@@ -1,0 +1,2 @@
+(def (binary f) (fun (x y) (f x y)))
+(print ((binary +) 2 2))
