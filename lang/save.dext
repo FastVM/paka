@@ -1,0 +1,16 @@
+def fib(x) {
+    if (x < 2) {
+        return x
+    }
+    return fib(x-2) + fib(x-1)
+}
+
+fibv = fib(20)
+
+if(dumpf("world/saved.json")) {
+    print("Saving World!")
+} else {
+    print("Loading World!")
+}
+
+print("Exiting!")

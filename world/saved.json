@@ -1,0 +1,487 @@
+{
+    "deptha": {
+        "0": "1",
+        "length": "1"
+    },
+    "funca": {
+        "0": {
+            "capture": {
+                "length": "0"
+            },
+            "captured": {
+                "0": {
+                    "type": "fun",
+                    "value": "print"
+                },
+                "1": {
+                    "type": "fun",
+                    "value": "put"
+                },
+                "2": {
+                    "type": "fun",
+                    "value": "readln"
+                },
+                "3": {
+                    "type": "fun",
+                    "value": "dumpf"
+                },
+                "4": {
+                    "type": "fun",
+                    "value": "resumef"
+                },
+                "5": {
+                    "type": "fun",
+                    "value": "leave"
+                },
+                "length": "6"
+            },
+            "constants": {
+                "0": {
+                    "type": "num",
+                    "value": "14"
+                },
+                "1": {
+                    "type": "nil"
+                },
+                "2": {
+                    "type": "str",
+                    "value": "world\/saved.json"
+                },
+                "3": {
+                    "type": "str",
+                    "value": "Saving World!"
+                },
+                "4": {
+                    "type": "str",
+                    "value": "Loading World!"
+                },
+                "5": {
+                    "type": "str",
+                    "value": "Exiting!"
+                },
+                "length": "6"
+            },
+            "funcs": {
+                "0": {
+                    "capture": {
+                        "0": {
+                            "from": "0",
+                            "is2": "false"
+                        },
+                        "length": "1"
+                    },
+                    "captured": {
+                        "length": "0"
+                    },
+                    "constants": {
+                        "0": {
+                            "type": "num",
+                            "value": "2"
+                        },
+                        "1": {
+                            "type": "nil"
+                        },
+                        "2": {
+                            "type": "num",
+                            "value": "2"
+                        },
+                        "3": {
+                            "type": "num",
+                            "value": "1"
+                        },
+                        "length": "4"
+                    },
+                    "funcs": {
+                        "length": "0"
+                    },
+                    "instrs": {
+                        "0": {
+                            "op": "load",
+                            "value": "0"
+                        },
+                        "1": {
+                            "op": "push",
+                            "value": "0"
+                        },
+                        "10": {
+                            "op": "loadc",
+                            "value": "0"
+                        },
+                        "11": {
+                            "op": "load",
+                            "value": "0"
+                        },
+                        "12": {
+                            "op": "push",
+                            "value": "2"
+                        },
+                        "13": {
+                            "op": "opsub",
+                            "value": "0"
+                        },
+                        "14": {
+                            "op": "call",
+                            "value": "1"
+                        },
+                        "15": {
+                            "op": "loadc",
+                            "value": "0"
+                        },
+                        "16": {
+                            "op": "load",
+                            "value": "0"
+                        },
+                        "17": {
+                            "op": "push",
+                            "value": "3"
+                        },
+                        "18": {
+                            "op": "opsub",
+                            "value": "0"
+                        },
+                        "19": {
+                            "op": "call",
+                            "value": "1"
+                        },
+                        "2": {
+                            "op": "oplt",
+                            "value": "0"
+                        },
+                        "20": {
+                            "op": "opadd",
+                            "value": "0"
+                        },
+                        "21": {
+                            "op": "retval",
+                            "value": "0"
+                        },
+                        "22": {
+                            "op": "pop",
+                            "value": "0"
+                        },
+                        "23": {
+                            "op": "retval",
+                            "value": "0"
+                        },
+                        "3": {
+                            "op": "iffalse",
+                            "value": "7"
+                        },
+                        "4": {
+                            "op": "load",
+                            "value": "0"
+                        },
+                        "5": {
+                            "op": "retval",
+                            "value": "0"
+                        },
+                        "6": {
+                            "op": "pop",
+                            "value": "0"
+                        },
+                        "7": {
+                            "op": "jump",
+                            "value": "8"
+                        },
+                        "8": {
+                            "op": "push",
+                            "value": "1"
+                        },
+                        "9": {
+                            "op": "pop",
+                            "value": "0"
+                        },
+                        "length": "24"
+                    },
+                    "self": {
+                        "length": "0"
+                    },
+                    "stackSize": "4"
+                },
+                "length": "1"
+            },
+            "instrs": {
+                "0": {
+                    "op": "sub",
+                    "value": "0"
+                },
+                "1": {
+                    "op": "store",
+                    "value": "0"
+                },
+                "10": {
+                    "op": "push",
+                    "value": "2"
+                },
+                "11": {
+                    "op": "call",
+                    "value": "1"
+                },
+                "12": {
+                    "op": "iffalse",
+                    "value": "16"
+                },
+                "13": {
+                    "op": "loadc",
+                    "value": "0"
+                },
+                "14": {
+                    "op": "push",
+                    "value": "3"
+                },
+                "15": {
+                    "op": "call",
+                    "value": "1"
+                },
+                "16": {
+                    "op": "jump",
+                    "value": "19"
+                },
+                "17": {
+                    "op": "loadc",
+                    "value": "0"
+                },
+                "18": {
+                    "op": "push",
+                    "value": "4"
+                },
+                "19": {
+                    "op": "call",
+                    "value": "1"
+                },
+                "2": {
+                    "op": "pop",
+                    "value": "0"
+                },
+                "20": {
+                    "op": "pop",
+                    "value": "0"
+                },
+                "21": {
+                    "op": "loadc",
+                    "value": "0"
+                },
+                "22": {
+                    "op": "push",
+                    "value": "5"
+                },
+                "23": {
+                    "op": "call",
+                    "value": "1"
+                },
+                "24": {
+                    "op": "retval",
+                    "value": "0"
+                },
+                "3": {
+                    "op": "load",
+                    "value": "0"
+                },
+                "4": {
+                    "op": "push",
+                    "value": "0"
+                },
+                "5": {
+                    "op": "call",
+                    "value": "1"
+                },
+                "6": {
+                    "op": "pstore",
+                    "value": "1"
+                },
+                "7": {
+                    "op": "push",
+                    "value": "1"
+                },
+                "8": {
+                    "op": "pop",
+                    "value": "0"
+                },
+                "9": {
+                    "op": "loadc",
+                    "value": "3"
+                },
+                "length": "25"
+            },
+            "self": {
+                "length": "0"
+            },
+            "stackSize": "3"
+        },
+        "length": "1"
+    },
+    "indexa": {
+        "0": "11",
+        "length": "1"
+    },
+    "localsa": {
+        "0": {
+            "0": {
+                "type": "pro",
+                "value": {
+                    "capture": {
+                        "0": {
+                            "from": "0",
+                            "is2": "false"
+                        },
+                        "length": "1"
+                    },
+                    "captured": {
+                        "0": {
+                            "type": "ref",
+                            "value": "0"
+                        },
+                        "length": "1"
+                    },
+                    "constants": {
+                        "0": {
+                            "type": "num",
+                            "value": "2"
+                        },
+                        "1": {
+                            "type": "nil"
+                        },
+                        "2": {
+                            "type": "num",
+                            "value": "2"
+                        },
+                        "3": {
+                            "type": "num",
+                            "value": "1"
+                        },
+                        "length": "4"
+                    },
+                    "funcs": {
+                        "length": "0"
+                    },
+                    "instrs": {
+                        "0": {
+                            "op": "load",
+                            "value": "0"
+                        },
+                        "1": {
+                            "op": "push",
+                            "value": "0"
+                        },
+                        "10": {
+                            "op": "loadc",
+                            "value": "0"
+                        },
+                        "11": {
+                            "op": "load",
+                            "value": "0"
+                        },
+                        "12": {
+                            "op": "push",
+                            "value": "2"
+                        },
+                        "13": {
+                            "op": "opsub",
+                            "value": "0"
+                        },
+                        "14": {
+                            "op": "call",
+                            "value": "1"
+                        },
+                        "15": {
+                            "op": "loadc",
+                            "value": "0"
+                        },
+                        "16": {
+                            "op": "load",
+                            "value": "0"
+                        },
+                        "17": {
+                            "op": "push",
+                            "value": "3"
+                        },
+                        "18": {
+                            "op": "opsub",
+                            "value": "0"
+                        },
+                        "19": {
+                            "op": "call",
+                            "value": "1"
+                        },
+                        "2": {
+                            "op": "oplt",
+                            "value": "0"
+                        },
+                        "20": {
+                            "op": "opadd",
+                            "value": "0"
+                        },
+                        "21": {
+                            "op": "retval",
+                            "value": "0"
+                        },
+                        "22": {
+                            "op": "pop",
+                            "value": "0"
+                        },
+                        "23": {
+                            "op": "retval",
+                            "value": "0"
+                        },
+                        "3": {
+                            "op": "iffalse",
+                            "value": "7"
+                        },
+                        "4": {
+                            "op": "load",
+                            "value": "0"
+                        },
+                        "5": {
+                            "op": "retval",
+                            "value": "0"
+                        },
+                        "6": {
+                            "op": "pop",
+                            "value": "0"
+                        },
+                        "7": {
+                            "op": "jump",
+                            "value": "8"
+                        },
+                        "8": {
+                            "op": "push",
+                            "value": "1"
+                        },
+                        "9": {
+                            "op": "pop",
+                            "value": "0"
+                        },
+                        "length": "24"
+                    },
+                    "self": {
+                        "length": "0"
+                    },
+                    "stackSize": "4"
+                }
+            },
+            "1": {
+                "type": "num",
+                "value": "377"
+            },
+            "length": "2"
+        },
+        "length": "1"
+    },
+    "stacka": {
+        "0": {
+            "0": {
+                "type": "fun",
+                "value": "dumpf"
+            },
+            "1": {
+                "type": "str",
+                "value": "world\/saved.json"
+            },
+            "2": {
+                "type": "nil"
+            },
+            "length": "3"
+        },
+        "length": "1"
+    }
+}

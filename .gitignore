@@ -17,3 +17,8 @@ dub.selections.json
 out.*
 trace.*
 .vscode
+dub_platform_probe*
+perf*
+vgcore*
+callgrind*
+./data

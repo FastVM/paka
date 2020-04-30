@@ -1,0 +1,10 @@
+def fib(x) {
+    if (x < 2) {
+        return x
+    }
+    return fib(x-2) + fib(x-1)
+}
+
+fibv = fib(16)
+
+print(fibv)

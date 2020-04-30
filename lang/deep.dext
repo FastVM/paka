@@ -1,0 +1,8 @@
+def rec(n) {
+    if (n > 0) {
+        return 1 + rec(n-1);
+    }
+    return 0;
+}
+
+print(rec(1000*1000))
