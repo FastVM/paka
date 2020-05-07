@@ -27,12 +27,6 @@ Dynamic nil() {
 }
 Dynamic ltrue = dynamic(true);
 Dynamic lfalse = dynamic(false);
-// static this()
-// {
-//     nil = Dynamic.init;
-//     lfalse = Dynamic(false);
-//     ltrue = Dynamic(true);
-// }
 
 struct Dynamic
 {
@@ -55,7 +49,7 @@ struct Dynamic
     {
         bool log;
         Number num;
-        string* str;
+        string str;
         Array* arr;
         Table* tab;
         union Callable
@@ -90,8 +84,10 @@ align(1):
 
     this(string str)
     {
-        value.str = cast(string*) GC.malloc(string.sizeof);
-        *value.str = str;
+        // value.str = cast(string*) GC.malloc(string.sizeof);
+        // *value.str = str;
+        value.str = str;
+        // value.str = new string(str);
         type = Type.str;
     }
 
@@ -161,11 +157,11 @@ align(1):
             }
             return 1;
         case Type.str:
-            if (*value.str == *other.value.str)
+            if (value.str == other.value.str)
             {
                 return 0;
             }
-            if (*value.str < *other.value.str)
+            if (value.str < other.value.str)
             {
                 return -1;
             }
@@ -194,7 +190,7 @@ align(1):
         case Type.num:
             return value.num == other.value.num;
         case Type.str:
-            return *value.str == *other.value.str;
+            return value.str == other.value.str;
         case Type.arr:
             return *value.arr == *other.value.arr;
         case Type.tab:
@@ -213,7 +209,7 @@ align(1):
         default:
             return hashOf(this.type) ^ hashOf(this.value);
         case Type.str:
-            return hashOf(*value.str);
+            return hashOf(value.str);
         case Type.arr:
             return hashOf(*value.arr);
         case Type.tab:
@@ -248,7 +244,7 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         }
         return dyn.value.num.to!string;
     case Dynamic.Type.str:
-        return '"' ~ *dyn.value.str ~ '"';
+        return dyn.value.str;
     case Dynamic.Type.arr:
         char[] ret;
         ret ~= "[";

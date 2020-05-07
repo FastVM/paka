@@ -3,7 +3,7 @@ module lang.data.rope;
 import std.algorithm;
 import std.stdio;
 
-double maxdiff = 4;
+double maxdiff = 64;
 
 class Rope(T)
 {
@@ -13,6 +13,11 @@ class Rope(T)
     size_t length = 0;
     this()
     {
+    }
+
+    this(T s) {
+        value = s;
+        length = 1;
     }
 
     this(Rope l, Rope r)
@@ -182,10 +187,10 @@ Rope!T balanced(T)(Rope!T rope)
     double l = cast(double) rope.left.length;
     double r = cast(double) rope.right.length;
     if (l / r > maxdiff && rope.left.right !is null) {
-        return rope.left.left ~ (rope.left.right ~ rope.right);
+        return new Rope!T(rope.left.left, rope.left.right ~ rope.right);
     }
     if (r / l > maxdiff && rope.right.left !is null) {
-        return (rope.left ~ rope.right.left) ~ rope.right.right;
+        return new Rope!T(rope.left ~ rope.right.left, rope.right.right);
     }
     return rope;
 }

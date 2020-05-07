@@ -5,6 +5,4 @@ def fib(x) {
     return fib(x-2) + fib(x-1)
 }
 
-fibv = fib(16)
-
-print(fibv)
+print(fib(10))

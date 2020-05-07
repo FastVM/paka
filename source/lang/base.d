@@ -35,7 +35,10 @@ Pair[] getRootBase()
         Pair("put", load(&lang.lib.io.libput)),
         Pair("readln", load(&lang.lib.io.libreadln)),
         Pair("dumpf", load(&lang.lib.serial.libdumpf)),
+        Pair("dump", load(&lang.lib.serial.libdump)),
+        Pair("undump", load(&lang.lib.serial.libundump)),
         Pair("resumef", load(&lang.lib.serial.libresumef)),
+        Pair("undumpf", load(&lang.lib.serial.libundumpf)),
         Pair("leave", load(&lang.lib.sys.libleave)),
     ];
 }

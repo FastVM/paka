@@ -5,12 +5,15 @@ def fib(x) {
     return fib(x-2) + fib(x-1)
 }
 
-fibv = fib(20)
-
-if(dumpf("world/saved.json")) {
-    print("Saving World!")
-} else {
-    print("Loading World!")
+fibv = fib(5)
+def run() {
+    if(dumpf("world/saved.json")) {
+        print("Loading World!")
+    } else {
+        print("Saving World!")
+    }
+    print(fib(5))
+    print(fibv)
 }
-
-print("Exiting!")
+run()
+print("Done!")

@@ -1,0 +1,9 @@
+def abc() {
+    x = 7
+    def l() {
+        print(x)
+        return x + 9
+    }
+    return dump(l)
+}
+undump(abc())()

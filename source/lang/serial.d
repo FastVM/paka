@@ -13,40 +13,92 @@ import lang.vm;
 import lang.base;
 import lang.bytecode;
 import lang.dynamic;
+import lang.data.rope;
 
 Dynamic[] jsarr;
 
+Rope!string[4] cs;
+
+void jsInit()
+{
+    cs[0] = new Rope!string("{");
+    cs[1] = new Rope!string(",");
+    cs[2] = new Rope!string(":");
+    cs[3] = new Rope!string("}");
+}
+
+Rope!string jsRope(JSONValue val)
+{
+    return memoize!jsRopeImpl(val);
+}
+
+Rope!string jsRopeImpl(JSONValue val)
+{
+    if (val.type == JSONType.string)
+    {
+        return new Rope!string("\"" ~ val.str ~ "\"");
+    }
+    Rope!string ret = cs[0];
+    bool begin = true;
+    foreach (i; val.object.byKeyValue)
+    {
+        if (begin)
+        {
+            begin = false;
+        }
+        else
+        {
+            ret = ret ~ cs[1];
+        }
+        ret = ret ~ new Rope!string("\"" ~ i.key ~ "\"");
+        ret = ret ~ cs[2];
+        ret = ret ~ i.value.jsRope;
+    }
+    ret = ret ~ cs[3];
+    return ret;
+}
+
 JSONValue saveState()
 {
-    return JSONValue([
-            "stacka": stacka.js,
-            "localsa": localsa.js,
+    GC.disable;
+    JSONValue ret = JSONValue([
+            "stacka": stacka.map!js.array.js,
+            "localsa": localsa.map!js.array.js,
             "indexa": indexa.map!js.array.js,
             "deptha": deptha.map!js.array.js,
             "funca": funca.js,
+            "base": rootBase.map!js.array.js,
             ]);
+    GC.enable;
+    return ret;
 }
 
 void loadState(JSONValue val)
 {
-    stacka = val.object["stacka"].readjs!(typeof(stacka));
     localsa = val.object["localsa"].readjs!(typeof(localsa));
+    stacka = val.object["stacka"].readjs!(typeof(stacka));
     indexa = val.object["indexa"].readjs!(typeof(indexa));
     deptha = val.object["deptha"].readjs!(typeof(deptha));
     funca = val.object["funca"].readjs!(typeof(funca));
-    stack[depth - 1] = lfalse;
+    rootBase = val.object["base"].readjs!(typeof(rootBase));
 }
 
-Function readjs(T)(JSONValue val) if (is(T == Function))
+Function readjs(T)(JSONValue val, Function ret = new Function) if (is(T == Function))
 {
-    Function ret = new Function;
     ret.capture = val.object["capture"].readjs!(Function.Capture[]);
     ret.instrs = val.object["instrs"].readjs!(Instr[]);
     ret.constants = val.object["constants"].readjs!(Dynamic[]);
     ret.captured = val.object["captured"].readjs!(Dynamic*[]);
     ret.stackSize = val.object["stackSize"].str.to!size_t;
+    ret.funcs = val.object["funcs"].readjs!(Function[]);
     ret.self = val.object["self"].readjs!(Dynamic[]);
+    ret.stab.byPlace.length = val.object["locc"].readjs!(size_t);
     return ret;
+}
+
+Pair readjs(T)(JSONValue val) if (is(T == Pair))
+{
+    return Pair(val.object["name"].str, val.object["val"].readjs!Dynamic);
 }
 
 Function.Capture readjs(T)(JSONValue val) if (is(T == Function.Capture))
@@ -65,18 +117,27 @@ size_t readjs(T)(JSONValue val) if (is(T == size_t))
 }
 
 Dynamic[] above;
+Function[] abovef;
 
 Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
 {
     above ~= nil;
+    abovef.length++;
+    abovef[$ - 1] = null;
     scope (exit)
     {
+        abovef.length--;
         above.length--;
     }
     final switch (val.object["type"].str)
     {
     case "ref":
-        return above[val.object["value"].str.to!size_t];
+        size_t vst = val.object["value"].str.to!size_t;
+        if (abovef[vst]!is null)
+        {
+            return dynamic(abovef[vst]);
+        }
+        return above[vst];
     case "nil":
         return nil;
     case "log":
@@ -104,7 +165,9 @@ Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
     case "fun":
         return dynamic(rootFuncs[val.object["value"].str]);
     case "pro":
-        return dynamic(val.object["value"].readjs!Function);
+        Function ret = new Function;
+        abovef[$ - 1] = ret;
+        return dynamic(val.object["value"].readjs!Function(ret));
     case "end":
         return dynamic(Dynamic.Type.end);
     case "dat":
@@ -128,6 +191,15 @@ Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
 
 T readjs(T)(JSONValue val) if (isPointer!T)
 {
+    static if (is(T == Dynamic*))
+    {
+        if (val.object["type"].str == "stk")
+        {
+            return &localsa[val.object["value"].object["level"].str.to!size_t][val
+                .object["value"].object["index"].str.to!size_t];
+
+        }
+    }
     if (val.type == JSONType.string && val.str == "null")
     {
         return null;
@@ -145,6 +217,27 @@ T readjs(T)(JSONValue val) if (isArray!T)
     return ret;
 }
 
+JSONValue jsp(Dynamic* d)
+{
+    foreach (n, l; localsa)
+    {
+        foreach (i; 0 .. l.length)
+        {
+            if (cast(void*) d == cast(void*)&l[i])
+            {
+                return JSONValue([
+                        "type": JSONValue("stk"),
+                        "value": JSONValue([
+                                "level": n.to!string,
+                                "index": i.to!string
+                            ])
+                        ]);
+            }
+        }
+    }
+    return js(*d);
+}
+
 JSONValue js(T)(T[] d)
 {
     JSONValue[string] ret;
@@ -154,6 +247,11 @@ JSONValue js(T)(T[] d)
         ret[i.to!string] = v.js;
     }
     return JSONValue(ret);
+}
+
+JSONValue js(Pair p)
+{
+    return JSONValue(["name": JSONValue(p.name), "val": p.val.js]);
 }
 
 JSONValue js(size_t v)
@@ -176,16 +274,25 @@ JSONValue js(Instr inst)
     return JSONValue(["op": inst.op.to!string, "value": inst.value.to!string]);
 }
 
+size_t depth;
+
 JSONValue js(Function f)
 {
+    depth++;
     JSONValue[string] ret;
     ret["capture"] = f.capture.map!js.array.js;
+    if (GC.addrOf(f.instrs.ptr) is null)
+    {
+        assert(0);
+    }
     ret["instrs"] = f.instrs.map!js.array.js;
     ret["constants"] = f.constants.map!js.array.js;
+    ret["captured"] = f.captured.map!jsp.array.js;
     ret["funcs"] = f.funcs.map!js.array.js;
-    ret["captured"] = f.captured.map!js.array.js;
     ret["stackSize"] = f.stackSize.to!string;
     ret["self"] = f.self.map!js.array.js;
+    ret["locc"] = f.stab.byPlace.length.js;
+    depth--;
     return JSONValue(ret);
 }
 
@@ -199,6 +306,11 @@ JSONValue js(T)(T* v)
 }
 
 JSONValue js(Dynamic d)
+{
+    return memoize!jsImpl(d);
+}
+
+JSONValue jsImpl(Dynamic d)
 {
     foreach (i, v; jsarr)
     {
@@ -229,7 +341,7 @@ JSONValue js(Dynamic d)
     case Dynamic.Type.str:
         return JSONValue([
                 "type": JSONValue("str"),
-                "value": JSONValue(*d.value.str)
+                "value": JSONValue(d.value.str)
                 ]);
     case Dynamic.Type.arr:
         return JSONValue(["type": JSONValue("arr"), "value": js(*d.value.arr)]);

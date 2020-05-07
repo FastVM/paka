@@ -3,11 +3,13 @@ module lang.vm;
 import std.stdio;
 import std.range;
 import std.conv;
+import std.algorithm;
+import std.json;
 import core.memory;
 import core.stdc.stdlib;
+import lang.serial;
 import lang.dynamic;
 import lang.bytecode;
-import std.algorithm;
 
 enum string[2][] cmpMap()
 {
@@ -19,7 +21,7 @@ enum string[2][] mutMap()
     return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"], ["%=", "mod"]];
 }
 
-Dynamic[] glocals = void;
+Dynamic[] glocals = null;
 
 void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
 {
@@ -118,12 +120,12 @@ size_t[] indexa;
 size_t[] deptha;
 Function[] funca;
 
-Dynamic[] stack()
+ref Dynamic[] stack()
 {
     return stacka[$ - 1];
 }
 
-Dynamic[] locals()
+ref Dynamic[] locals()
 {
     return localsa[$ - 1];
 }
@@ -145,29 +147,25 @@ Function func()
 
 void enterScope(Function afunc, Dynamic[] args)
 {
-    // printf("-> %zu, %zu\n", GC.stats.freeSize, GC.stats.usedSize);
     funca ~= afunc;
-    Dynamic* stackp = cast(Dynamic*) GC.malloc(Dynamic.sizeof * (1 + func.stackSize));
-    stacka ~= stackp[0 .. func.stackSize];
-    Dynamic* localp = cast(Dynamic*) GC.malloc(Dynamic.sizeof * (1 + func.stab.byPlace.length));
-    localsa ~= localp[0 .. func.stab.byPlace.length];
+    stacka ~= new Dynamic[func.stackSize];
+    localsa ~= new Dynamic[func.stab.byPlace.length];
     indexa ~= 0;
     deptha ~= 0;
     foreach (i, v; args)
     {
+        // writeln(locals, i);
         locals[i] = v;
     }
 }
 
 void exitScope()
 {
-
     funca.length--;
     stacka.length--;
     localsa.length--;
     indexa.length--;
     deptha.length--;
-    // printf("<- %zu, %zu\n", GC.stats.freeSize, GC.stats.usedSize);
     // funca.popBack;
     // stacka.popBack;
     // localsa.popBack;
@@ -175,15 +173,23 @@ void exitScope()
     // deptha.popBack;
 }
 
+JSONValue[] vmRecord;
+
 Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynamic[] args)
 {
     static if (hasScope)
     {
-        afunc.enterScope(args);
-        // scope (exit)
-        // {
-        //     exitScope;
-        // }
+        if (afunc !is null)
+        {
+            afunc.enterScope(args);
+        }
+        scope (exit)
+        {
+            if (afunc !is null)
+            {
+                exitScope;
+            }
+        }
     }
     size_t exiton = funca.length;
     static if (saveLocals)
@@ -196,11 +202,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
     vmLoop: while (true)
     {
         Instr cur = func.instrs[index];
-        // writeln(stack[0..depth]);
-        // printf("%zu, %zu\n", GC.stats.allocatedInCurrentThread,  GC.stats.usedSize);
-        // writeln(stack[0 .. depth]);
-        // writeln;
-        // writeln(index, " ", cur);
+        // vmRecord ~= saveState;
         switch (cur.op)
         {
         default:
@@ -240,20 +242,16 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             (*obj.value.tab)[stack[depth]].value.fun.pro.self = [obj];
             break;
         case Opcode.call:
-            // printf("%zu, %zu\n", GC.stats.allocatedInCurrentThread,  GC.stats.usedSize);
             depth -= cur.value;
             Dynamic f = stack[depth - 1];
             switch (f.type)
             {
             case Dynamic.Type.fun:
-                // printf("%zu, %zu\n", GC.stats.allocatedInCurrentThread,  GC.stats.usedSize);
-                stack[depth - 1] = f.value.fun.fun(stack[depth .. depth + cur.value].dup);
-                // printf("%zu, %zu\n", GC.stats.allocatedInCurrentThread,  GC.stats.usedSize);
+                stack[depth - 1] = f.value.fun.fun(stack[depth .. depth + cur.value]);
                 break;
             case Dynamic.Type.pro:
                 enterScope(f.value.fun.pro,
                         f.value.fun.pro.self ~ stack[depth .. depth + cur.value]);
-                // stack[depth .. depth + cur.value].dup);
                 continue vmLoop;
             default:
                 throw new Exception("error: not a function: " ~ f.to!string);
@@ -409,7 +407,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             stack[depth++] = locals[cur.value];
             break;
         case Opcode.loadc:
-            stack[depth++] = func.captured[cur.value][0];
+            stack[depth++] = *func.captured[cur.value];
             break;
         case Opcode.store:
             locals[cur.value] = stack[depth - 1];

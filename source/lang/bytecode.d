@@ -39,17 +39,18 @@ class Function
         bool is2;
     }
 
-    Capture[] capture;
-    Instr[] instrs;
-    Dynamic[] constants;
-    Function[] funcs;
-    Dynamic*[] captured;
-    size_t stackSize;
-    Dynamic[] self;
+    Capture[] capture = null;
+    Instr[] instrs = null;
+    Dynamic[] constants = null;
+    Function[] funcs = null;
+    Dynamic*[] captured = null;
+    size_t stackSize = 0;
+    Dynamic[] self = null;
 
     Lookup stab;
     Lookup captab;
     Function parent;
+
     this()
     {
     }

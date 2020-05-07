@@ -222,23 +222,23 @@ Node readExpr(ref Token[] tokens, size_t level = 0)
             break;
         case "+=":
             Node rhs = sub[i + 1].readExpr(level + 1);
-            ret = new Call(new Ident("@opset"), [new Ident("@add"), ret, rhs]);
+            ret = new Call(new Ident("@opset"), [new Ident("add"), ret, rhs]);
             break;
         case "-=":
             Node rhs = sub[i + 1].readExpr(level + 1);
-            ret = new Call(new Ident("@opset"), [new Ident("@sub"), ret, rhs]);
+            ret = new Call(new Ident("@opset"), [new Ident("sub"), ret, rhs]);
             break;
         case "*=":
             Node rhs = sub[i + 1].readExpr(level + 1);
-            ret = new Call(new Ident("@opset"), [new Ident("@mul"), ret, rhs]);
+            ret = new Call(new Ident("@opset"), [new Ident("mul"), ret, rhs]);
             break;
         case "/=":
             Node rhs = sub[i + 1].readExpr(level + 1);
-            ret = new Call(new Ident("@opset"), [new Ident("@div"), ret, rhs]);
+            ret = new Call(new Ident("@opset"), [new Ident("div"), ret, rhs]);
             break;
         case "%=":
             Node rhs = sub[i + 1].readExpr(level + 1);
-            ret = new Call(new Ident("@opset"), [new Ident("@mod"), ret, rhs]);
+            ret = new Call(new Ident("@opset"), [new Ident("mod"), ret, rhs]);
             break;
         default:
             Node rhs = sub[i + 1].readExpr(level + 1);
