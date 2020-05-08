@@ -89,6 +89,10 @@ class Function
         }
         else
         {
+            if (name !in parent.captab.byName)
+            {
+                throw new Exception("name not found " ~ name);
+            }
             parent.doCapture(name);
             capture ~= Capture(parent.captab.byName[name], true);
             return ret;

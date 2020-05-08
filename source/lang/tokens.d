@@ -11,7 +11,7 @@ enum string[][] prec = [
         ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"], ["*", "/", "%"],
     ];
 
-enum string[] nops = [".", ":", "@", "...", "!"];
+enum string[] nops = [".", ":", "...", "!"];
 
 enum string[] keywords = [
         "if", "else", "while", "return", "def", "target", "lambda"
@@ -229,7 +229,7 @@ Token readToken(ref string code)
         consume;
         return Token(Token.Type.string, ret);
     }
-    assert(0);
+    throw new Exception("bad char " ~ peek);
 }
 
 Token[] tokenize(string code)

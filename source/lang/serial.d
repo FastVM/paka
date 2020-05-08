@@ -145,8 +145,9 @@ Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
     case "num":
         return dynamic(val.object["value"].str.to!double);
     case "arr":
-        Dynamic ret = dynamic(new Dynamic[val.object["length"].str.to!size_t]);
+        Dynamic ret = dynamic(new Dynamic[val.object["value"].object["length"].str.to!size_t]);
         above[$ - 1] = ret;
+        writeln(val);
         foreach (i, ref v; *ret.value.arr)
         {
             v = val.object[i.to!string].readjs!Dynamic;
@@ -207,14 +208,22 @@ T readjs(T)(JSONValue val) if (isPointer!T)
     return [val.readjs!(PointerTarget!T)].ptr;
 }
 
-T readjs(T)(JSONValue val) if (isArray!T)
+T readjs(T)(JSONValue val, T arr = null) if (isArray!T)
 {
-    T ret = new ElementType!T[val.object["length"].str.to!size_t];
-    foreach (i, ref v; ret)
+    // T ret = new ElementType!T[val.object["length"].str.to!size_t];
+    foreach (i; 0 .. val.object["length"].str.to!size_t)
     {
-        v = val.object[i.to!string].readjs!(ElementType!T);
+        arr.length++;
+        static if (isArray!(ElementType!T))
+        {
+            arr[$-1] = val.object[i.to!string].readjs!(ElementType!T)(arr[$-1]);
+        }
+        else
+        {
+            arr[$-1] = val.object[i.to!string].readjs!(ElementType!T);
+        }
     }
-    return ret;
+    return arr;
 }
 
 JSONValue jsp(Dynamic* d)

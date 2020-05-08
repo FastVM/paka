@@ -154,7 +154,6 @@ void enterScope(Function afunc, Dynamic[] args)
     deptha ~= 0;
     foreach (i, v; args)
     {
-        // writeln(locals, i);
         locals[i] = v;
     }
 }
@@ -166,11 +165,6 @@ void exitScope()
     localsa.length--;
     indexa.length--;
     deptha.length--;
-    // funca.popBack;
-    // stacka.popBack;
-    // localsa.popBack;
-    // indexa.popBack;
-    // deptha.popBack;
 }
 
 JSONValue[] vmRecord;
@@ -341,6 +335,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             break;
         case Opcode.targeta:
             size_t end = depth;
+            depth --;
             while (stack[depth].type != Dynamic.Type.end)
             {
                 depth--;
@@ -433,7 +428,6 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
         case Opcode.tstore:
             depth -= 2;
             locals.store(stack[depth + 1], stack[depth]);
-            depth--;
             break;
         case Opcode.oppstore:
             index++;
