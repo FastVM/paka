@@ -7,14 +7,32 @@ import std.algorithm;
 
 enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 
-Node[] readOpen(string v)(ref Token[] tokens)
+Node[] readOpen(string v)(ref Token[] tokens) if (v != "{}")
 {
     Node[] args;
     tokens = tokens[1 .. $];
     while (!tokens[0].isClose([v[1]]))
     {
         args ~= tokens.readExpr;
-        if (tokens[0].isComma || tokens[0].isOperator(":"))
+        if (tokens[0].isComma)
+        {
+            tokens = tokens[1 .. $];
+        }
+    }
+    tokens = tokens[1 .. $];
+    return args;
+}
+
+Node[] readOpen(string v)(ref Token[] tokens) if (v == "{}")
+{
+    Node[] args;
+    tokens = tokens[1 .. $];
+    size_t items = 0;
+    while (!tokens[0].isClose([v[1]]))
+    {
+        args ~= tokens.readExpr;
+        items++;
+        if ((items % 2 == 0 && tokens[0].isComma) || (items % 2 == 1 && tokens[0].isOperator(":")))
         {
             tokens = tokens[1 .. $];
         }
@@ -75,6 +93,14 @@ Node readIf(ref Token[] tokens)
     return new Call(new Ident("@if"), [cond[0], iftrue, iffalse]);
 }
 
+Node readUsing(ref Token[] tokens)
+{
+    Node[] obj = tokens.readParens;
+    assert(obj.length == 1);
+    Node bod = tokens.readBlock;
+    return new Call(new Ident("@using"), [obj[0], bod]);
+}
+
 Node readPostExpr(ref Token[] tokens)
 {
     Node last = void;
@@ -113,6 +139,11 @@ Node readPostExpr(ref Token[] tokens)
     {
         tokens = tokens[1 .. $];
         last = tokens.readIf;
+    }
+    else if (tokens[0].isKeyword("using"))
+    {
+        tokens = tokens[1 .. $];
+        last = tokens.readUsing;
     }
     else if (tokens[0].isKeyword("while"))
     {
@@ -173,7 +204,7 @@ Node readExpr(ref Token[] tokens, size_t level = 0)
         }
         if (depth == 0)
         {
-            if (token.isComma || token.isSemicolon)
+            if (token.isComma || token.isSemicolon || token.isOperator(":"))
             {
                 break;
             }

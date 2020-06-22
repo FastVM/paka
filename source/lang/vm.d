@@ -33,7 +33,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
         }
         else
         {
-            mixin("locals[cast(size_t) to.value.num].value.num" ~ op ~ "from.value.num;");
+            mixin("locals[cast(size_t) to.value.num]" ~ op ~ "from;");
         }
     }
     else if (to.type == Dynamic.Type.dat)
@@ -59,15 +59,28 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
             {
             case Dynamic.Type.arr:
                 mixin(
-                        "(*arr.value.arr)[(*to.value.arr)[1].value.num.to!size_t].value.num "
-                        ~ op ~ " from.value.num;");
+                        "(*arr.value.arr)[(*to.value.arr)[1].value.num.to!size_t]"
+                        ~ op ~ " from;");
                 break;
             case Dynamic.Type.tab:
-                mixin("(*arr.value.tab)[(*to.value.arr)[1]].value.num " ~ op ~ " from.value.num;");
+                mixin("(*arr.value.tab)[(*to.value.arr)[1]]" ~ op ~ " from;");
                 break;
             default:
                 throw new Exception("error: cannot store at index");
             }
+        }
+    }
+    else if (to.type == Dynamic.type.str)
+    {
+        static if (op == "=")
+        {
+            (*(*locals[$ - 1].value.arr)[$ - 1].value.tab)[to] = from;
+        }
+        else
+        {
+            mixin(
+                    "(*(*locals[$ - 1].value.arr)[$ - 1].value.tab)[to]"
+                    ~ op ~ " from;");
         }
     }
     else
@@ -84,18 +97,19 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
                 {
                     index++;
                     size_t alen = from.value.arr.length - to.value.arr.length;
-                    locals.store((*to.value.arr)[index], dynamic(arr[index - 1 .. index + alen + 1]));
+                    locals.store!op((*to.value.arr)[index],
+                            dynamic(arr[index - 1 .. index + alen + 1]));
                     index++;
                     while (index < to.value.arr.length)
                     {
-                        locals.store((*to.value.arr)[index], arr[index + alen]);
+                        locals.store!op((*to.value.arr)[index], arr[index + alen]);
                         index++;
                     }
                     break outwhile;
                 }
                 else
                 {
-                    locals.store(nto, arr[index]);
+                    locals.store!op(nto, arr[index]);
                 }
                 index++;
             }
@@ -104,7 +118,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
         {
             foreach (v; to.value.tab.byKeyValue)
             {
-                locals.store(v.value, (*from.value.tab)[v.key]);
+                locals.store!op(v.value, (*from.value.tab)[v.key]);
             }
         }
         else
@@ -149,13 +163,14 @@ void enterScope(Function afunc, Dynamic[] args)
 {
     funca ~= afunc;
     stacka ~= new Dynamic[func.stackSize];
-    localsa ~= new Dynamic[func.stab.byPlace.length];
+    localsa ~= new Dynamic[func.stab.byPlace.length + 1];
     indexa ~= 0;
     deptha ~= 0;
     foreach (i, v; args)
     {
         locals[i] = v;
     }
+    locals[$ - 1] = dynamic([dynamic(Table.init)]);
 }
 
 void exitScope()
@@ -197,6 +212,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
     {
         Instr cur = func.instrs[index];
         // vmRecord ~= saveState;
+        // writeln(locals, "\n", stack[0..depth], "\n");
         switch (cur.op)
         {
         default:
@@ -335,7 +351,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             break;
         case Opcode.targeta:
             size_t end = depth;
-            depth --;
+            depth--;
             while (stack[depth].type != Dynamic.Type.end)
             {
                 depth--;
@@ -376,27 +392,27 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             }
             break;
         case Opcode.opneg:
-            stack[depth - 1].value.num = -stack[depth - 1].value.num;
+            stack[depth - 1] = -stack[depth - 1];
             break;
         case Opcode.opadd:
             depth--;
-            stack[depth - 1].value.num += stack[depth].value.num;
+            stack[depth - 1] += stack[depth];
             break;
         case Opcode.opsub:
             depth--;
-            stack[depth - 1].value.num -= stack[depth].value.num;
+            stack[depth - 1] -= stack[depth];
             break;
         case Opcode.opmul:
             depth--;
-            stack[depth - 1].value.num *= stack[depth].value.num;
+            stack[depth - 1] *= stack[depth];
             break;
         case Opcode.opdiv:
             depth--;
-            stack[depth - 1].value.num /= stack[depth].value.num;
+            stack[depth - 1] /= stack[depth];
             break;
         case Opcode.opmod:
             depth--;
-            stack[depth - 1].value.num %= stack[depth].value.num;
+            stack[depth - 1] %= stack[depth];
             break;
         case Opcode.load:
             stack[depth++] = locals[cur.value];
@@ -404,11 +420,12 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
         case Opcode.loadc:
             stack[depth++] = *func.captured[cur.value];
             break;
+        case Opcode.use:
+            stack[depth - 1] = (*(*locals[$ - 1].value.arr)[$ - 1].value.tab)[dynamic(
+                        stack[depth - 1].value.str)];
+            break;
         case Opcode.store:
             locals[cur.value] = stack[depth - 1];
-            break;
-        case Opcode.pstore:
-            locals[cur.value] = stack[--depth];
             break;
         case Opcode.istore:
             switch (stack[depth - 2].type)
@@ -423,23 +440,29 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             default:
                 throw new Exception("error: cannot store at index");
             }
-            depth -= 3;
+            depth -= 1;
             break;
         case Opcode.tstore:
             depth -= 2;
             locals.store(stack[depth + 1], stack[depth]);
+            depth++;
             break;
-        case Opcode.oppstore:
-            index++;
+        case Opcode.qstore:
+            depth -= 1;
+            (*(*locals[$ - 1].value.arr)[$ - 1].value.tab)[dynamic(stack[depth].value.str)] = stack[depth
+                - 1];
+            break;
+        case Opcode.opstore:
         switchOpp:
-            switch (func.instrs[index].value)
+            switch (func.instrs[++index].value)
             {
             default:
                 assert(0);
                 static foreach (opm; mutMap)
                 {
             case opm[1].to!AssignOp:
-                    mixin("locals[cur.value].value.num " ~ opm[0] ~ " stack[--depth].value.num;");
+                    stack[depth - 1] = mixin(
+                            "locals[cur.value]" ~ opm[0] ~ " stack[depth - 1]");
                     break switchOpp;
                 }
             }
@@ -457,20 +480,21 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
                     switch (arr.type)
                     {
                     case Dynamic.Type.arr:
-                        mixin("(*arr.value.arr)[stack[depth-1].value.num.to!size_t].value.num "
-                                ~ opm[0] ~ " stack[depth-3].value.num;");
+                        stack[depth - 3] = mixin(
+                                "(*arr.value.arr)[stack[depth-1].value.num.to!size_t]"
+                                ~ opm[0] ~ " stack[depth-3]");
                         break switchOpi;
                     case Dynamic.Type.tab:
-                        mixin(
-                                "(*arr.value.tab)[stack[depth-1]].value.num "
-                                ~ opm[0] ~ " stack[depth-3].value.num;");
+                        stack[depth - 3] = mixin(
+                                "(*arr.value.tab)[stack[depth-1]]"
+                                ~ opm[0] ~ " stack[depth-3]");
                         break switchOpi;
                     default:
                         throw new Exception("error: cannot store at index");
                     }
                 }
             }
-            depth -= 3;
+            depth -= 2;
             break;
         case Opcode.optstore:
             depth -= 2;
@@ -484,6 +508,24 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             case opm[1].to!AssignOp:
                     locals.store!(opm[0])(stack[depth + 1], stack[depth]);
                     break switchOpt;
+                }
+            }
+            depth++;
+            break;
+        case Opcode.opqstore:
+            depth -= 1;
+        switchOpq:
+            switch (func.instrs[++index].value)
+            {
+            default:
+                assert(0);
+                static foreach (opm; mutMap)
+                {
+            case opm[1].to!AssignOp:
+                    stack[depth - 1] = mixin(
+                            "(*(*locals[$ - 1].value.arr)[$ - 1].value.tab)[dynamic(stack[depth].value.str)]"
+                            ~ opm[0] ~ "stack[depth - 1]");
+                    break switchOpq;
                 }
             }
             break;
@@ -520,6 +562,13 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             break;
         case Opcode.jump:
             index = cur.value;
+            break;
+        case Opcode.douse:
+            (*locals[$ - 1].value.arr) ~= stack[--depth];
+            break;
+        case Opcode.unuse:
+            stack[depth - 1] = (*locals[$ - 1].value.arr)[$ - 1];
+            (*locals[$ - 1].value.arr).length--;
             break;
         }
         index++;

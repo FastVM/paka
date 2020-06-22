@@ -38,8 +38,9 @@ class Walker
     bool isTarget = false;
     enum string[] specialForms = [
             "@def", "@set", "@opset", "@while", "@array", "@table", "@target",
-            "@return", "@if", "@fun", "@do", "+", "-", "*", "/", "%", "<",
-            ">", "<=", ">=", "==", "!=", "...", "@index", "@method", "=>",
+            "@return", "@if", "@fun", "@do", "@using", "+", "-", "*", "/",
+            "%", "<", ">", "<=", ">=", "==", "!=", "...", "@index", "@method",
+            "=>", "."
         ];
     Function walkProgram(Node node)
     {
@@ -264,37 +265,41 @@ class Walker
                     walk(call.args[1]);
                     walk(call.args[2]);
                     func.instrs ~= Instr(Opcode.istore);
-                    freeStack(3);
+                    freeStack(2);
                     break;
                 case "@table":
                 case "@array":
                     walk(new Call(new Ident("@target"), [call]));
                     func.instrs ~= Instr(Opcode.tstore);
-                    freeStack(2);
+                    freeStack(1);
+                    break;
+                case ".":
+                    walkExact(new String((cast(Ident) call.args[1]).repr));
+                    func.instrs ~= Instr(Opcode.qstore);
+                    freeStack(1);
                     break;
                 default:
                     assert(0);
                 }
             }
-            else
+            else if (Ident ident = cast(Ident) target)
             {
-                Ident ident = cast(Ident) target;
                 ushort* us = ident.repr in func.stab.byName;
                 if (us is null)
                 {
                     ushort place = func.stab.define(ident.repr);
-                    func.instrs ~= Instr(Opcode.pstore, place);
+                    func.instrs ~= Instr(Opcode.store, place);
                 }
                 else
                 {
-                    func.instrs ~= Instr(Opcode.pstore, *us);
+                    func.instrs ~= Instr(Opcode.store, *us);
                 }
-                freeStack;
+            }
+            else
+            {
+                assert(0);
             }
         }
-        func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
-        useStack;
-        func.constants ~= nil;
     }
 
     void walkOpSet(Node[] c)
@@ -319,13 +324,18 @@ class Walker
                     walk(call.args[1]);
                     walk(call.args[2]);
                     func.instrs ~= Instr(Opcode.opistore, id.repr.to!AssignOp);
-                    freeStack(3);
+                    freeStack(2);
                     break;
                 case "@table":
                 case "@array":
                     walk(new Call(new Ident("@target"), [call]));
                     func.instrs ~= Instr(Opcode.optstore, id.repr.to!AssignOp);
-                    freeStack(2);
+                    freeStack(1);
+                    break;
+                case ".":
+                    walkExact(new String((cast(Ident) call.args[1]).repr));
+                    func.instrs ~= Instr(Opcode.opqstore, id.repr.to!AssignOp);
+                    freeStack(1);
                     break;
                 default:
                     assert(0);
@@ -338,19 +348,15 @@ class Walker
                 if (us is null)
                 {
                     ushort place = func.stab.define(ident.repr);
-                    func.instrs ~= Instr(Opcode.oppstore, place);
+                    func.instrs ~= Instr(Opcode.opstore, place);
                 }
                 else
                 {
-                    func.instrs ~= Instr(Opcode.oppstore, *us);
+                    func.instrs ~= Instr(Opcode.opstore, *us);
                 }
                 func.instrs ~= Instr(Opcode.nop, id.repr.to!AssignOp);
-                freeStack;
             }
         }
-        func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
-        useStack;
-        func.constants ~= nil;
     }
 
     void walkReturn(Node[] args)
@@ -448,6 +454,23 @@ class Walker
         freeStack;
     }
 
+    void walkUsing(Node[] args)
+    {
+        walk(args[0]);
+        func.instrs ~= Instr(Opcode.douse);
+        walk(args[1]);
+        func.instrs ~= Instr(Opcode.unuse);
+    }
+
+    void walkUse(Node[] args)
+    {
+        walkExact(new String((cast(Ident) args[0]).repr));
+        if (!isTarget)
+        {
+            func.instrs ~= Instr(Opcode.use);
+        }
+    }
+
     void walkSpecialCall(Call c)
     {
         final switch ((cast(Ident) c.args[0]).repr)
@@ -493,6 +516,12 @@ class Walker
             break;
         case "@target":
             walkTarget(c.args[1 .. $]);
+            break;
+        case "@using":
+            walkUsing(c.args[1 .. $]);
+            break;
+        case ".":
+            walkUse(c.args[1 .. $]);
             break;
         case "+":
             walkBinary!"add"(c.args[1 .. $]);

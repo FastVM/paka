@@ -1,0 +1,8 @@
+
+res = using ({"x":2, "y":3}) {
+    .x = 2
+    .y = 4
+    .z = 8
+}
+
+print("res = ", res)

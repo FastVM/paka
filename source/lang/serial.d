@@ -19,6 +19,15 @@ Dynamic[] jsarr;
 
 Rope!string[4] cs;
 
+LocalTie[] localTies = null;
+
+struct LocalTie
+{
+    size_t ind1;
+    size_t ind2;
+    Dynamic* target;
+}
+
 void jsInit()
 {
     cs[0] = new Rope!string("{");
@@ -62,8 +71,8 @@ JSONValue saveState()
 {
     GC.disable;
     JSONValue ret = JSONValue([
-            "stacka": stacka.map!js.array.js,
             "localsa": localsa.map!js.array.js,
+            "stacka": stacka.map!js.array.js,
             "indexa": indexa.map!js.array.js,
             "deptha": deptha.map!js.array.js,
             "funca": funca.js,
@@ -75,12 +84,17 @@ JSONValue saveState()
 
 void loadState(JSONValue val)
 {
-    localsa = val.object["localsa"].readjs!(typeof(localsa));
+    localTies = null;
+    val.object["localsa"].readjs!(typeof(localsa))(&localsa);
     stacka = val.object["stacka"].readjs!(typeof(stacka));
     indexa = val.object["indexa"].readjs!(typeof(indexa));
     deptha = val.object["deptha"].readjs!(typeof(deptha));
     funca = val.object["funca"].readjs!(typeof(funca));
     rootBase = val.object["base"].readjs!(typeof(rootBase));
+    foreach (tie; localTies)
+    {
+        *tie.target = localsa[tie.ind1][tie.ind2];
+    }
 }
 
 Function readjs(T)(JSONValue val, Function ret = new Function) if (is(T == Function))
@@ -147,10 +161,9 @@ Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
     case "arr":
         Dynamic ret = dynamic(new Dynamic[val.object["value"].object["length"].str.to!size_t]);
         above[$ - 1] = ret;
-        writeln(val);
         foreach (i, ref v; *ret.value.arr)
         {
-            v = val.object[i.to!string].readjs!Dynamic;
+            v = val.object["value"].object[i.to!string].readjs!Dynamic;
         }
         return ret;
     case "tab":
@@ -196,8 +209,19 @@ T readjs(T)(JSONValue val) if (isPointer!T)
     {
         if (val.object["type"].str == "stk")
         {
-            return &localsa[val.object["value"].object["level"].str.to!size_t][val
-                .object["value"].object["index"].str.to!size_t];
+            size_t k1 = val.object["value"].object["level"].str.to!size_t;
+            size_t k2 = val.object["value"].object["index"].str.to!size_t;
+            size_t ilength = localsa.length;
+            localsa.length = max(localsa.length, k1 + 1);
+            size_t klength = localsa[k1].length;
+            localsa[k1].length = max(localsa[k1].length, k2 + 1);
+            Dynamic* ret = &localsa[k1][k2];
+            if (ilength != localsa.length || klength != localsa[k1].length)
+            {
+                *ret = readjs!Dynamic(val.object["literal"]);
+            }
+            localTies ~= LocalTie(k1, k2, ret);
+            return ret;
 
         }
     }
@@ -208,22 +232,27 @@ T readjs(T)(JSONValue val) if (isPointer!T)
     return [val.readjs!(PointerTarget!T)].ptr;
 }
 
-T readjs(T)(JSONValue val, T arr = null) if (isArray!T)
+T readjs(T)(JSONValue val, T* arr = null) if (isArray!T)
 {
-    // T ret = new ElementType!T[val.object["length"].str.to!size_t];
-    foreach (i; 0 .. val.object["length"].str.to!size_t)
+    if (arr is null)
     {
-        arr.length++;
+        arr = [T.init].ptr;
+    }
+    // T ret = new ElementType!T[val.object["length"].str.to!size_t];
+    size_t len = val.object["length"].str.to!size_t;
+    (*arr).length = len;
+    foreach (i; 0 .. len)
+    {
         static if (isArray!(ElementType!T))
         {
-            arr[$-1] = val.object[i.to!string].readjs!(ElementType!T)(arr[$-1]);
+            val.object[i.to!string].readjs!(ElementType!T)(&(*arr)[i]);
         }
         else
         {
-            arr[$-1] = val.object[i.to!string].readjs!(ElementType!T);
+            (*arr)[i] = val.object[i.to!string].readjs!(ElementType!T);
         }
     }
-    return arr;
+    return *arr;
 }
 
 JSONValue jsp(Dynamic* d)
@@ -236,6 +265,7 @@ JSONValue jsp(Dynamic* d)
             {
                 return JSONValue([
                         "type": JSONValue("stk"),
+                        "literal": js(d),
                         "value": JSONValue([
                                 "level": n.to!string,
                                 "index": i.to!string

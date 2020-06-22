@@ -1,9 +1,10 @@
 def abc() {
-    x = 7
+    x = 1
     def l() {
         print(x)
-        return x + 9
+        x = x + 1
+        return dump(l)
     }
     return dump(l)
 }
-undump(abc())()
+undump(undump(abc())())()

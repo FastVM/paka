@@ -49,7 +49,7 @@ class Function
 
     Lookup stab;
     Lookup captab;
-    Function parent;
+    Function parent = null;
 
     this()
     {
@@ -89,7 +89,7 @@ class Function
         }
         else
         {
-            if (name !in parent.captab.byName)
+            if (parent.parent is null)
             {
                 throw new Exception("name not found " ~ name);
             }
@@ -143,18 +143,22 @@ enum Opcode : ushort
     opmod,
     load,
     loadc,
+    use,
     store,
-    pstore,
     istore,
     tstore,
-    oppstore,
+    qstore,
+    opstore,
     opistore,
     optstore,
+    opqstore,
     retval,
     retnone,
     iftrue,
     iffalse,
     jump,
+    douse,
+    unuse,
 }
 
 struct Instr

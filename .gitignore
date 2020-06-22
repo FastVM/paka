@@ -23,3 +23,4 @@ vgcore*
 callgrind*
 ./data
 world/*
+bf

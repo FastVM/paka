@@ -216,6 +216,19 @@ align(1):
             return hashOf(*value.tab);
         }
     }
+
+    Dynamic opBinary(string op)(Dynamic other) {
+        return dynamic(mixin("value.num" ~ op ~ "other.value.num"));
+    }
+
+    Dynamic opUnary(string op)() {
+        return dynamic(mixin(op ~ "value.num"));
+    }
+
+    Dynamic opOpAssign(string op)(Dynamic other) {
+        mixin("value.num" ~ op ~ "=other.value.num;");
+        return this;
+    }
 }
 
 private string strFormat(Dynamic dyn, Dynamic[] before = null)
@@ -269,7 +282,7 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
                 ret ~= ", ";
             }
             ret ~= strFormat(v.key, before);
-            ret ~= ", ";
+            ret ~= ": ";
             ret ~= strFormat(v.value, before);
             i++;
         }
