@@ -401,7 +401,8 @@ class Walker
             walk(i);
         }
         func.instrs ~= Instr(Opcode.table, cast(ushort) args.length);
-        freeStack(args.length - 1);
+        freeStack(args.length);
+        useStack();
     }
 
     void walkTarget(Node[] args)
@@ -458,6 +459,7 @@ class Walker
     {
         walk(args[0]);
         func.instrs ~= Instr(Opcode.douse);
+        freeStack();
         walk(args[1]);
         func.instrs ~= Instr(Opcode.unuse);
     }

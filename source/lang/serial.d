@@ -161,7 +161,7 @@ Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
     case "arr":
         Dynamic ret = dynamic(new Dynamic[val.object["value"].object["length"].str.to!size_t]);
         above[$ - 1] = ret;
-        foreach (i, ref v; *ret.value.arr)
+        foreach (i, ref v; ret.arr)
         {
             v = val.object["value"].object[i.to!string].readjs!Dynamic;
         }
@@ -171,7 +171,7 @@ Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
         above[$ - 1] = ret;
         foreach (i; val.object["value"].object.byValue)
         {
-            (*ret.value.tab)[i.object["key"].readjs!Dynamic] = i.object["value"].readjs!Dynamic;
+            ret.tab[i.object["key"].readjs!Dynamic] = i.object["value"].readjs!Dynamic;
         }
         return ret;
     case "str":
@@ -346,11 +346,6 @@ JSONValue js(T)(T* v)
 
 JSONValue js(Dynamic d)
 {
-    return memoize!jsImpl(d);
-}
-
-JSONValue jsImpl(Dynamic d)
-{
     foreach (i, v; jsarr)
     {
         if (v == d)
@@ -370,24 +365,24 @@ JSONValue jsImpl(Dynamic d)
     case Dynamic.Type.log:
         return JSONValue([
                 "type": JSONValue("log"),
-                "value": JSONValue(d.value.log.to!string)
+                "value": JSONValue(d.log.to!string)
                 ]);
     case Dynamic.Type.num:
         return JSONValue([
                 "type": JSONValue("num"),
-                "value": JSONValue(d.value.num.to!string)
+                "value": JSONValue(d.num.to!string)
                 ]);
     case Dynamic.Type.str:
         return JSONValue([
                 "type": JSONValue("str"),
-                "value": JSONValue(d.value.str)
+                "value": JSONValue(d.str)
                 ]);
     case Dynamic.Type.arr:
-        return JSONValue(["type": JSONValue("arr"), "value": js(*d.value.arr)]);
+        return JSONValue(["type": JSONValue("arr"), "value": d.arr.js]);
     case Dynamic.Type.tab:
         JSONValue[string] ret;
         size_t i = 0;
-        foreach (v; d.value.tab.byKeyValue)
+        foreach (v; d.tab.byKeyValue)
         {
             ret[i.to!string] = JSONValue(["key": v.key.js, "value": v.value.js]);
             i++;
@@ -396,22 +391,22 @@ JSONValue jsImpl(Dynamic d)
     case Dynamic.Type.fun:
         return JSONValue([
                 "type": JSONValue("fun"),
-                "value": JSONValue(serialLookup[d.value.fun.fun])
+                "value": JSONValue(serialLookup[d.fun.fun])
                 ]);
     case Dynamic.Type.pro:
-        return JSONValue(["type": JSONValue("pro"), "value": d.value.fun.pro.js]);
+        return JSONValue(["type": JSONValue("pro"), "value": d.fun.pro.js]);
     case Dynamic.Type.end:
         return JSONValue(["type": "end"]);
     case Dynamic.Type.dat:
         JSONValue[string] ret;
-        ret["length"] = JSONValue(d.value.arr.length.to!string);
-        foreach (i, v; *d.value.arr)
+        ret["length"] = JSONValue(d.arr.length.to!string);
+        foreach (i, v; d.arr)
         {
             ret[i.to!string] = v.js;
         }
         return JSONValue(["type": JSONValue("dat"), "value": JSONValue(ret)]);
     case Dynamic.Type.pac:
-        if (d.value.arr is null)
+        if (d.arr is null)
         {
             return JSONValue([
                     "type": JSONValue("pac"),
@@ -419,8 +414,8 @@ JSONValue jsImpl(Dynamic d)
                     ]);
         }
         JSONValue[string] ret;
-        ret["length"] = JSONValue(d.value.arr.length.to!string);
-        foreach (i, v; *d.value.arr)
+        ret["length"] = JSONValue(d.arr.length.to!string);
+        foreach (i, v; d.arr)
         {
             ret[i.to!string] = v.js;
         }

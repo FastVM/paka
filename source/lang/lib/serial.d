@@ -10,7 +10,7 @@ import core.memory;
 
 Dynamic libdumpf(Args args)
 {
-    File file = File(args[0].value.str, "w");
+    File file = File(args[0].str, "w");
     if (args.length == 1)
     {
         file.write(saveState);
@@ -25,7 +25,7 @@ Dynamic libdumpf(Args args)
 
 Dynamic libundumpf(Args args)
 {
-    string str = cast(string) read(args[0].value.str);
+    string str = cast(string) read(args[0].str);
     return str.parseJSON.readjs!Dynamic;
 }
 
@@ -36,12 +36,12 @@ Dynamic libdump(Args args)
 
 Dynamic libundump(Args args)
 {
-    return args[0].value.str.parseJSON.readjs!Dynamic;
+    return args[0].str.parseJSON.readjs!Dynamic;
 }
 
 Dynamic libresumef(Args args)
 {
-    string str = cast(string) read(args[0].value.str);
+    string str = cast(string) read(args[0].str);
     loadState(str.parseJSON);
     return dynamic(false);
 }

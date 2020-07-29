@@ -101,6 +101,12 @@ Node readUsing(ref Token[] tokens)
     return new Call(new Ident("@using"), [obj[0], bod]);
 }
 
+Node readTableCons(ref Token[] tokens)
+{
+    Node bod = tokens.readBlock;
+    return new Call(new Ident("@using"), [new Call(new Ident("@table"), []), bod]);
+}
+
 Node readPostExpr(ref Token[] tokens)
 {
     Node last = void;
@@ -144,6 +150,11 @@ Node readPostExpr(ref Token[] tokens)
     {
         tokens = tokens[1 .. $];
         last = tokens.readUsing;
+    }
+    else if (tokens[0].isKeyword("table"))
+    {
+        tokens = tokens[1 .. $];
+        last = tokens.readTableCons;
     }
     else if (tokens[0].isKeyword("while"))
     {

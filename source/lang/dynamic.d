@@ -22,9 +22,11 @@ alias Table = Dynamic[Dynamic];
 
 alias dynamic = Dynamic;
 
-Dynamic nil() {
+Dynamic nil()
+{
     return dynamic.init;
 }
+
 Dynamic ltrue = dynamic(true);
 Dynamic lfalse = dynamic(false);
 
@@ -84,10 +86,7 @@ align(1):
 
     this(string str)
     {
-        // value.str = cast(string*) GC.malloc(string.sizeof);
-        // *value.str = str;
         value.str = str;
-        // value.str = new string(str);
         type = Type.str;
     }
 
@@ -137,31 +136,31 @@ align(1):
         case Type.nil:
             return 0;
         case Type.log:
-            if (value.log == other.value.log)
+            if (value.log == other.log)
             {
                 return 0;
             }
-            if (value.log < other.value.log)
+            if (value.log < other.log)
             {
                 return -1;
             }
             return 1;
         case Type.num:
-            if (value.num == other.value.num)
+            if (value.num == other.num)
             {
                 return 0;
             }
-            if (value.num < other.value.num)
+            if (value.num < other.num)
             {
                 return -1;
             }
             return 1;
         case Type.str:
-            if (value.str == other.value.str)
+            if (value.str == other.str)
             {
                 return 0;
             }
-            if (value.str < other.value.str)
+            if (value.str < other.str)
             {
                 return -1;
             }
@@ -217,18 +216,97 @@ align(1):
         }
     }
 
-    Dynamic opBinary(string op)(Dynamic other) {
-        return dynamic(mixin("value.num" ~ op ~ "other.value.num"));
+    Dynamic opBinary(string op)(Dynamic other)
+    {
+        if (type == Type.num && other.type == Type.num)
+        {
+            return dynamic(mixin("value.num" ~ op ~ "other.num"));
+        }
+        if (type == Type.str && other.type == Type.str)
+        {
+            static if (op == "~" || op == "+") {
+                return dynamic(mixin("value.str~other.str"));
+            }
+        }
+        throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
     }
 
-    Dynamic opUnary(string op)() {
+    Dynamic opUnary(string op)()
+    {
         return dynamic(mixin(op ~ "value.num"));
     }
 
-    Dynamic opOpAssign(string op)(Dynamic other) {
-        mixin("value.num" ~ op ~ "=other.value.num;");
-        return this;
+    Dynamic opOpAssign(string op)(Dynamic other)
+    {
+        if (type == Type.num && other.type == Type.num)
+        {
+            dynamic(mixin("num" ~ op ~ "=other.num"));
+            return this;
+        }
+        if (type == Type.str && other.type == Type.str)
+        {
+            static if (op == "~" || op == "+") {
+                dynamic(mixin("str~=other.str"));
+                return this;
+            }
+        }
+        throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
     }
+
+    ref bool log()
+    {
+        if (type != Type.log)
+        {
+            throw new Exception("expected logical type");
+        }
+        return value.log;
+    }
+
+    ref Number num()
+    {
+        if (type != Type.num)
+        {
+            throw new Exception("expected number type");
+        }
+        return value.num;
+    }
+
+    ref string str()
+    {
+        if (type != Type.str)
+        {
+            throw new Exception("expected string type");
+        }
+        return value.str;
+    }
+
+    ref Array arr()
+    {
+        if (type != Type.arr)
+        {
+            throw new Exception("expected array type");
+        }
+        return *value.arr;
+    }
+
+    ref Table tab()
+    {
+        if (type != Type.tab)
+        {
+            throw new Exception("expected table type");
+        }
+        return *value.tab;
+    }
+
+    ref Value.Callable fun()
+    {
+        if (type != Type.fun && type != Type.pro)
+        {
+            throw new Exception("expected callable type");
+        }
+        return value.fun;
+    }
+
 }
 
 private string strFormat(Dynamic dyn, Dynamic[] before = null)
@@ -249,19 +327,19 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
     case Dynamic.Type.nil:
         return "nil";
     case Dynamic.Type.log:
-        return dyn.value.log.to!string;
+        return dyn.log.to!string;
     case Dynamic.Type.num:
-        if (dyn.value.num % 1 == 0)
+        if (dyn.num % 1 == 0)
         {
-            return to!string(cast(long) dyn.value.num);
+            return to!string(cast(long) dyn.num);
         }
-        return dyn.value.num.to!string;
+        return dyn.num.to!string;
     case Dynamic.Type.str:
-        return dyn.value.str;
+        return dyn.str;
     case Dynamic.Type.arr:
         char[] ret;
         ret ~= "[";
-        foreach (i, v; *dyn.value.arr)
+        foreach (i, v; dyn.arr)
         {
             if (i != 0)
             {
@@ -275,7 +353,7 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         char[] ret;
         ret ~= "{";
         size_t i;
-        foreach (v; dyn.value.tab.byKeyValue)
+        foreach (v; dyn.tab.byKeyValue)
         {
             if (i != 0)
             {
@@ -289,8 +367,8 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         ret ~= "}";
         return cast(string) ret;
     case Dynamic.Type.fun:
-        return serialLookup[dyn.value.fun.fun];
+        return serialLookup[dyn.fun.fun];
     case Dynamic.Type.pro:
-        return dyn.value.fun.pro.to!string;
+        return dyn.fun.pro.to!string;
     }
 }

@@ -61,7 +61,7 @@ string[Dynamic function(Args)] baseLookup()
     string[Dynamic function(Args)] ret;
     foreach (i; rootBase)
     {
-        ret[i.val.value.fun.fun] = i.name;
+        ret[i.val.fun.fun] = i.name;
     }
     return ret;
 }

@@ -6,4 +6,4 @@ def fib(x) {
     }
 }
 
-print(fib(27))
+print(fib(30))

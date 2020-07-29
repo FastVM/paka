@@ -111,19 +111,19 @@ void main(string[] args)
 			}
 		}
 	}
-	if (world.length != 0)
-	{
-		File f = File(world, "w");
-		f.write(saveState);
-	}
-	if ("world/vm".exists)
-	{
-		"world/vm".rmdirRecurse;
-	}
-	"world/vm".mkdir;
-	foreach (i, v; vmRecord)
-	{
-		File f = File("world/vm/" ~ i.to!string ~ ".json", "w");
-		f.write(v.toString);
-	}
+	// if (world.length != 0)
+	// {
+	// 	File f = File(world, "w");
+	// 	f.write(saveState);
+	// }
+	// if ("world/vm".exists)
+	// {
+	// 	"world/vm".rmdirRecurse;
+	// }
+	// "world/vm".mkdir;
+	// foreach (i, v; vmRecord)
+	// {
+	// 	File f = File("world/vm/" ~ i.to!string ~ ".json", "w");
+	// 	f.write(v.toString);
+	// }
 }

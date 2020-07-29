@@ -29,25 +29,25 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
     {
         static if (op == "=")
         {
-            mixin("locals[cast(size_t) to.value.num]" ~ op ~ "from;");
+            mixin("locals[cast(size_t) to.num]" ~ op ~ "from;");
         }
         else
         {
-            mixin("locals[cast(size_t) to.value.num]" ~ op ~ "from;");
+            mixin("locals[cast(size_t) to.num]" ~ op ~ "from;");
         }
     }
     else if (to.type == Dynamic.Type.dat)
     {
-        Dynamic arr = (*to.value.arr)[0];
+        Dynamic arr = to.arr[0];
         static if (op == "=")
         {
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                (*arr.value.arr)[(*to.value.arr)[1].value.num.to!size_t] = from;
+                arr.arr[to.arr[1].num.to!size_t] = from;
                 break;
             case Dynamic.Type.tab:
-                (*arr.value.tab)[(*to.value.arr)[1]] = from;
+                arr.tab[to.arr[1]] = from;
                 break;
             default:
                 throw new Exception("error: cannot store at index");
@@ -58,12 +58,10 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                mixin(
-                        "(*arr.value.arr)[(*to.value.arr)[1].value.num.to!size_t]"
-                        ~ op ~ " from;");
+                mixin("arr.arr[to.arr[1].num.to!size_t]" ~ op ~ " from;");
                 break;
             case Dynamic.Type.tab:
-                mixin("(*arr.value.tab)[(*to.value.arr)[1]]" ~ op ~ " from;");
+                mixin("arr.tab[to.arr[1]]" ~ op ~ " from;");
                 break;
             default:
                 throw new Exception("error: cannot store at index");
@@ -74,13 +72,11 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
     {
         static if (op == "=")
         {
-            (*(*locals[$ - 1].value.arr)[$ - 1].value.tab)[to] = from;
+            locals[$ - 1].arr[$ - 1].tab[to] = from;
         }
         else
         {
-            mixin(
-                    "(*(*locals[$ - 1].value.arr)[$ - 1].value.tab)[to]"
-                    ~ op ~ " from;");
+            mixin("locals[$ - 1].arr[$ - 1].tab[to]" ~ op ~ " from;");
         }
     }
     else
@@ -88,21 +84,20 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
         assert(to.type == from.type);
         if (to.type == Dynamic.Type.arr)
         {
-            Dynamic[] arr = *from.value.arr;
+            Dynamic[] arr = from.arr;
             size_t index = 0;
-            outwhile: while (index < to.value.arr.length)
+            outwhile: while (index < to.arr.length)
             {
-                Dynamic nto = (*to.value.arr)[index];
+                Dynamic nto = (to.arr)[index];
                 if (nto.type == Dynamic.Type.pac)
                 {
                     index++;
-                    size_t alen = from.value.arr.length - to.value.arr.length;
-                    locals.store!op((*to.value.arr)[index],
-                            dynamic(arr[index - 1 .. index + alen + 1]));
+                    size_t alen = from.arr.length - to.arr.length;
+                    locals.store!op((to.arr)[index], dynamic(arr[index - 1 .. index + alen + 1]));
                     index++;
-                    while (index < to.value.arr.length)
+                    while (index < to.arr.length)
                     {
-                        locals.store!op((*to.value.arr)[index], arr[index + alen]);
+                        locals.store!op((to.arr)[index], arr[index + alen]);
                         index++;
                     }
                     break outwhile;
@@ -116,9 +111,9 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
         }
         else if (to.type == Dynamic.Type.tab)
         {
-            foreach (v; to.value.tab.byKeyValue)
+            foreach (v; to.tab.byKeyValue)
             {
-                locals.store!op(v.value, (*from.value.tab)[v.key]);
+                locals.store!op(v.value, (from.tab)[v.key]);
             }
         }
         else
@@ -249,7 +244,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
         case Opcode.bind:
             depth--;
             Dynamic obj = stack[depth - 1];
-            (*obj.value.tab)[stack[depth]].value.fun.pro.self = [obj];
+            (obj.tab)[stack[depth]].fun.pro.self = [obj];
             break;
         case Opcode.call:
             depth -= cur.value;
@@ -257,11 +252,11 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             switch (f.type)
             {
             case Dynamic.Type.fun:
-                stack[depth - 1] = f.value.fun.fun(stack[depth .. depth + cur.value]);
+                stack[depth - 1] = f.fun.fun(stack[depth .. depth + cur.value]);
                 break;
             case Dynamic.Type.pro:
-                enterScope(f.value.fun.pro,
-                        f.value.fun.pro.self ~ stack[depth .. depth + cur.value]);
+                enterScope(f.fun.pro,
+                        f.fun.pro.self ~ stack[depth .. depth + cur.value]);
                 continue vmLoop;
             default:
                 throw new Exception("error: not a function: " ~ f.to!string);
@@ -280,7 +275,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
                 if (stack[i].type == Dynamic.Type.pac)
                 {
                     i++;
-                    cargs ~= *stack[i].value.arr;
+                    cargs ~= stack[i].arr;
                 }
                 else
                 {
@@ -292,10 +287,10 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             switch (f.type)
             {
             case Dynamic.Type.fun:
-                result = f.value.fun.fun(cargs);
+                result = f.fun.fun(cargs);
                 break;
             case Dynamic.Type.pro:
-                enterScope(f.value.fun.pro, f.value.fun.pro.self ~ cargs);
+                enterScope(f.fun.pro, f.fun.pro.self ~ cargs);
                 continue vmLoop;
             default:
                 throw new Exception("error: not a function: " ~ f.to!string);
@@ -339,7 +334,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
                 if (stack[i].type == Dynamic.Type.pac)
                 {
                     i++;
-                    arr ~= *stack[i].value.arr;
+                    arr ~= stack[i].arr;
                 }
                 else
                 {
@@ -382,10 +377,10 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                stack[depth - 1] = (*arr.value.arr)[stack[depth].value.num.to!size_t];
+                stack[depth - 1] = (arr.arr)[stack[depth].num.to!size_t];
                 break;
             case Dynamic.Type.tab:
-                stack[depth - 1] = (*arr.value.tab)[stack[depth]];
+                stack[depth - 1] = (arr.tab)[stack[depth]];
                 break;
             default:
                 throw new Exception("error: cannot store at index");
@@ -421,8 +416,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             stack[depth++] = *func.captured[cur.value];
             break;
         case Opcode.use:
-            stack[depth - 1] = (*(*locals[$ - 1].value.arr)[$ - 1].value.tab)[dynamic(
-                        stack[depth - 1].value.str)];
+            stack[depth - 1] = locals[$ - 1].arr[$ - 1].tab[dynamic(stack[depth - 1].str)];
             break;
         case Opcode.store:
             locals[cur.value] = stack[depth - 1];
@@ -431,11 +425,10 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             switch (stack[depth - 2].type)
             {
             case Dynamic.Type.arr:
-                (*stack[depth - 2].value.arr)[stack[depth - 1].value.num.to!size_t] = stack[depth
-                    - 3];
+                stack[depth - 2].arr[stack[depth - 1].num.to!size_t] = stack[depth - 3];
                 break;
             case Dynamic.Type.tab:
-                (*stack[depth - 2].value.tab)[stack[depth - 1]] = stack[depth - 3];
+                stack[depth - 2].tab[stack[depth - 1]] = stack[depth - 3];
                 break;
             default:
                 throw new Exception("error: cannot store at index");
@@ -449,8 +442,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             break;
         case Opcode.qstore:
             depth -= 1;
-            (*(*locals[$ - 1].value.arr)[$ - 1].value.tab)[dynamic(stack[depth].value.str)] = stack[depth
-                - 1];
+            locals[$ - 1].arr[$ - 1].tab[dynamic(stack[depth].str)] = stack[depth - 1];
             break;
         case Opcode.opstore:
         switchOpp:
@@ -461,8 +453,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
                 static foreach (opm; mutMap)
                 {
             case opm[1].to!AssignOp:
-                    stack[depth - 1] = mixin(
-                            "locals[cur.value]" ~ opm[0] ~ " stack[depth - 1]");
+                    stack[depth - 1] = mixin("locals[cur.value]" ~ opm[0] ~ " stack[depth - 1]");
                     break switchOpp;
                 }
             }
@@ -481,13 +472,11 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
                     {
                     case Dynamic.Type.arr:
                         stack[depth - 3] = mixin(
-                                "(*arr.value.arr)[stack[depth-1].value.num.to!size_t]"
-                                ~ opm[0] ~ " stack[depth-3]");
+                                "arr.arr[stack[depth-1].num.to!size_t]" ~ opm[0] ~ " stack[depth-3]");
                         break switchOpi;
                     case Dynamic.Type.tab:
                         stack[depth - 3] = mixin(
-                                "(*arr.value.tab)[stack[depth-1]]"
-                                ~ opm[0] ~ " stack[depth-3]");
+                                "arr.tab[stack[depth-1]]" ~ opm[0] ~ " stack[depth-3]");
                         break switchOpi;
                     default:
                         throw new Exception("error: cannot store at index");
@@ -523,7 +512,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
                 {
             case opm[1].to!AssignOp:
                     stack[depth - 1] = mixin(
-                            "(*(*locals[$ - 1].value.arr)[$ - 1].value.tab)[dynamic(stack[depth].value.str)]"
+                            "locals[$ - 1].arr[$ - 1].tab[dynamic(stack[depth].str)]"
                             ~ opm[0] ~ "stack[depth - 1]");
                     break switchOpq;
                 }
@@ -548,14 +537,14 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             break;
         case Opcode.iftrue:
             Dynamic val = stack[--depth];
-            if (val.type != Dynamic.Type.nil && (val.type != Dynamic.Type.log || val.value.log))
+            if (val.type != Dynamic.Type.nil && (val.type != Dynamic.Type.log || val.log))
             {
                 index = cur.value;
             }
             break;
         case Opcode.iffalse:
             Dynamic val = stack[--depth];
-            if (val.type == Dynamic.Type.nil || (val.type == Dynamic.Type.log && !val.value.log))
+            if (val.type == Dynamic.Type.nil || (val.type == Dynamic.Type.log && !val.log))
             {
                 index = cur.value;
             }
@@ -564,11 +553,11 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             index = cur.value;
             break;
         case Opcode.douse:
-            (*locals[$ - 1].value.arr) ~= stack[--depth];
+            locals[$ - 1].arr ~= stack[--depth];
             break;
         case Opcode.unuse:
-            stack[depth - 1] = (*locals[$ - 1].value.arr)[$ - 1];
-            (*locals[$ - 1].value.arr).length--;
+            stack[depth - 1] = locals[$ - 1].arr[$ - 1];
+            locals[$ - 1].arr.length--;
             break;
         }
         index++;
