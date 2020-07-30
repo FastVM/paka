@@ -166,6 +166,11 @@ void enterScope(Function afunc, Dynamic[] args)
         locals[i] = v;
     }
     locals[$ - 1] = dynamic([dynamic(Table.init)]);
+    // writeln("byPlace: ", func.captab.byPlace);
+    // writeln("captured: ", func.captured.map!(x => *x));
+    // writeln("constants: ", func.constants);
+    // writeln("funcs: ", func.funcs);
+    // writeln;
 }
 
 void exitScope()
@@ -206,8 +211,9 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
     vmLoop: while (true)
     {
         Instr cur = func.instrs[index];
+        // writeln(stack);
         // vmRecord ~= saveState;
-        // writeln(locals, "\n", stack[0..depth], "\n");
+        // writeln("stack: ", stack[0 .. depth], "\n", "locals: ", locals, "\n", cur, "\n");
         switch (cur.op)
         {
         default:
@@ -239,12 +245,18 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
                     built.captured ~= &locals[cap.from];
                 }
             }
+            if (built.env) {
+                built.captured ~= locals[$ - 1].arr[$ - 1 .. $].ptr;
+            }
             stack[depth++] = dynamic(built);
             break;
         case Opcode.bind:
             depth--;
-            Dynamic obj = stack[depth - 1];
-            (obj.tab)[stack[depth]].fun.pro.self = [obj];
+            // (obj.tab)[stack[depth]].fun.pro.self = [obj];
+            assert(stack[depth - 1].tab[stack[depth]].type == Dynamic.Type.pro);
+            stack[depth - 1].tab[stack[depth]].fun.pro = new Function(stack[depth - 1].tab[stack[depth]].fun.pro);
+            stack[depth - 1].tab[stack[depth]].fun.pro.self = [stack[depth - 1]];
+            stack[depth-1] = stack[depth - 1].tab[stack[depth]];
             break;
         case Opcode.call:
             depth -= cur.value;
@@ -414,6 +426,12 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             break;
         case Opcode.loadc:
             stack[depth++] = *func.captured[cur.value];
+            break;
+        case Opcode.loadenv:
+            stack[depth++] = *func.captured[$ - 1];
+            break;
+        case Opcode.loaduse:
+            stack[depth++] = locals[$ - 1].arr[$ - 1];
             break;
         case Opcode.use:
             stack[depth - 1] = locals[$ - 1].arr[$ - 1].tab[dynamic(stack[depth - 1].str)];

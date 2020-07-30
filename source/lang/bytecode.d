@@ -9,6 +9,12 @@ class Function
     {
         ushort[string] byName;
         string[] byPlace;
+        void clear()
+        {
+            byName = null;
+            byPlace = null;
+        }
+
         void set(string name, ushort us)
         {
             byName[name] = us;
@@ -17,7 +23,7 @@ class Function
 
         ushort define(string name)
         {
-            ushort ret = cast(ushort) byPlace.length;
+            ushort ret = cast(ushort)(byPlace.length);
             set(name, ret);
             return ret;
         }
@@ -50,6 +56,7 @@ class Function
     Lookup stab;
     Lookup captab;
     Function parent = null;
+    bool env;
 
     this()
     {
@@ -64,9 +71,17 @@ class Function
         parent = other.parent;
         captured = other.captured;
         stackSize = other.stackSize;
+        self = other.self.dup;
         stab = other.stab;
         captab = other.captab;
-        self = other.self;
+        env = other.env;
+    }
+
+    void useEnv() {
+        env = true;
+        if (parent !is null && !parent.env) {
+            parent.useEnv();
+        }
     }
 
     ushort doCapture(string name)
@@ -143,6 +158,8 @@ enum Opcode : ushort
     opmod,
     load,
     loadc,
+    loadenv,
+    loaduse,
     use,
     store,
     istore,

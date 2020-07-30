@@ -107,6 +107,7 @@ Function readjs(T)(JSONValue val, Function ret = new Function) if (is(T == Funct
     ret.funcs = val.object["funcs"].readjs!(Function[]);
     ret.self = val.object["self"].readjs!(Dynamic[]);
     ret.stab.byPlace.length = val.object["locc"].readjs!(size_t);
+    ret.env = cast(bool) val.object["env"].readjs!size_t;
     return ret;
 }
 
@@ -331,6 +332,7 @@ JSONValue js(Function f)
     ret["stackSize"] = f.stackSize.to!string;
     ret["self"] = f.self.map!js.array.js;
     ret["locc"] = f.stab.byPlace.length.js;
+    ret["env"] = (cast(size_t)(f.env)).js;
     depth--;
     return JSONValue(ret);
 }

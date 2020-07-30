@@ -224,7 +224,8 @@ align(1):
         }
         if (type == Type.str && other.type == Type.str)
         {
-            static if (op == "~" || op == "+") {
+            static if (op == "~" || op == "+")
+            {
                 return dynamic(mixin("value.str~other.str"));
             }
         }
@@ -245,7 +246,8 @@ align(1):
         }
         if (type == Type.str && other.type == Type.str)
         {
-            static if (op == "~" || op == "+") {
+            static if (op == "~" || op == "+")
+            {
                 dynamic(mixin("str~=other.str"));
                 return this;
             }
@@ -282,7 +284,7 @@ align(1):
 
     ref Array arr()
     {
-        if (type != Type.arr)
+        if (type != Type.arr && type != Type.dat)
         {
             throw new Exception("expected array type");
         }
@@ -335,7 +337,14 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         }
         return dyn.num.to!string;
     case Dynamic.Type.str:
-        return dyn.str;
+        if (before.length == 0)
+        {
+            return dyn.str;
+        }
+        else
+        {
+            return '"' ~ dyn.str ~ '"';
+        }
     case Dynamic.Type.arr:
         char[] ret;
         ret ~= "[";

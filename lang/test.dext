@@ -1,3 +1,6 @@
-x = object {
-    .x = 2
+tab = table {
+    .prop = "im a property"
+    .func = (this) => this.prop
 }
+
+print(tab::func())

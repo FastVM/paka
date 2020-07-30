@@ -1,0 +1,24 @@
+x = table {
+    .val = 1
+    .set = lambda(val) {
+        .val = val
+    }
+    .get = lambda() {
+        return .val
+    }
+}
+x.set(20)
+print(x.get())
+
+
+y = table {
+    .val = 300
+    .set = lambda(self, val) {
+        self.val = val
+    }
+    .get = lambda(self) {
+        return self.val
+    }
+}
+y::set(4000)
+print(y::get())

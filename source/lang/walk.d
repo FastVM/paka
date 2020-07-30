@@ -35,6 +35,7 @@ class Walker
 {
     Function func;
     ushort[2] stackSize;
+    ushort used;
     bool isTarget = false;
     enum string[] specialForms = [
             "@def", "@set", "@opset", "@while", "@array", "@table", "@target",
@@ -202,12 +203,14 @@ class Walker
     void walkFun(Node[] args)
     {
         Call argl = cast(Call) args[0];
-        Function last = func;
+        Function lastFunc = func;
+        ushort lastUsed = used;
         ushort[2] stackOld = stackSize;
         stackSize = [0, 0];
         Function newFunc = new Function;
         func = newFunc;
-        func.parent = last;
+        func.parent = lastFunc;
+        used = 0;
         foreach (i, v; argl.args)
         {
             Ident id = cast(Ident) v;
@@ -225,10 +228,11 @@ class Walker
         newFunc.instrs ~= Instr(Opcode.retval);
         newFunc.stackSize = stackSize[1];
         stackSize = stackOld;
-        last.instrs ~= Instr(Opcode.sub, cast(ushort) last.funcs.length);
+        lastFunc.instrs ~= Instr(Opcode.sub, cast(ushort) lastFunc.funcs.length);
         useStack;
-        last.funcs ~= newFunc;
-        func = last;
+        lastFunc.funcs ~= newFunc;
+        used = lastUsed;
+        func = lastFunc;
     }
 
     void walkBinary(string op)(Node[] args)
@@ -274,9 +278,21 @@ class Walker
                     freeStack(1);
                     break;
                 case ".":
-                    walkExact(new String((cast(Ident) call.args[1]).repr));
-                    func.instrs ~= Instr(Opcode.qstore);
-                    freeStack(1);
+                    if (used == 0)
+                    {
+                        func.useEnv();
+                        func.instrs ~= Instr(Opcode.loadenv);
+                        useStack;
+                        walk(new String((cast(Ident) call.args[1]).repr));
+                        func.instrs ~= Instr(Opcode.istore);
+                        freeStack;
+                    }
+                    else
+                    {
+                        walkExact(new String((cast(Ident) call.args[1]).repr));
+                        func.instrs ~= Instr(Opcode.qstore);
+                        freeStack(1);
+                    }
                     break;
                 default:
                     assert(0);
@@ -333,9 +349,21 @@ class Walker
                     freeStack(1);
                     break;
                 case ".":
-                    walkExact(new String((cast(Ident) call.args[1]).repr));
-                    func.instrs ~= Instr(Opcode.opqstore, id.repr.to!AssignOp);
-                    freeStack(1);
+                    if (used == 0)
+                    {
+                        func.useEnv();
+                        func.instrs ~= Instr(Opcode.loadenv);
+                        useStack;
+                        walk(new String((cast(Ident) call.args[1]).repr));
+                        func.instrs ~= Instr(Opcode.opistore, id.repr.to!AssignOp);
+                        freeStack;
+                    }
+                    else
+                    {
+                        walkExact(new String((cast(Ident) call.args[1]).repr));
+                        func.instrs ~= Instr(Opcode.opqstore, id.repr.to!AssignOp);
+                        freeStack(1);
+                    }
                     break;
                 default:
                     assert(0);
@@ -460,16 +488,45 @@ class Walker
         walk(args[0]);
         func.instrs ~= Instr(Opcode.douse);
         freeStack();
+        used++;
         walk(args[1]);
+        used--;
         func.instrs ~= Instr(Opcode.unuse);
     }
 
     void walkUse(Node[] args)
     {
-        walkExact(new String((cast(Ident) args[0]).repr));
-        if (!isTarget)
+        if (used == 0)
         {
-            func.instrs ~= Instr(Opcode.use);
+            func.useEnv();
+            if (isTarget)
+            {
+                func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
+                func.constants ~= dynamic(Dynamic.Type.end);
+                useStack;
+                func.instrs ~= Instr(Opcode.loadenv);
+                useStack;
+                walk(new String((cast(Ident) args[0]).repr));
+                func.instrs ~= Instr(Opcode.targeta);
+                freeStack(2);
+                func.instrs ~= Instr(Opcode.data);
+            }
+            else
+            {
+                func.instrs ~= Instr(Opcode.loadenv);
+                useStack;
+                walk(new String((cast(Ident) args[0]).repr));
+                func.instrs ~= Instr(Opcode.index);
+                freeStack;
+            }
+        }
+        else
+        {
+            walkExact(new String((cast(Ident) args[0]).repr));
+            if (!isTarget)
+            {
+                func.instrs ~= Instr(Opcode.use);
+            }
         }
     }
 
@@ -640,7 +697,19 @@ class Walker
         }
         else
         {
-            if (isTarget)
+            if (i.repr == "env")
+            {
+                if (used == 0)
+                {
+                    func.useEnv();
+                    func.instrs ~= Instr(Opcode.loadenv);
+                }
+                else
+                {
+                    func.instrs ~= Instr(Opcode.loaduse);
+                }
+            }
+            else if (isTarget)
             {
                 ushort* us = i.repr in func.stab.byName;
                 ushort v = void;

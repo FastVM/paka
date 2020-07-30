@@ -66,7 +66,7 @@ Node readPostExtend(ref Token[] tokens, Node last)
         ret = new Call(new Ident("@index"), [last, new String(tokens[0].value)]);
         tokens = tokens[1 .. $];
     }
-    else if (tokens[0].isOperator(":"))
+    else if (tokens[0].isOperator("::"))
     {
         tokens = tokens[1 .. $];
         ret = new Call(new Ident("@method"), [last, new String(tokens[0].value)]);
@@ -182,7 +182,11 @@ Node readPreExpr(ref Token[] tokens)
     {
         Token op = tokens[0];
         tokens = tokens[1 .. $];
-        return new Call(new Ident(op.value), [tokens.readPreExpr]);
+        string val = op.value;
+        if (op.value == "*") {
+            val = "...";
+        }
+        return new Call(new Ident(val), [tokens.readPreExpr]);
     }
     return tokens.readPostExpr;
 }
