@@ -71,11 +71,11 @@ JSONValue saveState()
 {
     GC.disable;
     JSONValue ret = JSONValue([
-            "localsa": localsa.map!js.array.js,
-            "stacka": stacka.map!js.array.js,
-            "indexa": indexa.map!js.array.js,
-            "deptha": deptha.map!js.array.js,
-            "funca": funca.js,
+            "localss": localss[0 .. calldepth].map!js.array.js,
+            "stacks": stacks[0 .. calldepth].map!js.array.js,
+            "indexs": indexs[0 .. calldepth].map!js.array.js,
+            "depths": depths[0 .. calldepth].map!js.array.js,
+            "funcs": funcs[0 .. calldepth].js,
             "base": rootBase.map!js.array.js,
             ]);
     GC.enable;
@@ -85,15 +85,20 @@ JSONValue saveState()
 void loadState(JSONValue val)
 {
     localTies = null;
-    val.object["localsa"].readjs!(typeof(localsa))(&localsa);
-    stacka = val.object["stacka"].readjs!(typeof(stacka));
-    indexa = val.object["indexa"].readjs!(typeof(indexa));
-    deptha = val.object["deptha"].readjs!(typeof(deptha));
-    funca = val.object["funca"].readjs!(typeof(funca));
+    val.object["localss"].readjs!(typeof(localss))(&localss);
+    localss.length = 1000;
+    val.object["stacks"].readjs!(typeof(stacks))(&stacks);
+    stacks.length = 1000;
+    val.object["indexs"].readjs!(typeof(indexs))(&indexs);
+    indexs.length = 1000;
+    val.object["depths"].readjs!(typeof(depths))(&depths);
+    depths.length = 1000;
+    val.object["funcs"].readjs!(typeof(funcs))(&funcs);
+    funcs.length = 1000;
     rootBase = val.object["base"].readjs!(typeof(rootBase));
     foreach (tie; localTies)
     {
-        *tie.target = localsa[tie.ind1][tie.ind2];
+        *tie.target = localss[tie.ind1][tie.ind2];
     }
 }
 
@@ -136,7 +141,7 @@ Function[] abovef;
 
 Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
 {
-    above ~= nil;
+    above ~= Dynamic.nil;
     abovef.length++;
     abovef[$ - 1] = null;
     scope (exit)
@@ -154,7 +159,7 @@ Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
         }
         return above[vst];
     case "nil":
-        return nil;
+        return Dynamic.nil;
     case "log":
         return dynamic(val.object["value"].str.to!bool);
     case "num":
@@ -193,7 +198,7 @@ Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
         Dynamic ret = void;
         if (val.object["value"].type == JSONType.string)
         {
-            ret = nil;
+            ret = Dynamic.nil;
         }
         else
         {
@@ -212,12 +217,12 @@ T readjs(T)(JSONValue val) if (isPointer!T)
         {
             size_t k1 = val.object["value"].object["level"].str.to!size_t;
             size_t k2 = val.object["value"].object["index"].str.to!size_t;
-            size_t ilength = localsa.length;
-            localsa.length = max(localsa.length, k1 + 1);
-            size_t klength = localsa[k1].length;
-            localsa[k1].length = max(localsa[k1].length, k2 + 1);
-            Dynamic* ret = &localsa[k1][k2];
-            if (ilength != localsa.length || klength != localsa[k1].length)
+            size_t ilength = calldepth;
+            calldepth = max(calldepth, k1 + 1);
+            size_t klength = localss[k1].length;
+            localss[k1].length = max(localss[k1].length, k2 + 1);
+            Dynamic* ret = &localss[k1][k2];
+            if (ilength != localss.length || klength != localss[k1].length)
             {
                 *ret = readjs!Dynamic(val.object["literal"]);
             }
@@ -258,7 +263,7 @@ T readjs(T)(JSONValue val, T* arr = null) if (isArray!T)
 
 JSONValue jsp(Dynamic* d)
 {
-    foreach (n, l; localsa)
+    foreach (n, l; localss)
     {
         foreach (i; 0 .. l.length)
         {
@@ -321,18 +326,14 @@ JSONValue js(Function f)
     depth++;
     JSONValue[string] ret;
     ret["capture"] = f.capture.map!js.array.js;
-    if (GC.addrOf(f.instrs.ptr) is null)
-    {
-        assert(0);
-    }
     ret["instrs"] = f.instrs.map!js.array.js;
     ret["constants"] = f.constants.map!js.array.js;
-    ret["captured"] = f.captured.map!jsp.array.js;
     ret["funcs"] = f.funcs.map!js.array.js;
     ret["stackSize"] = f.stackSize.to!string;
     ret["self"] = f.self.map!js.array.js;
     ret["locc"] = f.stab.byPlace.length.js;
     ret["env"] = (cast(size_t)(f.env)).js;
+    ret["captured"] = f.captured.map!jsp.array.js;
     depth--;
     return JSONValue(ret);
 }
@@ -375,10 +376,7 @@ JSONValue js(Dynamic d)
                 "value": JSONValue(d.num.to!string)
                 ]);
     case Dynamic.Type.str:
-        return JSONValue([
-                "type": JSONValue("str"),
-                "value": JSONValue(d.str)
-                ]);
+        return JSONValue(["type": JSONValue("str"), "value": JSONValue(d.str)]);
     case Dynamic.Type.arr:
         return JSONValue(["type": JSONValue("arr"), "value": d.arr.js]);
     case Dynamic.Type.tab:

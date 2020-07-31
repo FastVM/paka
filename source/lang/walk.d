@@ -4,6 +4,7 @@ import lang.ast;
 import lang.bytecode;
 import lang.dynamic;
 import lang.base;
+import lang.ssize;
 import std.algorithm;
 import std.conv;
 import std.string;
@@ -54,6 +55,10 @@ class Walker
         walk(node);
         func.instrs ~= Instr(Opcode.retval);
         func.stackSize = stackSize[1];
+        // foreach(k,i; func.instrs) {
+        //     writeln(k,":",i);
+        // }
+        func.resizeStack;
         return func;
     }
 
@@ -98,6 +103,7 @@ class Walker
             if (info == typeid(T))
             {
                 walkExact(cast(T) node);
+                // writeln(stackSize[0], " => ", node);
                 return;
             }
         }
@@ -129,7 +135,7 @@ class Walker
         {
             func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
             useStack;
-            func.constants ~= nil;
+            func.constants ~= Dynamic.nil;
         }
         foreach (i, v; args)
         {
@@ -170,7 +176,7 @@ class Walker
         func.instrs[whileloc].value = cast(ushort)(func.instrs.length - 1);
         func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
         useStack;
-        func.constants ~= nil;
+        func.constants ~= Dynamic.nil;
     }
 
     void walkArrowFun(Node[] args)
@@ -269,7 +275,7 @@ class Walker
                     walk(call.args[1]);
                     walk(call.args[2]);
                     func.instrs ~= Instr(Opcode.istore);
-                    freeStack(2);
+                    freeStack;
                     break;
                 case "@table":
                 case "@array":
@@ -675,19 +681,19 @@ class Walker
         {
             func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
             useStack;
-            func.constants ~= nil;
+            func.constants ~= Dynamic.nil;
         }
         else if (i.repr == "true")
         {
             func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
             useStack;
-            func.constants ~= ltrue;
+            func.constants ~= dynamic(true);
         }
         else if (i.repr == "false")
         {
             func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
             useStack;
-            func.constants ~= lfalse;
+            func.constants ~= dynamic(false);
         }
         else if (i.repr.isNumeric)
         {

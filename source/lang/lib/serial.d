@@ -20,7 +20,7 @@ Dynamic libdumpf(Args args)
         file.write(args[1].js);
     }
     file.close;
-    return lfalse;
+    return dynamic(false);
 }
 
 Dynamic libundumpf(Args args)

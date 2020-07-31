@@ -20,15 +20,10 @@ alias Args = Dynamic[];
 alias Array = Dynamic[];
 alias Table = Dynamic[Dynamic];
 
-alias dynamic = Dynamic;
-
-Dynamic nil()
+Dynamic dynamic(T...)(T a)
 {
-    return dynamic.init;
+    return Dynamic(a);
 }
-
-Dynamic ltrue = dynamic(true);
-Dynamic lfalse = dynamic(false);
 
 struct Dynamic
 {
@@ -52,8 +47,8 @@ struct Dynamic
         bool log;
         Number num;
         string str;
-        Array* arr;
-        Table* tab;
+        Array arr;
+        Table tab;
         union Callable
         {
             Dynamic function(Args) fun;
@@ -92,15 +87,13 @@ align(1):
 
     this(Array arr)
     {
-        value.arr = cast(Dynamic[]*) GC.malloc((Dynamic[]).sizeof);
-        *value.arr = arr;
+        value.arr = arr;
         type = Type.arr;
     }
 
     this(Table tab)
     {
-        value.tab = cast(Dynamic[Dynamic]*) GC.malloc((Dynamic[Dynamic]).sizeof);
-        *value.tab = tab;
+        value.tab = tab;
         type = Type.tab;
     }
 
@@ -120,6 +113,29 @@ align(1):
     {
         value = other.value;
         type = other.type;
+    }
+
+    static Dynamic nil()
+    {
+        Dynamic ret = dynamic(false);
+        ret.value = Dynamic.Value.init;
+        ret.type = Dynamic.Type.nil;
+        return ret;
+    }
+
+    size_t toHash() const nothrow  // override size_t toHash() const nothrow @trusted
+    {
+        switch (type)
+        {
+        default:
+            return hashOf(type) ^ hashOf(value);
+        case Type.str:
+            return hashOf(value.str);
+        case Type.arr:
+            return hashOf(value.arr);
+        case Type.tab:
+            return hashOf(value.tab);
+        }
     }
 
     string toString()
@@ -170,50 +186,7 @@ align(1):
 
     bool opEquals(const Dynamic other) const
     {
-        if (other.type != type)
-        {
-            return false;
-        }
-        if (this.value == other.value)
-        {
-            return true;
-        }
-        switch (type)
-        {
-        default:
-            assert(0);
-        case Type.nil:
-            return true;
-        case Type.log:
-            return value.log == other.value.log;
-        case Type.num:
-            return value.num == other.value.num;
-        case Type.str:
-            return value.str == other.value.str;
-        case Type.arr:
-            return *value.arr == *other.value.arr;
-        case Type.tab:
-            return *value.tab == *other.value.tab;
-        case Type.fun:
-            return value.fun.fun == other.value.fun.fun;
-        case Type.pro:
-            return value.fun.pro == other.value.fun.pro;
-        }
-    }
-
-    size_t toHash() const nothrow
-    {
-        switch (type)
-        {
-        default:
-            return hashOf(this.type) ^ hashOf(this.value);
-        case Type.str:
-            return hashOf(value.str);
-        case Type.arr:
-            return hashOf(*value.arr);
-        case Type.tab:
-            return hashOf(*value.tab);
-        }
+        return isEqual(this, other);
     }
 
     Dynamic opBinary(string op)(Dynamic other)
@@ -235,24 +208,6 @@ align(1):
     Dynamic opUnary(string op)()
     {
         return dynamic(mixin(op ~ "value.num"));
-    }
-
-    Dynamic opOpAssign(string op)(Dynamic other)
-    {
-        if (type == Type.num && other.type == Type.num)
-        {
-            dynamic(mixin("num" ~ op ~ "=other.num"));
-            return this;
-        }
-        if (type == Type.str && other.type == Type.str)
-        {
-            static if (op == "~" || op == "+")
-            {
-                dynamic(mixin("str~=other.str"));
-                return this;
-            }
-        }
-        throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
     }
 
     ref bool log()
@@ -288,7 +243,7 @@ align(1):
         {
             throw new Exception("expected array type");
         }
-        return *value.arr;
+        return value.arr;
     }
 
     ref Table tab()
@@ -297,7 +252,7 @@ align(1):
         {
             throw new Exception("expected table type");
         }
-        return *value.tab;
+        return value.tab;
     }
 
     ref Value.Callable fun()
@@ -309,6 +264,39 @@ align(1):
         return value.fun;
     }
 
+}
+
+private bool isEqual(Dynamic a, Dynamic b)
+{
+    if (b.type != a.type)
+    {
+        return false;
+    }
+    if (a.value == b.value)
+    {
+        return true;
+    }
+    switch (a.type)
+    {
+    default:
+        assert(0);
+    case Dynamic.Type.nil:
+        return true;
+    case Dynamic.Type.log:
+        return a.value.log == b.value.log;
+    case Dynamic.Type.num:
+        return a.value.num == b.value.num;
+    case Dynamic.Type.str:
+        return a.value.str == b.value.str;
+    case Dynamic.Type.arr:
+        return a.value.arr == b.value.arr;
+    case Dynamic.Type.tab:
+        return a.value.tab == b.value.tab;
+    case Dynamic.Type.fun:
+        return a.value.fun.fun == b.value.fun.fun;
+    case Dynamic.Type.pro:
+        return a.value.fun.pro == b.value.fun.pro;
+    }
 }
 
 private string strFormat(Dynamic dyn, Dynamic[] before = null)
@@ -376,7 +364,12 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         ret ~= "}";
         return cast(string) ret;
     case Dynamic.Type.fun:
-        return serialLookup[dyn.fun.fun];
+        string* name = dyn.fun.fun in serialLookup;
+        if (name is null)
+        {
+            return "<lambda>";
+        }
+        return *name;
     case Dynamic.Type.pro:
         return dyn.fun.pro.to!string;
     }

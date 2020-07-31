@@ -77,9 +77,11 @@ class Function
         env = other.env;
     }
 
-    void useEnv() {
+    void useEnv()
+    {
         env = true;
-        if (parent !is null && !parent.env) {
+        if (parent !is null && !parent.env)
+        {
             parent.useEnv();
         }
     }

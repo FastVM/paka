@@ -10,7 +10,7 @@ Dynamic libprint(Args args)
         write(i);
     }
     writeln;
-    return nil;
+    return Dynamic.nil;
 }
 
 Dynamic libput(Args args)
@@ -19,7 +19,7 @@ Dynamic libput(Args args)
     {
         write(i);
     }
-    return nil;
+    return Dynamic.nil;
 }
 
 Dynamic libreadln(Args args)

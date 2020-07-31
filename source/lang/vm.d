@@ -18,7 +18,7 @@ enum string[2][] cmpMap()
 
 enum string[2][] mutMap()
 {
-    return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"], ["%=", "mod"]];
+    return [["+", "add"], ["-", "sub"], ["*", "mul"], ["/", "div"], ["%", "mod"]];
 }
 
 Dynamic[] glocals = null;
@@ -29,11 +29,11 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
     {
         static if (op == "=")
         {
-            mixin("locals[cast(size_t) to.num]" ~ op ~ "from;");
+            mixin("locals[cast(size_t) to.num] = locals[cast(size_t) to.num]" ~ op ~ "from;");
         }
         else
         {
-            mixin("locals[cast(size_t) to.num]" ~ op ~ "from;");
+            mixin("locals[cast(size_t) to.num] = locals[cast(size_t) to.num]" ~ op ~ "from;");
         }
     }
     else if (to.type == Dynamic.Type.dat)
@@ -58,10 +58,12 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                mixin("arr.arr[to.arr[1].num.to!size_t]" ~ op ~ " from;");
+                mixin(
+                        "arr.arr[to.arr[1].num.to!size_t] = arr.arr[to.arr[1].num.to!size_t]"
+                        ~ op ~ " from;");
                 break;
             case Dynamic.Type.tab:
-                mixin("arr.tab[to.arr[1]]" ~ op ~ " from;");
+                mixin("arr.tab[to.arr[1]] = arr.tab[to.arr[1]]" ~ op ~ " from;");
                 break;
             default:
                 throw new Exception("error: cannot store at index");
@@ -76,7 +78,8 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
         }
         else
         {
-            mixin("locals[$ - 1].arr[$ - 1].tab[to]" ~ op ~ " from;");
+            Table tab = locals[$ - 1].arr[$ - 1].tab;
+            mixin("tab[to] = tab[to]" ~ op ~ " from;");
         }
     }
     else
@@ -123,63 +126,78 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
     }
 }
 
-Dynamic[][] stacka;
-Dynamic[][] localsa;
-size_t[] indexa;
-size_t[] deptha;
-Function[] funca;
+size_t calldepth;
+Dynamic[][] stacks = new Array[1000];
+Dynamic[][] localss = new Array[1000];
+size_t[] indexs = new size_t[1000];
+Function[] funcs = new Function[1000];
+size_t[] depths = new size_t[1000];
 
 ref Dynamic[] stack()
 {
-    return stacka[$ - 1];
+    return stacks[calldepth - 1];
 }
 
 ref Dynamic[] locals()
 {
-    return localsa[$ - 1];
+    return localss[calldepth - 1];
 }
 
 ref size_t index()
 {
-    return indexa[$ - 1];
+    return indexs[calldepth - 1];
 }
 
 ref size_t depth()
 {
-    return deptha[$ - 1];
+    return depths[calldepth - 1];
 }
 
 Function func()
 {
-    return funca[$ - 1];
+    // writeln(calldepth);
+    return funcs[calldepth - 1];
 }
 
 void enterScope(Function afunc, Dynamic[] args)
 {
-    funca ~= afunc;
-    stacka ~= new Dynamic[func.stackSize];
-    localsa ~= new Dynamic[func.stab.byPlace.length + 1];
-    indexa ~= 0;
-    deptha ~= 0;
+    funcs[calldepth] = afunc;
+    // stacks[calldepth] = new Dynamic[afunc.stackSize];
+    // localss[calldepth] = new Dynamic[afunc.stab.byPlace.length + 1];
+
+    Dynamic* ptr = cast(Dynamic*) GC.malloc(
+            (afunc.stackSize + afunc.stab.byPlace.length + 1) * Dynamic.sizeof);
+    stacks[calldepth] = ptr[0 .. afunc.stackSize];
+    localss[calldepth] = ptr[afunc.stackSize .. afunc.stackSize + afunc.stab.byPlace.length + 1];
+    // stacks[calldepth] = new Dynamic[2 ^^ 16];
+    // Dynamic* ptr = cast(Dynamic*) GC.malloc((afunc.stab.byPlace.length + 1) * Dynamic.sizeof);
+    // localss[calldepth] = ptr[0 .. afunc.stab.byPlace.length + 1];
+    indexs[calldepth] = 0;
+    depths[calldepth] = 0;
+    calldepth += 1;
+
     foreach (i, v; args)
     {
         locals[i] = v;
     }
-    locals[$ - 1] = dynamic([dynamic(Table.init)]);
+    locals[$ - 1] = dynamic(Array.init);
     // writeln("byPlace: ", func.captab.byPlace);
     // writeln("captured: ", func.captured.map!(x => *x));
     // writeln("constants: ", func.constants);
     // writeln("funcs: ", func.funcs);
+    // writeln("locals: ", locals);
     // writeln;
 }
 
 void exitScope()
 {
-    funca.length--;
-    stacka.length--;
-    localsa.length--;
-    indexa.length--;
-    deptha.length--;
+    calldepth--;
+    // writeln("exit");
+    // funcs.length--;
+    // stacka.length--;
+    // localsa.length--;
+    // indexs.length--;
+    // deptha.length--;
 }
 
 JSONValue[] vmRecord;
@@ -200,7 +218,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             }
         }
     }
-    size_t exiton = funca.length;
+    size_t exiton = calldepth;
     static if (saveLocals)
     {
         scope (exit)
@@ -213,7 +231,8 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
         Instr cur = func.instrs[index];
         // writeln(stack);
         // vmRecord ~= saveState;
-        // writeln("stack: ", stack[0 .. depth], "\n", "locals: ", locals, "\n", cur, "\n");
+        // writeln(index, ": ", cur);
+        // writeln("stack: ", stack[0 .. depth], "\n", "locals: ", locals, "\n");
         switch (cur.op)
         {
         default:
@@ -245,8 +264,9 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
                     built.captured ~= &locals[cap.from];
                 }
             }
-            if (built.env) {
-                built.captured ~= locals[$ - 1].arr[$ - 1 .. $].ptr;
+            if (built.env)
+            {
+                built.captured ~= &locals[$ - 1].arr[$ - 1];
             }
             stack[depth++] = dynamic(built);
             break;
@@ -254,9 +274,10 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             depth--;
             // (obj.tab)[stack[depth]].fun.pro.self = [obj];
             assert(stack[depth - 1].tab[stack[depth]].type == Dynamic.Type.pro);
-            stack[depth - 1].tab[stack[depth]].fun.pro = new Function(stack[depth - 1].tab[stack[depth]].fun.pro);
+            stack[depth - 1].tab[stack[depth]].fun.pro = new Function(
+                    stack[depth - 1].tab[stack[depth]].fun.pro);
             stack[depth - 1].tab[stack[depth]].fun.pro.self = [stack[depth - 1]];
-            stack[depth-1] = stack[depth - 1].tab[stack[depth]];
+            stack[depth - 1] = stack[depth - 1].tab[stack[depth]];
             break;
         case Opcode.call:
             depth -= cur.value;
@@ -269,6 +290,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             case Dynamic.Type.pro:
                 enterScope(f.fun.pro,
                         f.fun.pro.self ~ stack[depth .. depth + cur.value]);
+                // stack[depth .. depth + cur.value]);
                 continue vmLoop;
             default:
                 throw new Exception("error: not a function: " ~ f.to!string);
@@ -303,6 +325,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
                 break;
             case Dynamic.Type.pro:
                 enterScope(f.fun.pro, f.fun.pro.self ~ cargs);
+                // enterScope(f.fun.pro, cargs);
                 continue vmLoop;
             default:
                 throw new Exception("error: not a function: " ~ f.to!string);
@@ -403,23 +426,23 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             break;
         case Opcode.opadd:
             depth--;
-            stack[depth - 1] += stack[depth];
+            stack[depth - 1] = stack[depth - 1] + stack[depth];
             break;
         case Opcode.opsub:
             depth--;
-            stack[depth - 1] -= stack[depth];
+            stack[depth - 1] = stack[depth - 1] - stack[depth];
             break;
         case Opcode.opmul:
             depth--;
-            stack[depth - 1] *= stack[depth];
+            stack[depth - 1] = stack[depth - 1] * stack[depth];
             break;
         case Opcode.opdiv:
             depth--;
-            stack[depth - 1] /= stack[depth];
+            stack[depth - 1] = stack[depth - 1] / stack[depth];
             break;
         case Opcode.opmod:
             depth--;
-            stack[depth - 1] %= stack[depth];
+            stack[depth - 1] = stack[depth - 1] % stack[depth];
             break;
         case Opcode.load:
             stack[depth++] = locals[cur.value];
@@ -538,7 +561,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             break;
         case Opcode.retval:
             Dynamic v = stack[--depth];
-            if (funca.length == exiton)
+            if (calldepth == exiton)
             {
                 return v;
             }
@@ -546,12 +569,12 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             stack[depth - 1] = v;
             break;
         case Opcode.retnone:
-            if (funca.length == exiton)
+            if (calldepth == exiton)
             {
-                return nil;
+                return Dynamic.nil;
             }
             exitScope;
-            stack[depth - 1] = nil;
+            stack[depth - 1] = Dynamic.nil;
             break;
         case Opcode.iftrue:
             Dynamic val = stack[--depth];
