@@ -2,23 +2,17 @@ x = table {
     .val = 1
     .set = lambda(val) {
         .val = val
-    }
-    .get = lambda() {
         return .val
     }
 }
-x.set(20)
-print(x.get())
-
+print(x.set(20))
 
 y = table {
     .val = 300
     .set = lambda(self, val) {
         self.val = val
-    }
-    .get = lambda(self) {
-        return self.val
+        return .val
     }
 }
-y::set(4000)
-print(y::get())
+
+print(y.set(y, 4000))

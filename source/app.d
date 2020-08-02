@@ -16,19 +16,49 @@ import std.string;
 import std.getopt;
 import core.memory;
 
+extern (C) __gshared string[] rt_options = ["scanDataSeg=precise"];
+
 void main(string[] args)
 {
 	string[] scripts;
 	string[] stmts;
+	bool save = false;
 	bool repl = false;
 	bool carry = false;
+	ubyte vm = 1;
 	string world = "world/repl.json";
 	auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-			&scripts, "caarry", &carry, "json", &world);
+			&scripts, "caarry", &carry, "json", &world, "save", &save, "vm", &vm);
 	if (info.helpWanted)
 	{
 		defaultGetoptPrinter("Help for 9c language.", info.options);
 		return;
+	}
+	Dynamic runfn(bool a, bool b, bool c)(Function func, Args args)
+	{
+		if (vm == 1)
+		{
+			return run1!(a, b, c)(func, args);
+		}
+		// else if (vm == 2)
+		// {
+		// 	return run2!(a, b, c)(func, args);
+		// }
+		throw new Exception("bad vm version must be 1");
+	}
+
+	if (save)
+	{
+		if (world.length != 0)
+		{
+			File f = File(world, "w");
+			f.write(saveState);
+		}
+		if ("world/vm".exists)
+		{
+			"world/vm".rmdirRecurse;
+		}
+		"world/vm".mkdir;
 	}
 	foreach (i; stmts)
 	{
@@ -36,7 +66,15 @@ void main(string[] args)
 		Walker walker = new Walker;
 		Function func = walker.walkProgram(node);
 		func.captured = loadBase;
-		Dynamic retval = run!true(func, null);
+		Dynamic retval = void;
+		if (save)
+		{
+			retval = runfn!(true, true, true)(func, null);
+		}
+		else
+		{
+			retval = runfn!(true, true, false)(func, null);
+		}
 		if (retval.type != Dynamic.Type.nil)
 		{
 			writeln(retval);
@@ -55,7 +93,8 @@ void main(string[] args)
 		if (i.length > 5 && i[$ - 5 .. $] == ".json")
 		{
 			loadState(code.parseJSON);
-			run!(true, false)(null, null);
+			runfn!(true, false, false)(null, null);
+			save = false;
 		}
 		else
 		{
@@ -63,7 +102,14 @@ void main(string[] args)
 			Walker walker = new Walker;
 			Function func = walker.walkProgram(node);
 			func.captured = loadBase;
-			run(func, null);
+			if (save)
+			{
+				runfn!(false, true, true)(func, null);
+			}
+			else
+			{
+				runfn!(false, true, false)(func, null);
+			}
 		}
 	}
 	if (repl || (args.length == 1 && scripts.length == 0 && stmts.length == 0))
@@ -93,7 +139,15 @@ void main(string[] args)
 				Walker walker = new Walker;
 				Function func = walker.walkProgram(node);
 				func.captured = loadBase;
-				Dynamic retval = run!true(func, null);
+				Dynamic retval = void;
+				if (save)
+				{
+					retval = runfn!(true, true, true)(func, null);
+				}
+				else
+				{
+					retval = runfn!(true, true, false)(func, null);
+				}
 				if (retval.type != Dynamic.Type.nil)
 				{
 					writeln(retval);
@@ -111,19 +165,4 @@ void main(string[] args)
 			}
 		}
 	}
-	// if (world.length != 0)
-	// {
-	// 	File f = File(world, "w");
-	// 	f.write(saveState);
-	// }
-	// if ("world/vm".exists)
-	// {
-	// 	"world/vm".rmdirRecurse;
-	// }
-	// "world/vm".mkdir;
-	// foreach (i, v; vmRecord)
-	// {
-	// 	File f = File("world/vm/" ~ i.to!string ~ ".json", "w");
-	// 	f.write(v.toString);
-	// }
 }

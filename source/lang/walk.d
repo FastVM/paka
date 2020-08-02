@@ -203,6 +203,7 @@ class Walker
             useStack;
             last.funcs ~= newFunc;
             func = last;
+            newFunc.resizeStack;
         }
     }
 
@@ -239,6 +240,7 @@ class Walker
         lastFunc.funcs ~= newFunc;
         used = lastUsed;
         func = lastFunc;
+        newFunc.resizeStack;
     }
 
     void walkBinary(string op)(Node[] args)
@@ -498,6 +500,7 @@ class Walker
         walk(args[1]);
         used--;
         func.instrs ~= Instr(Opcode.unuse);
+        useStack();
     }
 
     void walkUse(Node[] args)

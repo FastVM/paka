@@ -28,63 +28,55 @@ struct LocalTie
     Dynamic* target;
 }
 
-void jsInit()
-{
-    cs[0] = new Rope!string("{");
-    cs[1] = new Rope!string(",");
-    cs[2] = new Rope!string(":");
-    cs[3] = new Rope!string("}");
-}
+// Rope!string jsRope(JSONValue val)
+// {
+//     return memoize!jsRopeImpl(val);
+// }
 
-Rope!string jsRope(JSONValue val)
-{
-    return memoize!jsRopeImpl(val);
-}
-
-Rope!string jsRopeImpl(JSONValue val)
-{
-    if (val.type == JSONType.string)
-    {
-        return new Rope!string("\"" ~ val.str ~ "\"");
-    }
-    Rope!string ret = cs[0];
-    bool begin = true;
-    foreach (i; val.object.byKeyValue)
-    {
-        if (begin)
-        {
-            begin = false;
-        }
-        else
-        {
-            ret = ret ~ cs[1];
-        }
-        ret = ret ~ new Rope!string("\"" ~ i.key ~ "\"");
-        ret = ret ~ cs[2];
-        ret = ret ~ i.value.jsRope;
-    }
-    ret = ret ~ cs[3];
-    return ret;
-}
+// Rope!string jsRopeImpl(JSONValue val)
+// {
+//     if (val.type == JSONType.string)
+//     {
+//         return new Rope!string("\"" ~ val.str ~ "\"");
+//     }
+//     Rope!string ret = cs[0];
+//     bool begin = true;
+//     foreach (i; val.object.byKeyValue)
+//     {
+//         if (begin)
+//         {
+//             begin = false;
+//         }
+//         else
+//         {
+//             ret = ret ~ cs[1];
+//         }
+//         ret = ret ~ new Rope!string("\"" ~ i.key ~ "\"");
+//         ret = ret ~ cs[2];@o
+//         ret = ret ~ i.value.jsRope;
+//     }
+//     ret = ret ~ cs[3];
+//     return ret;
+// }
 
 JSONValue saveState()
 {
-    GC.disable;
     JSONValue ret = JSONValue([
             "localss": localss[0 .. calldepth].map!js.array.js,
             "stacks": stacks[0 .. calldepth].map!js.array.js,
             "indexs": indexs[0 .. calldepth].map!js.array.js,
             "depths": depths[0 .. calldepth].map!js.array.js,
             "funcs": funcs[0 .. calldepth].js,
+            "calls": calldepth.js,
             "base": rootBase.map!js.array.js,
             ]);
-    GC.enable;
     return ret;
 }
 
 void loadState(JSONValue val)
 {
     localTies = null;
+    calldepth = val.object["calls"].readjs!size_t;
     val.object["localss"].readjs!(typeof(localss))(&localss);
     localss.length = 1000;
     val.object["stacks"].readjs!(typeof(stacks))(&stacks);
@@ -263,7 +255,7 @@ T readjs(T)(JSONValue val, T* arr = null) if (isArray!T)
 
 JSONValue jsp(Dynamic* d)
 {
-    foreach (n, l; localss)
+    foreach (n, l; localss[0 .. calldepth])
     {
         foreach (i; 0 .. l.length)
         {
@@ -285,6 +277,7 @@ JSONValue jsp(Dynamic* d)
 
 JSONValue js(T)(T[] d)
 {
+    // writeln(d.length, ": ", d.ptr);
     JSONValue[string] ret;
     ret["length"] = JSONValue(d.length.to!string);
     foreach (i, v; d)
@@ -361,8 +354,10 @@ JSONValue js(Dynamic d)
     {
         jsarr.length--;
     }
-    final switch (d.type)
+    switch (d.type)
     {
+    default:
+        assert(0);
     case Dynamic.Type.nil:
         return JSONValue(["type": JSONValue("nil")]);
     case Dynamic.Type.log:

@@ -178,6 +178,7 @@ enum Opcode : ushort
     jump,
     douse,
     unuse,
+    nonexist,
 }
 
 struct Instr
@@ -185,4 +186,5 @@ struct Instr
 align(1):
     Opcode op;
     ushort value;
+    ushort index;
 }

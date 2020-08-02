@@ -22,7 +22,8 @@ alias Table = Dynamic[Dynamic];
 
 Dynamic dynamic(T...)(T a)
 {
-    return Dynamic(a);
+    Dynamic ret = Dynamic(a);
+    return ret;
 }
 
 struct Dynamic
@@ -47,8 +48,8 @@ struct Dynamic
         bool log;
         Number num;
         string str;
-        Array arr;
-        Table tab;
+        Array* arr;
+        Table* tab;
         union Callable
         {
             Dynamic function(Args) fun;
@@ -87,13 +88,13 @@ align(1):
 
     this(Array arr)
     {
-        value.arr = arr;
+        value.arr = [arr].ptr;
         type = Type.arr;
     }
 
     this(Table tab)
     {
-        value.tab = tab;
+        value.tab = [tab].ptr;
         type = Type.tab;
     }
 
@@ -132,9 +133,9 @@ align(1):
         case Type.str:
             return hashOf(value.str);
         case Type.arr:
-            return hashOf(value.arr);
+            return hashOf(*value.arr);
         case Type.tab:
-            return hashOf(value.tab);
+            return hashOf(*value.tab);
         }
     }
 
@@ -193,7 +194,8 @@ align(1):
     {
         if (type == Type.num && other.type == Type.num)
         {
-            return dynamic(mixin("value.num" ~ op ~ "other.num"));
+            Dynamic ret = dynamic(mixin("value.num" ~ op ~ "other.num"));
+            return ret;
         }
         if (type == Type.str && other.type == Type.str)
         {
@@ -203,6 +205,14 @@ align(1):
             }
         }
         throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
+    }
+
+    Dynamic opOpAssign(string op)(Dynamic other)
+    {
+        Dynamic ret = mixin("this" ~ op ~ "other");
+        type = ret.type;
+        value = ret.value;
+        return this;
     }
 
     Dynamic opUnary(string op)()
@@ -243,7 +253,7 @@ align(1):
         {
             throw new Exception("expected array type");
         }
-        return value.arr;
+        return *value.arr;
     }
 
     ref Table tab()
@@ -252,7 +262,7 @@ align(1):
         {
             throw new Exception("expected table type");
         }
-        return value.tab;
+        return *value.tab;
     }
 
     ref Value.Callable fun()
@@ -266,7 +276,7 @@ align(1):
 
 }
 
-private bool isEqual(Dynamic a, Dynamic b)
+private bool isEqual(const Dynamic a, const Dynamic b)
 {
     if (b.type != a.type)
     {
@@ -289,9 +299,9 @@ private bool isEqual(Dynamic a, Dynamic b)
     case Dynamic.Type.str:
         return a.value.str == b.value.str;
     case Dynamic.Type.arr:
-        return a.value.arr == b.value.arr;
+        return *a.value.arr == *b.value.arr;
     case Dynamic.Type.tab:
-        return a.value.tab == b.value.tab;
+        return *a.value.tab == *b.value.tab;
     case Dynamic.Type.fun:
         return a.value.fun.fun == b.value.fun.fun;
     case Dynamic.Type.pro:

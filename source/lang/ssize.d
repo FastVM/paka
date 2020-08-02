@@ -4,7 +4,7 @@ import std.stdio;
 import lang.bytecode;
 
 void resizeStack(Function func) {
-    // foreach (i; func.instrs) {
-    //     func.stackSize = func.instrs.length;
-    // }
+    foreach (i, ref v; func.instrs) {
+        v.index = cast(ushort) i;
+    }
 }

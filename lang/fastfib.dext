@@ -1,15 +1,11 @@
 def pfib(n) {
-    a = 0
-    b = 1
-    i = 0
-    while (i <= n) {
-        print("fib(", i, ") = ", a)
-        tmp = a + b
-        a = b
-        b = tmp
-        i += 1
+    [a, b] = [0, 1]
+    while (n > 0) {
+        print(a)
+        [a, b] += [b - a, a]
+        n -= 1
     }
     return a
 }
 
-pfib(30)
+pfib(50)
