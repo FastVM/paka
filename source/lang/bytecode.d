@@ -82,7 +82,7 @@ class Function
         env = true;
         if (parent !is null && !parent.env)
         {
-            parent.useEnv();
+            parent.useEnv;
         }
     }
 

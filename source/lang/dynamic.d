@@ -34,9 +34,11 @@ struct Dynamic
         log,
         num,
         str,
+        box,
         arr,
         tab,
         fun,
+        del,
         pro,
         end,
         pac,
@@ -48,11 +50,13 @@ struct Dynamic
         bool log;
         Number num;
         string str;
+        Dynamic* box;
         Array* arr;
         Table* tab;
         union Callable
         {
             Dynamic function(Args) fun;
+            Dynamic delegate(Args) del;
             Function pro;
         }
 
@@ -86,6 +90,12 @@ align(1):
         type = Type.str;
     }
 
+    this(Dynamic* box)
+    {
+        value.box = box;
+        type = Type.box;
+    }
+
     this(Array arr)
     {
         value.arr = [arr].ptr;
@@ -102,6 +112,12 @@ align(1):
     {
         value.fun.fun = fun;
         type = Type.fun;
+    }
+
+    this(Dynamic delegate(Args) del)
+    {
+        value.fun.del = del;
+        type = Type.del;
     }
 
     this(Function pro)
@@ -146,12 +162,17 @@ align(1):
 
     int opCmp(Dynamic other)
     {
-        switch (type)
+        Type t = type;
+        before:
+        switch (t)
         {
         default:
             assert(0);
         case Type.nil:
             return 0;
+        case Type.box:
+            t = box.type;
+            goto before;
         case Type.log:
             if (value.log == other.log)
             {
@@ -222,6 +243,10 @@ align(1):
 
     ref bool log()
     {
+        if (type == Type.box)
+        {
+            return value.box.log;
+        }
         if (type != Type.log)
         {
             throw new Exception("expected logical type");
@@ -231,6 +256,10 @@ align(1):
 
     ref Number num()
     {
+        if (type == Type.box)
+        {
+            return value.box.num;
+        }
         if (type != Type.num)
         {
             throw new Exception("expected number type");
@@ -240,6 +269,10 @@ align(1):
 
     ref string str()
     {
+        if (type == Type.box)
+        {
+            return value.box.str;
+        }
         if (type != Type.str)
         {
             throw new Exception("expected string type");
@@ -249,6 +282,10 @@ align(1):
 
     ref Array arr()
     {
+        if (type == Type.box)
+        {
+            return value.box.arr;
+        }
         if (type != Type.arr && type != Type.dat)
         {
             throw new Exception("expected array type");
@@ -256,8 +293,25 @@ align(1):
         return *value.arr;
     }
 
+    ref Dynamic unbox() {
+        return *box;
+    }
+
+    ref Dynamic* box()
+    {
+        if (type != Type.box)
+        {
+            throw new Exception("expected box type");
+        }
+        return value.box;
+    }
+
     ref Table tab()
     {
+        if (type == Type.box)
+        {
+            return value.box.tab;
+        }
         if (type != Type.tab)
         {
             throw new Exception("expected table type");
@@ -267,7 +321,11 @@ align(1):
 
     ref Value.Callable fun()
     {
-        if (type != Type.fun && type != Type.pro)
+        if (type == Type.box)
+        {
+            return value.box.fun;
+        }
+        if (type != Type.fun && type != Type.pro && type != Type.del)
         {
             throw new Exception("expected callable type");
         }
@@ -304,6 +362,8 @@ private bool isEqual(const Dynamic a, const Dynamic b)
         return *a.value.tab == *b.value.tab;
     case Dynamic.Type.fun:
         return a.value.fun.fun == b.value.fun.fun;
+    case Dynamic.Type.del:
+        return a.value.fun.del == b.value.fun.del;
     case Dynamic.Type.pro:
         return a.value.fun.pro == b.value.fun.pro;
     }
@@ -343,6 +403,8 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         {
             return '"' ~ dyn.str ~ '"';
         }
+    case Dynamic.Type.box:
+        return "<box " ~ to!string(*dyn.value.box) ~ ">";
     case Dynamic.Type.arr:
         char[] ret;
         ret ~= "[";
@@ -374,12 +436,9 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         ret ~= "}";
         return cast(string) ret;
     case Dynamic.Type.fun:
-        string* name = dyn.fun.fun in serialLookup;
-        if (name is null)
-        {
-            return "<lambda>";
-        }
-        return *name;
+        return "<function>";
+    case Dynamic.Type.del:
+        return "<function>";
     case Dynamic.Type.pro:
         return dyn.fun.pro.to!string;
     }

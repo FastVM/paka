@@ -3,8 +3,9 @@ module lang.base;
 import lang.dynamic;
 import lang.bytecode;
 import lang.lib.io;
-import lang.lib.serial;
 import lang.lib.sys;
+import lang.lib.ffi;
+import lang.lib.box;
 
 struct Pair
 {
@@ -12,15 +13,31 @@ struct Pair
     Dynamic val;
 }
 
-Pair[] rootBase;
-Dynamic[string] rootFuncs;
-string[Dynamic function(Args)] serialLookup;
+Pair[][] rootBases;
+
+ref Pair[] rootBase()
+{
+    return rootBases[$ - 1];
+}
 
 static this()
 {
-    rootBase = getRootBase;
-    serialLookup = baseLookup;
-    rootFuncs = funcLookup;
+    rootBases ~= getRootBase;
+}
+
+void enterCtx()
+{
+    rootBases ~= getRootBase;
+}
+
+void exitCtx()
+{
+    rootBases.length--;
+}
+
+void defineRoot(string name, Dynamic val)
+{
+    rootBase ~= Pair(name, val);
 }
 
 Pair[] getRootBase()
@@ -34,12 +51,10 @@ Pair[] getRootBase()
         Pair("print", load(&lang.lib.io.libprint)),
         Pair("put", load(&lang.lib.io.libput)),
         Pair("readln", load(&lang.lib.io.libreadln)),
-        Pair("dumpf", load(&lang.lib.serial.libdumpf)),
-        Pair("dump", load(&lang.lib.serial.libdump)),
-        Pair("undump", load(&lang.lib.serial.libundump)),
-        Pair("resumef", load(&lang.lib.serial.libresumef)),
-        Pair("undumpf", load(&lang.lib.serial.libundumpf)),
         Pair("leave", load(&lang.lib.sys.libleave)),
+        Pair("symbol", load(&lang.lib.ffi.libselfload)),
+        Pair("box", load(&lang.lib.box.libbox)),
+        Pair("unbox", load(&lang.lib.box.libunbox)),
     ];
 }
 

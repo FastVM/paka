@@ -32,7 +32,8 @@ Node[] readOpen(string v)(ref Token[] tokens) if (v == "{}")
     {
         args ~= tokens.readExpr;
         items++;
-        if ((items % 2 == 0 && tokens[0].isComma) || (items % 2 == 1 && tokens[0].isOperator(":")))
+        // if ((items % 2 == 0 && tokens[0].isComma) || (items % 2 == 1 && tokens[0].isOperator(":")))
+        if (tokens[0].isComma || tokens[0].isOperator(":"))
         {
             tokens = tokens[1 .. $];
         }
@@ -60,9 +61,8 @@ Node readPostExtend(ref Token[] tokens, Node last)
     {
         ret = new Call(new Ident("@index"), last ~ tokens.readSquare);
     }
-    else if (tokens[0].isOperator("."))
+    else if (tokens[0].isDot)
     {
-        tokens = tokens[1 .. $];
         ret = new Call(new Ident("@index"), [last, new String(tokens[0].value)]);
         tokens = tokens[1 .. $];
     }
@@ -163,6 +163,11 @@ Node readPostExpr(ref Token[] tokens)
         Node loop = tokens.readBlock;
         last = new Call(new Ident("@while"), [cond, loop]);
     }
+    else if (tokens[0].isDot)
+    {
+        last = new Call(new Ident("."), [new Ident(tokens[0].value)]);
+        tokens = tokens[1 .. $];
+    }
     else if (tokens[0].isIdent)
     {
         last = new Ident(tokens[0].value);
@@ -183,7 +188,8 @@ Node readPreExpr(ref Token[] tokens)
         Token op = tokens[0];
         tokens = tokens[1 .. $];
         string val = op.value;
-        if (op.value == "*") {
+        if (op.value == "*")
+        {
             val = "...";
         }
         return new Call(new Ident(val), [tokens.readPreExpr]);

@@ -1,0 +1,3 @@
+C2 = f => x => (f => y => f(f)(y))(f => f)(x)
+F = f => x => if (x < 2) {x;} else {f(x - 1) + f(x - 2);}
+print(C2(F)(30))

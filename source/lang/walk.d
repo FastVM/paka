@@ -288,7 +288,7 @@ class Walker
                 case ".":
                     if (used == 0)
                     {
-                        func.useEnv();
+                        func.useEnv;
                         func.instrs ~= Instr(Opcode.loadenv);
                         useStack;
                         walk(new String((cast(Ident) call.args[1]).repr));
@@ -359,7 +359,7 @@ class Walker
                 case ".":
                     if (used == 0)
                     {
-                        func.useEnv();
+                        func.useEnv;
                         func.instrs ~= Instr(Opcode.loadenv);
                         useStack;
                         walk(new String((cast(Ident) call.args[1]).repr));
@@ -412,6 +412,7 @@ class Walker
 
     void walkArray(Node[] args)
     {
+        ushort tmp = stackSize[0];
         func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
         useStack;
         func.constants ~= dynamic(Dynamic.Type.end);
@@ -427,18 +428,23 @@ class Walker
         {
             func.instrs ~= Instr(Opcode.array);
         }
-        freeStack(args.length);
+        stackSize[0] = tmp;
+        useStack;
     }
 
     void walkTable(Node[] args)
     {
+        ushort tmp = stackSize[0];
+        func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
+        useStack;
+        func.constants ~= dynamic(Dynamic.Type.end);
         foreach (i; args)
         {
             walk(i);
         }
         func.instrs ~= Instr(Opcode.table, cast(ushort) args.length);
-        freeStack(args.length);
-        useStack();
+        stackSize[0] = tmp;
+        useStack;
     }
 
     void walkTarget(Node[] args)
@@ -495,19 +501,19 @@ class Walker
     {
         walk(args[0]);
         func.instrs ~= Instr(Opcode.douse);
-        freeStack();
+        freeStack;
         used++;
         walk(args[1]);
         used--;
         func.instrs ~= Instr(Opcode.unuse);
-        useStack();
+        useStack;
     }
 
     void walkUse(Node[] args)
     {
         if (used == 0)
         {
-            func.useEnv();
+            func.useEnv;
             if (isTarget)
             {
                 func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
@@ -710,7 +716,7 @@ class Walker
             {
                 if (used == 0)
                 {
-                    func.useEnv();
+                    func.useEnv;
                     func.instrs ~= Instr(Opcode.loadenv);
                 }
                 else

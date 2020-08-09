@@ -1,18 +1,23 @@
-x = table {
-    .val = 1
-    .set = lambda(val) {
-        .val = val
-        return .val
+n = 0
+res = 0
+while (n < 10) {
+    x = table {
+        .val = 1
+        .set = lambda(val) {
+            .val = val
+            return .val
+        }
     }
-}
-print(x.set(20))
+    res -= x.set(n)
 
-y = table {
-    .val = 300
-    .set = lambda(self, val) {
-        self.val = val
-        return .val
+    y = table {
+        .val = 300
+        .set = lambda(self, val) {
+            self.val = val
+            return .val
+        }
     }
+    n += 1
+    res += y::set(n)
 }
-
-print(y.set(y, 4000))
+print(res == 10)

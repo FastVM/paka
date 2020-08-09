@@ -1,8 +1,0 @@
-def abc() {
-    x = 7
-    dumpf("abc.json", abc)
-    print(x)
-    return x + 9
-}
-abc()
-result = undumpf("abc.json")()

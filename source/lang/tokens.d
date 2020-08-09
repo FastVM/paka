@@ -11,10 +11,11 @@ enum string[][] prec = [
         ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"], ["*", "/", "%"],
     ];
 
-enum string[] nops = [".", "::", "*", "!", ",",  ":"];
+enum string[] nops = ["::", "*", "!", ",", ":"];
 
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "target", "lambda", "using", "table"
+        "if", "else", "while", "return", "def", "target", "lambda", "using",
+        "table"
     ];
 
 enum string[] levels()
@@ -37,6 +38,7 @@ struct Token
         open,
         close,
         indent,
+        dotident,
         string,
     }
 
@@ -51,6 +53,11 @@ struct Token
     bool isIdent()
     {
         return type == Type.ident;
+    }
+
+    bool isDot()
+    {
+        return type == Type.dotident;
     }
 
     bool isString()
@@ -164,8 +171,13 @@ Token readToken(ref string code)
             return Token(Token.Type.operator, i);
         }
     }
-    if (peek.isAlphaNum || peek == '_')
+    if (peek.isAlphaNum || peek == '_' || peek == '.')
     {
+        bool isdot = peek == '.';
+        if (isdot)
+        {
+            read;
+        }
         char[] ret;
         while (peek.isAlphaNum || peek == '_')
         {
@@ -178,6 +190,10 @@ Token readToken(ref string code)
         if (keywords.canFind(ret))
         {
             return Token(Token.Type.keyword, ret);
+        }
+        if (isdot)
+        {
+            return Token(Token.Type.dotident, ret);
         }
         return Token(Token.Type.ident, ret);
     }
