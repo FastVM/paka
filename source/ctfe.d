@@ -8,6 +8,6 @@ pragma(msg, ctfeRun!q{
             return fib(x-2) + fib(x-1)
         }
     }
-    
+    git
     fib(20)
 });
