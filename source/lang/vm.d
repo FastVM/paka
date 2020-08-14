@@ -143,12 +143,12 @@ Dynamic run(T...)(Function func, T argss)
     size_t index = 0;
     size_t depth = 0;
     size_t argi = 0;
-    Dynamic* ptr = cast(Dynamic*) GC.calloc(
-            (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
-    Dynamic[] stack = ptr[0 .. func.stackSize];
-    Dynamic[] locals = ptr[func.stackSize .. func.stackSize + func.stab.byPlace.length + 1];
-    // Dynamic[] stack = new Dynamic[func.stackSize];
-    // Dynamic[] locals = new Dynamic[func.stab.byPlace.length];
+    // Dynamic* ptr = cast(Dynamic*) GC.calloc(
+    //         (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
+    // Dynamic[] stack = ptr[0 .. func.stackSize];
+    // Dynamic[] locals = ptr[func.stackSize .. func.stackSize + func.stab.byPlace.length + 1];
+    Dynamic[] stack = new Dynamic[func.stackSize];
+    Dynamic[] locals = new Dynamic[func.stab.byPlace.length + 1];
     scope (exit)
     {
         stack.length = 0;

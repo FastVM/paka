@@ -1,0 +1,3 @@
+yval = (y = 2, y += 1, y)
+xval = (x = 1, x += 2, x)
+print(xval == yval)

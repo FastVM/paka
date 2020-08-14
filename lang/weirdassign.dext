@@ -1,0 +1,12 @@
+index = 1
+while (index < 10) {
+    [x, y] = [[index-1], index]
+    [x[0], y] = [[y], x]
+    tab = table {
+        [.x, .y] = [*x[0], y[0][0]]
+        [.add, .sub, .mul, .div] = [.x + .y, .y - .x, .x * .y, .y / .x]
+    }
+    result = tab.x + tab.y + tab.add + tab.sub + tab.mul + tab.div
+    print(result == (index+2) * (index+2) - 3)
+    index += 1
+}

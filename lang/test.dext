@@ -1,1 +1,13 @@
-if (true) {1;}
+
+tab2 = table {
+    .value = 10
+    .get_value = lambda { return .value; }
+    .set_value = lambda (value) { .value = value; }
+}
+
+print(tab2.get_value())
+tab2.set_value(11)
+print(tab2.get_value())
+
+[tab2.value] = [12]
+print(tab2.get_value())

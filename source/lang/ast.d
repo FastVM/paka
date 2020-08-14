@@ -8,6 +8,7 @@ alias NodeTypes = AliasSeq!(Call, String, Ident);
 
 class Node
 {
+    string id="node";
 }
 
 class Call : Node
@@ -16,11 +17,13 @@ class Call : Node
     this(Node[] c)
     {
         args = c;
+        id="call";
     }
 
     this(Node f, Node[] a)
     {
-        args = f ~ a;
+        args = [f] ~ a;
+        id="call";
     }
 
     override string toString()
@@ -46,6 +49,7 @@ class Atom : Node
     this(string r)
     {
         repr = r;
+        id="atom";
     }
 
     override string toString()
@@ -59,6 +63,7 @@ class String : Atom
     this(string s)
     {
         super(s);
+        id="string";
     }
 
     override string toString()
@@ -72,13 +77,6 @@ class Ident : Atom
     this(string s)
     {
         super(s);
-    }
-}
-
-class Char : Atom
-{
-    this(char c)
-    {
-        super([c]);
+        id="ident";
     }
 }

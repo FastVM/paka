@@ -7,7 +7,71 @@ import std.algorithm;
 
 enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 
-Node[] readOpen(string v)(ref Token[] tokens) if (v != "{}")
+class PushArray(T)
+{
+    T[] tokens;
+    this(T[] t=null)
+    {
+        tokens = t;
+    }
+
+    T opIndex(size_t i)
+    {
+        return tokens[i];
+    }
+
+    void opOpAssign(string S)(T v) if (S == "~")
+    {
+        tokens ~= v;
+    }
+
+    PushArray!T opSlice(size_t i, size_t j)
+    {
+        return new PushArray(tokens[1 .. $]);
+    }
+
+    int opApply(scope int delegate(ref T) dg)
+    {
+        int result = 0;
+    
+        foreach (item; tokens)
+        {
+            result = dg(item);
+            if (result)
+                break;
+        }
+    
+        return result;
+    }
+
+    int opApply(scope int delegate(size_t, ref T) dg)
+    {
+        int result = 0;
+    
+        foreach (k, item; tokens)
+        {
+            result = dg(k, item);
+            if (result)
+                break;
+        }
+    
+        return result;
+    }
+
+    size_t length()
+    {
+        return tokens.length;
+    }
+
+    size_t opDollar()
+    {
+        return tokens.length;
+    }
+}
+
+alias TokenArray = PushArray!Token;
+
+Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
 {
     Node[] args;
     tokens = tokens[1 .. $];
@@ -23,7 +87,7 @@ Node[] readOpen(string v)(ref Token[] tokens) if (v != "{}")
     return args;
 }
 
-Node[] readOpen(string v)(ref Token[] tokens) if (v == "{}")
+Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
 {
     Node[] args;
     tokens = tokens[1 .. $];
@@ -46,7 +110,7 @@ alias readParens = readOpen!"()";
 alias readSquare = readOpen!"[]";
 alias readBrace = readOpen!"{}";
 
-Node readPostExtend(ref Token[] tokens, Node last)
+Node readPostExtend(ref TokenArray tokens, Node last)
 {
     if (tokens.length == 0)
     {
@@ -75,7 +139,7 @@ Node readPostExtend(ref Token[] tokens, Node last)
     return tokens.readPostExtend(ret);
 }
 
-Node readIf(ref Token[] tokens)
+Node readIf(ref TokenArray tokens)
 {
     Node[] cond = tokens.readParens;
     assert(cond.length == 1);
@@ -93,7 +157,7 @@ Node readIf(ref Token[] tokens)
     return new Call(new Ident("@if"), [cond[0], iftrue, iffalse]);
 }
 
-Node readUsing(ref Token[] tokens)
+Node readUsing(ref TokenArray tokens)
 {
     Node[] obj = tokens.readParens;
     assert(obj.length == 1);
@@ -101,13 +165,13 @@ Node readUsing(ref Token[] tokens)
     return new Call(new Ident("@using"), [obj[0], bod]);
 }
 
-Node readTableCons(ref Token[] tokens)
+Node readTableCons(ref TokenArray tokens)
 {
     Node bod = tokens.readBlock;
     return new Call(new Ident("@using"), [new Call(new Ident("@table"), []), bod]);
 }
 
-Node readPostExpr(ref Token[] tokens)
+Node readPostExpr(ref TokenArray tokens)
 {
     Node last = void;
     if (tokens[0].isKeyword("target"))
@@ -181,7 +245,7 @@ Node readPostExpr(ref Token[] tokens)
     return tokens.readPostExtend(last);
 }
 
-Node readPreExpr(ref Token[] tokens)
+Node readPreExpr(ref TokenArray tokens)
 {
     if (tokens[0].isOperator)
     {
@@ -197,14 +261,14 @@ Node readPreExpr(ref Token[] tokens)
     return tokens.readPostExpr;
 }
 
-Node readExpr(ref Token[] tokens, size_t level = 0)
+Node readExpr(ref TokenArray tokens, size_t level = 0)
 {
     if (level == prec.length)
     {
         return tokens.readPreExpr;
     }
-    Token[][] sub = [null];
-    Token[] opers;
+    TokenArray[] sub = [new TokenArray];
+    TokenArray opers = new TokenArray;
     bool lastIsOp = true;
     size_t depth = 0;
     while (tokens.length != 0)
@@ -233,7 +297,7 @@ Node readExpr(ref Token[] tokens, size_t level = 0)
             {
                 if (token.isOperator(op) && !lastIsOp)
                 {
-                    sub.length++;
+                    sub ~= new TokenArray;
                     opers ~= token;
                     found = true;
                     break;
@@ -305,9 +369,9 @@ Node readExpr(ref Token[] tokens, size_t level = 0)
     return ret;
 }
 
-Node readStmt(ref Token[] tokens)
+Node readStmt(ref TokenArray tokens)
 {
-    Token[] stmtTokens;
+    Token[] stmtTokens0;
     size_t depth;
     while (depth != 0 || !tokens[0].isSemicolon)
     {
@@ -319,10 +383,11 @@ Node readStmt(ref Token[] tokens)
         {
             depth--;
         }
-        stmtTokens ~= tokens[0];
+        stmtTokens0 ~= tokens[0];
         tokens = tokens[1 .. $];
     }
     tokens = tokens[1 .. $];
+    TokenArray stmtTokens = new TokenArray(stmtTokens0);
     if (stmtTokens.length == 0)
     {
         return null;
@@ -344,7 +409,7 @@ Node readStmt(ref Token[] tokens)
     return stmtTokens.readExpr;
 }
 
-Node readBlockBody(ref Token[] tokens)
+Node readBlockBody(ref TokenArray tokens)
 {
     Node[] ret;
     while (tokens.length > 0 && !tokens[0].isClose("}"))
@@ -358,17 +423,17 @@ Node readBlockBody(ref Token[] tokens)
     return new Call(new Ident("@do"), ret);
 }
 
-Node readBlock(ref Token[] tokens)
+Node readBlock(ref TokenArray tokens)
 {
     tokens = tokens[1 .. $];
-    Node ret = tokens.readBlockBody;
+    Node ret = readBlockBody(tokens);
     tokens = tokens[1 .. $];
     return ret;
 }
 
 Node parse(string code)
 {
-    Token[] tokens = code.tokenize;
+    TokenArray tokens = new TokenArray(code.tokenize);
     Node node = tokens.readBlockBody;
     return node;
 }

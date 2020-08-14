@@ -1,9 +1,9 @@
 module lang.walk;
 
 import lang.ast;
+import lang.base;
 import lang.bytecode;
 import lang.dynamic;
-import lang.base;
 import lang.ssize;
 import std.algorithm;
 import std.conv;
@@ -44,14 +44,28 @@ class Walker
             "%", "<", ">", "<=", ">=", "==", "!=", "...", "@index", "@method",
             "=>", "."
         ];
-    Function walkProgram(Node node)
+    Function walkProgram(bool ctfe = false)(Node node)
     {
-        func = new Function;
-        func.parent = baseFunction;
-        foreach (i; rootBase)
+        static if (ctfe)
         {
-            func.captab.define(i.name);
+            func = new Function;
+            func.parent = baseCtfeFunction;
+            foreach (i; rootCtfeBase)
+            {
+                func.captab.define(i.name);
+            }
         }
+        else
+        {
+            func = new Function;
+            func.parent = baseFunction;
+            foreach (i; rootBase)
+            {
+                func.captab.define(i.name);
+            }
+        }
+        // __ctfeWrite(func.to!string ~ "\n");
+        __ctfeWrite("heloo?\n");
         walk(node);
         func.instrs ~= Instr(Opcode.retval);
         func.stackSize = stackSize[1];
@@ -78,7 +92,7 @@ class Walker
 
     bool isSpecialCall(Node node)
     {
-        if (typeid(node) != typeid(Ident))
+        if (node.id != "ident")
         {
             return false;
         }
@@ -97,21 +111,25 @@ class Walker
 
     void walk(Node node)
     {
-        TypeInfo info = typeid(node);
-        foreach (T; NodeTypes)
+        switch (node.id)
         {
-            if (info == typeid(T))
-            {
-                walkExact(cast(T) node);
-                // writeln(stackSize[0], " => ", node);
-                return;
-            }
+        case "call":
+            walkExact(cast(Call) node);
+            break;
+        case "string":
+            walkExact(cast(String) node);
+            break;
+        case "ident":
+            walkExact(cast(Ident) node);
+            break;
+        default:
+            assert(0);
         }
     }
 
     void walkDef(Node[] args)
     {
-        if (typeid(args[0]) == typeid(Ident))
+        if (args[0].id == "ident")
         {
             Ident ident = cast(Ident) args[0];
             ushort place = func.stab.define(ident.repr);
@@ -706,6 +724,7 @@ class Walker
         }
         else if (i.repr.isNumeric)
         {
+            // __ctfeWrite(func.to!string);
             func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
             useStack;
             func.constants ~= dynamic(i.repr.to!Number);
