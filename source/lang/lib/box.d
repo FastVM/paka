@@ -2,12 +2,12 @@ module lang.lib.box;
 
 import lang.dynamic;
 
-Dynamic libbox(Dynamic[] args)
+Dynamic libbox(Args args)
 {
     return Dynamic([args[0]].ptr);
 }
 
-Dynamic libunbox(Dynamic[] args)
+Dynamic libunbox(Args args)
 {
     return *args[0].box;
 }

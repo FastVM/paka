@@ -7,6 +7,7 @@ import std.functional;
 import std.math;
 import std.traits;
 import std.typecons;
+import std.array;
 import std.stdio;
 import core.memory;
 import lang.bytecode;
@@ -160,10 +161,25 @@ align(1):
         return this.strFormat;
     }
 
+    Dynamic opCall(Dynamic[] args)
+    {
+        switch (type)
+        {
+        case Dynamic.Type.fun:
+            return fun.fun(args);
+        case Dynamic.Type.del:
+            return fun.del(args);
+        case Dynamic.Type.pro:
+            return run(fun.pro, fun.pro.self, args);
+        default:
+            throw new Exception("error: not a function: " ~ this.to!string);
+        }
+    }
+
     int opCmp(Dynamic other)
     {
         Type t = type;
-        before:
+    before:
         switch (t)
         {
         default:
@@ -215,14 +231,29 @@ align(1):
     {
         if (type == Type.num && other.type == Type.num)
         {
-            Dynamic ret = dynamic(mixin("value.num" ~ op ~ "other.num"));
+            Dynamic ret = dynamic(mixin("num" ~ op ~ "other.num"));
             return ret;
         }
-        if (type == Type.str && other.type == Type.str)
+        static if (op == "*")
         {
-            static if (op == "~" || op == "+")
+            if (type == Type.str && other.type == Type.num)
             {
-                return dynamic(mixin("value.str~other.str"));
+                return dynamic(cast(string) str.replicate(cast(size_t) other.num).array);
+            }
+            if (type == Type.arr && other.type == Type.num)
+            {
+                return dynamic(arr.replicate(cast(size_t) other.num).array);
+            }
+        }
+        static if (op == "~" || op == "+")
+        {
+            if (type == Type.str && other.type == Type.str)
+            {
+                return dynamic(str ~ other.str);
+            }
+            if (type == Type.arr && other.type == Type.arr)
+            {
+                return dynamic(arr ~ other.arr);
             }
         }
         throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
@@ -293,7 +324,8 @@ align(1):
         return *value.arr;
     }
 
-    ref Dynamic unbox() {
+    ref Dynamic unbox()
+    {
         return *box;
     }
 

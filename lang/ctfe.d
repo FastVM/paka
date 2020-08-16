@@ -9,5 +9,13 @@ pragma(msg, ctfeRun!q{
         }
     }
 
-    fib(20)
+    def fibfast(n) {
+        [a, b] = [0, 1];
+        while (n > 0) {
+            [a, b, n] -= [a - b, -a, 1];
+        }
+        return a;
+    }
+
+    fibfast(20)
 });

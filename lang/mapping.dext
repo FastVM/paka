@@ -1,0 +1,23 @@
+val = "v"
+arr = ["a0", "a1"]
+mat = [["m00", "m01"], ["m10", "m11"]]
+
+valval = val + val
+valarr = val +. arr
+valmat = val +.. mat
+arrval = arr .+ val
+arrarr = arr .+. arr
+arrmat = arr .+.. mat
+matval = mat ..+ val
+matarr = mat ..+. arr
+matmat = mat ..+.. mat
+
+print(valval == "vv")
+print(valarr == ["va0", "va1"])
+print(valmat == [["vm00", "vm01"], ["vm10", "vm11"]])
+print(arrval == ["a0v", "a1v"])
+print(arrarr == ["a0a0", "a1a1"])
+print(arrmat == [["a0m00", "a0m01"], ["a1m10", "a1m11"]])
+print(matval == [["m00v", "m01v"], ["m10v", "m11v"]])
+print(matarr == [["m00a0", "m01a0"], ["m10a1", "m11a1"]])
+print(matmat == [["m00m00", "m01m01"], ["m10m10", "m11m11"]])

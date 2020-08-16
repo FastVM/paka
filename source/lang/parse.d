@@ -3,17 +3,16 @@ module lang.parse;
 import lang.ast;
 import lang.tokens;
 import std.stdio;
+import std.conv;
 import std.algorithm;
 
 enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 
-class PushArray(T)
+version = push_array;
+
+struct PushArray(T)
 {
     T[] tokens;
-    this(T[] t=null)
-    {
-        tokens = t;
-    }
 
     T opIndex(size_t i)
     {
@@ -27,34 +26,34 @@ class PushArray(T)
 
     PushArray!T opSlice(size_t i, size_t j)
     {
-        return new PushArray(tokens[1 .. $]);
+        return PushArray(tokens[i .. j]);
     }
 
     int opApply(scope int delegate(ref T) dg)
     {
         int result = 0;
-    
+
         foreach (item; tokens)
         {
             result = dg(item);
             if (result)
                 break;
         }
-    
+
         return result;
     }
 
     int opApply(scope int delegate(size_t, ref T) dg)
     {
         int result = 0;
-    
+
         foreach (k, item; tokens)
         {
             result = dg(k, item);
             if (result)
                 break;
         }
-    
+
         return result;
     }
 
@@ -67,9 +66,31 @@ class PushArray(T)
     {
         return tokens.length;
     }
+
+    string toString()
+    {
+        return tokens.to!string;
+    }
 }
 
-alias TokenArray = PushArray!Token;
+version (push_array)
+{
+    alias TokenArray = PushArray!Token;
+
+    TokenArray newTokenArray(Token[] a)
+    {
+        return TokenArray(a);
+    }
+}
+else
+{
+    alias TokenArray = Token[];
+
+    TokenArray newTokenArray(T...)(Token[] a)
+    {
+        return a;
+    }
+}
 
 Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
 {
@@ -125,11 +146,14 @@ Node readPostExtend(ref TokenArray tokens, Node last)
     {
         ret = new Call(new Ident("@index"), last ~ tokens.readSquare);
     }
-    else if (tokens[0].isDot)
+    else if (tokens[0].isOperator("."))
     {
+        tokens = tokens[1 .. $];
         ret = new Call(new Ident("@index"), [last, new String(tokens[0].value)]);
         tokens = tokens[1 .. $];
     }
+    // else if (tokens[0].isDotIdent)
+    // {
     else if (tokens[0].isOperator("::"))
     {
         tokens = tokens[1 .. $];
@@ -227,7 +251,7 @@ Node readPostExpr(ref TokenArray tokens)
         Node loop = tokens.readBlock;
         last = new Call(new Ident("@while"), [cond, loop]);
     }
-    else if (tokens[0].isDot)
+    else if (tokens[0].isDotIdent)
     {
         last = new Call(new Ident("."), [new Ident(tokens[0].value)]);
         tokens = tokens[1 .. $];
@@ -261,14 +285,31 @@ Node readPreExpr(ref TokenArray tokens)
     return tokens.readPostExpr;
 }
 
+size_t[2] countDots(ref TokenArray tokens)
+{
+    size_t pre;
+    size_t post;
+    while (tokens.length != 0 && tokens[0].isOperator("."))
+    {
+        pre += 1;
+        tokens = tokens[1 .. $];
+    }
+    while (tokens.length != 0 && tokens[$ - 1].isOperator("."))
+    {
+        post += 1;
+        tokens = tokens[0 .. $ - 1];
+    }
+    return [pre, post];
+}
+
 Node readExpr(ref TokenArray tokens, size_t level = 0)
 {
     if (level == prec.length)
     {
         return tokens.readPreExpr;
     }
-    TokenArray[] sub = [new TokenArray];
-    TokenArray opers = new TokenArray;
+    TokenArray[] sub = [TokenArray.init];
+    TokenArray opers = TokenArray.init;
     bool lastIsOp = true;
     size_t depth = 0;
     while (tokens.length != 0)
@@ -297,7 +338,7 @@ Node readExpr(ref TokenArray tokens, size_t level = 0)
             {
                 if (token.isOperator(op) && !lastIsOp)
                 {
-                    sub ~= new TokenArray;
+                    sub ~= TokenArray.init;
                     opers ~= token;
                     found = true;
                     break;
@@ -308,7 +349,7 @@ Node readExpr(ref TokenArray tokens, size_t level = 0)
         {
             sub[$ - 1] ~= token;
         }
-        lastIsOp = token.isOperator;
+        lastIsOp = token.isOperator && !token.isOperator(".");
         tokens = tokens[1 .. $];
     }
     if (opers.length > 0 && opers[0].isOperator("=>"))
@@ -326,6 +367,14 @@ Node readExpr(ref TokenArray tokens, size_t level = 0)
             }
         }
         return ret;
+    }
+    size_t[2][] dotcount = [[0, 0]];
+    typeof(sub) sub2 = sub.dup;
+    foreach (i, ref v; sub)
+    {
+        size_t[2] dc = v.countDots;
+        dotcount[$ - 1][1] += dc[0];
+        dotcount ~= [dc[1], 0];
     }
     Node ret = sub[0].readExpr(level + 1);
     foreach (i, v; opers)
@@ -357,11 +406,33 @@ Node readExpr(ref TokenArray tokens, size_t level = 0)
             ret = new Call(new Ident("@opset"), [new Ident("mod"), ret, rhs]);
             break;
         default:
+            size_t lhsc = dotcount[i + 1][0];
+            size_t rhsc = dotcount[i + 1][1];
             Node rhs = sub[i + 1].readExpr(level + 1);
             ret = new Call(new Ident(v.value), [ret, rhs]);
             if (cmpOps.canFind(v.value))
             {
                 assert(opers.length == 1);
+            }
+            while (rhsc != 0 || lhsc != 0)
+            {
+                Call call = cast(Call) ret;
+                if (lhsc > rhsc)
+                {
+                    lhsc--;
+                    ret = new Call(new Ident("@dotmap-lhs"), call.args);
+                }
+                else if (rhsc > lhsc)
+                {
+                    rhsc--;
+                    ret = new Call(new Ident("@dotmap-rhs"), call.args);
+                }
+                else if (lhsc == rhsc && lhsc != 0)
+                {
+                    lhsc--;
+                    rhsc--;
+                    ret = new Call(new Ident("@dotmap-both"), call.args);
+                }
             }
             break;
         }
@@ -387,7 +458,7 @@ Node readStmt(ref TokenArray tokens)
         tokens = tokens[1 .. $];
     }
     tokens = tokens[1 .. $];
-    TokenArray stmtTokens = new TokenArray(stmtTokens0);
+    TokenArray stmtTokens = newTokenArray(stmtTokens0);
     if (stmtTokens.length == 0)
     {
         return null;
@@ -433,7 +504,7 @@ Node readBlock(ref TokenArray tokens)
 
 Node parse(string code)
 {
-    TokenArray tokens = new TokenArray(code.tokenize);
+    TokenArray tokens = newTokenArray(code.tokenize);
     Node node = tokens.readBlockBody;
     return node;
 }

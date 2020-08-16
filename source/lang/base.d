@@ -89,6 +89,9 @@ Pair[] getRootBase()
         Pair("put", load(&lang.lib.io.libput)),
         Pair("readln", load(&lang.lib.io.libreadln)),
         Pair("leave", load(&lang.lib.sys.libleave)),
+        Pair("_both_map", load(&lang.lib.sys.libubothmap)),
+        Pair("_lhs_map", load(&lang.lib.sys.libulhsmap)),
+        Pair("_rhs_map", load(&lang.lib.sys.liburhsmap)),
         Pair("box", load(&lang.lib.box.libbox)),
         Pair("unbox", load(&lang.lib.box.libunbox)),
     ];

@@ -41,8 +41,8 @@ class Walker
     enum string[] specialForms = [
             "@def", "@set", "@opset", "@while", "@array", "@table", "@target",
             "@return", "@if", "@fun", "@do", "@using", "+", "-", "*", "/",
-            "%", "<", ">", "<=", ">=", "==", "!=", "...", "@index", "@method",
-            "=>", "."
+            "@dotmap-both", "@dotmap-lhs", "@dotmap-rhs", "%", "<", ">",
+            "<=", ">=", "==", "!=", "...", "@index", "@method", "=>", ".",
         ];
     Function walkProgram(bool ctfe = false)(Node node)
     {
@@ -64,14 +64,10 @@ class Walker
                 func.captab.define(i.name);
             }
         }
-        // __ctfeWrite(func.to!string ~ "\n");
         __ctfeWrite("heloo?\n");
         walk(node);
         func.instrs ~= Instr(Opcode.retval);
         func.stackSize = stackSize[1];
-        // foreach(k,i; func.instrs) {
-        //     writeln(k,":",i);
-        // }
         func.resizeStack;
         return func;
     }
@@ -563,6 +559,15 @@ class Walker
         }
     }
 
+    void walkDotmap(string s)(Node[] args)
+    {
+        Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
+        Node lambdaBody = new Call(args[0 .. $ - 2] ~ xy);
+        Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
+        Call domap = new Call(new Ident(s), [cast(Node) lambda] ~ args[$ - 2 .. $]);
+        walk(domap);
+    }
+
     void walkSpecialCall(Call c)
     {
         final switch ((cast(Ident) c.args[0]).repr)
@@ -611,6 +616,15 @@ class Walker
             break;
         case "@using":
             walkUsing(c.args[1 .. $]);
+            break;
+        case "@dotmap-both":
+            walkDotmap!"_both_map"(c.args[1 .. $]);
+            break;
+        case "@dotmap-lhs":
+            walkDotmap!"_lhs_map"(c.args[1 .. $]);
+            break;
+        case "@dotmap-rhs":
+            walkDotmap!"_rhs_map"(c.args[1 .. $]);
             break;
         case ".":
             walkUse(c.args[1 .. $]);
@@ -724,7 +738,6 @@ class Walker
         }
         else if (i.repr.isNumeric)
         {
-            // __ctfeWrite(func.to!string);
             func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
             useStack;
             func.constants ~= dynamic(i.repr.to!Number);

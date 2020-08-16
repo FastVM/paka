@@ -1,8 +1,0 @@
-def toString(number) {
-    sprintf = symbol(nil, "sprintf", "int", "string*", "string", "double")
-    boxed = box("")
-    sprintf(boxed, "%lf", number)
-    return unbox(boxed);
-}
-
-print(toString(10))

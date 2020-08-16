@@ -8,10 +8,10 @@ import std.stdio;
 
 enum string[][] prec = [
         ["+=", "*=", "/=", "%=", "-=", "="], ["=>"], ["||", "&&"],
-        ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"], ["*", "/", "%"],
+        ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"], ["*", "/", "%"]
     ];
 
-enum string[] nops = ["::", "*", "!", ",", ":"];
+enum string[] nops = [".", "::", "*", "!", ",", ":"];
 
 enum string[] keywords = [
         "if", "else", "while", "return", "def", "target", "lambda", "using",
@@ -38,7 +38,7 @@ struct Token
         open,
         close,
         indent,
-        dotident,
+        envident,
         string,
     }
 
@@ -55,9 +55,9 @@ struct Token
         return type == Type.ident;
     }
 
-    bool isDot()
+    bool isDotIdent()
     {
-        return type == Type.dotident;
+        return type == Type.envident;
     }
 
     bool isString()
@@ -171,10 +171,10 @@ Token readToken(ref string code)
             return Token(Token.Type.operator, i);
         }
     }
-    if (peek.isAlphaNum || peek == '_' || peek == '.')
+    if (peek.isAlphaNum || peek == '_' || peek == '?')
     {
-        bool isdot = peek == '.';
-        if (isdot)
+        bool envident = peek == '?';
+        if (envident)
         {
             read;
         }
@@ -191,9 +191,9 @@ Token readToken(ref string code)
         {
             return Token(Token.Type.keyword, ret);
         }
-        if (isdot)
+        if (envident)
         {
-            return Token(Token.Type.dotident, ret);
+            return Token(Token.Type.envident, ret);
         }
         return Token(Token.Type.ident, ret);
     }
