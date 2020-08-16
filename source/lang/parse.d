@@ -8,7 +8,7 @@ import std.algorithm;
 
 enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 
-version = push_array;
+// version = push_array;
 
 struct PushArray(T)
 {
@@ -275,12 +275,24 @@ Node readPreExpr(ref TokenArray tokens)
     {
         Token op = tokens[0];
         tokens = tokens[1 .. $];
+        size_t count;
+        while (tokens[0].isOperator("."))
+        {
+            count++;
+            tokens = tokens[1 .. $];
+        }
         string val = op.value;
-        if (op.value == "*")
+        if (val == "*")
         {
             val = "...";
         }
-        return new Call(new Ident(val), [tokens.readPreExpr]);
+        Node ret = new Call(new Ident(val), [tokens.readPreExpr]);
+        foreach (i; 0 .. count)
+        {
+            Call call = cast(Call) ret;
+            ret = new Call(new Ident("@dotmap-pre"), call.args);
+        }
+        return ret;
     }
     return tokens.readPostExpr;
 }

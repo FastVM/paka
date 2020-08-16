@@ -29,6 +29,10 @@ Dynamic libmap(Args args)
 Dynamic libubothmap(Args args)
 {
     Array ret;
+    if (args[1].arr.length != args[2].arr.length)
+    {
+        throw new Exception("bad lengths in dotmap");
+    }
     foreach (i; 0 .. args[1].arr.length)
     {
         ret ~= args[0]([args[1].arr[i], args[2].arr[i]]);
@@ -52,6 +56,16 @@ Dynamic liburhsmap(Args args)
     foreach (i; args[2].arr)
     {
         ret ~= args[0]([args[1], i]);
+    }
+    return dynamic(ret);
+}
+
+Dynamic libupremap(Args args)
+{
+    Array ret;
+    foreach (i; args[1].arr)
+    {
+        ret ~= args[0]([i]);
     }
     return dynamic(ret);
 }

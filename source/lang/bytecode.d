@@ -186,5 +186,4 @@ struct Instr
 align(1):
     Opcode op;
     ushort value;
-    ushort index;
 }
