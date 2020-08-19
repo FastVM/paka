@@ -8,7 +8,7 @@ import std.algorithm;
 
 enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 
-// version = push_array;
+version = push_array;
 
 struct PushArray(T)
 {

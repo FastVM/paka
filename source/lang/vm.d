@@ -152,15 +152,12 @@ Dynamic run(T...)(Function func, T argss)
     }
     else
     {
-        Dynamic* ptr = cast(Dynamic*) GC.calloc(
-                (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
-        stack = ptr[0 .. func.stackSize];
-        locals = ptr[func.stackSize .. func.stackSize + func.stab.byPlace.length + 1];
-    }
-    scope (exit)
-    {
-        stack.length = 0;
-        locals.length = 0;
+        // Dynamic* ptr = cast(Dynamic*) GC.calloc(
+        //         (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
+        // stack = ptr[0 .. func.stackSize];
+        Dynamic* ptr = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof, 0, typeid(Dynamic));
+        stack = (cast(Dynamic*) alloca(func.stackSize * Dynamic.sizeof))[0 .. func.stackSize];
+        locals = ptr[0 .. func.stab.byPlace.length + 1];
     }
     static foreach (args; argss)
     {
@@ -221,21 +218,22 @@ Dynamic run(T...)(Function func, T argss)
             Function built = new Function(func.funcs[cur.value]);
             built.captured = null;
             built.parent = func;
+            built.captured = new Dynamic*[built.capture.length + built.env];
             foreach (i, v; built.capture)
             {
                 Function.Capture cap = built.capture[i];
                 if (cap.is2)
                 {
-                    built.captured ~= func.captured[cap.from];
+                    built.captured[i] = func.captured[cap.from];
                 }
                 else
                 {
-                    built.captured ~= &locals[cap.from];
+                    built.captured[i] = &locals[cap.from];
                 }
             }
             if (built.env)
             {
-                built.captured ~= [locals[$ - 1]].ptr;
+                built.captured[$ - 1] = [locals[$ - 1]].ptr;
             }
             stack[depth++] = dynamic(built);
             break;
@@ -255,7 +253,7 @@ Dynamic run(T...)(Function func, T argss)
                 stack[depth - 1] = f.fun.fun(stack[depth .. depth + cur.value]);
                 break;
             case Dynamic.Type.del:
-                stack[depth - 1] = f.fun.del(stack[depth .. depth + cur.value]);
+                stack[depth - 1] = (*f.fun.del)(stack[depth .. depth + cur.value]);
                 break;
             case Dynamic.Type.pro:
                 stack[depth - 1] = run(f.fun.pro,
@@ -293,7 +291,7 @@ Dynamic run(T...)(Function func, T argss)
                 result = f.fun.fun(cargs);
                 break;
             case Dynamic.Type.del:
-                stack[depth - 1] = f.fun.del(cargs);
+                stack[depth - 1] = (*f.fun.del)(cargs);
                 break;
             case Dynamic.Type.pro:
                 // enterScope(f.fun.pro, f.fun.pro.self ~ cargs);

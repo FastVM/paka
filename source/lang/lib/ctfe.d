@@ -24,16 +24,18 @@ Dynamic ctfelibprint(Dynamic[] args)
 Dynamic ctfelibread(Dynamic[] args)
 {
     // return dynamic(cast(string) args[0].str.read);
-    return dynamic(import("entry.dext"));
+    // return dynamic(import("entry.dext"));
+    return Dynamic.nil;
 }
 
 Dynamic ctfelibentry(Dynamic[] args)
 {
     // Node node = parse(cast(string) args[0].str.read);
-    Node node = parse(import("entry.dext"));
-    Walker walker = new Walker;
-    Function func = walker.walkProgram!true(node);
-    func.captured = loadCtfeBase;
-    Dynamic retval = run(func);
-    return retval;
+    // Node node = parse(import("entry.dext"));
+    // Walker walker = new Walker;
+    // Function func = walker.walkProgram!true(node);
+    // func.captured = loadCtfeBase;
+    // Dynamic retval = run(func);
+    // return retval;
+    return Dynamic.nil;
 }

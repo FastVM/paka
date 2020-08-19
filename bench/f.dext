@@ -1,3 +1,8 @@
-C2 = f => x => (f => y => f(f)(y))(f => f)(x)
-F = f => x => if (x < 2) {x;} else {f(x - 1) + f(x - 2);}
-print(C2(F)(30))
+Q = f => a => f(f)(a)
+F = f => a => if (a < 2) {
+    a
+} else {
+    Q(f)(a - 1) + Q(f)(a - 2)
+}
+fib = Q(F)
+print(fib(30))

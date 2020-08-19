@@ -50,14 +50,14 @@ struct Dynamic
     {
         bool log;
         Number num;
-        string str;
+        string* str;
         Dynamic* box;
         Array* arr;
         Table* tab;
         union Callable
         {
             Dynamic function(Args) fun;
-            Dynamic delegate(Args) del;
+            Dynamic delegate(Args)* del;
             Function pro;
         }
 
@@ -68,65 +68,76 @@ align(1):
     Type type;
     Value value;
 
+    pragma(inline, true)
     this(Type t)
     {
         type = t;
     }
 
+    pragma(inline, true)
     this(bool log)
     {
         value.log = log;
         type = Type.log;
     }
 
+    pragma(inline, true)
     this(Number num)
     {
         value.num = num;
         type = Type.num;
     }
 
+    pragma(inline, true)
     this(string str)
     {
-        value.str = str;
+        value.str = [str].ptr;
         type = Type.str;
     }
 
+    pragma(inline, true)
     this(Dynamic* box)
     {
         value.box = box;
         type = Type.box;
     }
 
+    pragma(inline, true)
     this(Array arr)
     {
         value.arr = [arr].ptr;
         type = Type.arr;
     }
 
+    pragma(inline, true)
     this(Table tab)
     {
         value.tab = [tab].ptr;
         type = Type.tab;
     }
 
+    pragma(inline, true)
     this(Dynamic function(Args) fun)
     {
         value.fun.fun = fun;
         type = Type.fun;
     }
 
+    pragma(inline, true)
     this(Dynamic delegate(Args) del)
     {
-        value.fun.del = del;
+        value.fun.del = [del].ptr;
         type = Type.del;
     }
 
+    pragma(inline, true)
     this(Function pro)
     {
         value.fun.pro = pro;
         type = Type.pro;
     }
 
+    pragma(inline, true)
     this(Dynamic other)
     {
         value = other.value;
@@ -148,7 +159,7 @@ align(1):
         default:
             return hashOf(type) ^ hashOf(value);
         case Type.str:
-            return hashOf(value.str);
+            return hashOf(*value.str);
         case Type.arr:
             return hashOf(*value.arr);
         case Type.tab:
@@ -161,6 +172,7 @@ align(1):
         return this.strFormat;
     }
 
+    pragma(inline, true)
     Dynamic opCall(Dynamic[] args)
     {
         switch (type)
@@ -168,7 +180,7 @@ align(1):
         case Dynamic.Type.fun:
             return fun.fun(args);
         case Dynamic.Type.del:
-            return fun.del(args);
+            return (*fun.del)(args);
         case Dynamic.Type.pro:
             return run(fun.pro, fun.pro.self, args);
         default:
@@ -176,6 +188,7 @@ align(1):
         }
     }
 
+    pragma(inline, true)
     int opCmp(Dynamic other)
     {
         Type t = type;
@@ -190,35 +203,11 @@ align(1):
             t = box.type;
             goto before;
         case Type.log:
-            if (value.log == other.log)
-            {
-                return 0;
-            }
-            if (value.log < other.log)
-            {
-                return -1;
-            }
-            return 1;
+            return value.log - other.log;
         case Type.num:
-            if (value.num == other.num)
-            {
-                return 0;
-            }
-            if (value.num < other.num)
-            {
-                return -1;
-            }
-            return 1;
+            return cmp(value.num, other.num);
         case Type.str:
-            if (value.str == other.str)
-            {
-                return 0;
-            }
-            if (value.str < other.str)
-            {
-                return -1;
-            }
-            return 1;
+            return cmp(*value.str, other.str);
         }
     }
 
@@ -227,6 +216,7 @@ align(1):
         return isEqual(this, other);
     }
 
+    pragma(inline, true)
     Dynamic opBinary(string op)(Dynamic other)
     {
         if (type == Type.num && other.type == Type.num)
@@ -272,6 +262,7 @@ align(1):
         return dynamic(mixin(op ~ "value.num"));
     }
 
+    pragma(inline, true)
     ref bool log()
     {
         if (type == Type.box)
@@ -285,6 +276,7 @@ align(1):
         return value.log;
     }
 
+    pragma(inline, true)
     ref Number num()
     {
         if (type == Type.box)
@@ -298,6 +290,7 @@ align(1):
         return value.num;
     }
 
+    pragma(inline, true)
     ref string str()
     {
         if (type == Type.box)
@@ -308,9 +301,10 @@ align(1):
         {
             throw new Exception("expected string type");
         }
-        return value.str;
+        return *value.str;
     }
 
+    pragma(inline, true)
     ref Array arr()
     {
         if (type == Type.box)
@@ -324,11 +318,13 @@ align(1):
         return *value.arr;
     }
 
+    pragma(inline, true)
     ref Dynamic unbox()
     {
         return *box;
     }
 
+    pragma(inline, true)
     ref Dynamic* box()
     {
         if (type != Type.box)
@@ -338,6 +334,7 @@ align(1):
         return value.box;
     }
 
+    pragma(inline, true)
     ref Table tab()
     {
         if (type == Type.box)
@@ -351,6 +348,7 @@ align(1):
         return *value.tab;
     }
 
+    pragma(inline, true)
     ref Value.Callable fun()
     {
         if (type == Type.box)
@@ -366,6 +364,7 @@ align(1):
 
 }
 
+pragma(inline, true)
 private bool isEqual(const Dynamic a, const Dynamic b)
 {
     if (b.type != a.type)
@@ -387,7 +386,7 @@ private bool isEqual(const Dynamic a, const Dynamic b)
     case Dynamic.Type.num:
         return a.value.num == b.value.num;
     case Dynamic.Type.str:
-        return a.value.str == b.value.str;
+        return *a.value.str == *b.value.str;
     case Dynamic.Type.arr:
         return *a.value.arr == *b.value.arr;
     case Dynamic.Type.tab:

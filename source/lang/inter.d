@@ -90,7 +90,7 @@ T fromDynamic(T)(Dynamic v) if (isDelegate!T)
         case Dynamic.Type.pro:
             return run(v.fun.pro, dargs).fromDynamic!Ret;
         case Dynamic.Type.del:
-            return v.fun.del(dargs).fromDynamic!Ret;
+            return (*v.fun.del)(dargs).fromDynamic!Ret;
         case Dynamic.Type.fun:
             return v.fun.fun(dargs).fromDynamic!Ret;
         }
