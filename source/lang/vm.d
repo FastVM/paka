@@ -138,6 +138,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
     }
 }
 
+pragma(inline, false)
 Dynamic run(T...)(Function func, T argss)
 {
     size_t index = 0;
@@ -155,9 +156,21 @@ Dynamic run(T...)(Function func, T argss)
         // Dynamic* ptr = cast(Dynamic*) GC.calloc(
         //         (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
         // stack = ptr[0 .. func.stackSize];
-        Dynamic* ptr = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof, 0, typeid(Dynamic));
-        stack = (cast(Dynamic*) alloca(func.stackSize * Dynamic.sizeof))[0 .. func.stackSize];
-        locals = ptr[0 .. func.stab.byPlace.length + 1];
+        if (func.flags & Function.Flags.isLocal)
+        {
+            Dynamic* ptr = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof,
+                    0, typeid(Dynamic));
+            stack = (cast(Dynamic*) alloca(func.stackSize * Dynamic.sizeof))[0 .. func.stackSize];
+            locals = ptr[0 .. func.stab.byPlace.length + 1];
+        }
+        else
+        {
+
+            Dynamic* ptr = cast(Dynamic*) alloca(
+                    (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
+            stack = ptr[0 .. func.stackSize];
+            locals = ptr[func.stackSize .. func.stackSize + func.stab.byPlace.length + 1];
+        }
     }
     static foreach (args; argss)
     {
@@ -185,7 +198,9 @@ Dynamic run(T...)(Function func, T argss)
     Instr* instrs = func.instrs.ptr;
     while (true)
     {
+        // writeln(stack[0 .. depth]);
         Instr cur = instrs[index];
+        // writeln(cur);
         static foreach (args; argss)
         {
             static if (is(typeof(args) == LocalCallback[]))
@@ -218,7 +233,7 @@ Dynamic run(T...)(Function func, T argss)
             Function built = new Function(func.funcs[cur.value]);
             built.captured = null;
             built.parent = func;
-            built.captured = new Dynamic*[built.capture.length + built.env];
+            built.captured = new Dynamic*[built.capture.length];
             foreach (i, v; built.capture)
             {
                 Function.Capture cap = built.capture[i];
@@ -230,10 +245,6 @@ Dynamic run(T...)(Function func, T argss)
                 {
                     built.captured[i] = &locals[cap.from];
                 }
-            }
-            if (built.env)
-            {
-                built.captured[$ - 1] = [locals[$ - 1]].ptr;
             }
             stack[depth++] = dynamic(built);
             break;
@@ -364,12 +375,12 @@ Dynamic run(T...)(Function func, T argss)
             break;
         case Opcode.table:
             size_t end = depth;
-            while (stack[depth].type != Dynamic.Type.end)
+            while (stack[depth - 1].type != Dynamic.Type.end)
             {
                 depth--;
             }
             Dynamic[Dynamic] table;
-            for (size_t i = depth + 1; i < end; i += 2)
+            for (size_t i = depth; i < end; i += 2)
             {
                 if (stack[i].type == Dynamic.Type.pac)
                 {
@@ -383,7 +394,7 @@ Dynamic run(T...)(Function func, T argss)
                     table[stack[i]] = stack[i + 1];
                 }
             }
-            stack[depth++] = dynamic(table);
+            stack[depth - 1] = dynamic(table);
             break;
         case Opcode.index:
             depth--;
@@ -429,15 +440,6 @@ Dynamic run(T...)(Function func, T argss)
         case Opcode.loadc:
             stack[depth++] = *func.captured[cur.value];
             break;
-        case Opcode.loadenv:
-            stack[depth++] = *func.captured[$ - 1];
-            break;
-        case Opcode.loaduse:
-            stack[depth++] = locals[$ - 1];
-            break;
-        case Opcode.use:
-            stack[depth - 1] = locals[$ - 1].tab[dynamic(stack[depth - 1].str)];
-            break;
         case Opcode.store:
             locals[cur.value] = stack[depth - 1];
             break;
@@ -462,7 +464,6 @@ Dynamic run(T...)(Function func, T argss)
             break;
         case Opcode.qstore:
             depth -= 1;
-            locals[$ - 1].tab[dynamic(stack[depth].str)] = stack[depth - 1];
             break;
         case Opcode.opstore:
         switchOpp:
@@ -583,13 +584,6 @@ Dynamic run(T...)(Function func, T argss)
             break;
         case Opcode.jump:
             index = cur.value;
-            break;
-        case Opcode.douse:
-            locals ~= stack[--depth];
-            break;
-        case Opcode.unuse:
-            stack[depth - 1] = locals[$ - 1];
-            locals.length--;
             break;
         }
         index++;

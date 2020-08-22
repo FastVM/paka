@@ -38,7 +38,6 @@ struct Token
         open,
         close,
         indent,
-        envident,
         string,
     }
 
@@ -53,11 +52,6 @@ struct Token
     bool isIdent()
     {
         return type == Type.ident;
-    }
-
-    bool isDotIdent()
-    {
-        return type == Type.envident;
     }
 
     bool isString()
@@ -150,7 +144,7 @@ Token readToken(ref string code)
         }
         return code.readToken;
     }
-    if (peek == ';' || peek == '\n')
+    if (peek == ';')
     {
         return Token(Token.Type.semicolon, [read]);
     }
@@ -173,11 +167,6 @@ Token readToken(ref string code)
     }
     if (peek.isAlphaNum || peek == '_' || peek == '?')
     {
-        bool envident = peek == '?';
-        if (envident)
-        {
-            read;
-        }
         char[] ret;
         while (peek.isAlphaNum || peek == '_')
         {
@@ -190,10 +179,6 @@ Token readToken(ref string code)
         if (keywords.canFind(ret))
         {
             return Token(Token.Type.keyword, ret);
-        }
-        if (envident)
-        {
-            return Token(Token.Type.envident, ret);
         }
         return Token(Token.Type.ident, ret);
     }

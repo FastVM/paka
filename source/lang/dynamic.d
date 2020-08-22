@@ -21,10 +21,9 @@ alias Args = Dynamic[];
 alias Array = Dynamic[];
 alias Table = Dynamic[Dynamic];
 
-Dynamic dynamic(T...)(T a)
+pragma(inline, true) Dynamic dynamic(T...)(T a)
 {
-    Dynamic ret = Dynamic(a);
-    return ret;
+    return Dynamic(a);
 }
 
 struct Dynamic
@@ -64,81 +63,70 @@ struct Dynamic
         Callable fun;
     }
 
-align(1):
+    // align(1):
     Type type;
     Value value;
 
-    pragma(inline, true)
-    this(Type t)
+    pragma(inline, true) this(Type t)
     {
         type = t;
     }
 
-    pragma(inline, true)
-    this(bool log)
+    pragma(inline, true) this(bool log)
     {
         value.log = log;
         type = Type.log;
     }
 
-    pragma(inline, true)
-    this(Number num)
+    pragma(inline, true) this(Number num)
     {
         value.num = num;
         type = Type.num;
     }
 
-    pragma(inline, true)
-    this(string str)
+    pragma(inline, true) this(string str)
     {
         value.str = [str].ptr;
         type = Type.str;
     }
 
-    pragma(inline, true)
-    this(Dynamic* box)
+    pragma(inline, true) this(Dynamic* box)
     {
         value.box = box;
         type = Type.box;
     }
 
-    pragma(inline, true)
-    this(Array arr)
+    pragma(inline, true) this(Array arr)
     {
         value.arr = [arr].ptr;
         type = Type.arr;
     }
 
-    pragma(inline, true)
-    this(Table tab)
+    pragma(inline, true) this(Table tab)
     {
         value.tab = [tab].ptr;
         type = Type.tab;
     }
 
-    pragma(inline, true)
-    this(Dynamic function(Args) fun)
+    pragma(inline, true) this(Dynamic function(Args) fun)
     {
         value.fun.fun = fun;
         type = Type.fun;
     }
 
-    pragma(inline, true)
-    this(Dynamic delegate(Args) del)
+    pragma(inline, true) this(Dynamic delegate(Args) del)
     {
         value.fun.del = [del].ptr;
         type = Type.del;
     }
 
-    pragma(inline, true)
-    this(Function pro)
+    pragma(inline, true) this(Function pro)
     {
         value.fun.pro = pro;
         type = Type.pro;
     }
 
-    pragma(inline, true)
-    this(Dynamic other)
+    pragma(inline, true) this(Dynamic other)
     {
         value = other.value;
         type = other.type;
@@ -152,7 +140,7 @@ align(1):
         return ret;
     }
 
-    size_t toHash() const nothrow  // override size_t toHash() const nothrow @trusted
+    pragma(inline, true) size_t toHash() const nothrow  // override size_t toHash() const nothrow @trusted
     {
         switch (type)
         {
@@ -172,8 +160,7 @@ align(1):
         return this.strFormat;
     }
 
-    pragma(inline, true)
-    Dynamic opCall(Dynamic[] args)
+    pragma(inline, true) Dynamic opCall(Dynamic[] args)
     {
         switch (type)
         {
@@ -188,8 +175,7 @@ align(1):
         }
     }
 
-    pragma(inline, true)
-    int opCmp(Dynamic other)
+    pragma(inline, true) int opCmp(Dynamic other)
     {
         Type t = type;
     before:
@@ -205,19 +191,25 @@ align(1):
         case Type.log:
             return value.log - other.log;
         case Type.num:
-            return cmp(value.num, other.num);
+            static if (__traits(compiles, cmp(value.num, other.num)))
+            {
+                return cmp(value.num, other.num);
+            }
+            else
+            {
+                return value.num.opCmp(other.num);
+            }
         case Type.str:
             return cmp(*value.str, other.str);
         }
     }
 
-    bool opEquals(const Dynamic other) const
+    pragma(inline, true) bool opEquals(const Dynamic other) const
     {
         return isEqual(this, other);
     }
 
-    pragma(inline, true)
-    Dynamic opBinary(string op)(Dynamic other)
+    pragma(inline, true) Dynamic opBinary(string op)(Dynamic other)
     {
         if (type == Type.num && other.type == Type.num)
         {
@@ -249,7 +241,7 @@ align(1):
         throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
     }
 
-    Dynamic opOpAssign(string op)(Dynamic other)
+    pragma(inline, true) Dynamic opOpAssign(string op)(Dynamic other)
     {
         Dynamic ret = mixin("this" ~ op ~ "other");
         type = ret.type;
@@ -257,13 +249,12 @@ align(1):
         return this;
     }
 
-    Dynamic opUnary(string op)()
+    pragma(inline, true) Dynamic opUnary(string op)()
     {
         return dynamic(mixin(op ~ "value.num"));
     }
 
-    pragma(inline, true)
-    ref bool log()
+    pragma(inline, true) bool log()
     {
         if (type == Type.box)
         {
@@ -276,8 +267,7 @@ align(1):
         return value.log;
     }
 
-    pragma(inline, true)
-    ref Number num()
+    pragma(inline, true) Number num()
     {
         if (type == Type.box)
         {
@@ -290,8 +280,7 @@ align(1):
         return value.num;
     }
 
-    pragma(inline, true)
-    ref string str()
+    pragma(inline, true) string str()
     {
         if (type == Type.box)
         {
@@ -304,8 +293,7 @@ align(1):
         return *value.str;
     }
 
-    pragma(inline, true)
-    ref Array arr()
+    pragma(inline, true) Array arr()
     {
         if (type == Type.box)
         {
@@ -318,14 +306,12 @@ align(1):
         return *value.arr;
     }
 
-    pragma(inline, true)
-    ref Dynamic unbox()
+    pragma(inline, true) Dynamic unbox()
     {
         return *box;
     }
 
-    pragma(inline, true)
-    ref Dynamic* box()
+    pragma(inline, true) Dynamic* box()
     {
         if (type != Type.box)
         {
@@ -334,8 +320,7 @@ align(1):
         return value.box;
     }
 
-    pragma(inline, true)
-    ref Table tab()
+    pragma(inline, true) Table tab()
     {
         if (type == Type.box)
         {
@@ -348,8 +333,7 @@ align(1):
         return *value.tab;
     }
 
-    pragma(inline, true)
-    ref Value.Callable fun()
+    pragma(inline, true) Value.Callable fun()
     {
         if (type == Type.box)
         {
@@ -364,8 +348,7 @@ align(1):
 
 }
 
-pragma(inline, true)
-private bool isEqual(const Dynamic a, const Dynamic b)
+pragma(inline, true) private bool isEqual(const Dynamic a, const Dynamic b)
 {
     if (b.type != a.type)
     {
@@ -422,7 +405,7 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
     case Dynamic.Type.num:
         if (dyn.num % 1 == 0)
         {
-            return to!string(cast(long) dyn.num);
+            return to!string(dyn.num);
         }
         return dyn.num.to!string;
     case Dynamic.Type.str:

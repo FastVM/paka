@@ -17,6 +17,9 @@ import std.string;
 import std.getopt;
 import core.memory;
 
+// extern (C) __gshared bool rt_cmdline_enabled = false;
+// extern (C) __gshared string[] rt_options = ["heapSizeFactor:8"];
+
 enum string getstr(string code)()
 {
     Node node = code.parse;

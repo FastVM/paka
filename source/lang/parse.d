@@ -96,9 +96,11 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
 {
     Node[] args;
     tokens = tokens[1 .. $];
+    tokens.stripNewlines;
     while (!tokens[0].isClose([v[1]]))
     {
         args ~= tokens.readExpr;
+        tokens.stripNewlines;
         if (tokens[0].isComma)
         {
             tokens = tokens[1 .. $];
@@ -113,9 +115,11 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
     Node[] args;
     tokens = tokens[1 .. $];
     size_t items = 0;
+    tokens.stripNewlines;
     while (!tokens[0].isClose([v[1]]))
     {
         args ~= tokens.readExpr;
+        tokens.stripNewlines;
         items++;
         // if ((items % 2 == 0 && tokens[0].isComma) || (items % 2 == 1 && tokens[0].isOperator(":")))
         if (tokens[0].isComma || tokens[0].isOperator(":"))
@@ -125,6 +129,14 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
     }
     tokens = tokens[1 .. $];
     return args;
+}
+
+void stripNewlines(ref TokenArray tokens)
+{
+    while (tokens[0].isSemicolon)
+    {
+        tokens = tokens[1 .. $];
+    }
 }
 
 alias readParens = readOpen!"()";
@@ -152,8 +164,6 @@ Node readPostExtend(ref TokenArray tokens, Node last)
         ret = new Call(new Ident("@index"), [last, new String(tokens[0].value)]);
         tokens = tokens[1 .. $];
     }
-    // else if (tokens[0].isDotIdent)
-    // {
     else if (tokens[0].isOperator("::"))
     {
         tokens = tokens[1 .. $];
@@ -250,11 +260,6 @@ Node readPostExpr(ref TokenArray tokens)
         Node cond = tokens.readParens[$ - 1];
         Node loop = tokens.readBlock;
         last = new Call(new Ident("@while"), [cond, loop]);
-    }
-    else if (tokens[0].isDotIdent)
-    {
-        last = new Call(new Ident("."), [new Ident(tokens[0].value)]);
-        tokens = tokens[1 .. $];
     }
     else if (tokens[0].isIdent)
     {

@@ -1,9 +1,9 @@
-x = 0
-res = 0
+x = 0;
+res = 0;
 
 while (x < 1000) {
-    x += 1
-    res += x
-}
+    x += 1;
+    res += x;
+};
 
-print(res)
+print(res);

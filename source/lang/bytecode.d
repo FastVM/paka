@@ -45,6 +45,10 @@ class Function
         bool is2;
     }
 
+    enum Flags : ubyte{
+        isLocal = 1,
+    }
+
     Capture[] capture = null;
     Instr[] instrs = null;
     Dynamic[] constants = null;
@@ -56,7 +60,7 @@ class Function
     Lookup stab;
     Lookup captab;
     Function parent = null;
-    bool env;
+    Flags flags = cast(Flags) 0;
 
     this()
     {
@@ -74,16 +78,7 @@ class Function
         self = other.self.dup;
         stab = other.stab;
         captab = other.captab;
-        env = other.env;
-    }
-
-    void useEnv()
-    {
-        env = true;
-        if (parent !is null && !parent.env)
-        {
-            parent.useEnv;
-        }
+        flags = other.flags;
     }
 
     ushort doCapture(string name)
@@ -133,52 +128,68 @@ enum AssignOp : ushort
 
 enum Opcode : ushort
 {
+    // never generated
     nop,
+    // stack ops
     push,
     pop,
+    // change data flag
     data,
+    // subroutine
     sub,
+    // bind not implmented yet
     bind,
+    // call without spread
     call,
+    // call with atleast 1 spread
     upcall,
+    // cmp
     oplt,
     opgt,
     oplte,
     opgte,
     opeq,
     opneq,
+    // build array
     array,
+    // build array that will be assigned to
     targeta,
+    // unpack into array
     unpack,
+    // built table
     table,
+    // index table or array
     index,
+    // math ops (arithmatic)
     opneg,
     opadd,
     opsub,
     opmul,
     opdiv,
     opmod,
+    // load from locals
     load,
+    // load from captured
     loadc,
-    loadenv,
-    loaduse,
-    use,
     store,
     istore,
     tstore,
     qstore,
+    // same but with operators like += and -=
     opstore,
     opistore,
     optstore,
     opqstore,
+    // return a value
     retval,
+    // return no value
     retnone,
+    // jump if true
     iftrue,
+    // jump if false
     iffalse,
+    // jump to index
     jump,
-    douse,
-    unuse,
-    nonexist,
 }
 
 struct Instr
@@ -187,3 +198,4 @@ align(1):
     Opcode op;
     ushort value;
 }
+

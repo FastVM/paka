@@ -1,8 +1,8 @@
-Q = f => a => f(f)(a)
+Q = f => a => f(f)(a);
 F = f => a => if (a < 2) {
-    a
+    a;
 } else {
-    Q(f)(a - 1) + Q(f)(a - 2)
-}
-fib = Q(F)
-print(fib(30))
+    Q(f)(a - 1) + Q(f)(a - 2);
+};
+fib = Q(F);
+print(fib(30));

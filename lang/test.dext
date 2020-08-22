@@ -1,0 +1,14 @@
+def getf(early) {
+    x = 5;
+    def f() {
+        return x;
+    };
+    if (early) {
+        return f;
+    };
+    x = 10;
+    return f;
+};
+
+print(getf(true)());
+print(getf(false)());

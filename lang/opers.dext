@@ -1,10 +1,10 @@
-x = 10
-y = 20
-add = x + y
-sub = x - y
-mul = x * y
-div = x / y
-print(add == 30)
-print(mul == 200)
-print(div == 1/2)
-print(sub == -10)
+x = 10;
+y = 20;
+add = x + y;
+sub = x - y;
+mul = x * y;
+div = x / y;
+print(add == 30);
+print(mul == 200);
+print(div == 1/2);
+print(sub == -10);

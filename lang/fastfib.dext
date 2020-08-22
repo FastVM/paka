@@ -1,11 +1,11 @@
 def pfib(n) {
-    [a, b] = [0, 1]
+    [a, b] = [0, 1];
     while (n > 0) {
-        print(a)
-        [a, b] += [b - a, a]
-        n -= 1
-    }
-    return a
-}
+        print(a);
+        [a, b] += [b - a, a];
+        n -= 1;
+    };
+    return a;
+};
 
-pfib(50)
+pfib(50);
