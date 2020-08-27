@@ -35,10 +35,10 @@ Dynamic*[] loadCtfeBase()
 Function baseCtfeFunction()
 {
     Function ret = new Function;
-    ushort[string] byName;
+    uint[string] byName;
     foreach (i; rootCtfeBase)
     {
-        byName[i.name] = cast(ushort) byName.length;
+        byName[i.name] = cast(uint) byName.length;
     }
     string[] byPlace = ["print"];
     ret.stab = Function.Lookup(byName, byPlace);
@@ -53,9 +53,9 @@ struct Pair
 
 Pair[][] rootBases;
 
-ref Pair[] rootBase()
+ref Pair[] rootBase(size_t index = rootBases.length - 1)
 {
-    return rootBases[$ - 1];
+    return rootBases[index];
 }
 
 static this()
@@ -63,9 +63,10 @@ static this()
     rootBases ~= getRootBase;
 }
 
-void enterCtx()
+size_t enterCtx()
 {
     rootBases ~= getRootBase;
+    return rootBases.length - 1;
 }
 
 void exitCtx()
@@ -100,43 +101,23 @@ Pair[] getRootBase()
     ];
 }
 
-Function baseFunction()
+Function baseFunction(size_t ctx = rootBases.length - 1)
 {
     Function ret = new Function;
-    ushort[string] byName;
-    foreach (i; rootBase)
+    uint[string] byName;
+    foreach (i; ctx.rootBase)
     {
-        byName[i.name] = cast(ushort) byName.length;
+        byName[i.name] = cast(uint) byName.length;
     }
     string[] byPlace = ["print"];
     ret.stab = Function.Lookup(byName, byPlace);
     return ret;
 }
 
-string[Dynamic function(Args)] baseLookup()
-{
-    string[Dynamic function(Args)] ret;
-    foreach (i; rootBase)
-    {
-        ret[i.val.fun.fun] = i.name;
-    }
-    return ret;
-}
-
-Dynamic[string] funcLookup()
-{
-    Dynamic[string] ret;
-    foreach (i; rootBase)
-    {
-        ret[i.name] = i.val;
-    }
-    return ret;
-}
-
-Dynamic*[] loadBase()
+Dynamic*[] loadBase(size_t ctx = rootBases.length - 1)
 {
     Dynamic*[] ret;
-    foreach (i; rootBase)
+    foreach (i; ctx.rootBase)
     {
         ret ~= [i.val].ptr;
     }

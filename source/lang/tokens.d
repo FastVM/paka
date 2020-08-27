@@ -144,7 +144,7 @@ Token readToken(ref string code)
         }
         return code.readToken;
     }
-    if (peek == ';')
+    if (peek == ';' || peek == '\n')
     {
         return Token(Token.Type.semicolon, [read]);
     }

@@ -7,7 +7,7 @@ class Function
 {
     struct Lookup
     {
-        ushort[string] byName;
+        uint[string] byName;
         string[] byPlace;
         void clear()
         {
@@ -15,25 +15,25 @@ class Function
             byPlace = null;
         }
 
-        void set(string name, ushort us)
+        void set(string name, uint us)
         {
             byName[name] = us;
             byPlace ~= name;
         }
 
-        ushort define(string name)
+        uint define(string name)
         {
-            ushort ret = cast(ushort)(byPlace.length);
+            uint ret = cast(uint)(byPlace.length);
             set(name, ret);
             return ret;
         }
 
-        ushort opIndex(string name)
+        uint opIndex(string name)
         {
             return byName[name];
         }
 
-        string opIndex(ushort name)
+        string opIndex(uint name)
         {
             return byPlace[name];
         }
@@ -41,7 +41,7 @@ class Function
 
     struct Capture
     {
-        ushort from;
+        uint from;
         bool is2;
     }
 
@@ -81,14 +81,14 @@ class Function
         flags = other.flags;
     }
 
-    ushort doCapture(string name)
+    uint doCapture(string name)
     {
-        ushort* got = name in captab.byName;
+        uint* got = name in captab.byName;
         if (got !is null)
         {
             return *got;
         }
-        ushort ret = captab.define(name);
+        uint ret = captab.define(name);
         if (name in parent.stab.byName)
         {
             capture ~= Capture(parent.stab.byName[name], false);
@@ -117,7 +117,7 @@ class Function
     }
 }
 
-enum AssignOp : ushort
+enum AssignOp : uint
 {
     add,
     sub,
@@ -126,7 +126,7 @@ enum AssignOp : ushort
     mod,
 }
 
-enum Opcode : ushort
+enum Opcode
 {
     // never generated
     nop,
@@ -194,8 +194,7 @@ enum Opcode : ushort
 
 struct Instr
 {
-align(1):
     Opcode op;
-    ushort value;
+    uint value;
 }
 

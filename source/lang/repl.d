@@ -7,6 +7,7 @@ import lang.dynamic;
 import lang.parse;
 import lang.typed;
 import lang.vm;
+import lang.inter;
 import std.stdio;
 import std.algorithm;
 import std.string;
@@ -31,25 +32,21 @@ void printTop(ref size_t index, ref size_t depth, ref Dynamic[] stack, ref Dynam
     writeln(stack[depth]);
 }
 
-static this()
-{
-    printTopCallback = LocalCallback(toDelegate(&printTop), LocalCallback.At.exit);
-}
-
 void replRun()
 {
-    enterCtx;
+    size_t ctx = enterCtx;
     scope (exit)
+    {
         exitCtx;
+    }
     while (true)
     {
         write(">>> ");
         string code = readln.strip;
         Node node = code.parse;
         Walker walker = new Walker;
-        Function func = walker.walkProgram(node);
+        Function func = walker.walkProgram(node, ctx);
         func.captured = loadBase;
-        Dynamic retval = void;
-        retval = run(func, [printTopCallback, func.exportLocalsToBaseCallback]);
+        run(func, [LocalCallback(toDelegate(&printTop), LocalCallback.At.exit), func.exportLocalsToBaseCallback]);
     }
 }

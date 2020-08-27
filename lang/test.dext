@@ -1,14 +1,7 @@
-def getf(early) {
-    x = 5;
-    def f() {
-        return x;
-    };
-    if (early) {
-        return f;
-    };
-    x = 10;
-    return f;
+x = 0;
+res = 0;
+while (x < 1000 * 1000) {
+    x += 1;
+    res += x;
 };
-
-print(getf(true)());
-print(getf(false)());
+print(res);

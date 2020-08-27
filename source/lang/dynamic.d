@@ -13,7 +13,6 @@ import core.memory;
 import lang.bytecode;
 import lang.vm;
 import lang.data.rope;
-import lang.base;
 
 public import lang.number : Number;
 
@@ -405,7 +404,7 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
     case Dynamic.Type.num:
         if (dyn.num % 1 == 0)
         {
-            return to!string(dyn.num);
+            return to!string(cast(size_t) dyn.num);
         }
         return dyn.num.to!string;
     case Dynamic.Type.str:

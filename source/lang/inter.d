@@ -5,12 +5,30 @@ import std.stdio;
 import std.functional;
 import std.conv;
 import lang.vm;
+import lang.walk;
+import lang.bytecode;
+import lang.base;
+import lang.ast;
 import lang.dynamic;
 import lang.parse;
-import lang.base;
-import lang.walk;
-import lang.ast;
-import lang.bytecode;
+import lang.typed;
+import lang.vm;
+import lang.inter;
+import lang.repl;
+
+Dynamic eval(size_t ctx, string code)
+{
+    Node node = code.parse;
+    Walker walker = new Walker;
+    Function func = walker.walkProgram(node, ctx);
+    func.captured = ctx.loadBase;
+    return run(func, [func.exportLocalsToBaseCallback]);
+}
+
+void define(T)(size_t ctx, string name, T value)
+{
+    ctx.rootBase ~= Pair(name, value.toDynamic);
+}
 
 Dynamic toDynamic()
 {
@@ -52,10 +70,20 @@ Dynamic toDynamic(T)(T[] v)
     return dynamic(ret);
 }
 
-T fromDynamid(T)(Dynamic v) if (isArray!T)
+Dynamic toDynamic(string v)
+{
+    return dynamic(v);
+}
+
+T fromDynamic(T)(Dynamic v) if (is(T == string))
+{
+    return v.str;
+}
+
+T fromDynamic(T)(Dynamic a) if (isArray!T && !is(T == string))
 {
     T ret;
-    foreach (i, v; v.arr)
+    foreach (i, v; a.arr)
     {
         ret ~= v.fromDynamic!(ForeachType!T);
     }
@@ -74,7 +102,42 @@ Dynamic[] toDynamicArray(T...)(T args)
 
 Dynamic toDynamic(R, A...)(R function(A) arg)
 {
-    return toDelegate(arg).toDynamic;
+    return dynamic((Dynamic[] args) {
+        A fargs;
+        foreach (i, T; A)
+        {
+            fargs[i] = args[i].fromDynamic!T;
+        }
+        static if (is(R == void))
+        {
+            arg(fargs);
+            return Dynamic.nil;
+        }
+        else
+        {
+            return arg(fargs).toDynamic;
+        }
+    });
+}
+
+Dynamic toDynamic(R, A...)(R delegate(A) arg)
+{
+    return dynamic((Dynamic[] args) {
+        A fargs;
+        foreach (i, T; A)
+        {
+            fargs[i] = args[i].fromDynamic!T;
+        }
+        static if (is(R == void))
+        {
+            arg(fargs);
+            return Dynamic.nil;
+        }
+        else
+        {
+            return arg(fargs).toDynamic;
+        }
+    });
 }
 
 T fromDynamic(T)(Dynamic v) if (isDelegate!T)
@@ -97,61 +160,31 @@ T fromDynamic(T)(Dynamic v) if (isDelegate!T)
     };
 }
 
-Dynamic overload(A...)(A args) {
-    return dynamic((Dynamic[] args) {
-
-    });
-}
-
-Dynamic toDynamic(Ret, Args...)(Ret delegate(Args) del)
+Dynamic overload(A...)(A args)
 {
-    return dynamic((Dynamic[] dargs) {
-        Args args;
-        foreach (i, Arg; Args)
-        {
-            args[i] = dargs[i].fromDynamic!(Arg);
-        }
-        if (is(Ret == void))
-        {
-            del(args);
-        }
-        else
-        {
-            return del(args).toDynamic;
-        }
-    });
+    return dynamic((Dynamic[] args) {});
 }
 
-T evalTo(T, A...)(string code, A args) if ((A.length == 1 && isAssociativeArray!(A[0])) || A.length % 2 == 0)
-{
-    Node node = code.parse;
-    Walker walker = new Walker;
-    enterCtx;
-    scope(exit) exitCtx;
-    static if (A.length == 1)
-    {
-        static foreach (i; A[0].byKeyValue)
-        {
-            defineRoot(i.key.to!string, i.value.toDynamic);
-        }
-    }
-    else
-    {
-        static foreach (i; 0 .. A.length / 2)
-        {
-            defineRoot(args[i * 2].to!string, args[i * 2 + 1].toDynamic);
-        }
-    }
-    Function func = walker.walkProgram(node);
-    func.captured = loadBase;
-    return run(func).fromDynamic!T;
-}
+// Dynamic toDynamic(Ret, Args...)(Ret delegate(Args) del)
+// {
+//     return dynamic((Dynamic[] dargs) {
+//         Args args;
+//         foreach (i, Arg; Args)
+//         {
+//             args[i] = dargs[i].fromDynamic!(Arg);
+//         }
+//         static if (is(Ret == void))
+//         {
+//             del(args);
+//         }
+//         else
+//         {
+//             return del(args).toDynamic;
+//         }
+//     });
+// }
 
 Dynamic eval(A...)(string code, A args)
 {
     return evalTo!Dynamic(code, args);
-}
-
-static this()
-{
 }

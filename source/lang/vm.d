@@ -138,8 +138,43 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
     }
 }
 
-pragma(inline, false)
-Dynamic run(T...)(Function func, T argss)
+// void trace(A, B)(A a, B b, ref size_t[size_t] heat)
+// {
+//     if (b < a)
+//     {
+//         size_t index2 = a * ushort.max + b;
+//         size_t* ptr = index2 in heat;
+//         if (ptr is null)
+//         {
+//             heat[index2] = 1;
+//         }
+//         else
+//         {
+//             *ptr += 1;
+//             if (*ptr == 16)
+//             {
+//                 writeln(index2.getPlace);
+//             }
+//         }
+//     }
+// }
+
+// ulong[2] getPlace(size_t index)
+// {
+//     return [index % ushort.max, index / ushort.max];
+// }
+
+// void writeTraceLn(size_t[size_t] heat)
+// {
+//     foreach (kv; heat.byKeyValue)
+//     {
+//         ulong a = kv.key / ushort.max;
+//         ulong b = kv.key % ushort.max;
+//         // writeln(b, "\t..\t", a, "\t->\t", kv.value);
+//     }
+// }
+
+pragma(inline, false) Dynamic run(T...)(Function func, T argss)
 {
     size_t index = 0;
     size_t depth = 0;
@@ -196,6 +231,7 @@ Dynamic run(T...)(Function func, T argss)
         }
     }
     Instr* instrs = func.instrs.ptr;
+    size_t[size_t] heat;
     while (true)
     {
         // writeln(stack[0 .. depth]);
@@ -552,6 +588,7 @@ Dynamic run(T...)(Function func, T argss)
                     }
                 }
             }
+            // writeTraceLn(heat);
             return v;
         case Opcode.retnone:
             static foreach (args; argss)
@@ -567,8 +604,10 @@ Dynamic run(T...)(Function func, T argss)
                     }
                 }
             }
+            // writeTraceLn(heat);
             return Dynamic.nil;
         case Opcode.iftrue:
+            // trace(index, cur.value, heat);
             Dynamic val = stack[--depth];
             if (val.type != Dynamic.Type.nil && (val.type != Dynamic.Type.log || val.log))
             {
@@ -576,6 +615,7 @@ Dynamic run(T...)(Function func, T argss)
             }
             break;
         case Opcode.iffalse:
+            // trace(index, cur.value, heat);
             Dynamic val = stack[--depth];
             if (val.type == Dynamic.Type.nil || (val.type == Dynamic.Type.log && !val.log))
             {
@@ -583,6 +623,7 @@ Dynamic run(T...)(Function func, T argss)
             }
             break;
         case Opcode.jump:
+            // trace(index, cur.value, heat);
             index = cur.value;
             break;
         }
