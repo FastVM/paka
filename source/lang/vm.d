@@ -18,7 +18,7 @@ enum string[2][] cmpMap()
 
 enum string[2][] mutMap()
 {
-    return [["+", "add"], ["-", "sub"], ["*", "mul"], ["/", "div"], ["%", "mod"]];
+    return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"], ["%=", "mod"]];
 }
 
 Dynamic[] glocals = null;
@@ -88,28 +88,28 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
         if (to.type == Dynamic.Type.arr)
         {
             Dynamic[] arr = from.arr;
-            size_t index = 0;
-            outwhile: while (index < to.arr.length)
+            size_t sindex = 0;
+            outwhile: while (sindex < to.arr.length)
             {
-                Dynamic nto = (to.arr)[index];
+                Dynamic nto = (to.arr)[sindex];
                 if (nto.type == Dynamic.Type.pac)
                 {
-                    index++;
+                    sindex++;
                     size_t alen = from.arr.length - to.arr.length;
-                    locals.store!op((to.arr)[index], dynamic(arr[index - 1 .. index + alen + 1]));
-                    index++;
-                    while (index < to.arr.length)
+                    locals.store!op((to.arr)[sindex], dynamic(arr[sindex - 1 .. index + alen + 1]));
+                    sindex++;
+                    while (sindex < to.arr.length)
                     {
-                        locals.store!op((to.arr)[index], arr[index + alen]);
-                        index++;
+                        locals.store!op((to.arr)[sindex], arr[sindex + alen]);
+                        sindex++;
                     }
                     break outwhile;
                 }
                 else
                 {
-                    locals.store!op(nto, arr[index]);
+                    locals.store!op(nto, arr[sindex]);
                 }
-                index++;
+                sindex++;
             }
         }
         else if (to.type == Dynamic.Type.tab)
@@ -155,54 +155,34 @@ ref size_t depth()
 
 Function func()
 {
-    // writeln(calldepth);
     return funcs[calldepth - 1];
 }
 
 void enterScope(Function afunc, Dynamic[] args)
 {
     funcs[calldepth] = afunc;
-    // stacks[calldepth] = new Dynamic[afunc.stackSize];
-    // localss[calldepth] = new Dynamic[afunc.stab.byPlace.length + 1];
-
-    Dynamic* ptr = cast(Dynamic*) GC.malloc(
-            (afunc.stackSize + afunc.stab.byPlace.length + 1) * Dynamic.sizeof);
-    stacks[calldepth] = ptr[0 .. afunc.stackSize];
-    localss[calldepth] = ptr[afunc.stackSize .. afunc.stackSize + afunc.stab.byPlace.length + 1];
-    // stacks[calldepth] = new Dynamic[2 ^^ 16];
-    // Dynamic* ptr = cast(Dynamic*) GC.malloc((afunc.stab.byPlace.length + 1) * Dynamic.sizeof);
-    // localss[calldepth] = ptr[0 .. afunc.stab.byPlace.length + 1];
+    stacks[calldepth] = new Dynamic[afunc.stackSize];
+    localss[calldepth] = new Dynamic[afunc.stab.byPlace.length + 1];
     indexs[calldepth] = 0;
     depths[calldepth] = 0;
     calldepth += 1;
-
+    // writeln(func.constants);
     foreach (i, v; args)
     {
         locals[i] = v;
     }
     locals[$ - 1] = dynamic(Array.init);
-    // writeln("byPlace: ", func.captab.byPlace);
-    // writeln("captured: ", func.captured.map!(x => *x));
-    // writeln("constants: ", func.constants);
-    // writeln("funcs: ", func.funcs);
-    // writeln("locals: ", locals);
-    // writeln;
 }
 
 void exitScope()
 {
     calldepth--;
-    // writeln("exit");
-    // funcs.length--;
-    // stacka.length--;
-    // localsa.length--;
-    // indexs.length--;
-    // deptha.length--;
 }
 
-JSONValue[] vmRecord;
+size_t vmRecord;
 
-Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynamic[] args)
+Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc,
+        Dynamic[] args, size_t exiton = calldepth)
 {
     static if (hasScope)
     {
@@ -218,7 +198,6 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             }
         }
     }
-    size_t exiton = calldepth;
     static if (saveLocals)
     {
         scope (exit)
@@ -229,10 +208,8 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
     vmLoop: while (true)
     {
         Instr cur = func.instrs[index];
-        // writeln(stack);
-        // vmRecord ~= saveState;
-        // writeln(index, ": ", cur);
-        // writeln("stack: ", stack[0 .. depth], "\n", "locals: ", locals, "\n");
+        vmRecord++;
+        // File("world/vm/" ~ vmRecord.to!string ~ ".json", "w").write(saveState);
         switch (cur.op)
         {
         default:
@@ -290,7 +267,6 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             case Dynamic.Type.pro:
                 enterScope(f.fun.pro,
                         f.fun.pro.self ~ stack[depth .. depth + cur.value]);
-                // stack[depth .. depth + cur.value]);
                 continue vmLoop;
             default:
                 throw new Exception("error: not a function: " ~ f.to!string);
@@ -554,14 +530,14 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             case opm[1].to!AssignOp:
                     stack[depth - 1] = mixin(
                             "locals[$ - 1].arr[$ - 1].tab[dynamic(stack[depth].str)]"
-                            ~ opm[0] ~ "stack[depth - 1]");
+                            ~ opm[0] ~ " stack[depth - 1]");
                     break switchOpq;
                 }
             }
             break;
         case Opcode.retval:
             Dynamic v = stack[--depth];
-            if (calldepth == exiton)
+            if (calldepth - 1 == exiton)
             {
                 return v;
             }
@@ -569,7 +545,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, Dynam
             stack[depth - 1] = v;
             break;
         case Opcode.retnone:
-            if (calldepth == exiton)
+            if (calldepth - 1 == exiton)
             {
                 return Dynamic.nil;
             }

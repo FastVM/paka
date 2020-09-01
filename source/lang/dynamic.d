@@ -12,6 +12,7 @@ import core.memory;
 import lang.bytecode;
 import lang.vm;
 import lang.data.rope;
+import lang.data.array;
 import lang.base;
 
 public import lang.number : Number;
@@ -46,9 +47,9 @@ struct Dynamic
     {
         bool log;
         Number num;
-        string str;
-        Array arr;
-        Table tab;
+        string* str;
+        Array* arr;
+        Table* tab;
         union Callable
         {
             Dynamic function(Args) fun;
@@ -59,8 +60,8 @@ struct Dynamic
     }
 
 align(1):
-    Type type;
-    Value value;
+    Type type = Type.nil;
+    Value value = void;
 
     this(Type t)
     {
@@ -81,17 +82,35 @@ align(1):
 
     this(string str)
     {
-        value.str = str;
+        value.str = [str].ptr;
         type = Type.str;
     }
 
     this(Array arr)
     {
-        value.arr = arr;
+        value.arr = [arr].ptr;
         type = Type.arr;
     }
 
     this(Table tab)
+    {
+        value.tab = [tab].ptr;
+        type = Type.tab;
+    }
+
+    this(string* str)
+    {
+        value.str = str;
+        type = Type.str;
+    }
+
+    this(Array* arr)
+    {
+        value.arr = arr;
+        type = Type.arr;
+    }
+
+    this(Table* tab)
     {
         value.tab = tab;
         type = Type.tab;
@@ -130,11 +149,11 @@ align(1):
         default:
             return hashOf(type) ^ hashOf(value);
         case Type.str:
-            return hashOf(value.str);
+            return hashOf(*value.str);
         case Type.arr:
-            return hashOf(value.arr);
+            return hashOf(*value.arr);
         case Type.tab:
-            return hashOf(value.tab);
+            return hashOf(*value.tab);
         }
     }
 
@@ -172,11 +191,11 @@ align(1):
             }
             return 1;
         case Type.str:
-            if (value.str == other.str)
+            if (*value.str == other.str)
             {
                 return 0;
             }
-            if (value.str < other.str)
+            if (*value.str < other.str)
             {
                 return -1;
             }
@@ -199,7 +218,25 @@ align(1):
         {
             static if (op == "~" || op == "+")
             {
-                return dynamic(mixin("value.str~other.str"));
+                return dynamic(*value.str ~ other.str);
+            }
+        }
+        throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
+    }
+
+    Dynamic opOpAssign(string op)(Dynamic other)
+    {
+        if (type == Type.num && other.type == Type.num)
+        {
+            mixin("value.num" ~ op ~ "=other.num;");
+            return dynamic();
+        }
+        if (type == Type.str && other.type == Type.str)
+        {
+            static if (op == "~" || op == "+")
+            {
+                *value.str ~= other.str;
+                return dynamic();
             }
         }
         throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
@@ -234,6 +271,15 @@ align(1):
         {
             throw new Exception("expected string type");
         }
+        return *value.str;
+    }
+
+    string* strPtr()
+    {
+        if (type != Type.str)
+        {
+            throw new Exception("expected string type");
+        }
         return value.str;
     }
 
@@ -243,10 +289,28 @@ align(1):
         {
             throw new Exception("expected array type");
         }
+        return *value.arr;
+    }
+
+    Array* arrPtr()
+    {
+        if (type != Type.arr && type != Type.dat)
+        {
+            throw new Exception("expected array type");
+        }
         return value.arr;
     }
 
     ref Table tab()
+    {
+        if (type != Type.tab)
+        {
+            throw new Exception("expected table type");
+        }
+        return *value.tab;
+    }
+
+    Table* tabPtr()
     {
         if (type != Type.tab)
         {
@@ -287,11 +351,11 @@ private bool isEqual(Dynamic a, Dynamic b)
     case Dynamic.Type.num:
         return a.value.num == b.value.num;
     case Dynamic.Type.str:
-        return a.value.str == b.value.str;
+        return *a.value.str == *b.value.str;
     case Dynamic.Type.arr:
-        return a.value.arr == b.value.arr;
+        return *a.value.arr == *b.value.arr;
     case Dynamic.Type.tab:
-        return a.value.tab == b.value.tab;
+        return *a.value.tab == *b.value.tab;
     case Dynamic.Type.fun:
         return a.value.fun.fun == b.value.fun.fun;
     case Dynamic.Type.pro:
@@ -364,7 +428,7 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         ret ~= "}";
         return cast(string) ret;
     case Dynamic.Type.fun:
-        string* name = dyn.fun.fun in serialLookup;
+        string* name = dyn in serialLookup;
         if (name is null)
         {
             return "<lambda>";

@@ -5,6 +5,10 @@ import lang.bytecode;
 import lang.lib.io;
 import lang.lib.serial;
 import lang.lib.sys;
+import lang.lib.str;
+import lang.lib.arr;
+import std.algorithm;
+import std.stdio;
 
 struct Pair
 {
@@ -14,7 +18,7 @@ struct Pair
 
 Pair[] rootBase;
 Dynamic[string] rootFuncs;
-string[Dynamic function(Args)] serialLookup;
+string[Dynamic] serialLookup;
 
 static this()
 {
@@ -23,14 +27,28 @@ static this()
     rootFuncs = funcLookup;
 }
 
+void addLib(ref Pair[] pairs, string name, Pair[] lib)
+{
+    foreach (entry; lib)
+    {
+        pairs ~= Pair(name ~ "." ~ entry.name, entry.val);
+    }
+    Table dyn;
+    foreach (entry; lib)
+    {
+        dyn[dynamic(entry.name)] = entry.val;
+    }
+    pairs ~= Pair(name, dynamic(dyn));
+}
+
+Dynamic load(Dynamic function(Args args) fn)
+{
+    return dynamic(fn);
+}
+
 Pair[] getRootBase()
 {
-    Dynamic load(Dynamic function(Args args) fn)
-    {
-        return dynamic(fn);
-    }
-
-    return [
+    Pair[] ret = [
         Pair("print", load(&lang.lib.io.libprint)),
         Pair("put", load(&lang.lib.io.libput)),
         Pair("readln", load(&lang.lib.io.libreadln)),
@@ -41,6 +59,10 @@ Pair[] getRootBase()
         Pair("undumpf", load(&lang.lib.serial.libundumpf)),
         Pair("leave", load(&lang.lib.sys.libleave)),
     ];
+    ret.addLib("str", libstr);
+    ret.addLib("arr", libarr);
+    // writeln(ret.map!(x => x.name));
+    return ret;
 }
 
 Function baseFunction()
@@ -51,17 +73,18 @@ Function baseFunction()
     {
         byName[i.name] = cast(ushort) byName.length;
     }
-    string[] byPlace = ["print"];
+    // string[] byPlace = ["print"];
+    string[] byPlace = [];
     ret.stab = Function.Lookup(byName, byPlace);
     return ret;
 }
 
-string[Dynamic function(Args)] baseLookup()
+string[Dynamic] baseLookup()
 {
-    string[Dynamic function(Args)] ret;
+    string[Dynamic] ret;
     foreach (i; rootBase)
     {
-        ret[i.val.fun.fun] = i.name;
+        ret[i.val] = i.name;
     }
     return ret;
 }

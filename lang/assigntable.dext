@@ -3,11 +3,9 @@ x = table {
     .incme = 0
     env[0] = "zero"
     lambda() {
-        print(env)
-        print(.self)
         .added = "added value"
         [.incme] += [1]
-        [*.spread] = [1, 2, 3, 4]
+        [env.val, .incme] = [1, .incme + 1]
     }()
 }
 

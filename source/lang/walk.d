@@ -55,9 +55,6 @@ class Walker
         walk(node);
         func.instrs ~= Instr(Opcode.retval);
         func.stackSize = stackSize[1];
-        // foreach(k,i; func.instrs) {
-        //     writeln(k,":",i);
-        // }
         func.resizeStack;
         return func;
     }
@@ -103,7 +100,6 @@ class Walker
             if (info == typeid(T))
             {
                 walkExact(cast(T) node);
-                // writeln(stackSize[0], " => ", node);
                 return;
             }
         }
@@ -141,7 +137,7 @@ class Walker
         {
             if (i != 0)
             {
-                doPop;
+                func.instrs ~= Instr(Opcode.pop);
                 freeStack;
             }
             walk(v);
@@ -170,7 +166,7 @@ class Walker
         func.instrs ~= Instr(Opcode.iffalse);
         freeStack;
         walk(args[1]);
-        doPop;
+        func.instrs ~= Instr(Opcode.pop);
         freeStack;
         func.instrs ~= Instr(Opcode.jump, cast(ushort) redo);
         func.instrs[whileloc].value = cast(ushort)(func.instrs.length - 1);
@@ -403,7 +399,7 @@ class Walker
         {
             walk(args[0]);
             func.instrs ~= Instr(Opcode.retval);
-            doPop;
+            func.instrs ~= Instr(Opcode.pop);
             freeStack;
         }
     }

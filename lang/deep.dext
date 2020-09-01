@@ -5,4 +5,4 @@ def rec(n) {
     return 0;
 }
 
-print(rec(1000*1000))
+print(rec(500))

@@ -2,6 +2,7 @@ module lang.lib.serial;
 
 import lang.serial;
 import lang.dynamic;
+import lang.vm;
 import std.json;
 import std.file;
 import std.conv;
@@ -36,7 +37,8 @@ Dynamic libdump(Args args)
 
 Dynamic libundump(Args args)
 {
-    return args[0].str.parseJSON.readjs!Dynamic;
+    Dynamic ret = args[0].str.parseJSON.readjs!Dynamic;
+    return ret;
 }
 
 Dynamic libresumef(Args args)

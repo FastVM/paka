@@ -1,6 +1,3 @@
-tab = table {
-    .prop = "im a property"
-    .func = (this) => this.prop
-}
-
-print(tab::func())
+x = []
+arr.push(x, 10)
+print(x)

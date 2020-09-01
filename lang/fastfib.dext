@@ -3,7 +3,7 @@ def pfib(n) {
     b = 1
     i = 0
     while (i <= n) {
-        print("fib(", i, ") = ", a)
+        print(i, ": ", a)
         tmp = a + b
         a = b
         b = tmp
@@ -12,4 +12,4 @@ def pfib(n) {
     return a
 }
 
-pfib(30)
+pfib(5)

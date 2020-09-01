@@ -137,11 +137,11 @@ Token readToken(ref string code)
 
     if (peek == '#')
     {
-        while (peek != '\n')
+        while (peek != '\n' && code.length != 0)
         {
             read;
         }
-        return code.readToken;
+        return Token(Token.Type.none);
     }
     if (peek == ';' || peek == '\n')
     {

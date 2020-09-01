@@ -72,13 +72,20 @@ Node readPostExtend(ref Token[] tokens, Node last)
         ret = new Call(new Ident("@method"), [last, new String(tokens[0].value)]);
         tokens = tokens[1 .. $];
     }
+    else
+    {
+        throw new Exception("parser: invalid parse");
+    }
     return tokens.readPostExtend(ret);
 }
 
 Node readIf(ref Token[] tokens)
 {
     Node[] cond = tokens.readParens;
-    assert(cond.length == 1);
+    if (cond.length != 1)
+    {
+        throw new Exception("parser: if takes one");
+    }
     Node iftrue = tokens.readBlock;
     Node iffalse;
     if (tokens.length > 0 && tokens[0].isKeyword("else"))
@@ -96,7 +103,10 @@ Node readIf(ref Token[] tokens)
 Node readUsing(ref Token[] tokens)
 {
     Node[] obj = tokens.readParens;
-    assert(obj.length == 1);
+    if (obj.length != 1)
+    {
+        throw new Exception("invalid parse");
+    }
     Node bod = tokens.readBlock;
     return new Call(new Ident("@using"), [obj[0], bod]);
 }
@@ -183,7 +193,8 @@ Node readPreExpr(ref Token[] tokens)
         Token op = tokens[0];
         tokens = tokens[1 .. $];
         string val = op.value;
-        if (op.value == "*") {
+        if (op.value == "*")
+        {
             val = "...";
         }
         return new Call(new Ident(val), [tokens.readPreExpr]);
@@ -291,7 +302,10 @@ Node readExpr(ref Token[] tokens, size_t level = 0)
             ret = new Call(new Ident(v.value), [ret, rhs]);
             if (cmpOps.canFind(v.value))
             {
-                assert(opers.length == 1);
+                if (opers.length != 1)
+                {
+                    throw new Exception("invalid parse");
+                }
             }
             break;
         }

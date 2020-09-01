@@ -69,21 +69,39 @@ Rope!string jsRopeImpl(JSONValue val)
 
 JSONValue saveState()
 {
-    GC.disable;
+    GC.disable();
+    // bool extend = calldepth == 0;
+    // if (extend)
+    // {
+    //     calldepth++;
+    // }
+    JSONValue jslocals = localss[0 .. calldepth].map!js.array.js;
+    JSONValue jsstacks = stacks[0 .. calldepth].map!js.array.js;
+    JSONValue jsindexs = indexs[0 .. calldepth].map!js.array.js;
+    JSONValue jsdepths = depths[0 .. calldepth].map!js.array.js;
+    JSONValue jsfuncs = funcs[0 .. calldepth].js;
+    JSONValue jsbase = rootBase.map!js.array.js;
+    JSONValue jscalls = calldepth.js;
     JSONValue ret = JSONValue([
-            "localss": localss[0 .. calldepth].map!js.array.js,
-            "stacks": stacks[0 .. calldepth].map!js.array.js,
-            "indexs": indexs[0 .. calldepth].map!js.array.js,
-            "depths": depths[0 .. calldepth].map!js.array.js,
-            "funcs": funcs[0 .. calldepth].js,
-            "base": rootBase.map!js.array.js,
+            "localss": jslocals,
+            "stacks": jsstacks,
+            "indexs": jsindexs,
+            "depths": jsdepths,
+            "funcs": jsfuncs,
+            "base": jsbase,
+            "calls": jscalls,
             ]);
-    GC.enable;
+    // if (extend)
+    // {
+    //     calldepth--;
+    // }
+    GC.enable();
     return ret;
 }
 
 void loadState(JSONValue val)
 {
+    GC.disable();
     localTies = null;
     val.object["localss"].readjs!(typeof(localss))(&localss);
     localss.length = 1000;
@@ -96,10 +114,12 @@ void loadState(JSONValue val)
     val.object["funcs"].readjs!(typeof(funcs))(&funcs);
     funcs.length = 1000;
     rootBase = val.object["base"].readjs!(typeof(rootBase));
+    calldepth = val.object["calls"].readjs!(size_t);
     foreach (tie; localTies)
     {
         *tie.target = localss[tie.ind1][tie.ind2];
     }
+    GC.enable();
 }
 
 Function readjs(T)(JSONValue val, Function ret = new Function) if (is(T == Function))
@@ -218,13 +238,16 @@ T readjs(T)(JSONValue val) if (isPointer!T)
             size_t k1 = val.object["value"].object["level"].str.to!size_t;
             size_t k2 = val.object["value"].object["index"].str.to!size_t;
             size_t ilength = calldepth;
-            calldepth = max(calldepth, k1 + 1);
+            if (k1 > calldepth)
+            {
+                return [val.object["literal"].readjs!Dynamic].ptr;
+            }
             size_t klength = localss[k1].length;
             localss[k1].length = max(localss[k1].length, k2 + 1);
             Dynamic* ret = &localss[k1][k2];
             if (ilength != localss.length || klength != localss[k1].length)
             {
-                *ret = readjs!Dynamic(val.object["literal"]);
+                *ret = val.object["literal"].readjs!Dynamic;
             }
             localTies ~= LocalTie(k1, k2, ret);
             return ret;
@@ -263,7 +286,13 @@ T readjs(T)(JSONValue val, T* arr = null) if (isArray!T)
 
 JSONValue jsp(Dynamic* d)
 {
-    foreach (n, l; localss)
+    // if (cast(void*) d == null) 
+    // {
+    //     throw new Exception("memory error");
+    // }
+    // writeln("ptr: ", d);
+    // writeln("val: ", *d);
+    foreach (n, l; localss[0 .. calldepth])
     {
         foreach (i; 0 .. l.length)
         {
@@ -391,7 +420,7 @@ JSONValue js(Dynamic d)
     case Dynamic.Type.fun:
         return JSONValue([
                 "type": JSONValue("fun"),
-                "value": JSONValue(serialLookup[d.fun.fun])
+                "value": JSONValue(serialLookup[d])
                 ]);
     case Dynamic.Type.pro:
         return JSONValue(["type": JSONValue("pro"), "value": d.fun.pro.js]);
