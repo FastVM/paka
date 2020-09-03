@@ -101,7 +101,7 @@ void main(string[] args)
 			if (world.length != 0 && code.length == 0)
 			{
 				File f = File(world, "w");
-				f.write(saveState);
+				f.write(saveState.toPrettyString);
 				continue;
 			}
 			code = code;

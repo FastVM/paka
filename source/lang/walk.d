@@ -42,7 +42,7 @@ class Walker
             "@def", "@set", "@opset", "@while", "@array", "@table", "@target",
             "@return", "@if", "@fun", "@do", "@using", "+", "-", "*", "/",
             "%", "<", ">", "<=", ">=", "==", "!=", "...", "@index", "@method",
-            "=>", "."
+            "=>", ".", "&&", "||",
         ];
     Function walkProgram(Node node)
     {
@@ -532,6 +532,16 @@ class Walker
         }
     }
 
+    void walkAnd(Node[] args)
+    {
+        walkSpecialCall(new Call(new Ident("@if"), [args[0], args[1], new Ident("false")]));
+    }
+
+    void walkOr(Node[] args)
+    {
+        walkSpecialCall(new Call(new Ident("@if"), [args[0], new Ident("true"), args[1]]));
+    }
+
     void walkSpecialCall(Call c)
     {
         final switch ((cast(Ident) c.args[0]).repr)
@@ -583,6 +593,12 @@ class Walker
             break;
         case ".":
             walkUse(c.args[1 .. $]);
+            break;
+        case "&&":
+            walkAnd(c.args[1 .. $]);
+            break;
+        case "||":
+            walkOr(c.args[1 .. $]);
             break;
         case "+":
             walkBinary!"add"(c.args[1 .. $]);
