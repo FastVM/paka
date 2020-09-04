@@ -7,13 +7,13 @@ def fib(x) {
 
 fibv = fib(5)
 def run() {
-    if(dumpf("world/saved.json")) {
-        print("Loading World!")
+    if(json.dumpf("world/saved.json")) {
+        io.print("Loading World!")
     } else {
-        print("Saving World!")
+        io.print("Saving World!")
     }
-    print(fib(5))
-    print(fibv)
+    io.print(fib(5))
+    io.print(fibv)
 }
 run()
-print("Done!")
+io.print("Done!")

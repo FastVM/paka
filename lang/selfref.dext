@@ -1,6 +1,0 @@
-x = [1]
-y = [2]
-x[0] = y
-print(x, y)
-y[0] = x
-print(x, y)

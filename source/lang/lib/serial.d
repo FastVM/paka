@@ -3,12 +3,26 @@ module lang.lib.serial;
 import lang.serial;
 import lang.dynamic;
 import lang.vm;
-import std.json;
+import lang.base;
+import lang.json;
 import std.file;
 import std.conv;
 import std.stdio;
 import core.memory;
 
+Pair[] libjson()
+{
+    Pair[] ret = [
+        Pair("dumpf", dynamic(&libdumpf)),
+        Pair("dump", dynamic(&libdump)),
+        Pair("undump", dynamic(&libundump)),
+        Pair("resumef", dynamic(&libresumef)),
+        Pair("undumpf", dynamic(&libundumpf)),
+    ];
+    return ret;
+}
+
+private:
 Dynamic libdumpf(Args args)
 {
     File file = File(args[0].str, "w");
@@ -27,7 +41,7 @@ Dynamic libdumpf(Args args)
 Dynamic libundumpf(Args args)
 {
     string str = cast(string) read(args[0].str);
-    return str.parseJSON.readjs!Dynamic;
+    return str.serialParse.readjs!Dynamic;
 }
 
 Dynamic libdump(Args args)
@@ -37,13 +51,13 @@ Dynamic libdump(Args args)
 
 Dynamic libundump(Args args)
 {
-    Dynamic ret = args[0].str.parseJSON.readjs!Dynamic;
+    Dynamic ret = args[0].str.serialParse.readjs!Dynamic;
     return ret;
 }
 
 Dynamic libresumef(Args args)
 {
     string str = cast(string) read(args[0].str);
-    loadState(str.parseJSON);
+    loadState(str.serialParse);
     return dynamic(false);
 }

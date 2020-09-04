@@ -3,6 +3,7 @@ module lang.ast;
 import std.algorithm;
 import std.conv;
 import std.meta;
+import lang.data.array;
 
 alias NodeTypes = AliasSeq!(Call, String, Ident);
 
@@ -12,15 +13,25 @@ class Node
 
 class Call : Node
 {
-    Node[] args;
-    this(Node[] c)
+    SafeArray!Node args;
+    this(SafeArray!Node c)
     {
         args = c;
     }
 
+    this(Node[] c)
+    {
+        args = SafeArray!Node(c);
+    }
+
+    this(Node f, SafeArray!Node a)
+    {
+        args = SafeArray!Node(f ~ a);
+    }
+
     this(Node f, Node[] a)
     {
-        args = f ~ a;
+        args = SafeArray!Node(f ~ a);
     }
 
     override string toString()

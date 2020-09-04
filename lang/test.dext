@@ -1,3 +1,7 @@
-x = []
-arr.push(x, 10)
-print(x)
+x = 0
+s = 0
+while (x < 100) {
+    x += 1
+    s += x
+}
+io.print(s)

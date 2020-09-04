@@ -24,7 +24,7 @@ Dynamic liblen(Args args)
 
 Dynamic libsplit(Args args)
 {
-    return dynamic(args[0].arr.splitter(args[1]).map!(x => dynamic(x)).array);
+    return dynamic(args[0].arr.arr.splitter(args[1]).map!(x => dynamic(x)).array);
 }
 
 Dynamic libpush(Args args)

@@ -3,12 +3,12 @@ def abc() {
     def l() {
         return x
     }
-    one = dump(l)
+    one = json.dump(l)
     x = 2
-    two = dump(l)
+    two = json.dump(l)
     return [one, two]
 }
 
 [one, two] = abc()
-print(undump(one)())
-print(undump(two)())
+io.print(json.undump(one)())
+io.print(json.undump(two)())

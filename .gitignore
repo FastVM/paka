@@ -25,3 +25,4 @@ callgrind*
 world/*
 bf
 dadv
+.repl_dext

@@ -9,4 +9,4 @@ x = table {
     }()
 }
 
-print(x)
+io.print(x)

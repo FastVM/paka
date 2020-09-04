@@ -1,8 +1,9 @@
 def abc() {
     x = 7
-    dumpf("abc.json", abc)
-    print(x)
+    json.dumpf("abc.json", abc)
+    io.print(x)
     return x + 9
 }
 abc()
-result = undumpf("abc.json")()
+result = json.undumpf("abc.json")()
+io.print(result)

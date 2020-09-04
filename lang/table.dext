@@ -14,8 +14,8 @@ tab4 = using ({}) {
     .y = 20
 }
 
-print(tab1)
-print(tab2)
-print(tab3)
-print(tab4)
+io.print(tab1)
+io.print(tab2)
+io.print(tab3)
+io.print(tab4)
 

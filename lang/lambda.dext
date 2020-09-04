@@ -8,7 +8,7 @@ x = table {
     }
 }
 x.set(20)
-print(x.get())
+io.print(x.get())
 
 
 y = table {
@@ -21,4 +21,4 @@ y = table {
     }
 }
 y::set(4000)
-print(y::get())
+io.print(y::get())

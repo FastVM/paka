@@ -9,6 +9,7 @@ import std.traits;
 import std.typecons;
 import std.stdio;
 import core.memory;
+import lang.data.array;
 import lang.bytecode;
 import lang.vm;
 import lang.data.rope;
@@ -17,8 +18,8 @@ import lang.base;
 
 public import lang.number : Number;
 
-alias Args = Dynamic[];
-alias Array = Dynamic[];
+alias Args = SafeArray!Dynamic;
+alias Array = SafeArray!Dynamic;
 alias Table = Dynamic[Dynamic];
 
 Dynamic dynamic(T...)(T a)
@@ -89,6 +90,12 @@ align(1):
     this(Array arr)
     {
         value.arr = [arr].ptr;
+        type = Type.arr;
+    }
+
+    this(Dynamic[] arr)
+    {
+        value.arr = [SafeArray!Dynamic(arr)].ptr;
         type = Type.arr;
     }
 
@@ -221,6 +228,13 @@ align(1):
                 return dynamic(*value.str ~ other.str);
             }
         }
+        if (type == Type.arr && other.type == Type.arr)
+        {
+            static if (op == "~" || op == "+")
+            {
+                return dynamic(*value.arr ~ other.arr);
+            }
+        }
         throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
     }
 
@@ -229,14 +243,22 @@ align(1):
         if (type == Type.num && other.type == Type.num)
         {
             mixin("value.num" ~ op ~ "=other.num;");
-            return dynamic();
+            return this;
         }
         if (type == Type.str && other.type == Type.str)
         {
             static if (op == "~" || op == "+")
             {
                 *value.str ~= other.str;
-                return dynamic();
+                return this;
+            }
+        }
+        if (type == Type.arr && other.type == Type.arr)
+        {
+            static if (op == "~" || op == "+")
+            {
+                *value.arr ~= other.arr;
+                return this;
             }
         }
         throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
@@ -363,7 +385,7 @@ private bool isEqual(Dynamic a, Dynamic b)
     }
 }
 
-private string strFormat(Dynamic dyn, Dynamic[] before = null)
+private string strFormat(Dynamic dyn, SafeArray!Dynamic before = SafeArray!Dynamic.init)
 {
     if (canFind(before, dyn))
     {

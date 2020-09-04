@@ -1,6 +1,5 @@
 module lang.serial;
 
-import std.json;
 import std.conv;
 import std.algorithm;
 import std.array;
@@ -10,14 +9,18 @@ import std.stdio;
 import std.functional;
 import core.memory;
 import lang.vm;
+import lang.json;
 import lang.base;
 import lang.bytecode;
 import lang.dynamic;
-import lang.data.rope;
+import lang.data.array;
 
-Dynamic[] jsarr;
+// enum string gcOffFor = `
+//     GC.disable();
+//     scope(exit) {GC.enable();}
+// `;
 
-Rope!string[4] cs;
+SafeArray!Dynamic jsarr;
 
 LocalTie[] localTies = null;
 
@@ -28,80 +31,26 @@ struct LocalTie
     Dynamic* target;
 }
 
-void jsInit()
+SerialValue saveState(bool repl = false)()
 {
-    cs[0] = new Rope!string("{");
-    cs[1] = new Rope!string(",");
-    cs[2] = new Rope!string(":");
-    cs[3] = new Rope!string("}");
-}
-
-Rope!string jsRope(JSONValue val)
-{
-    return memoize!jsRopeImpl(val);
-}
-
-Rope!string jsRopeImpl(JSONValue val)
-{
-    if (val.type == JSONType.string)
-    {
-        return new Rope!string("\"" ~ val.str ~ "\"");
-    }
-    Rope!string ret = cs[0];
-    bool begin = true;
-    foreach (i; val.object.byKeyValue)
-    {
-        if (begin)
-        {
-            begin = false;
-        }
-        else
-        {
-            ret = ret ~ cs[1];
-        }
-        ret = ret ~ new Rope!string("\"" ~ i.key ~ "\"");
-        ret = ret ~ cs[2];
-        ret = ret ~ i.value.jsRope;
-    }
-    ret = ret ~ cs[3];
+    SerialValue jslocals = localss[0 .. calldepth].map!js.array.js;
+    SerialValue jsstacks = stacks[0 .. calldepth].map!js.array.js;
+    SerialValue jsindexs = indexs[0 .. calldepth].map!js.array.js;
+    SerialValue jsdepths = depths[0 .. calldepth].map!js.array.js;
+    SerialValue jsfuncs = funcs[0 .. calldepth].js;
+    SerialValue jsbase = rootBase.map!js.array.js;
+    SerialValue jscalls = calldepth.js;
+    SerialValue[string] data = [
+        "localss" : jslocals, "stacks" : jsstacks, "indexs" : jsindexs,
+        "depths" : jsdepths, "funcs" : jsfuncs, "base" : jsbase,
+        "calls" : jscalls, 
+    ];
+    SerialValue ret = SerialValue(data);
     return ret;
 }
 
-JSONValue saveState()
+void loadState(bool repl = false)(SerialValue val)
 {
-    GC.disable();
-    // bool extend = calldepth == 0;
-    // if (extend)
-    // {
-    //     calldepth++;
-    // }
-    JSONValue jslocals = localss[0 .. calldepth].map!js.array.js;
-    JSONValue jsstacks = stacks[0 .. calldepth].map!js.array.js;
-    JSONValue jsindexs = indexs[0 .. calldepth].map!js.array.js;
-    JSONValue jsdepths = depths[0 .. calldepth].map!js.array.js;
-    JSONValue jsfuncs = funcs[0 .. calldepth].js;
-    JSONValue jsbase = rootBase.map!js.array.js;
-    JSONValue jscalls = calldepth.js;
-    JSONValue ret = JSONValue([
-            "localss": jslocals,
-            "stacks": jsstacks,
-            "indexs": jsindexs,
-            "depths": jsdepths,
-            "funcs": jsfuncs,
-            "base": jsbase,
-            "calls": jscalls,
-            ]);
-    // if (extend)
-    // {
-    //     calldepth--;
-    // }
-    GC.enable();
-    return ret;
-}
-
-void loadState(JSONValue val)
-{
-    GC.disable();
     localTies = null;
     val.object["localss"].readjs!(typeof(localss))(&localss);
     localss.length = 1000;
@@ -113,53 +62,52 @@ void loadState(JSONValue val)
     depths.length = 1000;
     val.object["funcs"].readjs!(typeof(funcs))(&funcs);
     funcs.length = 1000;
-    rootBase = val.object["base"].readjs!(typeof(rootBase));
+    val.object["base"].readjs!(typeof(rootBase))(&rootBase);
     calldepth = val.object["calls"].readjs!(size_t);
     foreach (tie; localTies)
     {
         *tie.target = localss[tie.ind1][tie.ind2];
     }
-    GC.enable();
 }
 
-Function readjs(T)(JSONValue val, Function ret = new Function) if (is(T == Function))
+Function readjs(T)(SerialValue val, Function ret = new Function) if (is(T == Function))
 {
     ret.capture = val.object["capture"].readjs!(Function.Capture[]);
     ret.instrs = val.object["instrs"].readjs!(Instr[]);
-    ret.constants = val.object["constants"].readjs!(Dynamic[]);
+    ret.constants = val.object["constants"].readjs!(SafeArray!Dynamic);
     ret.captured = val.object["captured"].readjs!(Dynamic*[]);
     ret.stackSize = val.object["stackSize"].str.to!size_t;
     ret.funcs = val.object["funcs"].readjs!(Function[]);
-    ret.self = val.object["self"].readjs!(Dynamic[]);
+    ret.self = val.object["self"].readjs!(SafeArray!Dynamic);
     ret.stab.byPlace.length = val.object["locc"].readjs!(size_t);
     ret.env = cast(bool) val.object["env"].readjs!size_t;
     return ret;
 }
 
-Pair readjs(T)(JSONValue val) if (is(T == Pair))
+Pair readjs(T)(SerialValue val) if (is(T == Pair))
 {
     return Pair(val.object["name"].str, val.object["val"].readjs!Dynamic);
 }
 
-Function.Capture readjs(T)(JSONValue val) if (is(T == Function.Capture))
+Function.Capture readjs(T)(SerialValue val) if (is(T == Function.Capture))
 {
     return Function.Capture(val.object["from"].str.to!ushort, val.object["is2"].str.to!bool);
 }
 
-Instr readjs(T)(JSONValue val) if (is(T == Instr))
+Instr readjs(T)(SerialValue val) if (is(T == Instr))
 {
     return Instr(val.object["op"].str.to!Opcode, val.object["value"].str.to!ushort);
 }
 
-size_t readjs(T)(JSONValue val) if (is(T == size_t))
+size_t readjs(T)(SerialValue val) if (is(T == size_t))
 {
     return val.str.to!size_t;
 }
 
-Dynamic[] above;
+SafeArray!Dynamic above;
 Function[] abovef;
 
-Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
+Dynamic readjs(T)(SerialValue val) if (is(T == Dynamic))
 {
     above ~= Dynamic.nil;
     abovef.length++;
@@ -211,25 +159,25 @@ Dynamic readjs(T)(JSONValue val) if (is(T == Dynamic))
     case "end":
         return dynamic(Dynamic.Type.end);
     case "dat":
-        Dynamic ret = dynamic(val.object["value"].readjs!(Dynamic[]));
+        Dynamic ret = dynamic(val.object["value"].readjs!(SafeArray!Dynamic));
         ret.type = Dynamic.Type.arr;
         return ret;
     case "pac":
         Dynamic ret = void;
-        if (val.object["value"].type == JSONType.string)
+        if (val.object["value"].type == SerialType.string)
         {
             ret = Dynamic.nil;
         }
         else
         {
-            ret = dynamic(val.object["value"].readjs!(Dynamic[]));
+            ret = dynamic(val.object["value"].readjs!(SafeArray!Dynamic));
         }
         ret.type = Dynamic.Type.pac;
         return ret;
     }
 }
 
-T readjs(T)(JSONValue val) if (isPointer!T)
+T readjs(T)(SerialValue val) if (isPointer!T)
 {
     static if (is(T == Dynamic*))
     {
@@ -254,14 +202,15 @@ T readjs(T)(JSONValue val) if (isPointer!T)
 
         }
     }
-    if (val.type == JSONType.string && val.str == "null")
+    if (val.type == SerialType.string && val.str == "null")
     {
         return null;
     }
     return [val.readjs!(PointerTarget!T)].ptr;
 }
 
-T readjs(T)(JSONValue val, T* arr = null) if (isArray!T)
+T readjs(T)(SerialValue val, T* arr = null)
+        if (isArray!T || is(T == SafeArray!Dynamic))
 {
     if (arr is null)
     {
@@ -272,7 +221,7 @@ T readjs(T)(JSONValue val, T* arr = null) if (isArray!T)
     (*arr).length = len;
     foreach (i; 0 .. len)
     {
-        static if (isArray!(ElementType!T))
+        static if (is(ElementType!T == SafeArray!Dynamic))
         {
             val.object[i.to!string].readjs!(ElementType!T)(&(*arr)[i]);
         }
@@ -284,24 +233,18 @@ T readjs(T)(JSONValue val, T* arr = null) if (isArray!T)
     return *arr;
 }
 
-JSONValue jsp(Dynamic* d)
+SerialValue jsp(Dynamic* d)
 {
-    // if (cast(void*) d == null) 
-    // {
-    //     throw new Exception("memory error");
-    // }
-    // writeln("ptr: ", d);
-    // writeln("val: ", *d);
     foreach (n, l; localss[0 .. calldepth])
     {
         foreach (i; 0 .. l.length)
         {
             if (cast(void*) d == cast(void*)&l[i])
             {
-                return JSONValue([
-                        "type": JSONValue("stk"),
+                return SerialValue([
+                        "type": SerialValue("stk"),
                         "literal": js(d),
-                        "value": JSONValue([
+                        "value": SerialValue([
                                 "level": n.to!string,
                                 "index": i.to!string
                             ])
@@ -312,48 +255,48 @@ JSONValue jsp(Dynamic* d)
     return js(*d);
 }
 
-JSONValue js(T)(T[] d)
+SerialValue js(T)(T[] d)
 {
-    JSONValue[string] ret;
-    ret["length"] = JSONValue(d.length.to!string);
+    SerialValue[string] ret;
+    ret["length"] = SerialValue(d.length.to!string);
     foreach (i, v; d)
     {
         ret[i.to!string] = v.js;
     }
-    return JSONValue(ret);
+    return SerialValue(ret);
 }
 
-JSONValue js(Pair p)
+SerialValue js(Pair p)
 {
-    return JSONValue(["name": JSONValue(p.name), "val": p.val.js]);
+    return SerialValue(["name": SerialValue(p.name), "val": p.val.js]);
 }
 
-JSONValue js(size_t v)
+SerialValue js(size_t v)
 {
-    return JSONValue(v.to!string);
+    return SerialValue(v.to!string);
 }
 
-JSONValue js(JSONValue d)
+SerialValue js(SerialValue d)
 {
     return d;
 }
 
-JSONValue js(Function.Capture c)
+SerialValue js(Function.Capture c)
 {
-    return JSONValue(["from": c.from.to!string, "is2": c.is2.to!string]);
+    return SerialValue(["from": c.from.to!string, "is2": c.is2.to!string]);
 }
 
-JSONValue js(Instr inst)
+SerialValue js(Instr inst)
 {
-    return JSONValue(["op": inst.op.to!string, "value": inst.value.to!string]);
+    return SerialValue(["op": inst.op.to!string, "value": inst.value.to!string]);
 }
 
 size_t depth;
 
-JSONValue js(Function f)
+SerialValue js(Function f)
 {
     depth++;
-    JSONValue[string] ret;
+    SerialValue[string] ret;
     ret["capture"] = f.capture.map!js.array.js;
     ret["instrs"] = f.instrs.map!js.array.js;
     ret["constants"] = f.constants.map!js.array.js;
@@ -364,25 +307,25 @@ JSONValue js(Function f)
     ret["env"] = (cast(size_t)(f.env)).js;
     ret["captured"] = f.captured.map!jsp.array.js;
     depth--;
-    return JSONValue(ret);
+    return SerialValue(ret);
 }
 
-JSONValue js(T)(T* v)
+SerialValue js(T)(T* v)
 {
     if (v is null)
     {
-        return JSONValue("null");
+        return SerialValue("null");
     }
     return js(*v);
 }
 
-JSONValue js(Dynamic d)
+SerialValue js(Dynamic d)
 {
     foreach (i, v; jsarr)
     {
         if (v == d)
         {
-            return JSONValue(["type": "ref", "value": i.to!string]);
+            return SerialValue(["type": "ref", "value": i.to!string]);
         }
     }
     jsarr ~= d;
@@ -393,61 +336,61 @@ JSONValue js(Dynamic d)
     final switch (d.type)
     {
     case Dynamic.Type.nil:
-        return JSONValue(["type": JSONValue("nil")]);
+        return SerialValue(["type": SerialValue("nil")]);
     case Dynamic.Type.log:
-        return JSONValue([
-                "type": JSONValue("log"),
-                "value": JSONValue(d.log.to!string)
+        return SerialValue([
+                "type": SerialValue("log"),
+                "value": SerialValue(d.log.to!string)
                 ]);
     case Dynamic.Type.num:
-        return JSONValue([
-                "type": JSONValue("num"),
-                "value": JSONValue(d.num.to!string)
+        return SerialValue([
+                "type": SerialValue("num"),
+                "value": SerialValue(d.num.to!string)
                 ]);
     case Dynamic.Type.str:
-        return JSONValue(["type": JSONValue("str"), "value": JSONValue(d.str)]);
+        return SerialValue(["type": SerialValue("str"), "value": SerialValue(d.str)]);
     case Dynamic.Type.arr:
-        return JSONValue(["type": JSONValue("arr"), "value": d.arr.js]);
+        return SerialValue(["type": SerialValue("arr"), "value": d.arr.js]);
     case Dynamic.Type.tab:
-        JSONValue[string] ret;
+        SerialValue[string] ret;
         size_t i = 0;
         foreach (v; d.tab.byKeyValue)
         {
-            ret[i.to!string] = JSONValue(["key": v.key.js, "value": v.value.js]);
+            ret[i.to!string] = SerialValue(["key": v.key.js, "value": v.value.js]);
             i++;
         }
-        return JSONValue(["type": JSONValue("tab"), "value": JSONValue(ret)]);
+        return SerialValue(["type": SerialValue("tab"), "value": SerialValue(ret)]);
     case Dynamic.Type.fun:
-        return JSONValue([
-                "type": JSONValue("fun"),
-                "value": JSONValue(serialLookup[d])
+        return SerialValue([
+                "type": SerialValue("fun"),
+                "value": SerialValue(serialLookup[d])
                 ]);
     case Dynamic.Type.pro:
-        return JSONValue(["type": JSONValue("pro"), "value": d.fun.pro.js]);
+        return SerialValue(["type": SerialValue("pro"), "value": d.fun.pro.js]);
     case Dynamic.Type.end:
-        return JSONValue(["type": "end"]);
+        return SerialValue(["type": "end"]);
     case Dynamic.Type.dat:
-        JSONValue[string] ret;
-        ret["length"] = JSONValue(d.arr.length.to!string);
+        SerialValue[string] ret;
+        ret["length"] = SerialValue(d.arr.length.to!string);
         foreach (i, v; d.arr)
         {
             ret[i.to!string] = v.js;
         }
-        return JSONValue(["type": JSONValue("dat"), "value": JSONValue(ret)]);
+        return SerialValue(["type": SerialValue("dat"), "value": SerialValue(ret)]);
     case Dynamic.Type.pac:
         if (d.arr is null)
         {
-            return JSONValue([
-                    "type": JSONValue("pac"),
-                    "value": JSONValue("null")
+            return SerialValue([
+                    "type": SerialValue("pac"),
+                    "value": SerialValue("null")
                     ]);
         }
-        JSONValue[string] ret;
-        ret["length"] = JSONValue(d.arr.length.to!string);
+        SerialValue[string] ret;
+        ret["length"] = SerialValue(d.arr.length.to!string);
         foreach (i, v; d.arr)
         {
             ret[i.to!string] = v.js;
         }
-        return JSONValue(["type": JSONValue("pac"), "value": JSONValue(ret)]);
+        return SerialValue(["type": SerialValue("pac"), "value": SerialValue(ret)]);
     }
 }

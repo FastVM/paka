@@ -1,8 +1,8 @@
 tab1 = table {
     .value = "tab1"
     .log = lambda(self) {
-        print(self.value)
-        print(.value)
+        io.print(self.value)
+        io.print(.value)
     }
 }
 

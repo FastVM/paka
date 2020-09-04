@@ -5,12 +5,13 @@ import lang.bytecode;
 import lang.dynamic;
 import lang.base;
 import lang.ssize;
+import lang.data.array;
 import std.algorithm;
 import std.conv;
 import std.string;
 import std.stdio;
 
-bool isUnpacking(Node[] args)
+bool isUnpacking(SafeArray!Node args)
 {
     foreach (i; args)
     {
@@ -105,7 +106,7 @@ class Walker
         }
     }
 
-    void walkDef(Node[] args)
+    void walkDef(SafeArray!Node args)
     {
         if (typeid(args[0]) == typeid(Ident))
         {
@@ -125,7 +126,7 @@ class Walker
         }
     }
 
-    void walkDo(Node[] args)
+    void walkDo(SafeArray!Node args)
     {
         if (args.length == 0)
         {
@@ -144,7 +145,7 @@ class Walker
         }
     }
 
-    void walkIf(Node[] args)
+    void walkIf(SafeArray!Node args)
     {
         walk(args[0]);
         size_t ifloc = func.instrs.length;
@@ -158,8 +159,11 @@ class Walker
         func.instrs[jumploc].value = cast(ushort)(func.instrs.length - 1);
     }
 
-    void walkWhile(Node[] args)
+    void walkWhile(SafeArray!Node args)
     {
+        func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
+        useStack;
+        func.constants ~= Dynamic.nil;
         size_t redo = func.instrs.length - 1;
         walk(args[0]);
         size_t whileloc = func.instrs.length;
@@ -170,12 +174,9 @@ class Walker
         freeStack;
         func.instrs ~= Instr(Opcode.jump, cast(ushort) redo);
         func.instrs[whileloc].value = cast(ushort)(func.instrs.length - 1);
-        func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
-        useStack;
-        func.constants ~= Dynamic.nil;
     }
 
-    void walkArrowFun(Node[] args)
+    void walkArrowFun(SafeArray!Node args)
     {
         Ident argid = cast(Ident) args[0];
         if (argid is null)
@@ -202,7 +203,7 @@ class Walker
         }
     }
 
-    void walkFun(Node[] args)
+    void walkFun(SafeArray!Node args)
     {
         Call argl = cast(Call) args[0];
         Function lastFunc = func;
@@ -237,7 +238,7 @@ class Walker
         func = lastFunc;
     }
 
-    void walkBinary(string op)(Node[] args)
+    void walkBinary(string op)(SafeArray!Node args)
     {
         walk(args[0]);
         walk(args[1]);
@@ -245,13 +246,13 @@ class Walker
         freeStack;
     }
 
-    void walkUnary(string op)(Node[] args)
+    void walkUnary(string op)(SafeArray!Node args)
     {
         walk(args[0]);
         func.instrs ~= Instr(mixin("Opcode.op" ~ op));
     }
 
-    void walkSet(Node[] c)
+    void walkSet(SafeArray!Node c)
     {
         foreach (p; 0 .. c.length / 2)
         {
@@ -320,7 +321,7 @@ class Walker
         }
     }
 
-    void walkOpSet(Node[] c)
+    void walkOpSet(SafeArray!Node c)
     {
         Ident id = cast(Ident) c[0];
         c = c[1 .. $];
@@ -389,7 +390,7 @@ class Walker
         }
     }
 
-    void walkReturn(Node[] args)
+    void walkReturn(SafeArray!Node args)
     {
         if (args.length == 0)
         {
@@ -404,7 +405,7 @@ class Walker
         }
     }
 
-    void walkArray(Node[] args)
+    void walkArray(SafeArray!Node args)
     {
         func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
         useStack;
@@ -424,7 +425,7 @@ class Walker
         freeStack(args.length);
     }
 
-    void walkTable(Node[] args)
+    void walkTable(SafeArray!Node args)
     {
         foreach (i; args)
         {
@@ -435,7 +436,7 @@ class Walker
         useStack();
     }
 
-    void walkTarget(Node[] args)
+    void walkTarget(SafeArray!Node args)
     {
         bool lastTarget = isTarget;
         scope (exit)
@@ -446,7 +447,7 @@ class Walker
         walk(args[0]);
     }
 
-    void walkIndex(Node[] args)
+    void walkIndex(SafeArray!Node args)
     {
         if (isTarget)
         {
@@ -470,14 +471,14 @@ class Walker
         }
     }
 
-    void walkUnpack(Node[] args)
+    void walkUnpack(SafeArray!Node args)
     {
         func.instrs ~= Instr(Opcode.unpack);
         useStack;
         walk(args[0]);
     }
 
-    void walkMethod(Node[] args)
+    void walkMethod(SafeArray!Node args)
     {
         walk(args[0]);
         walk(args[1]);
@@ -485,7 +486,7 @@ class Walker
         freeStack;
     }
 
-    void walkUsing(Node[] args)
+    void walkUsing(SafeArray!Node args)
     {
         walk(args[0]);
         func.instrs ~= Instr(Opcode.douse);
@@ -496,7 +497,7 @@ class Walker
         func.instrs ~= Instr(Opcode.unuse);
     }
 
-    void walkUse(Node[] args)
+    void walkUse(SafeArray!Node args)
     {
         if (used == 0)
         {
@@ -532,14 +533,18 @@ class Walker
         }
     }
 
-    void walkAnd(Node[] args)
+    void walkAnd(SafeArray!Node args)
     {
-        walkSpecialCall(new Call(new Ident("@if"), [args[0], args[1], new Ident("false")]));
+        walkSpecialCall(new Call(new Ident("@if"), [
+                    args[0], args[1], new Ident("false")
+                ]));
     }
 
-    void walkOr(Node[] args)
+    void walkOr(SafeArray!Node args)
     {
-        walkSpecialCall(new Call(new Ident("@if"), [args[0], new Ident("true"), args[1]]));
+        walkSpecialCall(new Call(new Ident("@if"), [
+                    args[0], new Ident("true"), args[1]
+                ]));
     }
 
     void walkSpecialCall(Call c)

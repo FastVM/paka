@@ -7,9 +7,11 @@ import std.algorithm;
 import std.json;
 import core.memory;
 import core.stdc.stdlib;
+import lang.data.array;
 import lang.serial;
 import lang.dynamic;
 import lang.bytecode;
+import lang.json;
 
 enum string[2][] cmpMap()
 {
@@ -21,7 +23,7 @@ enum string[2][] mutMap()
     return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"], ["%=", "mod"]];
 }
 
-Dynamic[] glocals = null;
+Dynamic[] glocals;
 
 void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
 {
@@ -87,7 +89,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
         assert(to.type == from.type);
         if (to.type == Dynamic.Type.arr)
         {
-            Dynamic[] arr = from.arr;
+            SafeArray!Dynamic arr = from.arr;
             size_t sindex = 0;
             outwhile: while (sindex < to.arr.length)
             {
@@ -132,6 +134,7 @@ Dynamic[][] localss = new Array[1000];
 size_t[] indexs = new size_t[1000];
 Function[] funcs = new Function[1000];
 size_t[] depths = new size_t[1000];
+SerialValue[string] states;
 
 ref Dynamic[] stack()
 {
@@ -158,15 +161,27 @@ Function func()
     return funcs[calldepth - 1];
 }
 
-void enterScope(Function afunc, Dynamic[] args)
+void enterScope(Function afunc, SafeArray!Dynamic args)
 {
+    GC.enable;
+    scope (exit)
+    {
+        GC.disable;
+    }
     funcs[calldepth] = afunc;
     stacks[calldepth] = new Dynamic[afunc.stackSize];
     localss[calldepth] = new Dynamic[afunc.stab.byPlace.length + 1];
     indexs[calldepth] = 0;
     depths[calldepth] = 0;
     calldepth += 1;
-    // writeln(func.constants);
+    if (calldepth + 4 > funcs.length)
+    {
+        funcs.length *= 2;
+        stacks.length *= 2;
+        localss.length *= 2;
+        indexs.length *= 2;
+        depths.length *= 2;
+    }
     foreach (i, v; args)
     {
         locals[i] = v;
@@ -180,15 +195,15 @@ void exitScope()
 }
 
 size_t vmRecord;
+size_t maxLength = size_t.max;
 
-Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc,
-        Dynamic[] args, size_t exiton = calldepth)
+Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_t exiton = calldepth)
 {
     static if (hasScope)
     {
         if (afunc !is null)
         {
-            afunc.enterScope(args);
+            afunc.enterScope(SafeArray!Dynamic.init);
         }
         scope (exit)
         {
@@ -205,10 +220,11 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc,
             glocals = locals[0 .. func.stab.byPlace.length].dup;
         }
     }
-    vmLoop: while (true)
+    vmLoop: while (vmRecord < maxLength)
     {
         Instr cur = func.instrs[index];
         vmRecord++;
+        // writeln(vmRecord, ": ", cur);
         // File("world/vm/" ~ vmRecord.to!string ~ ".json", "w").write(saveState);
         switch (cur.op)
         {
@@ -262,11 +278,11 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc,
             switch (f.type)
             {
             case Dynamic.Type.fun:
-                stack[depth - 1] = f.fun.fun(stack[depth .. depth + cur.value]);
+                stack[depth - 1] = f.fun.fun(SafeArray!Dynamic(stack[depth .. depth + cur.value]));
                 break;
             case Dynamic.Type.pro:
                 enterScope(f.fun.pro,
-                        f.fun.pro.self ~ stack[depth .. depth + cur.value]);
+                        SafeArray!Dynamic(f.fun.pro.self ~ stack[depth .. depth + cur.value]));
                 continue vmLoop;
             default:
                 throw new Exception("error: not a function: " ~ f.to!string);
@@ -279,7 +295,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc,
             {
                 depth--;
             }
-            Dynamic[] cargs;
+            SafeArray!Dynamic cargs;
             for (size_t i = depth + 1; i < end; i++)
             {
                 if (stack[i].type == Dynamic.Type.pac)
@@ -300,7 +316,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc,
                 result = f.fun.fun(cargs);
                 break;
             case Dynamic.Type.pro:
-                enterScope(f.fun.pro, f.fun.pro.self ~ cargs);
+                enterScope(f.fun.pro, SafeArray!Dynamic(f.fun.pro.self ~ cargs));
                 // enterScope(f.fun.pro, cargs);
                 continue vmLoop;
             default:
@@ -339,7 +355,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc,
             {
                 depth--;
             }
-            Dynamic[] arr;
+            SafeArray!Dynamic arr;
             for (size_t i = depth + 1; i < end; i++)
             {
                 if (stack[i].type == Dynamic.Type.pac)
@@ -391,10 +407,15 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc,
                 stack[depth - 1] = (arr.arr)[stack[depth].num.to!size_t];
                 break;
             case Dynamic.Type.tab:
+
+                if (stack[depth]!in arr.tab)
+                {
+                    throw new Exception("index error: " ~ stack[depth].to!string ~ " not found");
+                }
                 stack[depth - 1] = (arr.tab)[stack[depth]];
                 break;
             default:
-                throw new Exception("error: cannot store at index");
+                throw new Exception("error: cannot get index");
             }
             break;
         case Opcode.opneg:
@@ -442,10 +463,11 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc,
             switch (stack[depth - 2].type)
             {
             case Dynamic.Type.arr:
-                stack[depth - 2].arr[stack[depth - 1].num.to!size_t] = stack[depth - 3];
+                stack[depth - 1] = stack[depth - 2].arr[stack[depth - 1].num.to!size_t]
+                    = stack[depth - 3];
                 break;
             case Dynamic.Type.tab:
-                stack[depth - 2].tab[stack[depth - 1]] = stack[depth - 3];
+                stack[depth - 1] = stack[depth - 2].tab[stack[depth - 1]] = stack[depth - 3];
                 break;
             default:
                 throw new Exception("error: cannot store at index");
@@ -579,5 +601,5 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc,
         }
         index++;
     }
-    assert(0);
+    return Dynamic.nil;
 }

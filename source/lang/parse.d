@@ -2,14 +2,15 @@ module lang.parse;
 
 import lang.ast;
 import lang.tokens;
+import lang.data.array;
 import std.stdio;
 import std.algorithm;
 
 enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 
-Node[] readOpen(string v)(ref Token[] tokens) if (v != "{}")
+SafeArray!Node readOpen(string v)(ref SafeArray!Token tokens) if (v != "{}")
 {
-    Node[] args;
+    SafeArray!Node args;
     tokens = tokens[1 .. $];
     while (!tokens[0].isClose([v[1]]))
     {
@@ -23,9 +24,9 @@ Node[] readOpen(string v)(ref Token[] tokens) if (v != "{}")
     return args;
 }
 
-Node[] readOpen(string v)(ref Token[] tokens) if (v == "{}")
+SafeArray!Node readOpen(string v)(ref SafeArray!Token tokens) if (v == "{}")
 {
-    Node[] args;
+    SafeArray!Node args;
     tokens = tokens[1 .. $];
     size_t items = 0;
     while (!tokens[0].isClose([v[1]]))
@@ -45,7 +46,7 @@ alias readParens = readOpen!"()";
 alias readSquare = readOpen!"[]";
 alias readBrace = readOpen!"{}";
 
-Node readPostExtend(ref Token[] tokens, Node last)
+Node readPostExtend(ref SafeArray!Token tokens, Node last)
 {
     if (tokens.length == 0)
     {
@@ -79,9 +80,9 @@ Node readPostExtend(ref Token[] tokens, Node last)
     return tokens.readPostExtend(ret);
 }
 
-Node readIf(ref Token[] tokens)
+Node readIf(ref SafeArray!Token tokens)
 {
-    Node[] cond = tokens.readParens;
+    SafeArray!Node cond = tokens.readParens;
     if (cond.length != 1)
     {
         throw new Exception("parser: if takes one");
@@ -100,9 +101,9 @@ Node readIf(ref Token[] tokens)
     return new Call(new Ident("@if"), [cond[0], iftrue, iffalse]);
 }
 
-Node readUsing(ref Token[] tokens)
+Node readUsing(ref SafeArray!Token tokens)
 {
-    Node[] obj = tokens.readParens;
+    SafeArray!Node obj = tokens.readParens;
     if (obj.length != 1)
     {
         throw new Exception("invalid parse");
@@ -111,13 +112,13 @@ Node readUsing(ref Token[] tokens)
     return new Call(new Ident("@using"), [obj[0], bod]);
 }
 
-Node readTableCons(ref Token[] tokens)
+Node readTableCons(ref SafeArray!Token tokens)
 {
     Node bod = tokens.readBlock;
     return new Call(new Ident("@using"), [new Call(new Ident("@table"), []), bod]);
 }
 
-Node readPostExpr(ref Token[] tokens)
+Node readPostExpr(ref SafeArray!Token tokens)
 {
     Node last = void;
     if (tokens[0].isKeyword("target"))
@@ -186,7 +187,7 @@ Node readPostExpr(ref Token[] tokens)
     return tokens.readPostExtend(last);
 }
 
-Node readPreExpr(ref Token[] tokens)
+Node readPreExpr(ref SafeArray!Token tokens)
 {
     if (tokens[0].isOperator)
     {
@@ -202,14 +203,14 @@ Node readPreExpr(ref Token[] tokens)
     return tokens.readPostExpr;
 }
 
-Node readExpr(ref Token[] tokens, size_t level = 0)
+Node readExpr(ref SafeArray!Token tokens, size_t level = 0)
 {
     if (level == prec.length)
     {
         return tokens.readPreExpr;
     }
-    Token[][] sub = [null];
-    Token[] opers;
+    SafeArray!Token[] sub = [SafeArray!Token.init];
+    SafeArray!Token opers;
     bool lastIsOp = true;
     size_t depth = 0;
     while (tokens.length != 0)
@@ -313,9 +314,9 @@ Node readExpr(ref Token[] tokens, size_t level = 0)
     return ret;
 }
 
-Node readStmt(ref Token[] tokens)
+Node readStmt(ref SafeArray!Token tokens)
 {
-    Token[] stmtTokens;
+    SafeArray!Token stmtTokens;
     size_t depth;
     while (depth != 0 || !tokens[0].isSemicolon)
     {
@@ -345,16 +346,16 @@ Node readStmt(ref Token[] tokens)
         stmtTokens = stmtTokens[1 .. $];
         Node name = new Ident(stmtTokens[0].value);
         stmtTokens = stmtTokens[1 .. $];
-        Node[] args = stmtTokens.readParens;
+        SafeArray!Node args = stmtTokens.readParens;
         Node dobody = stmtTokens.readBlock;
         return new Call(new Ident("@def"), [new Call(name, args), dobody]);
     }
     return stmtTokens.readExpr;
 }
 
-Node readBlockBody(ref Token[] tokens)
+Node readBlockBody(ref SafeArray!Token tokens)
 {
-    Node[] ret;
+    SafeArray!Node ret;
     while (tokens.length > 0 && !tokens[0].isClose("}"))
     {
         Node stmt = tokens.readStmt;
@@ -366,7 +367,7 @@ Node readBlockBody(ref Token[] tokens)
     return new Call(new Ident("@do"), ret);
 }
 
-Node readBlock(ref Token[] tokens)
+Node readBlock(ref SafeArray!Token tokens)
 {
     tokens = tokens[1 .. $];
     Node ret = tokens.readBlockBody;
@@ -376,7 +377,7 @@ Node readBlock(ref Token[] tokens)
 
 Node parse(string code)
 {
-    Token[] tokens = code.tokenize;
+    SafeArray!Token tokens = SafeArray!Token(code.tokenize);
     Node node = tokens.readBlockBody;
     return node;
 }

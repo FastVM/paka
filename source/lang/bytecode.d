@@ -2,6 +2,7 @@ module lang.bytecode;
 
 import lang.dynamic;
 import std.stdio;
+import lang.data.array;
 
 class Function
 {
@@ -9,11 +10,6 @@ class Function
     {
         ushort[string] byName;
         string[] byPlace;
-        void clear()
-        {
-            byName = null;
-            byPlace = null;
-        }
 
         void set(string name, ushort us)
         {
@@ -45,17 +41,17 @@ class Function
         bool is2;
     }
 
-    Capture[] capture = null;
-    Instr[] instrs = null;
-    Dynamic[] constants = null;
-    Function[] funcs = null;
-    Dynamic*[] captured = null;
+    Capture[] capture;
+    Instr[] instrs;
+    Dynamic[] constants;
+    Function[] funcs;
+    Dynamic*[] captured;
     size_t stackSize = 0;
-    Dynamic[] self = null;
+    Dynamic[] self;
 
     Lookup stab;
     Lookup captab;
-    Function parent = null;
+    Function parent;
     bool env;
 
     this()

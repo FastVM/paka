@@ -7,8 +7,12 @@ import lang.lib.serial;
 import lang.lib.sys;
 import lang.lib.str;
 import lang.lib.arr;
+import lang.lib.repl;
 import std.algorithm;
 import std.stdio;
+
+bool enableIo = true;
+bool ioUsed = false;
 
 struct Pair
 {
@@ -36,32 +40,23 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
     Table dyn;
     foreach (entry; lib)
     {
-        dyn[dynamic(entry.name)] = entry.val;
+        if (!entry.name.canFind('.'))
+        {
+            dyn[dynamic(entry.name)] = entry.val;
+        }
     }
     pairs ~= Pair(name, dynamic(dyn));
 }
 
-Dynamic load(Dynamic function(Args args) fn)
-{
-    return dynamic(fn);
-}
-
 Pair[] getRootBase()
 {
-    Pair[] ret = [
-        Pair("print", load(&lang.lib.io.libprint)),
-        Pair("put", load(&lang.lib.io.libput)),
-        Pair("readln", load(&lang.lib.io.libreadln)),
-        Pair("dumpf", load(&lang.lib.serial.libdumpf)),
-        Pair("dump", load(&lang.lib.serial.libdump)),
-        Pair("undump", load(&lang.lib.serial.libundump)),
-        Pair("resumef", load(&lang.lib.serial.libresumef)),
-        Pair("undumpf", load(&lang.lib.serial.libundumpf)),
-        Pair("leave", load(&lang.lib.sys.libleave)),
-    ];
+    Pair[] ret;
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);
-    // writeln(ret.map!(x => x.name));
+    ret.addLib("io", libio);
+    ret.addLib("json", libjson);
+    ret.addLib("sys", libsys);
+    ret.addLib("repl", librepl);
     return ret;
 }
 
@@ -73,7 +68,6 @@ Function baseFunction()
     {
         byName[i.name] = cast(ushort) byName.length;
     }
-    // string[] byPlace = ["print"];
     string[] byPlace = [];
     ret.stab = Function.Lookup(byName, byPlace);
     return ret;

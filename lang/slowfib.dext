@@ -6,4 +6,4 @@ def fib(x) {
     }
 }
 
-print(fib(10))
+io.print(fib(10))

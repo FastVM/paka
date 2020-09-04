@@ -30,7 +30,7 @@ Dynamic libsplit(Args args)
 
 Dynamic libjoin(Args args)
 {
-    return dynamic(cast(string) args[1].arr.map!(x => x.str).joiner(args[0].str).array);
+    return dynamic(cast(string) args[1].arr.arr.map!(x => x.str).joiner(args[0].str).array);
 }
 
 Dynamic libchars(Args args)

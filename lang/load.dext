@@ -1,1 +1,1 @@
-resumef("world/saved.json")
+json.resumef("world/saved.json")

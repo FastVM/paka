@@ -1,1 +1,1 @@
-print(610)
+io.print(610)

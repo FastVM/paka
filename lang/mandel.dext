@@ -5,6 +5,8 @@ m = 16
 limit2 = 4
 y = 0
 
+iters = 0
+
 while (y <= height - 1) {
     ci = 2 * y / height - 1
     xb = 0
@@ -17,7 +19,6 @@ while (y <= height - 1) {
             loopend = width - 1
         }
         x = xb
-        iters = 0
         while (x <= loopend) {
             bits *= 2
             zr = 0
@@ -31,16 +32,14 @@ while (y <= height - 1) {
                 zi = zri * 2 + ci
                 zrq = zr * 2
                 ziq = zi * 2
-                iters += 1
-                print(zrq + ziq, " ", limit2)
                 if (zrq + ziq > limit2) {
                     bits += 1
+                    iters += 1
                 }
                 i += 1
             }
             x += 1
         }
-        print(bits)
         if (xbb >= width) {
             x = width
             while (x < xbb) {
@@ -52,3 +51,5 @@ while (y <= height - 1) {
     } 
     y += 1
 }
+
+io.print(iters)
