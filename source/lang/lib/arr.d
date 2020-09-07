@@ -12,6 +12,7 @@ Pair[] libarr()
         Pair("len", dynamic(&liblen)), Pair("split", dynamic(&libsplit)),
         Pair("push", dynamic(&libpush)), Pair("extend",
                 dynamic(&libextend)), Pair("pop", dynamic(&libpop)),
+        Pair("slice", dynamic(&libslice)),
     ];
     return ret;
 }
@@ -47,3 +48,16 @@ Dynamic libextend(Args args)
     }
     return Dynamic.nil;
 }
+
+Dynamic libslice(Args args)
+{
+    if (args.length == 2)
+    {
+        return dynamic(args[0].arr[cast(size_t) args[1].num .. $]);
+    }
+    else
+    {
+        return dynamic(args[0].arr[cast(size_t) args[1].num .. cast(size_t) args[2].num]);
+    }
+}
+

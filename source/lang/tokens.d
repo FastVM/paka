@@ -11,10 +11,10 @@ enum string[][] prec = [
         ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"], ["*", "/", "%"],
     ];
 
-enum string[] nops = [".", "::", "*", "!", ",",  ":"];
+enum string[] nops = [".", "::", "*", "!", ",", ":"];
 
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "target", "lambda", "using", "table"
+        "if", "else", "while", "return", "def", "target", "lambda"
     ];
 
 enum string[] levels()
@@ -42,6 +42,8 @@ struct Token
 
     Type type;
     string value;
+    size_t[2] begin;
+    size_t[2] end;
     this(T)(Type t, T v = null)
     {
         type = t;
@@ -109,7 +111,7 @@ struct Token
     }
 }
 
-Token readToken(ref string code)
+Token readToken(ref string code, ref size_t[2] pos)
 {
     char peek()
     {
@@ -122,6 +124,15 @@ Token readToken(ref string code)
 
     void consume()
     {
+        if (peek == '\n')
+        {
+            pos[0] += 1;
+            pos[1] = 1;
+        }
+        else
+        {
+            pos[1] += 1;
+        }
         if (code.length != 0)
         {
             code = code[1 .. $];
@@ -161,6 +172,7 @@ Token readToken(ref string code)
         if (code.startsWith(i))
         {
             code = code[i.length .. $];
+            pos[1] += i.length;
             return Token(Token.Type.operator, i);
         }
     }
@@ -215,7 +227,7 @@ Token readToken(ref string code)
                 default:
                     throw new Exception("parse error: unknown escape '" ~ code[0] ~ "'");
                 }
-                code = code[1 .. $];
+                consume;
             }
             else
             {
@@ -235,9 +247,13 @@ Token readToken(ref string code)
 Token[] tokenize(string code)
 {
     Token[] tokens;
+    size_t[2] pos = [1, 1];
     while (code.length > 0)
     {
-        Token token = code.readToken;
+        size_t[2] begin = pos;
+        Token token = code.readToken(pos);
+        token.begin = begin;
+        token.end = pos;
         if (token.type == Token.Type.none)
         {
             continue;

@@ -72,7 +72,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
             }
         }
     }
-    else if (to.type == Dynamic.type.str)
+    else if (to.type == Dynamic.Type.str)
     {
         static if (op == "=")
         {
@@ -123,7 +123,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
         }
         else
         {
-            assert(0);
+            throw new Exception("unknown error");
         }
     }
 }
@@ -229,7 +229,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_
         switch (cur.op)
         {
         default:
-            assert(0);
+            throw new Exception("unknown error");
         case Opcode.nop:
             break;
         case Opcode.push:
@@ -256,10 +256,6 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_
                 {
                     built.captured ~= &locals[cap.from];
                 }
-            }
-            if (built.env)
-            {
-                built.captured ~= &locals[$ - 1].arr[$ - 1];
             }
             stack[depth++] = dynamic(built);
             break;
@@ -382,19 +378,39 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_
             depth++;
             break;
         case Opcode.unpack:
-            stack[depth] = dynamic(Dynamic.Type.pac);
+            Dynamic val = dynamic(Array.init);
+            val.type = Dynamic.Type.pac;
+            stack[depth] = val;
             depth++;
             break;
         case Opcode.table:
-            depth -= cur.value;
+            size_t end = depth;
+            depth--;
+            while (stack[depth].type != Dynamic.Type.end)
+            {
+                depth--;
+            }
+            // depth -= cur.value;
             Dynamic[Dynamic] table;
-            size_t place = depth;
-            size_t end = place + cur.value;
+            size_t place = depth + 1;
+            // size_t end = place + cur.value;
             while (place < end)
             {
-                table[stack[place]] = stack[place + 1];
-                place += 2;
+                if (stack[place].type == Dynamic.Type.pac)
+                {
+                    foreach (kv; stack[place + 1].tab.byKeyValue)
+                    {
+                        table[kv.key] = kv.value;
+                    }
+                    place += 2;
+                }
+                else
+                {
+                    table[stack[place]] = stack[place + 1];
+                    place += 2;
+                }
             }
+            // stack[depth] = dynamic(stack[depth .. end]);
             stack[depth] = dynamic(table);
             depth++;
             break;
@@ -415,7 +431,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_
                 stack[depth - 1] = (arr.tab)[stack[depth]];
                 break;
             default:
-                throw new Exception("error: cannot get index");
+                throw new Exception("error: cannot get index from: " ~ arr.to!string);
             }
             break;
         case Opcode.opneg:
@@ -446,15 +462,6 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_
             break;
         case Opcode.loadc:
             stack[depth++] = *func.captured[cur.value];
-            break;
-        case Opcode.loadenv:
-            stack[depth++] = *func.captured[$ - 1];
-            break;
-        case Opcode.loaduse:
-            stack[depth++] = locals[$ - 1].arr[$ - 1];
-            break;
-        case Opcode.use:
-            stack[depth - 1] = locals[$ - 1].arr[$ - 1].tab[dynamic(stack[depth - 1].str)];
             break;
         case Opcode.store:
             locals[cur.value] = stack[depth - 1];
@@ -488,7 +495,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_
             switch (func.instrs[++index].value)
             {
             default:
-                assert(0);
+                throw new Exception("unknown error");
                 static foreach (opm; mutMap)
                 {
             case opm[1].to!AssignOp:
@@ -502,7 +509,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_
             switch (func.instrs[index].value)
             {
             default:
-                assert(0);
+                throw new Exception("unknown error");
                 static foreach (opm; mutMap)
                 {
             case opm[1].to!AssignOp:
@@ -530,7 +537,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_
             switch (cur.value)
             {
             default:
-                assert(0);
+                throw new Exception("unknown error");
                 static foreach (opm; mutMap)
                 {
             case opm[1].to!AssignOp:
@@ -546,7 +553,7 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_
             switch (func.instrs[++index].value)
             {
             default:
-                assert(0);
+                throw new Exception("unknown error");
                 static foreach (opm; mutMap)
                 {
             case opm[1].to!AssignOp:
@@ -591,15 +598,8 @@ Dynamic run(bool saveLocals = false, bool hasScope = true)(Function afunc, size_
         case Opcode.jump:
             index = cur.value;
             break;
-        case Opcode.douse:
-            locals[$ - 1].arr ~= stack[--depth];
-            break;
-        case Opcode.unuse:
-            stack[depth - 1] = locals[$ - 1].arr[$ - 1];
-            locals[$ - 1].arr.length--;
-            break;
         }
         index++;
     }
-    return Dynamic.nil;
+    throw new Exception("too many instructions for repl");
 }

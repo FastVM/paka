@@ -15,11 +15,6 @@ import lang.bytecode;
 import lang.dynamic;
 import lang.data.array;
 
-// enum string gcOffFor = `
-//     GC.disable();
-//     scope(exit) {GC.enable();}
-// `;
-
 SafeArray!Dynamic jsarr;
 
 LocalTie[] localTies = null;
@@ -80,7 +75,6 @@ Function readjs(T)(SerialValue val, Function ret = new Function) if (is(T == Fun
     ret.funcs = val.object["funcs"].readjs!(Function[]);
     ret.self = val.object["self"].readjs!(SafeArray!Dynamic);
     ret.stab.byPlace.length = val.object["locc"].readjs!(size_t);
-    ret.env = cast(bool) val.object["env"].readjs!size_t;
     return ret;
 }
 
@@ -304,7 +298,6 @@ SerialValue js(Function f)
     ret["stackSize"] = f.stackSize.to!string;
     ret["self"] = f.self.map!js.array.js;
     ret["locc"] = f.stab.byPlace.length.js;
-    ret["env"] = (cast(size_t)(f.env)).js;
     ret["captured"] = f.captured.map!jsp.array.js;
     depth--;
     return SerialValue(ret);

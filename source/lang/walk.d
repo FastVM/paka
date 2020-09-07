@@ -41,9 +41,9 @@ class Walker
     bool isTarget = false;
     enum string[] specialForms = [
             "@def", "@set", "@opset", "@while", "@array", "@table", "@target",
-            "@return", "@if", "@fun", "@do", "@using", "+", "-", "*", "/",
-            "%", "<", ">", "<=", ">=", "==", "!=", "...", "@index", "@method",
-            "=>", ".", "&&", "||",
+            "@return", "@if", "@fun", "@do", "+", "-", "*", "/", "%", "<",
+            ">", "<=", ">=", "==", "!=", "...", "@index", "@method", "=>", ".",
+            "&&", "||",
         ];
     Function walkProgram(Node node)
     {
@@ -96,7 +96,7 @@ class Walker
     void walk(Node node)
     {
         TypeInfo info = typeid(node);
-        foreach (T; NodeTypes)
+        static foreach (T; NodeTypes)
         {
             if (info == typeid(T))
             {
@@ -111,6 +111,10 @@ class Walker
         if (typeid(args[0]) == typeid(Ident))
         {
             Ident ident = cast(Ident) args[0];
+            if (ident is null)
+            {
+                throw new Exception("bad def");
+            }
             ushort place = func.stab.define(ident.repr);
             walk(args[1]);
             func.instrs ~= Instr(Opcode.store, place);
@@ -118,6 +122,10 @@ class Walker
         else
         {
             Call callArgs = cast(Call) args[0];
+            if (callArgs is null)
+            {
+                throw new Exception("bad def");
+            }
             Node name = callArgs.args[0];
             Call funArgs = new Call(callArgs.args[1 .. $]);
             Call funCall = new Call(new Ident("@fun"), funArgs ~ args[1 .. $]);
@@ -206,6 +214,10 @@ class Walker
     void walkFun(SafeArray!Node args)
     {
         Call argl = cast(Call) args[0];
+        if (argl is null)
+        {
+            throw new Exception("bad fun");
+        }
         Function lastFunc = func;
         ushort lastUsed = used;
         ushort[2] stackOld = stackSize;
@@ -217,6 +229,10 @@ class Walker
         foreach (i, v; argl.args)
         {
             Ident id = cast(Ident) v;
+            if (id is null)
+            {
+                throw new Exception("bad fun");
+            }
             newFunc.stab.set(id.repr, cast(ushort) i);
         }
         foreach (i, v; args[1 .. $])
@@ -264,7 +280,15 @@ class Walker
             if (cast(Call) target)
             {
                 Call call = cast(Call) target;
+                if (call is null)
+                {
+                    throw new Exception("bad set");
+                }
                 Ident ident = cast(Ident) call.args[0];
+                if (ident is null)
+                {
+                    throw new Exception("bad set");
+                }
                 string name = ident.repr;
                 switch (name)
                 {
@@ -280,25 +304,8 @@ class Walker
                     func.instrs ~= Instr(Opcode.tstore);
                     freeStack(1);
                     break;
-                case ".":
-                    if (used == 0)
-                    {
-                        func.useEnv();
-                        func.instrs ~= Instr(Opcode.loadenv);
-                        useStack;
-                        walk(new String((cast(Ident) call.args[1]).repr));
-                        func.instrs ~= Instr(Opcode.istore);
-                        freeStack;
-                    }
-                    else
-                    {
-                        walkExact(new String((cast(Ident) call.args[1]).repr));
-                        func.instrs ~= Instr(Opcode.qstore);
-                        freeStack(1);
-                    }
-                    break;
                 default:
-                    assert(0);
+                    throw new Exception("bad set");
                 }
             }
             else if (Ident ident = cast(Ident) target)
@@ -316,7 +323,7 @@ class Walker
             }
             else
             {
-                assert(0);
+                throw new Exception("bad set");
             }
         }
     }
@@ -324,6 +331,10 @@ class Walker
     void walkOpSet(SafeArray!Node c)
     {
         Ident id = cast(Ident) c[0];
+        if (id is null)
+        {
+            throw new Exception("bad op set");
+        }
         c = c[1 .. $];
         foreach (p; 0 .. c.length / 2)
         {
@@ -332,10 +343,13 @@ class Walker
         foreach_reverse (p; 0 .. c.length / 2)
         {
             Node target = c[p * 2];
-            if (cast(Call) target)
+            if (Call call = cast(Call) target)
             {
-                Call call = cast(Call) target;
                 Ident ident = cast(Ident) call.args[0];
+                if (ident is null)
+                {
+                    throw new Exception("bad op set");
+                }
                 string name = ident.repr;
                 switch (name)
                 {
@@ -351,30 +365,18 @@ class Walker
                     func.instrs ~= Instr(Opcode.optstore, id.repr.to!AssignOp);
                     freeStack(1);
                     break;
-                case ".":
-                    if (used == 0)
-                    {
-                        func.useEnv();
-                        func.instrs ~= Instr(Opcode.loadenv);
-                        useStack;
-                        walk(new String((cast(Ident) call.args[1]).repr));
-                        func.instrs ~= Instr(Opcode.opistore, id.repr.to!AssignOp);
-                        freeStack;
-                    }
-                    else
-                    {
-                        walkExact(new String((cast(Ident) call.args[1]).repr));
-                        func.instrs ~= Instr(Opcode.opqstore, id.repr.to!AssignOp);
-                        freeStack(1);
-                    }
-                    break;
                 default:
-                    assert(0);
+                    throw new Exception("bad op set");
                 }
             }
             else
             {
                 Ident ident = cast(Ident) target;
+                if (ident is null)
+                {
+                    throw new Exception("bad op set");
+                }
+
                 ushort* us = ident.repr in func.stab.byName;
                 if (us is null)
                 {
@@ -427,6 +429,9 @@ class Walker
 
     void walkTable(SafeArray!Node args)
     {
+        func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
+        useStack;
+        func.constants ~= dynamic(Dynamic.Type.end);
         foreach (i; args)
         {
             walk(i);
@@ -484,53 +489,6 @@ class Walker
         walk(args[1]);
         func.instrs ~= Instr(Opcode.bind);
         freeStack;
-    }
-
-    void walkUsing(SafeArray!Node args)
-    {
-        walk(args[0]);
-        func.instrs ~= Instr(Opcode.douse);
-        freeStack();
-        used++;
-        walk(args[1]);
-        used--;
-        func.instrs ~= Instr(Opcode.unuse);
-    }
-
-    void walkUse(SafeArray!Node args)
-    {
-        if (used == 0)
-        {
-            func.useEnv();
-            if (isTarget)
-            {
-                func.instrs ~= Instr(Opcode.push, cast(ushort) func.constants.length);
-                func.constants ~= dynamic(Dynamic.Type.end);
-                useStack;
-                func.instrs ~= Instr(Opcode.loadenv);
-                useStack;
-                walk(new String((cast(Ident) args[0]).repr));
-                func.instrs ~= Instr(Opcode.targeta);
-                freeStack(2);
-                func.instrs ~= Instr(Opcode.data);
-            }
-            else
-            {
-                func.instrs ~= Instr(Opcode.loadenv);
-                useStack;
-                walk(new String((cast(Ident) args[0]).repr));
-                func.instrs ~= Instr(Opcode.index);
-                freeStack;
-            }
-        }
-        else
-        {
-            walkExact(new String((cast(Ident) args[0]).repr));
-            if (!isTarget)
-            {
-                func.instrs ~= Instr(Opcode.use);
-            }
-        }
     }
 
     void walkAnd(SafeArray!Node args)
@@ -592,12 +550,6 @@ class Walker
             break;
         case "@target":
             walkTarget(c.args[1 .. $]);
-            break;
-        case "@using":
-            walkUsing(c.args[1 .. $]);
-            break;
-        case ".":
-            walkUse(c.args[1 .. $]);
             break;
         case "&&":
             walkAnd(c.args[1 .. $]);
@@ -720,19 +672,7 @@ class Walker
         }
         else
         {
-            if (i.repr == "env")
-            {
-                if (used == 0)
-                {
-                    func.useEnv();
-                    func.instrs ~= Instr(Opcode.loadenv);
-                }
-                else
-                {
-                    func.instrs ~= Instr(Opcode.loaduse);
-                }
-            }
-            else if (isTarget)
+            if (isTarget)
             {
                 ushort* us = i.repr in func.stab.byName;
                 ushort v = void;

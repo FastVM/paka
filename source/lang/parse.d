@@ -33,7 +33,7 @@ SafeArray!Node readOpen(string v)(ref SafeArray!Token tokens) if (v == "{}")
     {
         args ~= tokens.readExpr;
         items++;
-        if ((items % 2 == 0 && tokens[0].isComma) || (items % 2 == 1 && tokens[0].isOperator(":")))
+        if (tokens[0].isComma || tokens[0].isOperator(":"))
         {
             tokens = tokens[1 .. $];
         }
@@ -101,23 +101,6 @@ Node readIf(ref SafeArray!Token tokens)
     return new Call(new Ident("@if"), [cond[0], iftrue, iffalse]);
 }
 
-Node readUsing(ref SafeArray!Token tokens)
-{
-    SafeArray!Node obj = tokens.readParens;
-    if (obj.length != 1)
-    {
-        throw new Exception("invalid parse");
-    }
-    Node bod = tokens.readBlock;
-    return new Call(new Ident("@using"), [obj[0], bod]);
-}
-
-Node readTableCons(ref SafeArray!Token tokens)
-{
-    Node bod = tokens.readBlock;
-    return new Call(new Ident("@using"), [new Call(new Ident("@table"), []), bod]);
-}
-
 Node readPostExpr(ref SafeArray!Token tokens)
 {
     Node last = void;
@@ -157,16 +140,6 @@ Node readPostExpr(ref SafeArray!Token tokens)
         tokens = tokens[1 .. $];
         last = tokens.readIf;
     }
-    else if (tokens[0].isKeyword("using"))
-    {
-        tokens = tokens[1 .. $];
-        last = tokens.readUsing;
-    }
-    else if (tokens[0].isKeyword("table"))
-    {
-        tokens = tokens[1 .. $];
-        last = tokens.readTableCons;
-    }
     else if (tokens[0].isKeyword("while"))
     {
         tokens = tokens[1 .. $];
@@ -183,6 +156,10 @@ Node readPostExpr(ref SafeArray!Token tokens)
     {
         last = new String(tokens[0].value);
         tokens = tokens[1 .. $];
+    }
+    else
+    {
+        throw new Exception("error in parse");
     }
     return tokens.readPostExtend(last);
 }

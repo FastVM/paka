@@ -174,7 +174,7 @@ align(1):
         switch (type)
         {
         default:
-            assert(0);
+            throw new Exception("unknown error");
         case Type.nil:
             return 0;
         case Type.log:
@@ -282,7 +282,7 @@ align(1):
     {
         if (type != Type.num)
         {
-            throw new Exception("expected number type");
+            throw new Exception("expected number type, not: " ~ type.to!string);
         }
         return value.num;
     }
@@ -307,7 +307,7 @@ align(1):
 
     ref Array arr()
     {
-        if (type != Type.arr && type != Type.dat)
+        if (type != Type.arr && type != Type.dat && type != Type.pac)
         {
             throw new Exception("expected array type");
         }
@@ -316,7 +316,7 @@ align(1):
 
     Array* arrPtr()
     {
-        if (type != Type.arr && type != Type.dat)
+        if (type != Type.arr && type != Type.dat && type != Type.pac)
         {
             throw new Exception("expected array type");
         }
@@ -365,7 +365,7 @@ private bool isEqual(Dynamic a, Dynamic b)
     switch (a.type)
     {
     default:
-        assert(0);
+        throw new Exception("unknown error");
     case Dynamic.Type.nil:
         return true;
     case Dynamic.Type.log:

@@ -1,0 +1,47 @@
+parse = lambda (strv) {
+    [x1, y1, x2, y2] = str.chars(strv)
+    n = str.to_number
+    return [[n(x1), n(y1)], [n(x2), n(y2)]]
+}
+
+can_move = lambda (board, from, to) {
+    chr = str.to_lower(board[from[0]][from[1]])
+    if (chr == "R") {
+        
+    }
+    return false
+}
+
+new_board = lambda () {
+    empty_char = "_"
+    board_array = lambda () {
+        def empty() {
+            return [empty_char, empty_char, empty_char, empty_char, empty_char, empty_char, empty_char, empty_char]
+        }
+        r0 = ["R", "N", "B", "Q", "K", "B", "N", "R"]
+        r7 = ["r", "n", "b", "q", "k", "b", "n", "r"]
+        return [r0, empty(), empty(), empty(), empty(), empty(), empty(), r7]
+    }
+
+    ret = {}
+    ret.board = board_array()
+    ret.print = lambda () {
+        index = 0
+        io.print("    0 1 2 3 4 5 6 7")
+        io.print()
+        while (index < 8) {
+            io.print(index, "   ", str.join(" ", ret.board[index]))
+            index += 1
+        }
+    }
+    ret.okay = lambda (from, to) {
+        return can_move(ret.board, from, to)
+    } 
+
+    return ret;
+}
+
+board = new_board()
+board.print()
+ok = board.okay(*parse("0021"))
+io.print(ok)

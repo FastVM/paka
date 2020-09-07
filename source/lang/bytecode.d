@@ -52,7 +52,6 @@ class Function
     Lookup stab;
     Lookup captab;
     Function parent;
-    bool env;
 
     this()
     {
@@ -70,16 +69,6 @@ class Function
         self = other.self.dup;
         stab = other.stab;
         captab = other.captab;
-        env = other.env;
-    }
-
-    void useEnv()
-    {
-        env = true;
-        if (parent !is null && !parent.env)
-        {
-            parent.useEnv();
-        }
     }
 
     ushort doCapture(string name)
@@ -156,9 +145,6 @@ enum Opcode : ushort
     opmod,
     load,
     loadc,
-    loadenv,
-    loaduse,
-    use,
     store,
     istore,
     tstore,
@@ -172,8 +158,6 @@ enum Opcode : ushort
     iftrue,
     iffalse,
     jump,
-    douse,
-    unuse,
 }
 
 struct Instr

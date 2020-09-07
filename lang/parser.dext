@@ -1,0 +1,126 @@
+parse = {}
+
+parse.good = (val, next) => {"good": true, "value": val, "next": next}
+parse.bad = {"good": false}
+
+parse.parse = lambda(parser, string) {
+    res = parser(str.chars(string))
+    if (res.good) {
+        return res.value
+    }
+    return nil
+}
+
+parse.util = {}
+
+parse.util.map = lambda(items, fun) {
+    len = arr.len(items)
+    n = 0
+    ret = []
+    while (n < len) {
+        arr.push(ret, fun(items[n]))
+        n += 1
+    }
+    return ret
+}
+
+parse.parsers = {}
+
+parse.parsers.match = exact => lambda(input) {
+    if (arr.len(input) > 0 && input[0] == exact) {
+        return parse.good(input[0], arr.slice(input, 1))
+    }
+    return parse.bad
+}
+
+parse.parsers.range = (min, max) =>  lambda(input) {
+    if (arr.len(input) > 0 && min <= input[0] && input[0] <= max) {
+        return parse.good(input[0], arr.slice(input, 1))
+    }
+    return parse.bad
+}
+
+parse.parsers.repeat = parser => lambda(input) {
+    ret = []
+    while (true) {
+        res = parser(input)
+        if (res.good == false) {
+            return parse.good(ret, input)
+        }
+        arr.push(ret, res.value)
+        input = res.next
+    }
+}
+
+parse.parsers.sequence = parsers => lambda(input) {
+    len = arr.len(parsers)
+    n = 0
+    ret = []
+    while (n < len) {
+        res = parsers[n](input)
+        if (res.good) {
+            arr.push(ret, res.value)
+        } else {
+            return parse.bad
+        }
+        input = res.next
+        n += 1
+    }
+    return ret
+}
+
+parse.parsers.first = parsers => lambda(input) {
+    len = arr.len(parsers)
+    n = 0
+    while (n < len) {
+        res = parsers[n](input)
+        if (res.good) {
+            return res
+        }
+        n += 1
+    }
+    return parse.bad
+}
+
+parse.parsers.call = fun => parser => lambda(input) {
+    res = parser(input)
+    if (res.good) {
+        return parse.good(fun(res.value), res.next)
+    }
+    return parse.bad
+}
+
+parse.parsers.strseq = parse.parsers.call(val => str.join("", val))
+
+parse.parsers.seperated = (between, parser) => lambda(input){
+    n = 0
+    ret = []
+    while (true) {
+        if (n != 0) {
+            res = between(input)
+            if (res.good == false) {
+                return parse.good(ret, input)
+            }
+            arr.push(ret, res.value)
+            input = res.next
+        }
+        res = parser(input)
+        if (res.good == false) {
+            return parse.good(ret, input)
+        }
+        arr.push(ret, res.value)
+        input = res.next
+        n += 1
+    }
+}
+
+parse.parsers.ident = parse.parsers.strseq(parse.parsers.repeat(parse.parsers.range("a", "z")))                                                                 
+parse.parsers.sexpr = lambda() {
+    sexpr = []
+    parens = parse.parsers.sequence([parse.parsers.match("("), parse.parsers.match(")")])
+    arr.push(sexpr, parse.parsers.sexpr)
+    return parse.parsers.first(sexpr)
+}()
+
+got = parse.parse(parse.parsers.sexpr, "(def start (repeat (range 'a 'z)))")
+io.print(got)

@@ -9,6 +9,7 @@ alias NodeTypes = AliasSeq!(Call, String, Ident);
 
 class Node
 {
+    size_t[2] pos;
 }
 
 class Call : Node
