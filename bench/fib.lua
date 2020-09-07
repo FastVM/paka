@@ -5,4 +5,5 @@ local function fib(x)
         return fib(x - 2) + fib(x - 1)
     end
 end
+
 print(fib(35))

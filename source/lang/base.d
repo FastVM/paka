@@ -4,7 +4,6 @@ import lang.dynamic;
 import lang.bytecode;
 import lang.lib.io;
 import lang.lib.sys;
-import lang.lib.box;
 import lang.lib.ctfe;
 import lang.lib.func;
 
@@ -95,8 +94,6 @@ Pair[] getRootBase()
         Pair("_lhs_map", load(&lang.lib.sys.libulhsmap)),
         Pair("_rhs_map", load(&lang.lib.sys.liburhsmap)),
         Pair("_pre_map", load(&lang.lib.sys.libupremap)),
-        Pair("box", load(&lang.lib.box.libbox)),
-        Pair("unbox", load(&lang.lib.box.libunbox)),
         Pair("range", load(&lang.lib.func.librange)),
     ];
 }

@@ -174,6 +174,12 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
 //     }
 // }
 
+version (LDC) {
+    import ldc.attributes;
+    @(polly):
+    @(fastmath):
+}
+
 pragma(inline, false) Dynamic run(T...)(Function func, T argss)
 {
     size_t index = 0;
@@ -193,8 +199,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
         // stack = ptr[0 .. func.stackSize];
         if (func.flags & Function.Flags.isLocal)
         {
-            Dynamic* ptr = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof,
-                    0, typeid(Dynamic));
+            Dynamic* ptr = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof, 0, typeid(Dynamic));
             stack = (cast(Dynamic*) alloca(func.stackSize * Dynamic.sizeof))[0 .. func.stackSize];
             locals = ptr[0 .. func.stab.byPlace.length + 1];
         }
@@ -217,39 +222,13 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             }
         }
     }
-    static foreach (args; argss)
-    {
-        static if (is(typeof(args) == LocalCallback[]))
-        {
-            foreach (arg; args)
-            {
-                if (arg.at == LocalCallback.At.entry)
-                {
-                    arg.del(index, depth, stack, locals);
-                }
-            }
-        }
-    }
     Instr* instrs = func.instrs.ptr;
-    size_t[size_t] heat;
+    // size_t[size_t] heat;
     while (true)
     {
         // writeln(stack[0 .. depth]);
         Instr cur = instrs[index];
         // writeln(cur);
-        static foreach (args; argss)
-        {
-            static if (is(typeof(args) == LocalCallback[]))
-            {
-                foreach (arg; args)
-                {
-                    if (arg.at == LocalCallback.At.every)
-                    {
-                        arg.del(index, depth, stack, locals);
-                    }
-                }
-            }
-        }
         switch (cur.op)
         {
         default:
@@ -498,9 +477,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             locals.store(stack[depth + 1], stack[depth]);
             depth++;
             break;
-        case Opcode.qstore:
-            depth -= 1;
-            break;
         case Opcode.opstore:
         switchOpp:
             switch (func.instrs[++index].value)
@@ -556,54 +532,11 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             }
             depth++;
             break;
-        case Opcode.opqstore:
-            depth -= 1;
-        switchOpq:
-            switch (func.instrs[++index].value)
-            {
-            default:
-                assert(0);
-                static foreach (opm; mutMap)
-                {
-            case opm[1].to!AssignOp:
-                    mixin(
-                            "locals[$ - 1].tab[dynamic(stack[depth].str)]"
-                            ~ opm[0] ~ "stack[depth - 1];");
-                    break switchOpq;
-                }
-            }
-            break;
         case Opcode.retval:
-            Dynamic v = stack[--depth];
-            static foreach (args; argss)
-            {
-                static if (is(typeof(args) == LocalCallback[]))
-                {
-                    foreach (arg; args)
-                    {
-                        if (arg.at == LocalCallback.At.exit)
-                        {
-                            arg.del(index, depth, stack, locals);
-                        }
-                    }
-                }
-            }
             // writeTraceLn(heat);
+            Dynamic v = stack[--depth];
             return v;
         case Opcode.retnone:
-            static foreach (args; argss)
-            {
-                static if (is(typeof(args) == LocalCallback[]))
-                {
-                    foreach (arg; args)
-                    {
-                        if (arg.at == LocalCallback.At.exit)
-                        {
-                            arg.del(index, depth, stack, locals);
-                        }
-                    }
-                }
-            }
             // writeTraceLn(heat);
             return Dynamic.nil;
         case Opcode.iftrue:

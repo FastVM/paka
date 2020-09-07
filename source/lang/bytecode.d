@@ -45,7 +45,8 @@ class Function
         bool is2;
     }
 
-    enum Flags : ubyte{
+    enum Flags : ubyte
+    {
         isLocal = 1,
     }
 
@@ -174,12 +175,10 @@ enum Opcode
     store,
     istore,
     tstore,
-    qstore,
     // same but with operators like += and -=
     opstore,
     opistore,
     optstore,
-    opqstore,
     // return a value
     retval,
     // return no value
@@ -192,9 +191,20 @@ enum Opcode
     jump,
 }
 
+enum int[Opcode] opSizes = [
+    // mat change: call, array, targeta, table, upcall
+    Opcode.nop : 0, Opcode.push : 1, Opcode.pop : -1, Opcode.data : 0,
+    Opcode.sub : 1, Opcode.bind : -1, Opcode.oplt : -1, Opcode.opgt : -1,
+    Opcode.oplte : -1, Opcode.opgte : -1, Opcode.opeq : -1, Opcode.opneq : -1,
+    Opcode.unpack : 1, Opcode.index : -1, Opcode.opneg : 0, Opcode.opadd : -1,
+    Opcode.opsub : -1, Opcode.opmul : -1, Opcode.opdiv : -1, Opcode.opmod : -1,
+    Opcode.load : 1, Opcode.loadc : 1, Opcode.store : 0, Opcode.istore : -1,
+    Opcode.tstore : -1, Opcode.opistore : -1, Opcode.optstore : -1,
+    Opcode.retval : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
+    Opcode.iffalse : -1, Opcode.jump : 0
+];
 struct Instr
 {
     Opcode op;
     uint value;
 }
-

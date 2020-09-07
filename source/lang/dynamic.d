@@ -20,6 +20,8 @@ alias Args = Dynamic[];
 alias Array = Dynamic[];
 alias Table = Dynamic[Dynamic];
 
+version = safe;
+
 pragma(inline, true) Dynamic dynamic(T...)(T a)
 {
     return Dynamic(a);
@@ -33,7 +35,6 @@ struct Dynamic
         log,
         num,
         str,
-        box,
         arr,
         tab,
         fun,
@@ -49,7 +50,6 @@ struct Dynamic
         bool log;
         Number num;
         string* str;
-        Dynamic* box;
         Array* arr;
         Table* tab;
         union Callable
@@ -87,12 +87,6 @@ struct Dynamic
     {
         value.str = [str].ptr;
         type = Type.str;
-    }
-
-    pragma(inline, true) this(Dynamic* box)
-    {
-        value.box = box;
-        type = Type.box;
     }
 
     pragma(inline, true) this(Array arr)
@@ -174,7 +168,7 @@ struct Dynamic
         }
     }
 
-    pragma(inline, true) int opCmp(Dynamic other)
+    pragma(inline, true) long opCmp(Dynamic other)
     {
         Type t = type;
     before:
@@ -184,9 +178,6 @@ struct Dynamic
             assert(0);
         case Type.nil:
             return 0;
-        case Type.box:
-            t = box.type;
-            goto before;
         case Type.log:
             return value.log - other.log;
         case Type.num:
@@ -196,7 +187,17 @@ struct Dynamic
             }
             else
             {
-                return value.num.opCmp(other.num);
+                Number a = value.num;
+                Number b = other.num;
+                if (a < b)
+                {
+                    return -1;
+                }
+                if (a > b)
+                {
+                    return 1;
+                }
+                return 0;
             }
         case Type.str:
             return cmp(*value.str, other.str);
@@ -255,93 +256,61 @@ struct Dynamic
 
     pragma(inline, true) bool log()
     {
-        if (type == Type.box)
-        {
-            return value.box.log;
-        }
-        if (type != Type.log)
-        {
-            throw new Exception("expected logical type");
-        }
+        version (safe)
+            if (type != Type.log)
+            {
+                throw new Exception("expected logical type");
+            }
         return value.log;
     }
 
     pragma(inline, true) Number num()
     {
-        if (type == Type.box)
-        {
-            return value.box.num;
-        }
-        if (type != Type.num)
-        {
-            throw new Exception("expected number type");
-        }
+        version (safe)
+            if (type != Type.num)
+            {
+                throw new Exception("expected number type");
+            }
         return value.num;
     }
 
     pragma(inline, true) string str()
     {
-        if (type == Type.box)
-        {
-            return value.box.str;
-        }
-        if (type != Type.str)
-        {
-            throw new Exception("expected string type");
-        }
+        version (safe)
+            if (type != Type.str)
+            {
+                throw new Exception("expected string type");
+            }
         return *value.str;
     }
 
     pragma(inline, true) Array arr()
     {
-        if (type == Type.box)
-        {
-            return value.box.arr;
-        }
-        if (type != Type.arr && type != Type.dat)
-        {
-            throw new Exception("expected array type");
-        }
+        version (safe)
+            if (type != Type.arr && type != Type.dat)
+            {
+                throw new Exception("expected array type");
+            }
         return *value.arr;
-    }
-
-    pragma(inline, true) Dynamic unbox()
-    {
-        return *box;
-    }
-
-    pragma(inline, true) Dynamic* box()
-    {
-        if (type != Type.box)
-        {
-            throw new Exception("expected box type");
-        }
-        return value.box;
     }
 
     pragma(inline, true) Table tab()
     {
-        if (type == Type.box)
-        {
-            return value.box.tab;
-        }
-        if (type != Type.tab)
-        {
-            throw new Exception("expected table type");
-        }
+        version (safe)
+            if (type != Type.tab)
+            {
+                throw new Exception("expected table type");
+            }
         return *value.tab;
     }
 
     pragma(inline, true) Value.Callable fun()
     {
-        if (type == Type.box)
-        {
-            return value.box.fun;
-        }
-        if (type != Type.fun && type != Type.pro && type != Type.del)
-        {
-            throw new Exception("expected callable type");
-        }
+        version (safe)
+            if (type != Type.fun && type != Type.pro && type != Type.del)
+            {
+                throw new Exception("expected callable type");
+            }
         return value.fun;
     }
 
@@ -416,8 +385,6 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         {
             return '"' ~ dyn.str ~ '"';
         }
-    case Dynamic.Type.box:
-        return "<box " ~ to!string(*dyn.value.box) ~ ">";
     case Dynamic.Type.arr:
         char[] ret;
         ret ~= "[";
