@@ -29,19 +29,19 @@ Dynamic dynamic(T...)(T a)
 
 struct Dynamic
 {
-    enum Type : ubyte
+    enum Type : ushort
     {
-        nil,
-        log,
-        num,
-        str,
-        arr,
-        tab,
-        fun,
-        pro,
-        end,
-        pac,
-        dat,
+        nil=1,
+        log=2,
+        num=4,
+        str=8,
+        arr=16,
+        tab=32,
+        fun=64,
+        pro=128,
+        end=256,
+        pac=512,
+        dat=1024,
     }
 
     union Value
@@ -60,7 +60,7 @@ struct Dynamic
         Callable fun;
     }
 
-align(1):
+align(2):
     Type type = Type.nil;
     Value value = void;
 

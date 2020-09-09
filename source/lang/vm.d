@@ -168,20 +168,20 @@ void enterScope(Function afunc, SafeArray!Dynamic args)
     {
         GC.disable;
     }
+    if (calldepth + 4 > funcs.length)
+    {
+        funcs.length = calldepth * 2 + 4;
+        stacks.length = calldepth * 2 + 4;
+        localss.length = calldepth * 2 + 4;
+        indexs.length = calldepth * 2 + 4;
+        depths.length = calldepth * 2 + 4;
+    }
     funcs[calldepth] = afunc;
     stacks[calldepth] = new Dynamic[afunc.stackSize];
     localss[calldepth] = new Dynamic[afunc.stab.byPlace.length + 1];
     indexs[calldepth] = 0;
     depths[calldepth] = 0;
     calldepth += 1;
-    if (calldepth + 4 > funcs.length)
-    {
-        funcs.length *= 2;
-        stacks.length *= 2;
-        localss.length *= 2;
-        indexs.length *= 2;
-        depths.length *= 2;
-    }
     foreach (i, v; args)
     {
         locals[i] = v;

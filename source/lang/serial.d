@@ -48,21 +48,21 @@ void loadState(bool repl = false)(SerialValue val)
 {
     localTies = null;
     val.object["localss"].readjs!(typeof(localss))(&localss);
-    localss.length = 1000;
     val.object["stacks"].readjs!(typeof(stacks))(&stacks);
-    stacks.length = 1000;
     val.object["indexs"].readjs!(typeof(indexs))(&indexs);
-    indexs.length = 1000;
     val.object["depths"].readjs!(typeof(depths))(&depths);
-    depths.length = 1000;
     val.object["funcs"].readjs!(typeof(funcs))(&funcs);
-    funcs.length = 1000;
     val.object["base"].readjs!(typeof(rootBase))(&rootBase);
     calldepth = val.object["calls"].readjs!(size_t);
     foreach (tie; localTies)
     {
         *tie.target = localss[tie.ind1][tie.ind2];
     }
+    localss.length = calldepth;
+    stacks.length = calldepth;
+    indexs.length = calldepth;
+    depths.length = calldepth;
+    funcs.length = calldepth;
 }
 
 Function readjs(T)(SerialValue val, Function ret = new Function) if (is(T == Function))
