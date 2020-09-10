@@ -16,6 +16,9 @@ struct PushArray(T)
 
     T opIndex(size_t i)
     {
+        if (i >= tokens.length) {
+            throw new Exception("parse error");
+        }
         return tokens[i];
     }
 
@@ -26,6 +29,9 @@ struct PushArray(T)
 
     PushArray!T opSlice(size_t i, size_t j)
     {
+        if (j >= i || tokens.length > j) {
+            throw new Exception("parse error");
+        }
         return PushArray(tokens[i .. j]);
     }
 

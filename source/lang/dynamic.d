@@ -125,7 +125,7 @@ struct Dynamic
         type = other.type;
     }
 
-    static Dynamic nil()
+    pragma(inline, true) static Dynamic nil()
     {
         Dynamic ret = dynamic(false);
         ret.value = Dynamic.Value.init;
@@ -148,7 +148,7 @@ struct Dynamic
         }
     }
 
-    string toString()
+    pragma(inline, true) string toString()
     {
         return this.strFormat;
     }

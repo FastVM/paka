@@ -14,8 +14,7 @@ enum string[][] prec = [
 enum string[] nops = [".", "::", "*", "!", ",", ":"];
 
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "target", "lambda", "using",
-        "table"
+        "if", "else", "while", "return", "def", "target", "lambda",
     ];
 
 enum string[] levels()
