@@ -11,7 +11,7 @@ enum string[][] prec = [
         ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"], ["*", "/", "%"]
     ];
 
-enum string[] nops = [".", "::", "*", "!", ",", ":"];
+enum string[] nops = [".", "*", "!", ",", ":"];
 
 enum string[] keywords = [
         "if", "else", "while", "return", "def", "target", "lambda",
@@ -143,7 +143,7 @@ Token readToken(ref string code)
         }
         return code.readToken;
     }
-    if (peek == ';' || peek == '\n')
+    if (peek == ';')
     {
         return Token(Token.Type.semicolon, [read]);
     }

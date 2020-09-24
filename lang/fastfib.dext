@@ -1,7 +1,7 @@
 def pfib(n) {
     [a, b] = [0, 1];
     while (n > 0) {
-        print(a);
+        io.print(a);
         [a, b] += [b - a, a];
         n -= 1;
     };

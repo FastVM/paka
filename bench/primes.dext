@@ -22,4 +22,4 @@ def sum_primes(upto) {
 }
 
 res = sum_primes(20000)
-print(res)
+io.print(res)

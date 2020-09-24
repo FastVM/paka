@@ -5,7 +5,6 @@ import lang.base;
 import lang.ast;
 import lang.dynamic;
 import lang.parse;
-import lang.typed;
 import lang.vm;
 import lang.inter;
 import std.stdio;

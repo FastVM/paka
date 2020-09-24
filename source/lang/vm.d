@@ -10,6 +10,7 @@ import core.memory;
 import core.stdc.stdlib;
 import lang.dynamic;
 import lang.bytecode;
+import lang.number;
 
 alias CallbackDelegate = void delegate(ref size_t index, ref size_t depth,
         ref Dynamic[] stack, ref Dynamic[] locals);
@@ -43,11 +44,11 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
     {
         static if (op == "=")
         {
-            locals[cast(size_t) to.num] = from;
+            locals[to.num.as!size_t] = from;
         }
         else
         {
-            mixin(" locals[cast(size_t) to.num]" ~ op ~ "from;");
+            mixin(" locals[to.num.as!size_t]" ~ op ~ "from;");
         }
     }
     else if (to.type == Dynamic.Type.dat)
@@ -58,7 +59,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                arr.arr[to.arr[1].num.to!size_t] = from;
+                arr.arr[to.arr[1].num.as!size_t] = from;
                 break;
             case Dynamic.Type.tab:
                 arr.tab[to.arr[1]] = from;
@@ -72,7 +73,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                mixin("arr.arr[to.arr[1].num.to!size_t]" ~ op ~ " from;");
+                mixin("arr.arr[to.arr[1].num.as!size_t]" ~ op ~ " from;");
                 break;
             case Dynamic.Type.tab:
                 mixin("arr.tab[to.arr[1]]" ~ op ~ " from;");
@@ -205,7 +206,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
         }
         else
         {
-
             Dynamic* ptr = cast(Dynamic*) alloca(
                     (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
             stack = ptr[0 .. func.stackSize];
@@ -417,7 +417,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                stack[depth - 1] = (arr.arr)[stack[depth].num.to!size_t];
+                stack[depth - 1] = (arr.arr)[stack[depth].num.as!size_t];
                 break;
             case Dynamic.Type.tab:
                 stack[depth - 1] = (arr.tab)[stack[depth]];
@@ -431,23 +431,23 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             break;
         case Opcode.opadd:
             depth--;
-            stack[depth - 1] = stack[depth - 1] + stack[depth];
+            stack[depth - 1] += stack[depth];
             break;
         case Opcode.opsub:
             depth--;
-            stack[depth - 1] = stack[depth - 1] - stack[depth];
+            stack[depth - 1] -= stack[depth];
             break;
         case Opcode.opmul:
             depth--;
-            stack[depth - 1] = stack[depth - 1] * stack[depth];
+            stack[depth - 1] *= stack[depth];
             break;
         case Opcode.opdiv:
             depth--;
-            stack[depth - 1] = stack[depth - 1] / stack[depth];
+            stack[depth - 1] /= stack[depth];
             break;
         case Opcode.opmod:
             depth--;
-            stack[depth - 1] = stack[depth - 1] % stack[depth];
+            stack[depth - 1] %= stack[depth];
             break;
         case Opcode.load:
             stack[depth++] = locals[cur.value];
@@ -462,7 +462,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             switch (stack[depth - 2].type)
             {
             case Dynamic.Type.arr:
-                stack[depth - 2].arr[stack[depth - 1].num.to!size_t] = stack[depth - 3];
+                stack[depth - 2].arr[stack[depth - 1].num.as!size_t] = stack[depth - 3];
                 break;
             case Dynamic.Type.tab:
                 stack[depth - 2].tab[stack[depth - 1]] = stack[depth - 3];
@@ -504,7 +504,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
                     switch (arr.type)
                     {
                     case Dynamic.Type.arr:
-                        mixin("arr.arr[stack[depth-1].num.to!size_t]" ~ opm[0] ~ " stack[depth-3];");
+                        mixin("arr.arr[stack[depth-1].num.as!size_t]" ~ opm[0] ~ " stack[depth-3];");
                         break switchOpi;
                     case Dynamic.Type.tab:
                         mixin("arr.tab[stack[depth-1]]" ~ opm[0] ~ " stack[depth-3];");

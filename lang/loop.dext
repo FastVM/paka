@@ -6,4 +6,4 @@ while (x < 1000) {
     res += x;
 };
 
-print(res);
+io.print(res);

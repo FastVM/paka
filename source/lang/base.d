@@ -1,23 +1,25 @@
 module lang.base;
 
+import std.algorithm;
 import lang.dynamic;
 import lang.bytecode;
 import lang.lib.io;
 import lang.lib.sys;
+import lang.lib.str;
+import lang.lib.arr;
 import lang.lib.ctfe;
-import lang.lib.func;
 
 Pair[] rootCtfeBase()
 {
-    Dynamic load(Dynamic function(Args args) fn)
+    Dynamic dynamic(Dynamic function(Args args) fn)
     {
         return dynamic(fn);
     }
 
     return [
-        Pair("print", load(&lang.lib.ctfe.ctfelibprint)),
-        Pair("read", load(&lang.lib.ctfe.ctfelibread)),
-        Pair("run_entry", load(&lang.lib.ctfe.ctfelibentry)),
+        Pair("print", dynamic(&lang.lib.ctfe.ctfelibprint)),
+        Pair("read", dynamic(&lang.lib.ctfe.ctfelibread)),
+        Pair("run_entry", dynamic(&lang.lib.ctfe.ctfelibentry)),
     ];
 }
 
@@ -78,24 +80,37 @@ void defineRoot(string name, Dynamic val)
     rootBase ~= Pair(name, val);
 }
 
+void addLib(ref Pair[] pairs, string name, Pair[] lib)
+{
+    foreach (entry; lib)
+    {
+        pairs ~= Pair(name ~ "." ~ entry.name, entry.val);
+    }
+    Table dyn;
+    foreach (entry; lib)
+    {
+        if (!entry.name.canFind('.'))
+        {
+            dyn[dynamic(entry.name)] = entry.val;
+        }
+    }
+    pairs ~= Pair(name, dynamic(dyn));
+}
+
 Pair[] getRootBase()
 {
-    Dynamic load(Dynamic function(Args args) fn)
-    {
-        return dynamic(fn);
-    }
-
-    return [
-        Pair("print", load(&lang.lib.io.libprint)),
-        Pair("put", load(&lang.lib.io.libput)),
-        Pair("readln", load(&lang.lib.io.libreadln)),
-        Pair("leave", load(&lang.lib.sys.libleave)),
-        Pair("_both_map", load(&lang.lib.sys.libubothmap)),
-        Pair("_lhs_map", load(&lang.lib.sys.libulhsmap)),
-        Pair("_rhs_map", load(&lang.lib.sys.liburhsmap)),
-        Pair("_pre_map", load(&lang.lib.sys.libupremap)),
-        Pair("range", load(&lang.lib.func.librange)),
+    Pair[] ret = [
+        Pair("_both_map", dynamic(&libubothmap)),
+        Pair("_lhs_map", dynamic(&libulhsmap)),
+        Pair("_rhs_map", dynamic(&liburhsmap)),
+        Pair("_pre_map", dynamic(&libupremap)),
     ];
+    ret.addLib("str", libstr);
+    ret.addLib("arr", libarr);
+    ret.addLib("io", libio);
+    ret.addLib("sys", libsys);
+    // ret.addLib("func", librepl);
+    return ret;
 }
 
 Function baseFunction(size_t ctx = rootBases.length - 1)

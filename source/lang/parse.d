@@ -29,9 +29,9 @@ struct PushArray(T)
 
     PushArray!T opSlice(size_t i, size_t j)
     {
-        if (j >= i || tokens.length > j) {
-            throw new Exception("parse error");
-        }
+        // if (j >= i || tokens.length > j) {
+        //     throw new Exception("parse error");
+        // }
         return PushArray(tokens[i .. j]);
     }
 
@@ -168,12 +168,6 @@ Node readPostExtend(ref TokenArray tokens, Node last)
     {
         tokens = tokens[1 .. $];
         ret = new Call(new Ident("@index"), [last, new String(tokens[0].value)]);
-        tokens = tokens[1 .. $];
-    }
-    else if (tokens[0].isOperator("::"))
-    {
-        tokens = tokens[1 .. $];
-        ret = new Call(new Ident("@method"), [last, new String(tokens[0].value)]);
         tokens = tokens[1 .. $];
     }
     return tokens.readPostExtend(ret);

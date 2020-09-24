@@ -5,10 +5,18 @@ import lang.base;
 import lang.bytecode;
 import lang.dynamic;
 import lang.ssize;
+import lang.number;
 import std.algorithm;
 import std.conv;
 import std.string;
 import std.stdio;
+
+enum string[] specialForms = [
+        "@def", "@set", "@opset", "@while", "@array", "@table", "@target",
+        "@return", "@if", "@fun", "@do", "@using", "F+", "-", "+", "*", "/",
+        "@dotmap-both", "@dotmap-lhs", "@dotmap-rhs", "@dotmap-pre", "%",
+        "<", ">", "<=", ">=", "==", "!=", "...", "@index", "=>",
+    ];
 
 bool isUnpacking(Node[] args)
 {
@@ -37,12 +45,6 @@ class Walker
     Function func;
     uint[2] stackSize;
     bool isTarget = false;
-    enum string[] specialForms = [
-            "@def", "@set", "@opset", "@while", "@array", "@table", "@target",
-            "@return", "@if", "@fun", "@do", "@using", "F+", "-", "+", "*", "/",
-            "@dotmap-both", "@dotmap-lhs", "@dotmap-rhs", "@dotmap-pre", "%",
-            "<", ">", "<=", ">=", "==", "!=", "...", "@index", "@method", "=>",
-        ];
 
     Function walkProgram(bool ctfe = false)(Node node, size_t ctx)
     {
@@ -472,16 +474,7 @@ class Walker
     void walkUnpack(Node[] args)
     {
         pushInstr(func, Instr(Opcode.unpack));
-
         walk(args[0]);
-    }
-
-    void walkMethod(Node[] args)
-    {
-        walk(args[0]);
-        walk(args[1]);
-        pushInstr(func, Instr(Opcode.bind));
-
     }
 
     void walkDotmap(string s)(Node[] args)
@@ -537,9 +530,6 @@ class Walker
             break;
         case "@array":
             walkArray(c.args[1 .. $]);
-            break;
-        case "@method":
-            walkMethod(c.args[1 .. $]);
             break;
         case "@table":
             walkTable(c.args[1 .. $]);
@@ -675,7 +665,7 @@ class Walker
         {
             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
 
-            func.constants ~= dynamic(i.repr.to!Number);
+            func.constants ~= dynamic(i.repr.as!Number);
         }
         else
         {
@@ -692,7 +682,7 @@ class Walker
                     v = func.stab.define(i.repr);
                 }
                 pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-                func.constants ~= dynamic(v.to!Number);
+                func.constants ~= dynamic(v.as!Number);
             }
             else
             {

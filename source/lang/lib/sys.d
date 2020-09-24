@@ -1,14 +1,22 @@
 module lang.lib.sys;
 
-import core.stdc.stdlib;
 import lang.dynamic;
+import lang.base;
+import lang.lib.sysenv;
+import core.stdc.stdlib;
+import core.runtime;
+import std.algorithm;
+import std.array;
 import std.stdio;
 import std.parallelism;
 
-Dynamic libleave(Args args)
+Pair[] libsys()
 {
-    exit(0);
-    assert(0);
+    Pair[] ret = [
+        Pair("leave", dynamic(&libleave)), Pair("args", dynamic(&libargs)),
+    ];
+    ret.addLib("env", libsysenv);
+    return ret;
 }
 
 Dynamic libmap(Args args)
@@ -68,4 +76,16 @@ Dynamic libupremap(Args args)
         ret ~= args[0]([i]);
     }
     return dynamic(ret);
+}
+
+private:
+Dynamic libleave(Args args)
+{
+    exit(0);
+    assert(0);
+}
+
+Dynamic libargs(Args args)
+{
+    return dynamic(Runtime.args.map!(x => dynamic(x)).array);
 }

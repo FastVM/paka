@@ -1,9 +1,9 @@
 def fib(x) {
-    if (x < 2) {
-        return x
+    return if (x < 2) {
+        x;
     } else {
-        return fib(x-2) + fib(x-1)
-    }
-}
+        fib(x-2) + fib(x-1);
+    };
+};
 
-print(fib(35))
+io.print(fib(35));

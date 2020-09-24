@@ -6,7 +6,7 @@ import lang.bytecode;
 import lang.base;
 import lang.dynamic;
 import lang.parse;
-import lang.typed;
+import lang.number;
 import lang.repl;
 import lang.inter;
 import std.file;
@@ -56,7 +56,7 @@ void main(string[] args)
     foreach (i; stmts)
     {
         size_t ctx = enterCtx;
-        scope(exit)
+        scope (exit)
         {
             exitCtx;
         }
@@ -73,17 +73,42 @@ void main(string[] args)
     foreach (i; scripts ~ args[1 .. $])
     {
         size_t ctx = enterCtx;
-        scope(exit)
+        scope (exit)
         {
             exitCtx;
         }
         string code = cast(string) i.read;
         Node node = code.parse;
-        // Typer typer = new Typer;
-        // typer.annot(node);
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);
         func.captured = loadBase;
         run(func);
     }
+    // if (scripts.length == 0 && stmts.length == 0)
+    // {
+    //     while (true)
+    //     {
+    //         size_t ctx = enterCtx;
+    //         scope (exit)
+    //         {
+    //             exitCtx;
+    //         }
+    //         write(">>> ");
+    //         string code = cast(string) readln;
+    //         Node node = code.parse;
+    //         Compiler compiler = new Compiler;
+    //         string got = compiler.walkFunction(node);
+    //         writeln(got);
+    //         // Typer typer = new Typer;
+    //         // typer.annot(node);
+    //         Walker walker = new Walker;
+    //         Function func = walker.walkProgram(node, ctx);
+    //         func.captured = loadBase;
+    //         Dynamic retval = run(func);
+    //         if (retval.type != Dynamic.Type.nil)
+    //         {
+    //             writeln(retval);
+    //         }
+    //     }
+    // }
 }

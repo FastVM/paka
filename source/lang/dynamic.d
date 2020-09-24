@@ -12,6 +12,7 @@ import std.stdio;
 import core.memory;
 import lang.bytecode;
 import lang.vm;
+import lang.number;
 import lang.data.rope;
 
 public import lang.number : Number;
@@ -63,8 +64,8 @@ struct Dynamic
     }
 
     // align(1):
-    Type type;
-    Value value;
+    Type type = Type.nil;
+    Value value = void;
 
     pragma(inline, true) this(Type t)
     {
@@ -171,7 +172,6 @@ struct Dynamic
     pragma(inline, true) long opCmp(Dynamic other)
     {
         Type t = type;
-    before:
         switch (t)
         {
         default:
@@ -181,24 +181,17 @@ struct Dynamic
         case Type.log:
             return value.log - other.log;
         case Type.num:
-            static if (__traits(compiles, cmp(value.num, other.num)))
+            Number a = value.num;
+            Number b = other.num;
+            if (a < b)
             {
-                return cmp(value.num, other.num);
+                return -1;
             }
-            else
+            if (a == b)
             {
-                Number a = value.num;
-                Number b = other.num;
-                if (a < b)
-                {
-                    return -1;
-                }
-                if (a > b)
-                {
-                    return 1;
-                }
-                return 0;
+                return 1;
             }
+            return 0;
         case Type.str:
             return cmp(*value.str, other.str);
         }
@@ -220,11 +213,11 @@ struct Dynamic
         {
             if (type == Type.str && other.type == Type.num)
             {
-                return dynamic(cast(string) str.replicate(cast(size_t) other.num).array);
+                return dynamic(cast(string) str.replicate(other.num.as!size_t).array);
             }
             if (type == Type.arr && other.type == Type.num)
             {
-                return dynamic(arr.replicate(cast(size_t) other.num).array);
+                return dynamic(arr.replicate(other.num.as!size_t).array);
             }
         }
         static if (op == "~" || op == "+")
@@ -304,6 +297,36 @@ struct Dynamic
         return *value.tab;
     }
 
+    pragma(inline, true) string* strPtr()
+    {
+        version (safe)
+            if (type != Type.str)
+            {
+                throw new Exception("expected string type");
+            }
+        return value.str;
+    }
+
+    pragma(inline, true) Array* arrPtr()
+    {
+        version (safe)
+            if (type != Type.arr && type != Type.dat)
+            {
+                throw new Exception("expected array type");
+            }
+        return value.arr;
+    }
+
+    pragma(inline, true) Table* tabPtr()
+    {
+        version (safe)
+            if (type != Type.tab)
+            {
+                throw new Exception("expected table type");
+            }
+        return value.tab;
+    }
+
     pragma(inline, true) Value.Callable fun()
     {
         version (safe)
@@ -373,7 +396,7 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
     case Dynamic.Type.num:
         if (dyn.num % 1 == 0)
         {
-            return to!string(cast(size_t) dyn.num);
+            return to!string(dyn.num.as!size_t);
         }
         return dyn.num.to!string;
     case Dynamic.Type.str:

@@ -50,5 +50,3 @@ while (y <= height - 1) {
     } ;
     y += 1;
 };
-
-print(iters);
