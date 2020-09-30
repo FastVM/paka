@@ -5,319 +5,365 @@ import std.traits;
 import std.string;
 import std.stdio;
 import std.conv;
-        import core.memory;
-import mpfrd;
-import deimos.mpfr;
+import core.memory;
 
-// version = big_number;
+// import mpfrd;
+import lang.data.mpfr;
+import std.experimental.checkedint;
 
-version (big)
+private BigNumber maxSmall = void;
+private BigNumber minSmall = void;
+
+// nothrow extern (C) void mp_set_memory_functions(void function(size_t),
+//         void* function(void*, size_t, size_t), void function(void*, size_t));
+
+extern (C) extern __gshared void* function(size_t s) __gmp_allocate_func;
+extern (C) extern __gshared void* function(void* p, size_t s, size_t o) __gmp_reallocate_func;
+extern (C) extern __gshared void function(void* p, size_t o) __gmp_free_func;
+
+static this()
 {
-    struct Number
+    __gmp_allocate_func = function(size_t s) { return GC.malloc(s); };
+    __gmp_reallocate_func = function(void* p, size_t s, size_t o) {
+        return GC.realloc(p, s);
+    };
+    __gmp_free_func = function(void* p, size_t o) {};
+    maxSmall = int.max.asBig;
+    minSmall = int.min.asBig;
+}
+
+alias SmallNumber = double;
+alias BigNumber = const(MpfrBigNumber);
+
+pragma(inline, true) BigNumber asBig(T...)(T v)
+{
+    return BigNumber(v);
+}
+
+bool fits(SmallNumber num)
+{
+    return int.min <= num && num <= int.max;
+}
+
+struct MpfrBigNumber
+{
+    mpfr_t mpfr = void;
+    alias mpfr this;
+
+    @disable this();
+
+    pragma(inline, true) bool fits() const
     {
-        mpfr_t mpfr = void;
-        alias mpfr this;
+        return minSmall <= this && this <= maxSmall;
+    }
 
-        @disable this();
+    pragma(inline, true) this(const(MpfrBigNumber) other)
+    {
+        mpfr_init2(mpfr, mpfr_get_prec(other.mpfr));
+        mpfr_set(mpfr, other.mpfr, mpfr_rnd_t.MPFR_RNDN);
+    }
 
-        pragma(inline, true) this(this)
+    pragma(inline, true) this(SmallNumber other)
+    {
+        mpfr_init(mpfr);
+        mpfr_set_d(mpfr, other, mpfr_rnd_t.MPFR_RNDN);
+    }
+
+    pragma(inline, true) static MpfrBigNumber empty(mpfr_prec_t p = 64)
+    {
+        MpfrBigNumber ret = void;
+        mpfr_init2(ret.mpfr, p);
+        return ret;
+    }
+
+    // pragma(inline, true) this(T)(T value, mpfr_prec_t p = 32)
+    //         if (isNumericValue!T)
+    // {
+    //     mpfr_init2(mpfr, p);
+    //     this = value;
+    // }
+
+    pragma(inline, true) this(const string value)
+    {
+        mpfr_init_set_str(mpfr, value.toStringz, 10, mpfr_rnd_t.MPFR_RNDN);
+    }
+
+    pragma(inline, true) ~this()
+    {
+        // mpfr_clear(mpfr);
+        destroy!false(mpfr);
+    }
+
+    private static template isNumericValue(T)
+    {
+        enum isNumericValue = std.traits.isNumeric!T || is(T == MpfrBigNumber);
+    }
+
+    private static string getTypeString(T)()
+    {
+        static if (isIntegral!T && isSigned!T)
         {
-            mpfr_t new_mpfr;
-            mpfr_init2(new_mpfr, mpfr_get_prec(mpfr));
-            mpfr_set(new_mpfr, mpfr, mpfr_rnd_t.MPFR_RNDN);
-            mpfr = new_mpfr;
+            return "_si";
         }
-
-        pragma(inline, true) static Number empty(mpfr_prec_t p = 32)
+        else static if (isIntegral!T && !isSigned!T)
         {
-            Number ret = void;
-            mpfr_init2(ret.mpfr, p);
-            return ret;
+            return "_ui";
         }
-
-        pragma(inline, true) this(T)(const T value, mpfr_prec_t p = 32)
-                if (isNumericValue!T)
+        else static if (is(T : double))
         {
-            mpfr_init2(mpfr, p);
-            this = value;
+            return "_d";
         }
-
-        pragma(inline, true) this(const string value)
+        else static if (is(T == MpfrBigNumber))
         {
-            mpfr_init_set_str(mpfr, value.toStringz, 10, mpfr_rnd_t.MPFR_RNDN);
+            return "";
         }
-
-        pragma(inline, true) ~this()
+        else
         {
-            mpfr_clear(mpfr);
-        }
-
-        private static template isNumericValue(T)
-        {
-            enum isNumericValue = std.traits.isNumeric!T || is(T == Number);
-        }
-
-        private static string getTypeString(T)()
-        {
-            static if (isIntegral!T && isSigned!T)
-            {
-                return "_si";
-            }
-            else static if (isIntegral!T && !isSigned!T)
-            {
-                return "_ui";
-            }
-            else static if (is(T : double))
-            {
-                return "_d";
-            }
-            else static if (is(T == Number))
-            {
-                return "";
-            }
-            else
-            {
-                static assert(false, "Unhandled type " ~ T.stringof);
-            }
-        }
-
-        ////////////////////////////////////////////////////////////////////////////
-        // properties
-        ////////////////////////////////////////////////////////////////////////////
-
-        pragma(inline, true) @property void precision(mpfr_prec_t p)
-        {
-            mpfr_set_prec(mpfr, p);
-        }
-
-        pragma(inline, true) @property mpfr_prec_t precision() const
-        {
-            return mpfr_get_prec(mpfr);
-        }
-
-        ////////////////////////////////////////////////////////////////////////////
-        // Comparisons
-        ////////////////////////////////////////////////////////////////////////////
-
-        pragma(inline, true) int opCmp(T)(const T value) const 
-                if (isNumericValue!T)
-        {
-            mixin("return mpfr_cmp" ~ getTypeString!T() ~ "(mpfr, value);");
-        }
-
-        pragma(inline, true) int opCmp(ref const Number value)
-        {
-            return mpfr_cmp(mpfr, value);
-        }
-
-        pragma(inline, true) bool opEquals(T)(const T value) const 
-                if (isNumericValue!T)
-        {
-            return opCmp(value) == 0;
-        }
-
-        pragma(inline, true) bool opEquals(ref const Number value)
-        {
-            return this is value || opCmp(value) == 0;
-        }
-
-        private static string getOperatorString(string op)()
-        {
-            switch (op)
-            {
-            default:
-                assert(0);
-            case "+":
-                return "_add";
-            case "-":
-                return "_sub";
-            case "*":
-                return "_mul";
-            case "/":
-                return "_div";
-            case "^^":
-                return "_pow";
-            }
-        }
-
-        private static string getShiftOperatorString(string op)()
-        {
-            final switch (op)
-            {
-            case "<<":
-                return "_mul";
-            case ">>":
-                return "_div";
-            }
-        }
-
-        private static string getShiftTypeString(T)()
-        {
-            static if (isIntegral!T && isSigned!T)
-            {
-                return "_2si";
-            }
-            else static if (isIntegral!T && !isSigned!T)
-            {
-                return "_2ui";
-            }
-            else
-            {
-                static assert(false, "Unhandled type " ~ T.stringof);
-            }
-        }
-
-        private static string getFunctionSuffix(string op, T, bool isRight)()
-        {
-            static if (op == "<<" || op == ">>")
-            {
-                static assert(!isRight,
-                        "Binary Right Shift not allowed, try using lower level mpfr_ui_pow.");
-                return getShiftOperatorString!op() ~ getShiftTypeString!T();
-            }
-            else
-            {
-                return isRight ? getTypeString!T() ~ getOperatorString!op() : getOperatorString!op() ~ getTypeString!T();
-            }
-        }
-
-        private static string getFunction(string op, T, bool isRight)()
-        {
-            return "mpfr" ~ getFunctionSuffix!(op, T, isRight);
-        }
-
-        ////////////////////////////////////////////////////////////////////////////
-        // Arithmetic
-        ////////////////////////////////////////////////////////////////////////////
-
-        pragma(inline, true) Number opBinary(string op)(Number value) if (op == "%")
-        {
-            Number output = Number.empty;
-            mpfr_fmod(output.mpfr, mpfr, value.mpfr, mpfr_rnd_t.MPFR_RNDN);
-            return output;
-        }
-
-        pragma(inline, true) Number opBinary(string op, T)(const T value)
-                if (isNumericValue!T && op == "%")
-        {
-            return this % Number(value);
-        }
-
-        pragma(inline, true) Number opBinary(string op, T)(const T value) const 
-                if (isNumericValue!T && op != "%")
-        {
-            Number output = Number.empty;
-            mixin(getFunction!(op, T, false)() ~ "(output, mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
-            return output;
-        }
-
-        pragma(inline, true) Number opBinaryRight(string op, T)(const T value) const
-                if (isNumericValue!T && op != "%")
-        {
-            static if (op == "-" || op == "/" || op == "<<" || op == ">>")
-            {
-                Number output = Number.empty;
-                mixin(getFunction!(op, T, true)() ~ "(output, value, mpfr, mpfr_rnd_t.MPFR_RNDN);");
-                return output;
-            }
-            else
-            {
-                return opBinary!op(value);
-            }
-        }
-
-        pragma(inline, true) Number opUnary(string op)() const if (op == "-")
-        {
-            Number output = Number.empty;
-            mpfr_neg(output, mpfr, mpfr_rnd_t.MPFR_RNDN);
-            return output;
-        }
-
-        pragma(inline, true) Number opUnary(string op)() if (op == "++")
-        {
-            mpfr_nextabove(this.mpfr);
-            return this;
-        }
-
-        pragma(inline, true) Number opUnary(string op)() if (op == "--")
-        {
-            mpfr_nextbelow(this.mpfr);
-            return this;
-        }
-
-        ////////////////////////////////////////////////////////////////////////////
-        // Mutation
-        ////////////////////////////////////////////////////////////////////////////
-
-        pragma(inline, true) ref Number opAssign(T)(const T value)
-                if (isNumericValue!T)
-        {
-            mixin("mpfr_set" ~ getTypeString!T() ~ "(mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
-            return this;
-        }
-
-        pragma(inline, true) ref Number opAssign(ref const Number value)
-        {
-            mpfr_set(mpfr, value, mpfr_rnd_t.MPFR_RNDN);
-            return this;
-        }
-
-        pragma(inline, true) ref Number opOpAssign(string op, T)(const T value)
-                if (isNumericValue!T && op != "%")
-        {
-            static assert(!(op == "^^" && isFloatingPoint!T),
-                    "No operator ^^= with floating point.");
-            mixin(getFunction!(op, T, false)() ~ "(mpfr, mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
-            return this;
-        }
-
-        pragma(inline, true) ref Number opOpAssign(string op)(ref const Number value)
-                if (op != "%")
-        {
-            if (value !is this)
-            {
-                mixin(getFunction!(op, T, false)() ~ "(mpfr, mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
-            }
-            return this;
-        }
-
-        ////////////////////////////////////////////////////////////////////////////
-        // String
-        ////////////////////////////////////////////////////////////////////////////
-
-        pragma(inline, true) string toString() const
-        {
-            char[1024] buffer;
-            const count = mpfr_snprintf(buffer.ptr, buffer.sizeof, "%Rg".ptr, &mpfr);
-            return buffer[0 .. count].idup;
+            static assert(false, "Unhandled type " ~ T.stringof);
         }
     }
 
-    pragma(inline, true) Number as(T, A)(A s) if (is(T == Number))
+    ////////////////////////////////////////////////////////////////////////////
+    // properties
+    ////////////////////////////////////////////////////////////////////////////
+
+    pragma(inline, true) @property void precision(mpfr_prec_t p)
     {
-        return Number(s);
+        mpfr_set_prec(mpfr, p);
     }
 
-    pragma(inline, true) T as(T)(Number n) if (std.traits.isNumeric!T)
+    pragma(inline, true) @property mpfr_prec_t precision() const
     {
-        return cast(T) mpfr_get_ui(n.mpfr, mpfr_rnd_t.MPFR_RNDN);
+        return mpfr_get_prec(mpfr);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Comparisons
+    ////////////////////////////////////////////////////////////////////////////
+
+    pragma(inline, true) int opCmp(T)(const T value) const if (isNumericValue!T)
+    {
+        mixin("return mpfr_cmp" ~ getTypeString!T() ~ "(mpfr, value);");
+    }
+
+    pragma(inline, true) int opCmp(ref const(MpfrBigNumber) value)
+    {
+        return mpfr_cmp(mpfr, value);
+    }
+
+    pragma(inline, true) bool opEquals(T)(const T value) const 
+            if (isNumericValue!T)
+    {
+        return opCmp(value) == 0;
+    }
+
+    pragma(inline, true) bool opEquals(ref const(MpfrBigNumber) value)
+    {
+        return this is value || opCmp(value) == 0;
+    }
+
+    private static string getOperatorString(string op)()
+    {
+        switch (op)
+        {
+        default:
+            assert(0);
+        case "+":
+            return "_add";
+        case "-":
+            return "_sub";
+        case "*":
+            return "_mul";
+        case "/":
+            return "_div";
+        case "^^":
+            return "_pow";
+        }
+    }
+
+    private static string getShiftOperatorString(string op)()
+    {
+        final switch (op)
+        {
+        case "<<":
+            return "_mul";
+        case ">>":
+            return "_div";
+        }
+    }
+
+    private static string getShiftTypeString(T)()
+    {
+        static if (isIntegral!T && isSigned!T)
+        {
+            return "_2si";
+        }
+        else static if (isIntegral!T && !isSigned!T)
+        {
+            return "_2ui";
+        }
+        else
+        {
+            static assert(false, "Unhandled type " ~ T.stringof);
+        }
+    }
+
+    private static string getFunctionSuffix(string op, T, bool isRight)()
+    {
+        static if (op == "<<" || op == ">>")
+        {
+            static assert(!isRight,
+                    "Binary Right Shift not allowed, try using lower level mpfr_ui_pow.");
+            return getShiftOperatorString!op() ~ getShiftTypeString!T();
+        }
+        else
+        {
+            return isRight ? getTypeString!T() ~ getOperatorString!op() : getOperatorString!op() ~ getTypeString!T();
+        }
+    }
+
+    private static string getFunction(string op, T, bool isRight)()
+    {
+        return "mpfr" ~ getFunctionSuffix!(op, T, isRight);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Arithmetic
+    ////////////////////////////////////////////////////////////////////////////
+
+    pragma(inline, true) MpfrBigNumber opBinary(string op)(const(MpfrBigNumber) value)
+            if (op == "%")
+    {
+        MpfrBigNumber output = MpfrBigNumber.empty;
+        mpfr_fmod(output.mpfr, mpfr, value.mpfr, mpfr_rnd_t.MPFR_RNDN);
+        return output;
+    }
+
+    pragma(inline, true) MpfrBigNumber opBinary(string op)(SmallNumber value)
+    {
+        return mixin("this" ~ op ~ "value.asBig");
+    }
+
+    pragma(inline, true) MpfrBigNumber opBinaryRight(string op)(SmallNumber value)
+    {
+        return mixin("value.asBig" ~ op ~ "this");
+    }
+
+    pragma(inline, true) MpfrBigNumber opBinary(string op, T)(const T value)
+            if (isNumericValue!T && op == "%")
+    {
+        return this % value.asBig;
+    }
+
+    pragma(inline, true) MpfrBigNumber opBinary(string op, T)(const T value) const
+            if (isNumericValue!T && op != "%")
+    {
+        MpfrBigNumber output = MpfrBigNumber.empty;
+        mixin(getFunction!(op, T, false)() ~ "(output, mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
+        return output;
+    }
+
+    pragma(inline, true) MpfrBigNumber opBinaryRight(string op, T)(const T value) const
+            if (isNumericValue!T && op != "%")
+    {
+        static if (op == "-" || op == "/" || op == "<<" || op == ">>")
+        {
+            MpfrBigNumber output = MpfrBigNumber.empty;
+            mixin(getFunction!(op, T, true)() ~ "(output, value, mpfr, mpfr_rnd_t.MPFR_RNDN);");
+            return output;
+        }
+        else
+        {
+            return opBinary!op(value);
+        }
+    }
+
+    pragma(inline, true) MpfrBigNumber opUnary(string op)() const if (op == "-")
+    {
+        MpfrBigNumber output = MpfrBigNumber.empty;
+        mpfr_neg(output, mpfr, mpfr_rnd_t.MPFR_RNDN);
+        return output;
+    }
+
+    pragma(inline, true) MpfrBigNumber opUnary(string op)() if (op == "++")
+    {
+        mpfr_nextabove(this.mpfr);
+        return this;
+    }
+
+    pragma(inline, true) MpfrBigNumber opUnary(string op)() if (op == "--")
+    {
+        mpfr_nextbelow(this.mpfr);
+        return this;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Mutation
+    ////////////////////////////////////////////////////////////////////////////
+
+    // pragma(inline, true) ref MpfrBigNumber opAssign(T)(const T value)
+    //         if (isNumericValue!T)
+    // {
+    //     mixin("mpfr_set" ~ getTypeString!T() ~ "(mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
+    //     return this;
+    // }
+
+    // pragma(inline, true) ref MpfrBigNumber opAssign(ref const MpfrBigNumber value)
+    // {
+    //     mpfr_set(mpfr, value, mpfr_rnd_t.MPFR_RNDN);
+    //     return this;
+    // }
+
+    // pragma(inline, true) ref MpfrBigNumber opOpAssign(string op, T)(const T value)
+    //         if (isNumericValue!T && op != "%")
+    // {
+    //     static assert(!(op == "^^" && isFloatingPoint!T), "No operator ^^= with floating point.");
+    //     mixin(getFunction!(op, T, false)() ~ "(mpfr, mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
+    //     return this;
+    // }
+
+    // pragma(inline, true) ref MpfrBigNumber opOpAssign(string op)(MpfrBigNumber value)
+    //         if (op != "%")
+    // {
+    //     mixin(getFunction!(op, MpfrBigNumber,
+    //             false)() ~ "(mpfr, mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
+    //     return this;
+    // }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // String
+    ////////////////////////////////////////////////////////////////////////////
+
+    pragma(inline, true) string toString() const
+    {
+        char[1024] buffer;
+        const count = mpfr_snprintf(buffer.ptr, buffer.sizeof, "%Rg".ptr, &mpfr);
+        return buffer[0 .. count].idup;
     }
 }
-else
-{
-    alias Number = double;
-    Number as(T, A)(A s) if (is(T == Number) && !is(A == string))
-    {
-        return Number(s);
-    }
 
-    Number as(T, A)(A s) if (is(T == Number) && is(A == string))
-    {
-        return s.to!Number;
-    }
+// pragma(inline, true) MpfrBigNumber as(T, A)(A s) if (is(T == MpfrBigNumber))
+// {
+//     return Mpfrs.asBig;
+// }
 
-    T as(T)(Number n) if (std.traits.isNumeric!T)
-    {
-        return cast(T) n;
-    }
-}
+// pragma(inline, true) T as(T)(MpfrBigNumber n) if (std.traits.isNumeric!T)
+// {
+//     return cast(T) mpfr_get_ui(n.mpfr, mpfr_rnd_t.MPFR_RNDN);
+// }
+
+// alias SmallNumber = double;
+// SmallNumber as(T, A)(A s) if (is(T == SmallNumber) && !is(A == string))
+// {
+//     return Number(s);
+// }
+
+// SmallNumber as(T, A)(A s) if (is(T == SmallNumber) && is(A == string))
+// {
+//     return s.to!SmallNumber;
+// }
+
+// T as(T)(SmallNumber n) if (std.traits.isNumeric!T)
+// {
+//     return cast(T) n;
+// }

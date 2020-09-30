@@ -35,20 +35,20 @@ enum string[2][] cmpMap()
 
 enum string[2][] mutMap()
 {
-    return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"], ["%=", "mod"]];
+    return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"]]; //, ["%=", "mod"]];
 }
 
 void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
 {
-    if (to.type == Dynamic.Type.num)
+    if (to.type == Dynamic.Type.sml || to.type == Dynamic.Type.big)
     {
         static if (op == "=")
         {
-            locals[to.num.as!size_t] = from;
+            locals[to.as!size_t] = from;
         }
         else
         {
-            mixin(" locals[to.num.as!size_t]" ~ op ~ "from;");
+            mixin("locals[to.as!size_t]" ~ op ~ "from;");
         }
     }
     else if (to.type == Dynamic.Type.dat)
@@ -59,7 +59,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                arr.arr[to.arr[1].num.as!size_t] = from;
+                arr.arr[to.arr[1].as!size_t] = from;
                 break;
             case Dynamic.Type.tab:
                 arr.tab[to.arr[1]] = from;
@@ -73,10 +73,10 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                mixin("arr.arr[to.arr[1].num.as!size_t]" ~ op ~ " from;");
+                mixin("arr.arr[to.arr[1].as!size_t]" ~ op ~ "from;");
                 break;
             case Dynamic.Type.tab:
-                mixin("arr.tab[to.arr[1]]" ~ op ~ " from;");
+                mixin("arr.tab[to.arr[1]]" ~ op ~ "from;");
                 break;
             default:
                 throw new Exception("error: cannot store at index");
@@ -92,7 +92,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
         else
         {
             Table tab = locals[$ - 1].tab;
-            tab[to] = mixin("tab[to]" ~ op ~ " from");
+            mixin("tab[to]" ~ op ~ "from;");
         }
     }
     else
@@ -175,11 +175,7 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
 //     }
 // }
 
-version (LDC) {
-    import ldc.attributes;
-    @(polly):
-    @(fastmath):
-}
+alias allocateStackAllowed = alloca;
 
 pragma(inline, false) Dynamic run(T...)(Function func, T argss)
 {
@@ -200,13 +196,15 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
         // stack = ptr[0 .. func.stackSize];
         if (func.flags & Function.Flags.isLocal)
         {
-            Dynamic* ptr = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof, 0, typeid(Dynamic));
-            stack = (cast(Dynamic*) alloca(func.stackSize * Dynamic.sizeof))[0 .. func.stackSize];
+            Dynamic* ptr = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof,
+                    0, typeid(Dynamic));
+            stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof))[0
+                .. func.stackSize];
             locals = ptr[0 .. func.stab.byPlace.length + 1];
         }
         else
         {
-            Dynamic* ptr = cast(Dynamic*) alloca(
+            Dynamic* ptr = cast(Dynamic*) allocateStackAllowed(
                     (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
             stack = ptr[0 .. func.stackSize];
             locals = ptr[func.stackSize .. func.stackSize + func.stab.byPlace.length + 1];
@@ -226,9 +224,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
     // size_t[size_t] heat;
     while (true)
     {
-        // writeln(stack[0 .. depth]);
         Instr cur = instrs[index];
-        // writeln(cur);
         switch (cur.op)
         {
         default:
@@ -417,7 +413,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                stack[depth - 1] = (arr.arr)[stack[depth].num.as!size_t];
+                stack[depth - 1] = (arr.arr)[stack[depth].as!size_t];
                 break;
             case Dynamic.Type.tab:
                 stack[depth - 1] = (arr.tab)[stack[depth]];
@@ -446,9 +442,10 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             stack[depth - 1] /= stack[depth];
             break;
         case Opcode.opmod:
-            depth--;
-            stack[depth - 1] %= stack[depth];
-            break;
+            // depth--;
+            // stack[depth - 1] %= stack[depth];
+            // break;
+            throw new Exception("error: cannot modulo");
         case Opcode.load:
             stack[depth++] = locals[cur.value];
             break;
@@ -462,7 +459,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             switch (stack[depth - 2].type)
             {
             case Dynamic.Type.arr:
-                stack[depth - 2].arr[stack[depth - 1].num.as!size_t] = stack[depth - 3];
+                stack[depth - 2].arr[stack[depth - 1].as!size_t] = stack[depth - 3];
                 break;
             case Dynamic.Type.tab:
                 stack[depth - 2].tab[stack[depth - 1]] = stack[depth - 3];
@@ -504,7 +501,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
                     switch (arr.type)
                     {
                     case Dynamic.Type.arr:
-                        mixin("arr.arr[stack[depth-1].num.as!size_t]" ~ opm[0] ~ " stack[depth-3];");
+                        mixin("arr.arr[stack[depth-1].as!size_t]" ~ opm[0] ~ " stack[depth-3];");
                         break switchOpi;
                     case Dynamic.Type.tab:
                         mixin("arr.tab[stack[depth-1]]" ~ opm[0] ~ " stack[depth-3];");

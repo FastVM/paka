@@ -25,7 +25,7 @@ Pair[] libstr()
 private:
 Dynamic liblen(Args args)
 {
-    return dynamic(Number(args[0].str.length));
+    return dynamic(args[0].str.length);
 }
 
 Dynamic libsplit(Args args)
@@ -60,17 +60,17 @@ Dynamic libtolower(Args args)
 
 Dynamic libtonumber(Args args)
 {
-    return dynamic(args[0].str.as!Number);
+    return Dynamic.strToNum(args[0].str);
 }
 
 Dynamic libslice(Args args)
 {
     if (args.length == 2)
     {
-        return dynamic(args[0].str[args[1].num.as!size_t .. $]);
+        return dynamic(args[0].str[args[1].as!size_t .. $]);
     }
     else
     {
-        return dynamic(args[0].str[args[1].num.as!size_t .. args[2].num.as!size_t]);
+        return dynamic(args[0].str[args[1].as!size_t .. args[2].as!size_t]);
     }
 }

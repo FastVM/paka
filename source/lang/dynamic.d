@@ -14,8 +14,9 @@ import lang.bytecode;
 import lang.vm;
 import lang.number;
 import lang.data.rope;
+import lang.data.mpfr;
 
-public import lang.number : Number;
+public import lang.number;
 
 alias Args = Dynamic[];
 alias Array = Dynamic[];
@@ -23,18 +24,23 @@ alias Table = Dynamic[Dynamic];
 
 version = safe;
 
+bool fastMathEnabled = false;
+
 pragma(inline, true) Dynamic dynamic(T...)(T a)
 {
     return Dynamic(a);
 }
 
+pragma(msg, Dynamic.sizeof);
+
 struct Dynamic
 {
-    enum Type : ubyte
+    enum Type
     {
         nil,
         log,
-        num,
+        sml,
+        big,
         str,
         arr,
         tab,
@@ -49,7 +55,8 @@ struct Dynamic
     union Value
     {
         bool log;
-        Number num;
+        SmallNumber sml;
+        BigNumber* bnm;
         string* str;
         Array* arr;
         Table* tab;
@@ -61,11 +68,25 @@ struct Dynamic
         }
 
         Callable fun;
+
+        BigNumber big() const
+        {
+            return *bnm;
+        }
     }
 
-    // align(1):
     Type type = Type.nil;
     Value value = void;
+
+    pragma(inline, true) static Dynamic strToNum(string s)
+    {
+        BigNumber big = BigNumber(s);
+        if (big.fits && fastMathEnabled)
+        {
+            return dynamic(SmallNumber(mpfr_get_d(big, mpfr_rnd_t.MPFR_RNDN)));
+        }
+        return dynamic(big);
+    }
 
     pragma(inline, true) this(Type t)
     {
@@ -78,10 +99,16 @@ struct Dynamic
         type = Type.log;
     }
 
-    pragma(inline, true) this(Number num)
+    pragma(inline, true) this(SmallNumber num)
     {
-        value.num = num;
-        type = Type.num;
+        value.sml = num;
+        type = Type.sml;
+    }
+
+    pragma(inline, true) this(BigNumber num)
+    {
+        value.bnm = new BigNumber(num);
+        type = Type.big;
     }
 
     pragma(inline, true) this(string str)
@@ -180,9 +207,13 @@ struct Dynamic
             return 0;
         case Type.log:
             return value.log - other.log;
-        case Type.num:
-            Number a = value.num;
-            Number b = other.num;
+        case Type.sml:
+            if (other.type == Type.big)
+            {
+                return value.sml.asBig.opCmp(other.value.big);
+            }
+            SmallNumber a = value.sml;
+            SmallNumber b = other.value.sml;
             if (a < b)
             {
                 return -1;
@@ -192,6 +223,12 @@ struct Dynamic
                 return 1;
             }
             return 0;
+        case Type.big:
+            if (other.type == Type.sml)
+            {
+                return value.big.opCmp(other.value.sml.asBig);
+            }
+            return value.big.opCmp(other.value.big);
         case Type.str:
             return cmp(*value.str, other.str);
         }
@@ -204,20 +241,34 @@ struct Dynamic
 
     pragma(inline, true) Dynamic opBinary(string op)(Dynamic other)
     {
-        if (type == Type.num && other.type == Type.num)
+        if (type == Type.sml)
         {
-            Dynamic ret = dynamic(mixin("num" ~ op ~ "other.num"));
-            return ret;
-        }
-        static if (op == "*")
-        {
-            if (type == Type.str && other.type == Type.num)
+            if (other.type == Type.sml)
             {
-                return dynamic(cast(string) str.replicate(other.num.as!size_t).array);
+                SmallNumber res = mixin("value.sml" ~ op ~ "other.value.sml");
+                if (res.fits)
+                {
+                    return dynamic(res);
+                }
+                else
+                {
+                    return dynamic(mixin("value.sml.asBig" ~ op ~ "other.value.sml.asBig"));
+                }
             }
-            if (type == Type.arr && other.type == Type.num)
+            else if (other.type == Type.big)
             {
-                return dynamic(arr.replicate(other.num.as!size_t).array);
+                return dynamic(mixin("value.sml.asBig" ~ op ~ "other.value.sml.asBig"));
+            }
+        }
+        else if (type == Type.big)
+        {
+            if (other.type == Type.sml)
+            {
+                return dynamic(mixin("value.big" ~ op ~ "other.value.sml.asBig"));
+            }
+            else if (other.type == Type.big)
+            {
+                return dynamic(mixin("value.big" ~ op ~ "other.value.big"));
             }
         }
         static if (op == "~" || op == "+")
@@ -244,7 +295,14 @@ struct Dynamic
 
     pragma(inline, true) Dynamic opUnary(string op)()
     {
-        return dynamic(mixin(op ~ "value.num"));
+        if (type == Type.sml)
+        {
+            return dynamic(mixin(op ~ "value.sml"));
+        }
+        else
+        {
+            return dynamic(mixin(op ~ "value.big"));
+        }
     }
 
     pragma(inline, true) bool log()
@@ -255,16 +313,6 @@ struct Dynamic
                 throw new Exception("expected logical type");
             }
         return value.log;
-    }
-
-    pragma(inline, true) Number num()
-    {
-        version (safe)
-            if (type != Type.num)
-            {
-                throw new Exception("expected number type");
-            }
-        return value.num;
     }
 
     pragma(inline, true) string str()
@@ -337,12 +385,38 @@ struct Dynamic
         return value.fun;
     }
 
+    T as(T)() if (is(T == size_t))
+    {
+        if (type == Type.sml)
+        {
+            return cast(size_t) value.sml;
+        }
+        else
+        {
+            return mpfr_get_ui(value.big.mpfr, mpfr_rnd_t.MPFR_RNDN);
+        }
+    }
+
 }
 
 pragma(inline, true) private bool isEqual(const Dynamic a, const Dynamic b)
 {
     if (b.type != a.type)
     {
+        if (a.type == Dynamic.Type.sml)
+        {
+            if (b.type == Dynamic.Type.big)
+            {
+                return a.value.sml.asBig == b.value.big;
+            }
+        }
+        if (a.type == Dynamic.Type.big)
+        {
+            if (b.type == Dynamic.Type.sml)
+            {
+                return a.value.big == b.value.sml.asBig;
+            }
+        }
         return false;
     }
     if (a.value == b.value)
@@ -357,10 +431,12 @@ pragma(inline, true) private bool isEqual(const Dynamic a, const Dynamic b)
         return true;
     case Dynamic.Type.log:
         return a.value.log == b.value.log;
-    case Dynamic.Type.num:
-        return a.value.num == b.value.num;
     case Dynamic.Type.str:
         return *a.value.str == *b.value.str;
+    case Dynamic.Type.sml:
+        return a.value.sml == b.value.sml;
+    case Dynamic.Type.big:
+        return a.value.big == b.value.big;
     case Dynamic.Type.arr:
         return *a.value.arr == *b.value.arr;
     case Dynamic.Type.tab:
@@ -393,12 +469,10 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         return "nil";
     case Dynamic.Type.log:
         return dyn.log.to!string;
-    case Dynamic.Type.num:
-        if (dyn.num % 1 == 0)
-        {
-            return to!string(dyn.num.as!size_t);
-        }
-        return dyn.num.to!string;
+    case Dynamic.Type.sml:
+        return dyn.value.sml.to!string;
+    case Dynamic.Type.big:
+        return dyn.value.big.to!string;
     case Dynamic.Type.str:
         if (before.length == 0)
         {

@@ -16,7 +16,8 @@ struct PushArray(T)
 
     T opIndex(size_t i)
     {
-        if (i >= tokens.length) {
+        if (i >= tokens.length)
+        {
             throw new Exception("parse error");
         }
         return tokens[i];
@@ -169,6 +170,10 @@ Node readPostExtend(ref TokenArray tokens, Node last)
         tokens = tokens[1 .. $];
         ret = new Call(new Ident("@index"), [last, new String(tokens[0].value)]);
         tokens = tokens[1 .. $];
+    }
+    else
+    {
+        throw new Exception("parse error");
     }
     return tokens.readPostExtend(ret);
 }

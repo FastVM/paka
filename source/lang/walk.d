@@ -43,7 +43,7 @@ bool isUnpacking(Node[] args)
 class Walker
 {
     Function func;
-    uint[2] stackSize;
+    int[2] stackSize;
     bool isTarget = false;
 
     Function walkProgram(bool ctfe = false)(Node node, size_t ctx)
@@ -68,7 +68,7 @@ class Walker
         }
         walk(node);
         pushInstr(func, Instr(Opcode.retval));
-        func.stackSize = stackSize[1];
+        func.stackSize =  stackSize[1];
         func.resizeStack;
         return func;
     }
@@ -76,7 +76,6 @@ class Walker
     void pushInstr(Function func, Instr instr, int size = 0)
     {
         func.instrs ~= instr;
-        int last = stackSize[0];
         int* psize = instr.op in opSizes;
         if (psize !is null)
         {
@@ -214,7 +213,7 @@ class Walker
         else
         {
             Function last = func;
-            uint[2] stackOld = stackSize;
+            int[2] stackOld = stackSize;
             stackSize = [0, 0];
             Function newFunc = new Function;
             func.flags |= Function.Flags.isLocal;
@@ -237,7 +236,7 @@ class Walker
     {
         Call argl = cast(Call) args[0];
         Function lastFunc = func;
-        uint[2] stackOld = stackSize;
+        int[2] stackOld = stackSize;
         stackSize = [0, 0];
         Function newFunc = new Function;
         func.flags |= Function.Flags.isLocal;
@@ -272,7 +271,6 @@ class Walker
         walk(args[0]);
         walk(args[1]);
         pushInstr(func, Instr(mixin("Opcode.op" ~ op)));
-
     }
 
     void walkUnary(string op)(Node[] args)
@@ -380,7 +378,8 @@ class Walker
                 {
                     pushInstr(func, Instr(Opcode.opstore, *us));
                 }
-                pushInstr(func, Instr(Opcode.nop, id.repr.to!AssignOp));
+                pushInstr(func, Instr(Opcode.push, id.repr.to!AssignOp));
+                func.constants ~= dynamic(Dynamic.Type.nil);
             }
         }
     }
@@ -665,7 +664,7 @@ class Walker
         {
             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
 
-            func.constants ~= dynamic(i.repr.as!Number);
+            func.constants ~= Dynamic.strToNum(i.repr);
         }
         else
         {
@@ -682,7 +681,7 @@ class Walker
                     v = func.stab.define(i.repr);
                 }
                 pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-                func.constants ~= dynamic(v.as!Number);
+                func.constants ~= dynamic(v);
             }
             else
             {

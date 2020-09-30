@@ -47,7 +47,7 @@ void main(string[] args)
     string[] scripts;
     string[] stmts;
     bool repl = false;
-    auto info = getopt(args, "repl", &repl, "eval", &stmts, "file", &scripts);
+    auto info = getopt(args, "repl", &repl, "eval", &stmts, "file", &scripts, "math", &fastMathEnabled);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
@@ -84,31 +84,26 @@ void main(string[] args)
         func.captured = loadBase;
         run(func);
     }
-    // if (scripts.length == 0 && stmts.length == 0)
-    // {
-    //     while (true)
-    //     {
-    //         size_t ctx = enterCtx;
-    //         scope (exit)
-    //         {
-    //             exitCtx;
-    //         }
-    //         write(">>> ");
-    //         string code = cast(string) readln;
-    //         Node node = code.parse;
-    //         Compiler compiler = new Compiler;
-    //         string got = compiler.walkFunction(node);
-    //         writeln(got);
-    //         // Typer typer = new Typer;
-    //         // typer.annot(node);
-    //         Walker walker = new Walker;
-    //         Function func = walker.walkProgram(node, ctx);
-    //         func.captured = loadBase;
-    //         Dynamic retval = run(func);
-    //         if (retval.type != Dynamic.Type.nil)
-    //         {
-    //             writeln(retval);
-    //         }
-    //     }
-    // }
+    if ((scripts ~ args[1 .. $]).length == 0)
+    {
+        while (true)
+        {
+            size_t ctx = enterCtx;
+            scope (exit)
+            {
+                exitCtx;
+            }
+            write(">>> ");
+            string code = cast(string) readln;
+            Node node = code.parse;
+            Walker walker = new Walker;
+            Function func = walker.walkProgram(node, ctx);
+            func.captured = loadBase;
+            Dynamic retval = run(func);
+            if (retval.type != Dynamic.Type.nil)
+            {
+                writeln(retval);
+            }
+        }
+    }
 }
