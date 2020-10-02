@@ -12,21 +12,8 @@ import lang.dynamic;
 import lang.bytecode;
 import lang.number;
 
-alias CallbackDelegate = void delegate(ref size_t index, ref size_t depth,
+alias LocalCallback = void delegate(ref size_t index, ref size_t depth,
         ref Dynamic[] stack, ref Dynamic[] locals);
-
-struct LocalCallback
-{
-    enum At
-    {
-        every,
-        entry,
-        exit,
-    }
-
-    CallbackDelegate del;
-    At at;
-}
 
 enum string[2][] cmpMap()
 {
@@ -217,6 +204,16 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             foreach (v; args)
             {
                 locals[argi++] = v;
+            }
+        }
+    }
+    scope (exit)
+    {
+        static foreach (callback; argss)
+        {
+            static if (is(typeof(callback) == LocalCallback))
+            {
+                callback(index, depth, stack, locals);
             }
         }
     }

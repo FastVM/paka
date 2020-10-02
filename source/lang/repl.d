@@ -16,14 +16,14 @@ LocalCallback printTopCallback;
 
 LocalCallback exportLocalsToBaseCallback(Function func)
 {
-    CallbackDelegate ret = (ref size_t index, ref size_t depth,
+    LocalCallback ret = (ref size_t index, ref size_t depth,
             ref Dynamic[] stack, ref Dynamic[] locals) {
         foreach (i, ref v; locals[0 .. func.stab.byPlace.length])
         {
             rootBase ~= Pair(func.stab.byPlace[i], v);
         }
     };
-    return LocalCallback(ret, LocalCallback.At.exit);
+    return ret;
 }
 
 void printTop(ref size_t index, ref size_t depth, ref Dynamic[] stack, ref Dynamic[] locals)
@@ -46,6 +46,6 @@ void replRun()
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);
         func.captured = loadBase;
-        run(func, [LocalCallback(toDelegate(&printTop), LocalCallback.At.exit), func.exportLocalsToBaseCallback]);
+        run(func, toDelegate(&printTop), func.exportLocalsToBaseCallback);
     }
 }

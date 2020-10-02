@@ -35,7 +35,7 @@ pragma(msg, Dynamic.sizeof);
 
 struct Dynamic
 {
-    enum Type
+    enum Type: long
     {
         nil,
         log,
