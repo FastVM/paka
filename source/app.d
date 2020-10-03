@@ -7,8 +7,8 @@ import lang.base;
 import lang.dynamic;
 import lang.parse;
 import lang.number;
-import lang.repl;
 import lang.inter;
+import gc.special;
 import std.file;
 import std.stdio;
 import std.algorithm;
@@ -18,7 +18,7 @@ import std.getopt;
 import core.memory;
 
 // extern (C) __gshared bool rt_cmdline_enabled = false;
-extern (C) __gshared string[] rt_options = ["heapSizeFactor:8"];
+// extern (C) __gshared string[] rt_options = ["heapSizeFactor:8"];
 
 enum string getstr(string code)()
 {
@@ -47,7 +47,7 @@ void main(string[] args)
     string[] scripts;
     string[] stmts;
     bool repl = false;
-    auto info = getopt(args, "repl", &repl, "eval", &stmts, "file", &scripts, "math", &fastMathEnabled);
+    auto info = getopt(args, "repl", &repl, "eval", &stmts, "file", &scripts, "math", &fastMathNotEnabled);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);

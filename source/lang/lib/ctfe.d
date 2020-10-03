@@ -4,7 +4,7 @@ import lang.ast;
 import lang.base;
 import lang.bytecode;
 import lang.dynamic;
-import lang.parse;
+import lang.dext.parse;
 import lang.walk;
 import lang.vm;
 import std.stdio;

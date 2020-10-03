@@ -1,4 +1,4 @@
-module lang.tokens;
+module lang.dext.tokens;
 
 import std.ascii;
 import std.conv;

@@ -24,7 +24,7 @@ alias Table = Dynamic[Dynamic];
 
 version = safe;
 
-bool fastMathEnabled = false;
+bool fastMathNotEnabled = false;
 
 pragma(inline, true) Dynamic dynamic(T...)(T a)
 {
@@ -81,7 +81,7 @@ struct Dynamic
     pragma(inline, true) static Dynamic strToNum(string s)
     {
         BigNumber big = BigNumber(s);
-        if (big.fits && fastMathEnabled)
+        if (big.fits && !fastMathNotEnabled)
         {
             return dynamic(SmallNumber(mpfr_get_d(big, mpfr_rnd_t.MPFR_RNDN)));
         }
@@ -239,7 +239,7 @@ struct Dynamic
         return isEqual(this, other);
     }
 
-    pragma(inline, true) Dynamic opBinary(string op)(Dynamic other)
+    Dynamic opBinary(string op)(Dynamic other)
     {
         if (type == Type.sml)
         {

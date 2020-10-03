@@ -1,10 +1,10 @@
-module lang.repl;
+module lang.dext.repl;
 import lang.walk;
 import lang.bytecode;
 import lang.base;
 import lang.ast;
 import lang.dynamic;
-import lang.parse;
+import lang.dext.parse;
 import lang.vm;
 import lang.inter;
 import std.stdio;

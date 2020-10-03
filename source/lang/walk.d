@@ -15,7 +15,7 @@ enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@target",
         "@return", "@if", "@fun", "@do", "@using", "F+", "-", "+", "*", "/",
         "@dotmap-both", "@dotmap-lhs", "@dotmap-rhs", "@dotmap-pre", "%",
-        "<", ">", "<=", ">=", "==", "!=", "...", "@index", "=>",
+        "<", ">", "<=", ">=", "==", "!=", "...", "@index", "=>"
     ];
 
 bool isUnpacking(Node[] args)
@@ -417,7 +417,7 @@ class Walker
         {
             pushInstr(func, Instr(Opcode.array), used);
         }
-        stackSize[0] = tmp;
+        stackSize[0] = tmp + 1;
 
     }
 
@@ -432,7 +432,7 @@ class Walker
             walk(i);
         }
         pushInstr(func, Instr(Opcode.table, cast(uint) args.length), stackSize[0] - used);
-        stackSize[0] = tmp;
+        stackSize[0] = tmp + 1;
 
     }
 

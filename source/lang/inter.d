@@ -10,10 +10,10 @@ import lang.bytecode;
 import lang.base;
 import lang.ast;
 import lang.dynamic;
-import lang.parse;
+import lang.dext.parse;
 import lang.vm;
 import lang.inter;
-import lang.repl;
+import lang.dext.repl;
 
 Dynamic eval(size_t ctx, string code)
 {

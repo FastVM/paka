@@ -1,3 +1,4 @@
+#?lang = "dext"
 Q = f => a => f(f)(a);
 F = f => a => if (a < 2) {
     a;
