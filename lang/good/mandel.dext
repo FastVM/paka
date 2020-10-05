@@ -1,11 +1,11 @@
 
-scl = 4;
-it = 500;
+scl = 1;
+it = 1000;
 
-y = -10/10;
-while (y < 10/10) {
-    x = -21/10;
-    while (x < 11/10) {
+y = -1;
+while (y < 1) {
+    x = -2;
+    while (x < 6/10) {
         zi = 0;
         zr = 0;
         i = 0;
@@ -20,7 +20,7 @@ while (y < 10/10) {
         } else {
             io.put("#");
         };
-        x += 3/100 / scl;
+        x += 5/2/100 / scl;
     };
     io.print();
     y += 5/100 / scl;

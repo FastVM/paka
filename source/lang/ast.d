@@ -3,11 +3,13 @@ module lang.ast;
 import std.algorithm;
 import std.conv;
 import std.meta;
+import lang.srcloc;
 
 alias NodeTypes = AliasSeq!(Call, String, Ident);
 
 class Node
 {
+    Span span;
     string id="node";
 }
 

@@ -5,6 +5,7 @@ import std.conv;
 import std.algorithm;
 import std.array;
 import std.stdio;
+import lang.srcloc;
 
 enum string[][] prec = [
         ["+=", "*=", "/=", "%=", "-=", "="], ["=>"], ["||", "&&"],
@@ -42,10 +43,17 @@ struct Token
 
     Type type;
     string value;
-    this(T)(Type t, T v = null)
+    Span span;
+    this(T)(Span s, Type t, T v = null)
     {
         type = t;
         value = cast(string) v;
+        span = s;
+    }
+
+    string toString()
+    {
+        return span.pretty ~ " -> \"" ~ value ~ "\"";
     }
 
     bool isIdent()
@@ -109,7 +117,7 @@ struct Token
     }
 }
 
-Token readToken(ref string code)
+Token readToken(ref string code, ref Location location)
 {
     char peek()
     {
@@ -122,6 +130,15 @@ Token readToken(ref string code)
 
     void consume()
     {
+        if (code[0] == '\n')
+        {
+            location.line += 1;
+            location.column = 1;
+        }
+        else
+        {
+            location.column += 1;
+        }
         if (code.length != 0)
         {
             code = code[1 .. $];
@@ -135,33 +152,40 @@ Token readToken(ref string code)
         return ret;
     }
 
+    Location begin = location;
+
+    Token consToken(T...)(T a)
+    {
+        return Token(Span(begin, location), a);
+    }
+
     if (peek == '#')
     {
         while (peek != '\n')
         {
-            read;
+            consume;
         }
-        return code.readToken;
-    }
-    if (peek == ';')
-    {
-        return Token(Token.Type.semicolon, [read]);
+        return code.readToken(location);
     }
     if (peek.isWhite)
     {
         consume;
-        return Token(Token.Type.none);
+        return consToken(Token.Type.none);
+    }
+    if (peek == ';')
+    {
+        return consToken(Token.Type.semicolon, [read]);
     }
     if (peek == ',')
     {
-        return Token(Token.Type.comma, [read]);
+        return consToken(Token.Type.comma, [read]);
     }
     static foreach (i; levels)
     {
         if (code.startsWith(i))
         {
             code = code[i.length .. $];
-            return Token(Token.Type.operator, i);
+            return consToken(Token.Type.operator, i);
         }
     }
     if (peek.isAlphaNum || peek == '_' || peek == '?')
@@ -173,21 +197,21 @@ Token readToken(ref string code)
         }
         if (levels.canFind(ret))
         {
-            return Token(Token.Type.operator, ret);
+            return consToken(Token.Type.operator, ret);
         }
         if (keywords.canFind(ret))
         {
-            return Token(Token.Type.keyword, ret);
+            return consToken(Token.Type.keyword, ret);
         }
-        return Token(Token.Type.ident, ret);
+        return consToken(Token.Type.ident, ret);
     }
     if ("{[(".canFind(peek))
     {
-        return Token(Token.Type.open, [read]);
+        return consToken(Token.Type.open, [read]);
     }
     if ("}])".canFind(peek))
     {
-        return Token(Token.Type.close, [read]);
+        return consToken(Token.Type.close, [read]);
     }
     if (peek == '"')
     {
@@ -227,7 +251,7 @@ Token readToken(ref string code)
             }
         }
         consume;
-        return Token(Token.Type.string, ret);
+        return consToken(Token.Type.string, ret);
     }
     throw new Exception("bad char " ~ peek);
 }
@@ -235,15 +259,15 @@ Token readToken(ref string code)
 Token[] tokenize(string code)
 {
     Token[] tokens;
+    Location location;
     while (code.length > 0)
     {
-        Token token = code.readToken;
+        Token token = code.readToken(location);
         if (token.type == Token.Type.none)
         {
             continue;
         }
         tokens ~= token;
     }
-    tokens ~= Token(Token.type.semicolon);
     return tokens;
 }

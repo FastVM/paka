@@ -8,6 +8,7 @@ import lang.dynamic;
 import lang.parse;
 import lang.number;
 import lang.inter;
+import lang.dext.repl;
 import gc.special;
 import std.file;
 import std.stdio;
@@ -86,24 +87,25 @@ void main(string[] args)
     }
     if ((scripts ~ args[1 .. $]).length == 0)
     {
-        while (true)
-        {
-            size_t ctx = enterCtx;
-            scope (exit)
-            {
-                exitCtx;
-            }
-            write(">>> ");
-            string code = cast(string) readln;
-            Node node = code.parse;
-            Walker walker = new Walker;
-            Function func = walker.walkProgram(node, ctx);
-            func.captured = loadBase;
-            Dynamic retval = run(func);
-            if (retval.type != Dynamic.Type.nil)
-            {
-                writeln(retval);
-            }
-        }
+        replRun;
+        // while (true)
+        // {
+        //     size_t ctx = enterCtx;
+        //     scope (exit)
+        //     {
+        //         exitCtx;
+        //     }
+        //     write(">>> ");
+        //     string code = cast(string) readln;
+        //     Node node = code.parse;
+        //     Walker walker = new Walker;
+        //     Function func = walker.walkProgram(node, ctx);
+        //     func.captured = loadBase;
+        //     Dynamic retval = run(func);
+        //     if (retval.type != Dynamic.Type.nil)
+        //     {
+        //         writeln(retval);
+        //     }
+        // }
     }
 }

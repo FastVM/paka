@@ -1,0 +1,27 @@
+
+scl = 1;
+it = 1000;
+
+y = -1;
+while (y < 1) {
+    x = -2;
+    while (x < 6/10) {
+        zi = 0;
+        zr = 0;
+        i = 0;
+        while (if (i < it) { zi * zi + zr * zr < 4; } else { false; }) {
+            zri = zr;
+            zr = zr * zr - zi * zi + x;
+            zi = 2 * zri * zi + y;
+            i += 1;
+        };
+        if (i == it) {
+            io.put(" ");
+        } else {
+            io.put("#")
+        };
+        x += 5/2/100 / scl;
+    };
+    io.print();
+    y += 5/100 / scl;
+};

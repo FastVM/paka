@@ -38,11 +38,11 @@ string readLine(ref string code)
 
 Node parse(string code, string lang = "dext")
 {
-    if (code[0 .. bashLine.length] == bashLine)
+    if (code.length > bashLine.length && code[0 .. bashLine.length] == bashLine)
     {
         code.readLine;
     }
-    if (code[0 .. langLine.length] == langLine)
+    if (code.length > langLine.length && code[0 .. langLine.length] == langLine)
     {
         size_t ctx = enterCtx;
         scope (exit)

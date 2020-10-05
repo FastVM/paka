@@ -42,6 +42,7 @@ void replRun()
     {
         write(">>> ");
         string code = readln.strip;
+        code ~= ";";
         Node node = code.parse;
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);

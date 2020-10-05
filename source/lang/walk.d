@@ -45,6 +45,7 @@ class Walker
     Function func;
     int[2] stackSize;
     bool isTarget = false;
+    Node[] nodes;
 
     Function walkProgram(bool ctfe = false)(Node node, size_t ctx)
     {
@@ -117,6 +118,11 @@ class Walker
 
     void walk(Node node)
     {
+        nodes ~= node;
+        scope(exit) {
+            nodes.length--;
+        }
+        // writeln(node.span.pretty, " -> ", node);
         switch (node.id)
         {
         case "call":
