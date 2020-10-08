@@ -1,4 +1,4 @@
-#?lang = "dext"
+#?lang = "dext";
 
 def fib(x) {
     return if (x < 2) {

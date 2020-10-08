@@ -17,6 +17,7 @@ struct Span
 {
     Location first;
     Location last;
+    
 
     string pretty() {
         return "from " ~ first.pretty ~ " to " ~ last.pretty;

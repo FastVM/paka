@@ -190,9 +190,11 @@ Token readToken(ref string code, ref Location location)
     }
     if (peek.isAlphaNum || peek == '_' || peek == '?')
     {
+        bool isNumber = true;
         char[] ret;
-        while (peek.isAlphaNum || peek == '_')
+        while (peek.isAlphaNum || peek == '_' || (isNumber && peek == '.'))
         {
+            isNumber = isNumber && (peek.isDigit || peek == '.');
             ret ~= read;
         }
         if (levels.canFind(ret))

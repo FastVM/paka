@@ -42,7 +42,7 @@ pragma(inline, true) BigNumber asBig(T...)(T v)
 
 bool fits(SmallNumber num)
 {
-    return int.min <= num && num <= int.max;
+    return int.min <= num && num <= uint.max;
 }
 
 struct MpfrBigNumber

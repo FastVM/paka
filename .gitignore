@@ -2,13 +2,8 @@
 docs.json
 __dummy.html
 docs/
-dext-exe
-dext.so
-dext.dylib
-dext.dll
-dext.a
-dext.lib
-dext-test-*
+app
+dextc
 *.exe
 *.o
 *.obj
