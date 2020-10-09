@@ -9,7 +9,6 @@ import lang.parse;
 import lang.number;
 import lang.inter;
 import lang.dext.repl;
-import gc.special;
 import std.file;
 import std.stdio;
 import std.algorithm;
