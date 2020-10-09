@@ -6,4 +6,4 @@ F = f => a => if (a < 2) {
     Q(f)(a - 1) + Q(f)(a - 2);
 };
 fib = Q(F);
-io.print(fib(30));
+io.print(fib(30));`

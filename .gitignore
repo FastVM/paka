@@ -3,7 +3,7 @@ docs.json
 __dummy.html
 docs/
 app
-dextc
+dext
 *.exe
 *.o
 *.obj

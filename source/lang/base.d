@@ -8,6 +8,7 @@ import lang.lib.sys;
 import lang.lib.str;
 import lang.lib.arr;
 import lang.lib.ctfe;
+import lang.lib.proc;
 
 Pair[] rootCtfeBase()
 {
@@ -109,6 +110,7 @@ Pair[] getRootBase()
     ret.addLib("arr", libarr);
     ret.addLib("io", libio);
     ret.addLib("sys", libsys);
+    ret.addLib("proc", libproc);
     // ret.addLib("func", librepl);
     return ret;
 }

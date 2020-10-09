@@ -4,6 +4,7 @@ import lang.base;
 import lang.dynamic;
 import lang.number;
 import std.array;
+import std.string;
 import std.algorithm;
 import std.stdio;
 import std.conv;
@@ -17,7 +18,7 @@ Pair[] libstr()
         Pair("subs", dynamic(&libsubs)), Pair("to_upper",
                 dynamic(&libtoupper)), Pair("to_lower", dynamic(&libtolower)),
         Pair("to_number", dynamic(&libtonumber)),
-        Pair("slice", dynamic(&libslice)),
+        Pair("slice", dynamic(&libslice)), Pair("strip", dynamic(&libstrip)),
     ];
     return ret;
 }
@@ -61,6 +62,11 @@ Dynamic libtolower(Args args)
 Dynamic libtonumber(Args args)
 {
     return Dynamic.strToNum(args[0].str);
+}
+
+Dynamic libstrip(Args args)
+{
+    return dynamic(args[0].str.strip);
 }
 
 Dynamic libslice(Args args)

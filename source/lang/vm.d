@@ -456,10 +456,10 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             switch (stack[depth - 2].type)
             {
             case Dynamic.Type.arr:
-                stack[depth - 2].arr[stack[depth - 1].as!size_t] = stack[depth - 3];
+                (*stack[depth - 2].arrPtr)[stack[depth - 1].as!size_t] = stack[depth - 3];
                 break;
             case Dynamic.Type.tab:
-                stack[depth - 2].tab[stack[depth - 1]] = stack[depth - 3];
+                (*stack[depth - 2].tabPtr)[stack[depth - 1]] = stack[depth - 3];
                 break;
             default:
                 throw new Exception("error: cannot store at index");
@@ -498,10 +498,10 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
                     switch (arr.type)
                     {
                     case Dynamic.Type.arr:
-                        mixin("arr.arr[stack[depth-1].as!size_t]" ~ opm[0] ~ " stack[depth-3];");
+                        mixin("(*arr.arrPtr)[stack[depth-1].as!size_t]" ~ opm[0] ~ " stack[depth-3];");
                         break switchOpi;
                     case Dynamic.Type.tab:
-                        mixin("arr.tab[stack[depth-1]]" ~ opm[0] ~ " stack[depth-3];");
+                        mixin("(*arr.tabPtr)[stack[depth-1]]" ~ opm[0] ~ " stack[depth-3];");
                         break switchOpi;
                     default:
                         throw new Exception("error: cannot store at index");

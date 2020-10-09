@@ -48,7 +48,8 @@ void main(string[] args)
     string[] scripts;
     string[] stmts;
     bool repl = false;
-    auto info = getopt(args, "repl", &repl, "eval", &stmts, "file", &scripts, "math", &fastMathNotEnabled);
+    auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
+            &scripts, "math", &fastMathNotEnabled);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
