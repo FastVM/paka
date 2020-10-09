@@ -1,25 +1,25 @@
 def is_prime(num) {
-    test = 2
+    test = 2;
     while (test < num) {
         if (num % test == 0) {
-            return false
-        }
-        test += 1
-    }
-    return true
-}
+            return false;
+        };
+        test += 1;
+    };
+    return true;
+};
 
 def sum_primes(upto) {
-    ret = 0
-    at = 2
+    ret = 0;
+    at = 2;
     while (at < upto) {
         if (is_prime(at)) {
-            ret += at
+            ret += at;
         }
-        at += 1
+        at += 1;
     }
-    return ret
+    return ret;
 }
 
-res = sum_primes(20000)
-io.print(res)
+res = sum_primes(20000);
+io.print(res);
