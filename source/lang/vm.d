@@ -127,42 +127,6 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
     }
 }
 
-// void trace(A, B)(A a, B b, ref size_t[size_t] heat)
-// {
-//     if (b < a)
-//     {
-//         size_t index2 = a * ushort.max + b;
-//         size_t* ptr = index2 in heat;
-//         if (ptr is null)
-//         {
-//             heat[index2] = 1;
-//         }
-//         else
-//         {
-//             *ptr += 1;
-//             if (*ptr == 16)
-//             {
-//                 writeln(index2.getPlace);
-//             }
-//         }
-//     }
-// }
-
-// ulong[2] getPlace(size_t index)
-// {
-//     return [index % ushort.max, index / ushort.max];
-// }
-
-// void writeTraceLn(size_t[size_t] heat)
-// {
-//     foreach (kv; heat.byKeyValue)
-//     {
-//         ulong a = kv.key / ushort.max;
-//         ulong b = kv.key % ushort.max;
-//         // writeln(b, "\t..\t", a, "\t->\t", kv.value);
-//     }
-// }
-
 alias allocateStackAllowed = alloca;
 
 Span[] spans;
@@ -184,9 +148,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
     }
     else
     {
-        // Dynamic* ptr = cast(Dynamic*) GC.calloc(
-        //         (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
-        // stack = ptr[0 .. func.stackSize];
         if (func.flags & Function.Flags.isLocal)
         {
             Dynamic* ptr = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof,
@@ -224,7 +185,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
         }
     }
     Instr* instrs = func.instrs.ptr;
-    // size_t[size_t] heat;
     while (true)
     {
         Instr cur = instrs[index];
@@ -319,7 +279,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
                 stack[depth - 1] = (*f.fun.del)(cargs);
                 break;
             case Dynamic.Type.pro:
-                // enterScope(f.fun.pro, f.fun.pro.self ~ cargs);
                 stack[depth - 1] = run(f.fun.pro, cargs);
                 break;
             default:
@@ -445,9 +404,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             stack[depth - 1] /= stack[depth];
             break;
         case Opcode.opmod:
-            // depth--;
-            // stack[depth - 1] %= stack[depth];
-            // break;
             throw new Exception("error: cannot modulo");
         case Opcode.load:
             stack[depth++] = locals[cur.value];
@@ -533,14 +489,11 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             depth++;
             break;
         case Opcode.retval:
-            // writeTraceLn(heat);
             Dynamic v = stack[--depth];
             return v;
         case Opcode.retnone:
-            // writeTraceLn(heat);
             return Dynamic.nil;
         case Opcode.iftrue:
-            // trace(index, cur.value, heat);
             Dynamic val = stack[--depth];
             if (val.type != Dynamic.Type.nil && (val.type != Dynamic.Type.log || val.log))
             {
@@ -548,7 +501,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             }
             break;
         case Opcode.iffalse:
-            // trace(index, cur.value, heat);
             Dynamic val = stack[--depth];
             if (val.type == Dynamic.Type.nil || (val.type == Dynamic.Type.log && !val.log))
             {
@@ -556,7 +508,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             }
             break;
         case Opcode.jump:
-            // trace(index, cur.value, heat);
             index = cur.value;
             break;
         }

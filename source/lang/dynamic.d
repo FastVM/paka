@@ -159,7 +159,7 @@ struct Dynamic
         return ret;
     }
 
-    pragma(inline, true) size_t toHash() const nothrow  // override size_t toHash() const nothrow @trusted
+    pragma(inline, true) size_t toHash() const nothrow
     {
         switch (type)
         {

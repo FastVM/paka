@@ -101,17 +101,16 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
 Pair[] getRootBase()
 {
     Pair[] ret = [
-        Pair("_both_map", dynamic(&libubothmap)),
-        Pair("_lhs_map", dynamic(&libulhsmap)),
-        Pair("_rhs_map", dynamic(&liburhsmap)),
-        Pair("_pre_map", dynamic(&libupremap)),
+        Pair("_both_map", dynamic(&syslibubothmap)),
+        Pair("_lhs_map", dynamic(&syslibulhsmap)),
+        Pair("_rhs_map", dynamic(&sysliburhsmap)),
+        Pair("_pre_map", dynamic(&syslibupremap)),
     ];
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);
     ret.addLib("io", libio);
     ret.addLib("sys", libsys);
     ret.addLib("proc", libproc);
-    // ret.addLib("func", librepl);
     return ret;
 }
 

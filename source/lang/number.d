@@ -6,16 +6,11 @@ import std.string;
 import std.stdio;
 import std.conv;
 import core.memory;
-
-// import mpfrd;
 import lang.data.mpfr;
 import std.experimental.checkedint;
 
 private BigNumber maxSmall = void;
 private BigNumber minSmall = void;
-
-// nothrow extern (C) void mp_set_memory_functions(void function(size_t),
-//         void* function(void*, size_t, size_t), void function(void*, size_t));
 
 extern (C) extern __gshared void* function(size_t s) __gmp_allocate_func;
 extern (C) extern __gshared void* function(void* p, size_t s, size_t o) __gmp_reallocate_func;
@@ -76,13 +71,6 @@ struct MpfrBigNumber
         return ret;
     }
 
-    // pragma(inline, true) this(T)(T value, mpfr_prec_t p = 32)
-    //         if (isNumericValue!T)
-    // {
-    //     mpfr_init2(mpfr, p);
-    //     this = value;
-    // }
-
     pragma(inline, true) this(const string value)
     {
         mpfr_init_set_str(mpfr, value.toStringz, 10, mpfr_rnd_t.MPFR_RNDN);
@@ -90,7 +78,6 @@ struct MpfrBigNumber
 
     pragma(inline, true) ~this()
     {
-        // mpfr_clear(mpfr);
         destroy!false(mpfr);
     }
 
@@ -123,10 +110,6 @@ struct MpfrBigNumber
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    // properties
-    ////////////////////////////////////////////////////////////////////////////
-
     pragma(inline, true) @property void precision(mpfr_prec_t p)
     {
         mpfr_set_prec(mpfr, p);
@@ -137,9 +120,6 @@ struct MpfrBigNumber
         return mpfr_get_prec(mpfr);
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Comparisons
-    ////////////////////////////////////////////////////////////////////////////
 
     pragma(inline, true) int opCmp(T)(const T value) const if (isNumericValue!T)
     {
@@ -227,10 +207,6 @@ struct MpfrBigNumber
         return "mpfr" ~ getFunctionSuffix!(op, T, isRight);
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Arithmetic
-    ////////////////////////////////////////////////////////////////////////////
-
     pragma(inline, true) MpfrBigNumber opBinary(string op)(const(MpfrBigNumber) value)
             if (op == "%")
     {
@@ -297,43 +273,6 @@ struct MpfrBigNumber
         return this;
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Mutation
-    ////////////////////////////////////////////////////////////////////////////
-
-    // pragma(inline, true) ref MpfrBigNumber opAssign(T)(const T value)
-    //         if (isNumericValue!T)
-    // {
-    //     mixin("mpfr_set" ~ getTypeString!T() ~ "(mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
-    //     return this;
-    // }
-
-    // pragma(inline, true) ref MpfrBigNumber opAssign(ref const MpfrBigNumber value)
-    // {
-    //     mpfr_set(mpfr, value, mpfr_rnd_t.MPFR_RNDN);
-    //     return this;
-    // }
-
-    // pragma(inline, true) ref MpfrBigNumber opOpAssign(string op, T)(const T value)
-    //         if (isNumericValue!T && op != "%")
-    // {
-    //     static assert(!(op == "^^" && isFloatingPoint!T), "No operator ^^= with floating point.");
-    //     mixin(getFunction!(op, T, false)() ~ "(mpfr, mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
-    //     return this;
-    // }
-
-    // pragma(inline, true) ref MpfrBigNumber opOpAssign(string op)(MpfrBigNumber value)
-    //         if (op != "%")
-    // {
-    //     mixin(getFunction!(op, MpfrBigNumber,
-    //             false)() ~ "(mpfr, mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
-    //     return this;
-    // }
-
-    ////////////////////////////////////////////////////////////////////////////
-    // String
-    ////////////////////////////////////////////////////////////////////////////
-
     pragma(inline, true) string toString() const
     {
         char[1024] buffer;
@@ -341,29 +280,3 @@ struct MpfrBigNumber
         return buffer[0 .. count].idup;
     }
 }
-
-// pragma(inline, true) MpfrBigNumber as(T, A)(A s) if (is(T == MpfrBigNumber))
-// {
-//     return Mpfrs.asBig;
-// }
-
-// pragma(inline, true) T as(T)(MpfrBigNumber n) if (std.traits.isNumeric!T)
-// {
-//     return cast(T) mpfr_get_ui(n.mpfr, mpfr_rnd_t.MPFR_RNDN);
-// }
-
-// alias SmallNumber = double;
-// SmallNumber as(T, A)(A s) if (is(T == SmallNumber) && !is(A == string))
-// {
-//     return Number(s);
-// }
-
-// SmallNumber as(T, A)(A s) if (is(T == SmallNumber) && is(A == string))
-// {
-//     return s.to!SmallNumber;
-// }
-
-// T as(T)(SmallNumber n) if (std.traits.isNumeric!T)
-// {
-//     return cast(T) n;
-// }

@@ -1,8 +1,9 @@
+
 COMPILER=ldc2
 LINKER=ld
 LINK_FLAGS=gmp mpfr
 OUTPUT=dextc
-DLANG_OPTIMIZE=-O3 -ffast-math -g
+DLANG_OPTIMIZE=-O3 -ffast-math -g --boundscheck=off -release
 DLANG_FLAGS=$(DLANG_OPTIMIZE) -Isource
 DLANG_SOURCE=$(shell find source | grep \.d$)
 OBJS=$(DLANG_SOURCE:source/%.d=out/%.o)

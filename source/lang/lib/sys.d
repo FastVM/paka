@@ -19,7 +19,7 @@ Pair[] libsys()
     return ret;
 }
 
-Dynamic libmap(Args args)
+Dynamic syslibmap(Args args)
 {
     Dynamic[] ret;
     foreach (i; 0 .. args[1].arr.length)
@@ -34,7 +34,7 @@ Dynamic libmap(Args args)
     return dynamic(ret);
 }
 
-Dynamic libubothmap(Args args)
+Dynamic syslibubothmap(Args args)
 {
     Array ret;
     if (args[1].arr.length != args[2].arr.length)
@@ -48,7 +48,7 @@ Dynamic libubothmap(Args args)
     return dynamic(ret);
 }
 
-Dynamic libulhsmap(Args args)
+Dynamic syslibulhsmap(Args args)
 {
     Array ret;
     foreach (i; args[1].arr)
@@ -58,7 +58,7 @@ Dynamic libulhsmap(Args args)
     return dynamic(ret);
 }
 
-Dynamic liburhsmap(Args args)
+Dynamic sysliburhsmap(Args args)
 {
     Array ret;
     foreach (i; args[2].arr)
@@ -68,7 +68,7 @@ Dynamic liburhsmap(Args args)
     return dynamic(ret);
 }
 
-Dynamic libupremap(Args args)
+Dynamic syslibupremap(Args args)
 {
     Array ret;
     foreach (i; args[1].arr)

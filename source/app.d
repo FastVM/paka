@@ -17,9 +17,6 @@ import std.string;
 import std.getopt;
 import core.memory;
 
-// extern (C) __gshared bool rt_cmdline_enabled = false;
-// extern (C) __gshared string[] rt_options = ["heapSizeFactor:8"];
-
 enum string getstr(string code)()
 {
     Node node = code.parse;
@@ -88,25 +85,6 @@ void domain(string[] args)
     if ((scripts ~ args[1 .. $]).length == 0)
     {
         replRun;
-        // while (true)
-        // {
-        //     size_t ctx = enterCtx;
-        //     scope (exit)
-        //     {
-        //         exitCtx;
-        //     }
-        //     write(">>> ");
-        //     string code = cast(string) readln;
-        //     Node node = code.parse;
-        //     Walker walker = new Walker;
-        //     Function func = walker.walkProgram(node, ctx);
-        //     func.captured = loadBase;
-        //     Dynamic retval = run(func);
-        //     if (retval.type != Dynamic.Type.nil)
-        //     {
-        //         writeln(retval);
-        //     }
-        // }
     }
 }
 

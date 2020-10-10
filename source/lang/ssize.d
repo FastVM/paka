@@ -7,6 +7,5 @@ void resizeStack(Function func)
 {
     foreach (i, ref v; func.instrs)
     {
-        // writeln(v);
     }
 }

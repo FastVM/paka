@@ -131,7 +131,6 @@ class Walker
                 nodes.length--;
             }
         }
-        // writeln(node.span.pretty, " -> ", node);
         switch (node.id)
         {
         case "call":
