@@ -8,6 +8,7 @@ import std.json;
 import std.traits;
 import core.memory;
 import core.stdc.stdlib;
+import lang.srcloc;
 import lang.dynamic;
 import lang.bytecode;
 import lang.number;
@@ -164,6 +165,8 @@ void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
 
 alias allocateStackAllowed = alloca;
 
+Span[] spans;
+
 pragma(inline, false) Dynamic run(T...)(Function func, T argss)
 {
     size_t index = 0;
@@ -171,6 +174,9 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
     size_t argi = 0;
     Dynamic[] stack = void;
     Dynamic[] locals = void;
+    scope(failure) {
+        spans ~= func.spans[index];
+    }
     if (__ctfe)
     {
         stack = new Dynamic[func.stackSize];

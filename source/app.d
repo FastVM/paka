@@ -42,7 +42,7 @@ enum string getfile(string file)()
     return retval.to!string;
 }
 
-void main(string[] args)
+void domain(string[] args)
 {
     string[] scripts;
     string[] stmts;
@@ -108,4 +108,60 @@ void main(string[] args)
         //     }
         // }
     }
+}
+
+void trymain(string[] args)
+{
+    try
+    {
+        domain(args);
+    }
+    catch (Exception e)
+    {
+        size_t[] nums;
+        size_t[] times;
+        size_t ml = 0;
+        foreach (i; spans)
+        {
+            if (nums.length != 0 && nums[$ - 1] == i.first.line)
+            {
+                times[$ - 1]++;
+            }
+            else
+            {
+                nums ~= i.first.line;
+                times ~= 1;
+                ml = max(ml, i.first.line.to!string.length);
+            }
+        }
+        string ret = "error on \n";
+        foreach (i, v; nums)
+        {
+            if (i == 0)
+            {
+                ret ~= "line";
+            }
+            else
+            {
+                ret ~= "from";
+            }
+            foreach (j; 0 .. ml.to!string.length - v.to!string.length + 2)
+            {
+                ret ~= " ";
+            }
+            ret ~= v.to!string;
+            if (times[i] > 2)
+            {
+                ret ~= " (repeated: " ~ times[i].to!string ~ " times)";
+            }
+            ret ~= "\n";
+        }
+        spans.length = 0;
+        throw new Exception(ret ~ e.msg);
+    }
+}
+
+void main(string[] args)
+{
+    trymain(args);
 }

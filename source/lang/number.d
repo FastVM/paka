@@ -65,14 +65,14 @@ struct MpfrBigNumber
 
     pragma(inline, true) this(SmallNumber other)
     {
-        mpfr_init(mpfr);
+        mpfr_init2(mpfr, 256);
         mpfr_set_d(mpfr, other, mpfr_rnd_t.MPFR_RNDN);
     }
 
-    pragma(inline, true) static MpfrBigNumber empty(mpfr_prec_t p = 64)
+    pragma(inline, true) static MpfrBigNumber empty()
     {
         MpfrBigNumber ret = void;
-        mpfr_init2(ret.mpfr, p);
+        mpfr_init2(ret.mpfr, 256);
         return ret;
     }
 

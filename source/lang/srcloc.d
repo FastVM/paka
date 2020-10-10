@@ -4,7 +4,7 @@ import std.conv;
 
 struct Location
 {
-    size_t line = 1;
+    size_t line = 0;
     size_t column = 1;
     string file;
 

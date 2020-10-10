@@ -6,6 +6,7 @@ import lang.bytecode;
 import lang.dynamic;
 import lang.ssize;
 import lang.number;
+import lang.srcloc;
 import std.algorithm;
 import std.conv;
 import std.string;
@@ -45,7 +46,7 @@ class Walker
     Function func;
     int[2] stackSize;
     bool isTarget = false;
-    Node[] nodes;
+    Span[] nodes = [Span.init];
 
     Function walkProgram(bool ctfe = false)(Node node, size_t ctx)
     {
@@ -69,7 +70,7 @@ class Walker
         }
         walk(node);
         pushInstr(func, Instr(Opcode.retval));
-        func.stackSize =  stackSize[1];
+        func.stackSize = stackSize[1];
         func.resizeStack;
         return func;
     }
@@ -77,6 +78,7 @@ class Walker
     void pushInstr(Function func, Instr instr, int size = 0)
     {
         func.instrs ~= instr;
+        func.spans ~= nodes[$-1];
         int* psize = instr.op in opSizes;
         if (psize !is null)
         {
@@ -118,9 +120,16 @@ class Walker
 
     void walk(Node node)
     {
-        nodes ~= node;
-        scope(exit) {
-            nodes.length--;
+        if (node.span.last.line != 0)
+        {
+            nodes ~= node.span;
+        }
+        scope (exit)
+        {
+            if (node.span.last.line != 0)
+            {
+                nodes.length--;
+            }
         }
         // writeln(node.span.pretty, " -> ", node);
         switch (node.id)

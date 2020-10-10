@@ -267,7 +267,7 @@ Token readToken(ref string code, ref Location location)
 Token[] tokenize(string code)
 {
     Token[] tokens;
-    Location location;
+    Location location = Location(1, 1);
     while (code.length > 0)
     {
         Token token = code.readToken(location);

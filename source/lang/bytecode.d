@@ -1,6 +1,7 @@
 module lang.bytecode;
 
 import lang.dynamic;
+import lang.srcloc;
 import std.stdio;
 
 class Function
@@ -52,6 +53,7 @@ class Function
 
     Capture[] capture = null;
     Instr[] instrs = null;
+    Span[] spans = null;
     Dynamic[] constants = null;
     Function[] funcs = null;
     Dynamic*[] captured = null;
@@ -71,6 +73,7 @@ class Function
     {
         capture = other.capture;
         instrs = other.instrs;
+        spans = other.spans;
         constants = other.constants;
         funcs = other.funcs;
         parent = other.parent;

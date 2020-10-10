@@ -53,22 +53,61 @@ struct PushArray(T)
     {
         if (i >= tokens.length)
         {
-            throw new Exception("parse error");
+            throw new Exception("parse error 1");
         }
         return tokens[i];
+    }
+
+    static if (is(T == Token))
+    {
+        bool match(Token.Type type)
+        {
+            if (this[0].type == type)
+            {
+                tokens = tokens[1 .. $];
+                return true;
+            }
+            return false;
+        }
+
+        bool match(Token.Type type, string val)
+        {
+            if (this[0].type == type && this[0].value == val)
+            {
+                tokens = tokens[1 .. $];
+                return true;
+            }
+            return false;
+        }
+
+        void nextIs(T...)(T a)
+        {
+            if (!match(a))
+            {
+                throw new Exception("expected " ~ a[$ - 1].to!string ~ " got " ~ this[0].to!string);
+            }
+        }
+
+        void nextIsAny()
+        {
+            tokens = tokens[1 .. $];
+        }
+    }
+    else
+    {
+        PushArray!T opSlice(size_t i, size_t j)
+        {
+            if (j < i || tokens.length < j)
+            {
+                throw new Exception("parse error 2");
+            }
+            return PushArray(tokens[i .. j]);
+        }
     }
 
     void opOpAssign(string S)(T v) if (S == "~")
     {
         tokens ~= v;
-    }
-
-    PushArray!T opSlice(size_t i, size_t j)
-    {
-        // if (j <= i || tokens.length < j) {
-        //     throw new Exception("parse error");
-        // }
-        return PushArray(tokens[i .. j]);
     }
 
     int opApply(scope int delegate(ref T) dg)
@@ -119,7 +158,7 @@ void skip(ref TokenArray tokens, string name)
 {
     if (tokens.length == 0 || tokens[0].value != name)
     {
-        throw new Exception("parse error: expected " ~ name ~ " found " ~ tokens[0].value);
+        throw new Exception("parse error: got " ~ tokens[0].value ~ " found " ~ name);
     }
 }
 
@@ -145,7 +184,7 @@ else
 Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
 {
     Node[] args;
-    tokens = tokens[1 .. $];
+    tokens.match(Token.Type.open, [v[0]]);
     tokens.stripNewlines;
     while (!tokens[0].isClose([v[1]]))
     {
@@ -153,17 +192,17 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
         tokens.stripNewlines;
         if (tokens[0].isComma)
         {
-            tokens = tokens[1 .. $];
+            tokens.nextIs(Token.Type.comma);
         }
     }
-    tokens = tokens[1 .. $];
+    tokens.match(Token.Type.close, [v[1]]);
     return args;
 }
 
 Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
 {
     Node[] args;
-    tokens = tokens[1 .. $];
+    tokens.match(Token.Type.open, [v[0]]);
     size_t items = 0;
     tokens.stripNewlines;
     while (!tokens[0].isClose([v[1]]))
@@ -172,12 +211,16 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
         tokens.stripNewlines;
         items++;
         // if ((items % 2 == 0 && tokens[0].isComma) || (items % 2 == 1 && tokens[0].isOperator(":")))
-        if (tokens[0].isComma || tokens[0].isOperator(":"))
+        if (tokens[0].isComma)
         {
-            tokens = tokens[1 .. $];
+            tokens.nextIs(Token.Type.comma);
+        }
+        else if (tokens[0].isOperator(":"))
+        {
+            tokens.nextIs(Token.Type.operator, ":");
         }
     }
-    tokens = tokens[1 .. $];
+    tokens.match(Token.Type.close, [v[1]]);
     return args;
 }
 
@@ -185,7 +228,7 @@ void stripNewlines(ref TokenArray tokens)
 {
     while (tokens[0].isSemicolon)
     {
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.semicolon);
     }
 }
 
@@ -211,9 +254,9 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     }
     else if (tokens[0].isOperator("."))
     {
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.operator, ".");
         ret = new Call(new Ident("@index"), [last, new String(tokens[0].value)]);
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.ident);
     }
     else
     {
@@ -226,12 +269,15 @@ alias readIf = Spanning!readIfImpl;
 Node readIfImpl(ref TokenArray tokens)
 {
     Node[] cond = tokens.readParens;
-    assert(cond.length == 1);
+    if (tokens.length < 1)
+    {
+        throw new Exception("if cannot have empty parens");
+    }
     Node iftrue = tokens.readBlock;
     Node iffalse;
     if (tokens.length > 0 && tokens[0].isKeyword("else"))
     {
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.keyword, "else");
         iffalse = tokens.readBlock;
     }
     else
@@ -263,12 +309,12 @@ Node readPostExprImpl(ref TokenArray tokens)
     Node last = void;
     if (tokens[0].isKeyword("target"))
     {
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.keyword, "target");
         last = new Call(new Ident("@target"), [tokens.readPostExpr]);
     }
     else if (tokens[0].isKeyword("lambda"))
     {
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.keyword, "lambda");
         if (tokens[0].isOpen("("))
         {
             last = new Call(new Ident("@fun"), [
@@ -294,22 +340,12 @@ Node readPostExprImpl(ref TokenArray tokens)
     }
     else if (tokens[0].isKeyword("if"))
     {
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.keyword, "if");
         last = tokens.readIf;
-    }
-    else if (tokens[0].isKeyword("using"))
-    {
-        tokens = tokens[1 .. $];
-        last = tokens.readUsing;
-    }
-    else if (tokens[0].isKeyword("table"))
-    {
-        tokens = tokens[1 .. $];
-        last = tokens.readTableCons;
     }
     else if (tokens[0].isKeyword("while"))
     {
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.keyword, "while");
         Node cond = tokens.readParens[$ - 1];
         Node loop = tokens.readBlock;
         last = new Call(new Ident("@while"), [cond, loop]);
@@ -317,12 +353,12 @@ Node readPostExprImpl(ref TokenArray tokens)
     else if (tokens[0].isIdent)
     {
         last = new Ident(tokens[0].value);
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.ident);
     }
     else if (tokens[0].isString)
     {
         last = new String(tokens[0].value);
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.string);
     }
     return tokens.readPostExtend(last);
 }
@@ -333,12 +369,12 @@ Node readPreExprImpl(ref TokenArray tokens)
     if (tokens[0].isOperator)
     {
         Token op = tokens[0];
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.operator);
         size_t count;
         while (tokens[0].isOperator("."))
         {
             count++;
-            tokens = tokens[1 .. $];
+            tokens.nextIs(Token.Type.operator, ".");
         }
         string val = op.value;
         if (val == "*")
@@ -363,12 +399,12 @@ size_t[2] countDots(ref TokenArray tokens)
     while (tokens.length != 0 && tokens[0].isOperator("."))
     {
         pre += 1;
-        tokens = tokens[1 .. $];
+        tokens.nextIs(Token.Type.operator, ".");
     }
     while (tokens.length != 0 && tokens[$ - 1].isOperator("."))
     {
         post += 1;
-        tokens = tokens[0 .. $ - 1];
+        tokens.nextIs(Token.Type.operator, ".");
     }
     return [pre, post];
 }
@@ -422,7 +458,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
             sub[$ - 1] ~= token;
         }
         lastIsOp = token.isOperator && !token.isOperator(".");
-        tokens = tokens[1 .. $];
+        tokens.nextIsAny;
     }
     if (opers.length > 0 && opers[0].isOperator("=>"))
     {
@@ -527,9 +563,9 @@ Node readStmtImpl(ref TokenArray tokens)
             depth--;
         }
         stmtTokens0 ~= tokens[0];
-        tokens = tokens[1 .. $];
+        tokens.nextIsAny;
     }
-    tokens = tokens[1 .. $];
+    tokens.nextIs(Token.Type.semicolon);
     TokenArray stmtTokens = newTokenArray(stmtTokens0);
     if (stmtTokens.length == 0)
     {
@@ -537,14 +573,14 @@ Node readStmtImpl(ref TokenArray tokens)
     }
     if (stmtTokens[0].isKeyword("return"))
     {
-        stmtTokens = stmtTokens[1 .. $];
+        stmtTokens.nextIs(Token.Type.keyword, "return");
         return new Call(new Ident("@return"), [stmtTokens.readExpr(0)]);
     }
     if (stmtTokens[0].isKeyword("def"))
     {
-        stmtTokens = stmtTokens[1 .. $];
+        stmtTokens.nextIs(Token.Type.keyword, "def");
         Node name = new Ident(stmtTokens[0].value);
-        stmtTokens = stmtTokens[1 .. $];
+        stmtTokens.nextIs(Token.Type.ident);
         Node[] args = stmtTokens.readParens;
         Node dobody = stmtTokens.readBlock;
         return new Call(new Ident("@def"), [new Call(name, args), dobody]);
@@ -570,9 +606,9 @@ Node readBlockBodyImpl(ref TokenArray tokens)
 alias readBlock = Spanning!readBlockImpl;
 Node readBlockImpl(ref TokenArray tokens)
 {
-    tokens = tokens[1 .. $];
+    tokens.nextIs(Token.Type.open, "{");
     Node ret = readBlockBody(tokens);
-    tokens = tokens[1 .. $];
+    tokens.nextIs(Token.Type.close, "}");
     return ret;
 }
 
@@ -598,15 +634,19 @@ Node parse(string code)
                 ml = max(ml, i.line.to!string.length);
             }
         }
+        string ret;
         foreach (i; nums)
         {
             string s = i.to!string;
             foreach (j; 0 .. ml - s.length)
             {
-                write(' ');
+                ret ~= ' ';
             }
-            writeln(i, ": ", lines[i - 1]);
+            if (i > 0 && i < lines.length)
+            {
+                ret ~= i.to!string ~ ": " ~ lines[i - 1].to!string ~ "\n";
+            }
         }
-        throw e;
+        throw new Exception(ret ~ e.msg);
     }
 }

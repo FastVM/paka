@@ -255,7 +255,7 @@ struct Dynamic
             }
             else if (other.type == Type.big)
             {
-                return dynamic(mixin("value.sml.asBig" ~ op ~ "other.value.sml.asBig"));
+                return dynamic(mixin("value.sml.asBig" ~ op ~ "other.value.big"));
             }
         }
         else if (type == Type.big)
@@ -395,6 +395,17 @@ struct Dynamic
         }
     }
 
+    T as(T)() if (is(T == double))
+    {
+        if (type == Type.sml)
+        {
+            return cast(double) value.sml;
+        }
+        else
+        {
+            return mpfr_get_d(value.big.mpfr, mpfr_rnd_t.MPFR_RNDN);
+        }
+    }
 }
 
 pragma(inline, true) private bool isEqual(const Dynamic a, const Dynamic b)

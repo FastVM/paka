@@ -1,4 +1,6 @@
 .dub
+.vscode
+.history
 docs.json
 __dummy.html
 docs/
@@ -11,16 +13,8 @@ dext
 dub.selections.json
 out*
 trace.*
-.vscode
-.history
 dub_platform_probe*
 perf*
 vgcore*
 callgrind*
-./data
-world/*
-bf
-dadv
-dadventure
 vscode
-.history
