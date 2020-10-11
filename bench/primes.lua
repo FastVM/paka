@@ -1,4 +1,4 @@
-local function is_prime(num)
+local is_prime = function (num)
     local test = 2
     while test < num do
         if num % test == 0 then
@@ -9,7 +9,7 @@ local function is_prime(num)
     return true
 end
 
-local function sum_primes(upto)
+local sum_primes = function (upto)
     local ret = 0
     local at = 2
     while at < upto do

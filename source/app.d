@@ -17,28 +17,7 @@ import std.string;
 import std.getopt;
 import core.memory;
 
-enum string getstr(string code)()
-{
-    Node node = code.parse;
-    Walker walker = new Walker;
-    Function func = walker.walkProgram!true(node);
-    func.captured = loadCtfeBase;
-    Dynamic retval = run(func);
-    return retval.to!string;
-}
-
-alias ctfeRun = getstr;
-
-enum string getfile(string file)()
-{
-    Node node = import(file).parse;
-    Walker walker = new Walker;
-    Function func = walker.walkProgram!true(node);
-    func.captured = loadCtfeBase;
-    Dynamic retval = run(func);
-    return retval.to!string;
-}
-
+/// the actual main function, it does not handle errors
 void domain(string[] args)
 {
     string[] scripts;
@@ -88,6 +67,7 @@ void domain(string[] args)
     }
 }
 
+/// the main function that handles runtime errors
 void trymain(string[] args)
 {
     try
@@ -135,7 +115,8 @@ void trymain(string[] args)
             ret ~= "\n";
         }
         spans.length = 0;
-        throw new Exception(ret ~ e.msg);
+        e.msg = "\n" ~ ret ~ e.msg;
+        throw e;
     }
 }
 

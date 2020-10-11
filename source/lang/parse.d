@@ -68,7 +68,7 @@ Node parse(string code, string lang = "dext")
             }
         }
 
-        run(func, &findLang);
+        run(func, null, &findLang);
     }
     if (auto i = lang in parsers)
     {

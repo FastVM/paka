@@ -7,45 +7,7 @@ import lang.lib.io;
 import lang.lib.sys;
 import lang.lib.str;
 import lang.lib.arr;
-import lang.lib.ctfe;
 import lang.lib.proc;
-
-Pair[] rootCtfeBase()
-{
-    Dynamic dynamic(Dynamic function(Args args) fn)
-    {
-        return dynamic(fn);
-    }
-
-    return [
-        Pair("print", dynamic(&lang.lib.ctfe.ctfelibprint)),
-        Pair("read", dynamic(&lang.lib.ctfe.ctfelibread)),
-        Pair("run_entry", dynamic(&lang.lib.ctfe.ctfelibentry)),
-    ];
-}
-
-Dynamic*[] loadCtfeBase()
-{
-    Dynamic*[] ret;
-    foreach (i; rootCtfeBase)
-    {
-        ret ~= [i.val].ptr;
-    }
-    return ret;
-}
-
-Function baseCtfeFunction()
-{
-    Function ret = new Function;
-    uint[string] byName;
-    foreach (i; rootCtfeBase)
-    {
-        byName[i.name] = cast(uint) byName.length;
-    }
-    string[] byPlace = ["print"];
-    ret.stab = Function.Lookup(byName, byPlace);
-    return ret;
-}
 
 struct Pair
 {

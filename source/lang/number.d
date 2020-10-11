@@ -253,6 +253,11 @@ struct MpfrBigNumber
             return opBinary!op(value);
         }
     }
+    pragma(inline, true) MpfrBigNumber opBinaryRight(string op, T)(const T value) const
+            if (isNumericValue!T && op == "%")
+    {
+        return this % MpfrBigNumber(value);
+    }
 
     pragma(inline, true) MpfrBigNumber opUnary(string op)() const if (op == "-")
     {

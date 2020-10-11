@@ -12,8 +12,7 @@ import std.algorithm;
 import std.string;
 import std.functional;
 
-LocalCallback printTopCallback;
-
+/// vm callback that sets the locals defined into the root base 
 LocalCallback exportLocalsToBaseCallback(Function func)
 {
     LocalCallback ret = (ref size_t index, ref size_t depth,
@@ -26,11 +25,13 @@ LocalCallback exportLocalsToBaseCallback(Function func)
     return ret;
 }
 
+/// vm callback that prints the top of the stack for the end of the repl
 void printTop(ref size_t index, ref size_t depth, ref Dynamic[] stack, ref Dynamic[] locals)
 {
     writeln(stack[depth]);
 }
 
+/// runs a repl for dext language
 void replRun()
 {
     size_t ctx = enterCtx;
@@ -47,6 +48,6 @@ void replRun()
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);
         func.captured = loadBase;
-        run(func, toDelegate(&printTop), func.exportLocalsToBaseCallback);
+        run(func, null, func.exportLocalsToBaseCallback, toDelegate(&printTop));
     }
 }

@@ -8,12 +8,17 @@ import std.array;
 import std.algorithm;
 import lang.srcloc;
 
+/// safe array of tokens
+alias TokenArray = PushArray!Token;
+
+/// operators for comparrason
 enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 
+/// locations for error handling
 Location[] locs;
 
-version = push_array;
-
+/// wraps a function of type Node function(T...)(TokenArray tokens, T args).
+/// it gets the span of tokens consumed and it gives them a span
 template Spanning(alias F, T...)
 {
     Node spanning(ref TokenArray tokens, T a)
@@ -33,10 +38,6 @@ template Spanning(alias F, T...)
         Node ret = F(tokens, a);
         if (orig.length > 0 && ret !is null)
         {
-            // writeln(orig.length, " ", tokens.length);
-            // writeln(0, " ", orig.length - tokens.length - 1);
-            // writeln(ret.span);
-            // writeln;
             ret.span = Span(orig[0].span.first, orig[orig.length - tokens.length - 1].span.last);
         }
         return ret;
@@ -45,10 +46,14 @@ template Spanning(alias F, T...)
     alias Spanning = spanning;
 }
 
+/// array that is bounds checked always and throws decent errors.
+/// usually used as a TokenArray.
 struct PushArray(T)
 {
+    /// the tokens is just an array
     T[] tokens;
 
+    /// safely index the array
     T opIndex(size_t i)
     {
         if (i >= tokens.length)
@@ -58,8 +63,10 @@ struct PushArray(T)
         return tokens[i];
     }
 
+    // utils that only happens if the token is a token array
     static if (is(T == Token))
     {
+        /// consumes token if it is of type, returns weather it was consumed
         bool match(Token.Type type)
         {
             if (this[0].type == type)
@@ -70,6 +77,7 @@ struct PushArray(T)
             return false;
         }
 
+        /// consumes token matching the args, returns weather it was consumed
         bool match(Token.Type type, string val)
         {
             if (this[0].type == type && this[0].value == val)
@@ -80,6 +88,7 @@ struct PushArray(T)
             return false;
         }
 
+        /// wraps match, it throws a nice error when it does not match
         void nextIs(T...)(T a)
         {
             if (!match(a))
@@ -88,6 +97,7 @@ struct PushArray(T)
             }
         }
 
+        /// this just skips a token, often used for bracket matching
         void nextIsAny()
         {
             tokens = tokens[1 .. $];
@@ -105,11 +115,13 @@ struct PushArray(T)
         }
     }
 
+    /// appends to the array
     void opOpAssign(string S)(T v) if (S == "~")
     {
         tokens ~= v;
     }
 
+    /// implements foreach(i; this)
     int opApply(scope int delegate(ref T) dg)
     {
         int result = 0;
@@ -124,6 +136,7 @@ struct PushArray(T)
         return result;
     }
 
+    /// implements foreach(i, ref v; this)
     int opApply(scope int delegate(size_t, ref T) dg)
     {
         int result = 0;
@@ -138,22 +151,26 @@ struct PushArray(T)
         return result;
     }
 
+    /// the length of the array, not often needed, errors are prefered
     size_t length()
     {
         return tokens.length;
     }
 
+    /// this is the same as length
     size_t opDollar()
     {
         return tokens.length;
     }
 
+    /// the same as this.tokens.to!string
     string toString()
     {
         return tokens.to!string;
     }
 }
 
+/// implements errors when the parser knows what should be next
 void skip(ref TokenArray tokens, string name)
 {
     if (tokens.length == 0 || tokens[0].value != name)
@@ -162,25 +179,15 @@ void skip(ref TokenArray tokens, string name)
     }
 }
 
-version (push_array)
+// TODO: replace with TokenArray calls
+/// constructs a token array, this will soon be replaced
+TokenArray newTokenArray(Token[] a)
 {
-    alias TokenArray = PushArray!Token;
-
-    TokenArray newTokenArray(Token[] a)
-    {
-        return TokenArray(a);
-    }
-}
-else
-{
-    alias TokenArray = Token[];
-
-    TokenArray newTokenArray(T...)(Token[] a)
-    {
-        return a;
-    }
+    return TokenArray(a);
 }
 
+/// reads open parens or square brackets
+/// ignores commas, soon to handle them correctly
 Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
 {
     Node[] args;
@@ -199,6 +206,8 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
     return args;
 }
 
+// TODO: make commas and colons alternate
+/// reads open curly brackets
 Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
 {
     Node[] args;
@@ -224,6 +233,7 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
     return args;
 }
 
+/// strips newlines and changes the input
 void stripNewlines(ref TokenArray tokens)
 {
     while (tokens[0].isSemicolon)
@@ -232,10 +242,17 @@ void stripNewlines(ref TokenArray tokens)
     }
 }
 
+/// read open paren until close paren.
+/// used for arguments and flow control
 alias readParens = readOpen!"()";
+/// read open square bracket until close square bracket.
+/// used for arrays and indexing 
 alias readSquare = readOpen!"[]";
+/// read open curly bracket until close curly bracket.
+/// used for tables 
 alias readBrace = readOpen!"{}";
 
+/// after reading a small expression, read a postfix expression
 alias readPostExtend = Spanning!(readPostExtendImpl, Node);
 Node readPostExtendImpl(ref TokenArray tokens, Node last)
 {
@@ -246,7 +263,21 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     Node ret = void;
     if (tokens[0].isOpen("("))
     {
-        ret = new Call(last, tokens.readParens);
+        Node[] args = tokens.readParens;
+        while (tokens.length != 0 && tokens[0].isOpen("{"))
+        {
+            args ~= cast(Node) new Call(new Ident("@fun"), [new Call([]), tokens.readBlock]);
+        }
+        ret = new Call(last, args);
+    }
+    else if (tokens[0].isOpen("{"))
+    {
+        Node[] args;
+        while (tokens[0].isOpen("{"))
+        {
+            args ~= cast(Node) new Call(new Ident("@fun"), [new Call([]), tokens.readBlock]);
+        }
+        ret = new Call(last, args);
     }
     else if (tokens[0].isOpen("["))
     {
@@ -265,6 +296,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     return tokens.readPostExtend(ret);
 }
 
+/// read an if statement
 alias readIf = Spanning!readIfImpl;
 Node readIfImpl(ref TokenArray tokens)
 {
@@ -287,22 +319,7 @@ Node readIfImpl(ref TokenArray tokens)
     return new Call(new Ident("@if"), [cond[0], iftrue, iffalse]);
 }
 
-alias readUsing = Spanning!readUsingImpl;
-Node readUsingImpl(ref TokenArray tokens)
-{
-    Node[] obj = tokens.readParens;
-    assert(obj.length == 1);
-    Node bod = tokens.readBlock;
-    return new Call(new Ident("@using"), [obj[0], bod]);
-}
-
-alias readTableCons = Spanning!readTableConsImpl;
-Node readTableConsImpl(ref TokenArray tokens)
-{
-    Node bod = tokens.readBlock;
-    return new Call(new Ident("@using"), [new Call(new Ident("@table"), []), bod]);
-}
-
+/// reads first element of postfix expression
 alias readPostExpr = Spanning!readPostExprImpl;
 Node readPostExprImpl(ref TokenArray tokens)
 {
@@ -363,6 +380,9 @@ Node readPostExprImpl(ref TokenArray tokens)
     return tokens.readPostExtend(last);
 }
 
+// TODO: make * only work when unpacking is allowed
+/// read prefix before postfix expression.
+/// prefix is able to be +, - or *
 alias readPreExpr = Spanning!readPreExprImpl;
 Node readPreExprImpl(ref TokenArray tokens)
 {
@@ -392,6 +412,8 @@ Node readPreExprImpl(ref TokenArray tokens)
     return tokens.readPostExpr;
 }
 
+/// hack for counting dots in an operator expression.
+/// only used for readExpr
 size_t[2] countDots(ref TokenArray tokens)
 {
     size_t pre;
@@ -409,6 +431,7 @@ size_t[2] countDots(ref TokenArray tokens)
     return [pre, post];
 }
 
+/// reads any expresssion, level should start at zero
 alias readExpr = Spanning!(readExprImpl, size_t);
 Node readExprImpl(ref TokenArray tokens, size_t level)
 {
@@ -547,6 +570,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
     return ret;
 }
 
+/// reads any statement ending in a semicolon
 alias readStmt = Spanning!readStmtImpl;
 Node readStmtImpl(ref TokenArray tokens)
 {
@@ -588,6 +612,8 @@ Node readStmtImpl(ref TokenArray tokens)
     return stmtTokens.readExpr(0);
 }
 
+/// reads many staments statement, each ending in a semicolon
+/// does not read brackets surrounding
 alias readBlockBody = Spanning!readBlockBodyImpl;
 Node readBlockBodyImpl(ref TokenArray tokens)
 {
@@ -603,6 +629,7 @@ Node readBlockBodyImpl(ref TokenArray tokens)
     return new Call(new Ident("@do"), ret);
 }
 
+/// wraps the readblock and consumes curly braces
 alias readBlock = Spanning!readBlockImpl;
 Node readBlockImpl(ref TokenArray tokens)
 {
@@ -612,6 +639,7 @@ Node readBlockImpl(ref TokenArray tokens)
     return ret;
 }
 
+/// parses code as the dext programming language
 Node parse(string code)
 {
     locs.length = 0;
@@ -647,6 +675,7 @@ Node parse(string code)
                 ret ~= i.to!string ~ ": " ~ lines[i - 1].to!string ~ "\n";
             }
         }
-        throw new Exception(ret ~ e.msg);
+        e.msg = ret ~ e.msg;
+        throw e;
     }
 }

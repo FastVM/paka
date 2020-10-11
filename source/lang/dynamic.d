@@ -188,7 +188,12 @@ struct Dynamic
         case Dynamic.Type.del:
             return (*fun.del)(args);
         case Dynamic.Type.pro:
-            return run(fun.pro, fun.pro.self, args);
+            if (fun.pro.self.length == 0) {
+                return run(fun.pro, args);
+            }
+            else {
+                return run(fun.pro, fun.pro.self ~ args);
+            }
         default:
             throw new Exception("error: not a function: " ~ this.to!string);
         }

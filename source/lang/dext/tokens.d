@@ -7,43 +7,57 @@ import std.array;
 import std.stdio;
 import lang.srcloc;
 
+/// operator precidence
 enum string[][] prec = [
         ["+=", "*=", "/=", "%=", "-=", "="], ["=>"], ["||", "&&"],
         ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"], ["*", "/", "%"]
     ];
 
+/// operators that dont work like binary operators sometimes
 enum string[] nops = [".", "*", "!", ",", ":"];
 
+/// language keywords
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "target", "lambda",
+        "if", "else", "while", "return", "def", "lambda",
     ];
 
+/// gets the operators by length not precidence
 enum string[] levels()
 {
     return join(prec ~ nops).sort!"a.length > b.length".array;
 }
 
+/// simple token
 struct Token
 {
+    /// the type of the token
     enum Type
     {
+        /// invalid token
         none,
+        /// some operator, not keyword
         operator,
+        /// semicolon seperator
         semicolon,
+        /// comma seperator
         comma,
-        seperator,
+        /// ident can be either a name or number
         ident,
+        /// language keyword
         keyword,
-        number,
+        /// "[", "{", or "("
         open,
+        /// "]", "}", or ")"
         close,
-        indent,
+        /// string literal
         string,
     }
 
     Type type;
     string value;
+    /// where is the token
     Span span;
+    /// only constructor
     this(T)(Span s, Type t, T v = null)
     {
         type = t;
@@ -51,6 +65,7 @@ struct Token
         span = s;
     }
 
+    /// shows token along with location
     string toString()
     {
         return span.pretty ~ " -> \"" ~ value ~ "\"";
@@ -117,6 +132,7 @@ struct Token
     }
 }
 
+/// reads a single token from a string
 Token readToken(ref string code, ref Location location)
 {
     char peek()
@@ -188,11 +204,11 @@ Token readToken(ref string code, ref Location location)
             return consToken(Token.Type.operator, i);
         }
     }
-    if (peek.isAlphaNum || peek == '_' || peek == '?')
+    if (peek.isAlphaNum || peek == '_' || peek == '?' || peek == '$')
     {
         bool isNumber = true;
         char[] ret;
-        while (peek.isAlphaNum || peek == '_' || (isNumber && peek == '.'))
+        while (peek.isAlphaNum || peek == '_' || peek == '$' || (isNumber && peek == '.'))
         {
             isNumber = isNumber && (peek.isDigit || peek == '.');
             ret ~= read;
@@ -264,6 +280,7 @@ Token readToken(ref string code, ref Location location)
     throw new Exception("bad char " ~ peek);
 }
 
+/// repeatedly calls a readToken until its empty
 Token[] tokenize(string code)
 {
     Token[] tokens;

@@ -21,7 +21,7 @@ Dynamic eval(size_t ctx, string code)
     Walker walker = new Walker;
     Function func = walker.walkProgram(node, ctx);
     func.captured = ctx.loadBase;
-    return run(func, [func.exportLocalsToBaseCallback]);
+    return run(func, null, func.exportLocalsToBaseCallback);
 }
 
 void define(T)(size_t ctx, string name, T value)

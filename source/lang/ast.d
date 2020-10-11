@@ -5,14 +5,17 @@ import std.conv;
 import std.meta;
 import lang.srcloc;
 
+/// all possible node types
 alias NodeTypes = AliasSeq!(Call, String, Ident);
 
+/// any node, not valid in the ast
 class Node
 {
     Span span;
     string id="node";
 }
 
+/// call of function or operator call
 class Call : Node
 {
     Node[] args;
@@ -45,6 +48,7 @@ class Call : Node
     }
 }
 
+/// atom like a string or a number
 class Atom : Node
 {
     string repr;
@@ -60,6 +64,7 @@ class Atom : Node
     }
 }
 
+/// string type
 class String : Atom
 {
     this(string s)
@@ -74,6 +79,7 @@ class String : Atom
     }
 }
 
+/// ident or number, detects at runtime
 class Ident : Atom
 {
     this(string s)

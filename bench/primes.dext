@@ -15,11 +15,11 @@ def sum_primes(upto) {
     while (at < upto) {
         if (is_prime(at)) {
             ret += at;
-        }
+        };
         at += 1;
-    }
+    };
     return ret;
-}
+};
 
 res = sum_primes(20000);
 io.print(res);

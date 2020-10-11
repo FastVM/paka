@@ -23,7 +23,7 @@ enum string[2][] cmpMap()
 
 enum string[2][] mutMap()
 {
-    return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"]]; //, ["%=", "mod"]];
+    return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"], ["%=", "mod"]];
 }
 
 void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
@@ -131,52 +131,42 @@ alias allocateStackAllowed = alloca;
 
 Span[] spans;
 
-pragma(inline, false) Dynamic run(T...)(Function func, T argss)
+pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T rest=T.init)
 {
+    static foreach (I; T) {
+        static assert(is(I == LocalCallback));
+    }
     size_t index = 0;
     size_t depth = 0;
     size_t argi = 0;
     Dynamic[] stack = void;
     Dynamic[] locals = void;
-    scope(failure) {
+    scope (failure)
+    {
         spans ~= func.spans[index];
     }
-    if (__ctfe)
+    if (func.flags & Function.Flags.isLocal)
     {
-        stack = new Dynamic[func.stackSize];
-        locals = new Dynamic[func.stab.byPlace.length + 1];
+        Dynamic* ptr = cast(Dynamic*) GC.malloc(
+                (func.stab.byPlace.length + 1) * Dynamic.sizeof, 0, typeid(Dynamic));
+        stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof))[0
+            .. func.stackSize];
+        locals = ptr[0 .. func.stab.byPlace.length + 1];
     }
     else
     {
-        if (func.flags & Function.Flags.isLocal)
-        {
-            Dynamic* ptr = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof,
-                    0, typeid(Dynamic));
-            stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof))[0
-                .. func.stackSize];
-            locals = ptr[0 .. func.stab.byPlace.length + 1];
-        }
-        else
-        {
-            Dynamic* ptr = cast(Dynamic*) allocateStackAllowed(
-                    (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
-            stack = ptr[0 .. func.stackSize];
-            locals = ptr[func.stackSize .. func.stackSize + func.stab.byPlace.length + 1];
-        }
+        Dynamic* ptr = cast(Dynamic*) allocateStackAllowed(
+                (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
+        stack = ptr[0 .. func.stackSize];
+        locals = ptr[func.stackSize .. func.stackSize + func.stab.byPlace.length + 1];
     }
-    static foreach (args; argss)
+    foreach (v; args)
     {
-        static if (is(typeof(args) == Dynamic[]))
-        {
-            foreach (v; args)
-            {
-                locals[argi++] = v;
-            }
-        }
+        locals[argi++] = v;
     }
     scope (exit)
     {
-        static foreach (callback; argss)
+        static foreach (callback; rest)
         {
             static if (is(typeof(callback) == LocalCallback))
             {
@@ -241,8 +231,15 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
                 stack[depth - 1] = (*f.fun.del)(stack[depth .. depth + cur.value]);
                 break;
             case Dynamic.Type.pro:
-                stack[depth - 1] = run(f.fun.pro,
-                        f.fun.pro.self, stack[depth .. depth + cur.value]);
+                if (f.fun.pro.self.length == 0)
+                {
+                    stack[depth - 1] = run(f.fun.pro,
+                            f.fun.pro.self ~ stack[depth .. depth + cur.value]);
+                }
+                else
+                {
+                    stack[depth - 1] = run(f.fun.pro, stack[depth .. depth + cur.value]);
+                }
                 break;
             default:
                 throw new Exception("error: not a function: " ~ f.to!string);
@@ -404,7 +401,9 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
             stack[depth - 1] /= stack[depth];
             break;
         case Opcode.opmod:
-            throw new Exception("error: cannot modulo");
+            depth--;
+            stack[depth - 1] %= stack[depth];
+            break;
         case Opcode.load:
             stack[depth++] = locals[cur.value];
             break;
@@ -460,7 +459,8 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
                     switch (arr.type)
                     {
                     case Dynamic.Type.arr:
-                        mixin("(*arr.arrPtr)[stack[depth-1].as!size_t]" ~ opm[0] ~ " stack[depth-3];");
+                        mixin("(*arr.arrPtr)[stack[depth-1].as!size_t]" ~ opm[0]
+                                ~ " stack[depth-3];");
                         break switchOpi;
                     case Dynamic.Type.tab:
                         mixin("(*arr.tabPtr)[stack[depth-1]]" ~ opm[0] ~ " stack[depth-3];");
@@ -510,6 +510,9 @@ pragma(inline, false) Dynamic run(T...)(Function func, T argss)
         case Opcode.jump:
             index = cur.value;
             break;
+        case Opcode.argno:
+            stack[depth] = args[cur.value];
+            depth++;
         }
         index++;
     }

@@ -192,6 +192,8 @@ enum Opcode
     iffalse,
     // jump to index
     jump,
+    // arg number
+    argno
 }
 
 enum int[Opcode] opSizes = [
@@ -204,7 +206,7 @@ enum int[Opcode] opSizes = [
     Opcode.load : 1, Opcode.loadc : 1, Opcode.store : 0, Opcode.istore : -1,
     Opcode.tstore : -1, Opcode.opistore : -1, Opcode.optstore : -1,
     Opcode.retval : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
-    Opcode.iffalse : -1, Opcode.jump : 0
+    Opcode.iffalse : -1, Opcode.jump : 0, Opcode.argno: 1,
 ];
 struct Instr
 {

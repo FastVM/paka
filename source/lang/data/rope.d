@@ -3,23 +3,35 @@ module lang.data.rope;
 import std.algorithm;
 import std.stdio;
 
+/// the maximum difference for a rope to rebalance
 double maxdiff = 64;
 
+/// an immutable array
+/// currently the implementation is not very good
 class Rope(T)
 {
+    /// left hand side of the rope, may be null
     Rope left = null;
+    /// right hand side of the rope, may be null
     Rope right = null;
+    /// the value is always there, even if it is not used
     T value = T.init;
+    /// to make length O(1)
     size_t length = 0;
+
+    /// construct an empty rope
     this()
     {
     }
 
+    /// construct a rope with length 1
     this(T s) {
         value = s;
         length = 1;
     }
 
+    /// construct a rope from two other ropes
+    /// this does not rebalance
     this(Rope l, Rope r)
     {
         left = l;
@@ -34,6 +46,7 @@ class Rope(T)
         length = s;
     }
 
+    /// constructs a rope from an iterable datastructure
     this(T2)(T2 a)
     {
         if (a.length != 0)
@@ -56,6 +69,7 @@ class Rope(T)
         }
     }
 
+    /// duplicates a rope
     this(Rope c)
     {
         if (c !is null) {
@@ -66,6 +80,7 @@ class Rope(T)
         }
     }
 
+    /// usually used internally, it constructs a rope from a slice of another ropes
     this(T2)(T2 a, size_t l = 0, size_t r = 0)
     {
         if (r == l)
@@ -87,6 +102,7 @@ class Rope(T)
         }
     }
 
+    /// appends data of rope into native array, similar to recursive array
     const void extend(ref T[] arr) nothrow
     {
         if (left is null && right is null)
@@ -101,7 +117,8 @@ class Rope(T)
         right.extend(arr);
     }
 
-    const T opIndex(size_t index)
+    /// gets index of element in rope, does not check bounds 
+    const T opIndex(size_t index) nothrow
     {
         if (left is null && right is null)
         {
@@ -114,6 +131,7 @@ class Rope(T)
         return right[index - left.length];
     }
 
+    /// slices rope into new rope, does not check bounds 
     const Rope!T opSlice(size_t from, size_t to) {
         if (from == to) {
             return new Rope;
@@ -130,41 +148,33 @@ class Rope(T)
         return left[from..left.length] ~ right[0..to-left.length];
     }
 
+    /// they are equivalent in this case 
     alias opDollar = length;
 
+    /// concatenate with balancing to a non rope
     Rope opBinary(string s, T2)(T2 other) if (s == "~")
     {
         return this ~ new Rope(other);
     }
 
+    /// concatenate with balancing 
     Rope opBinary(string s)(Rope other) if (s == "~")
     {
         return new Rope(this, other).balanced;
     }
 
-    void wscheme(size_t d = 0) {
-        foreach (i; 0..d) {
-            write("  ");
-        }
-        if (length == 1) {
-            writeln(value);
-        }
-        else {
-            writeln("concat");
-            left.wscheme(d+1);
-            right.wscheme(d+1);
-        }
-    }
-
+    /// compares two ropes like strings would
     override int opCmp(Object other) {
         return array.cmp((cast(Rope!T) other).array);        
     }
 
+    /// compares two ropes element for element
     override bool opEquals(Object other) {
         Rope!T rope = cast(Rope) other;
         return length == rope.length && array == rope.array;
     }
 
+    /// turns rope into array
     T[] array() const nothrow
     {
         T[] ret;
@@ -173,6 +183,7 @@ class Rope(T)
     }
 }
 
+/// balances a rope
 Rope!T balanced(T)(Rope!T rope)
 {
     if (rope.left is null || rope.right is null) {

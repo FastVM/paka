@@ -48,25 +48,13 @@ class Walker
     bool isTarget = false;
     Span[] nodes = [Span.init];
 
-    Function walkProgram(bool ctfe = false)(Node node, size_t ctx)
+    Function walkProgram(Node node, size_t ctx)
     {
-        static if (ctfe)
+        func = new Function;
+        func.parent = ctx.baseFunction;
+        foreach (i; ctx.rootBase)
         {
-            func = new Function;
-            func.parent = baseCtfeFunction;
-            foreach (i; rootCtfeBase)
-            {
-                func.captab.define(i.name);
-            }
-        }
-        else
-        {
-            func = new Function;
-            func.parent = ctx.baseFunction;
-            foreach (i; ctx.rootBase)
-            {
-                func.captab.define(i.name);
-            }
+            func.captab.define(i.name);
         }
         walk(node);
         pushInstr(func, Instr(Opcode.retval));
@@ -78,7 +66,7 @@ class Walker
     void pushInstr(Function func, Instr instr, int size = 0)
     {
         func.instrs ~= instr;
-        func.spans ~= nodes[$-1];
+        func.spans ~= nodes[$ - 1];
         int* psize = instr.op in opSizes;
         if (psize !is null)
         {
@@ -674,10 +662,13 @@ class Walker
 
             func.constants ~= dynamic(false);
         }
+        else if (i.repr.length != 0 && i.repr[0] == '$' && i.repr[1 .. $].isNumeric)
+        {
+            pushInstr(func, Instr(Opcode.argno, i.repr[1..$].to!uint));
+        }
         else if (i.repr.isNumeric)
         {
             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-
             func.constants ~= Dynamic.strToNum(i.repr);
         }
         else
