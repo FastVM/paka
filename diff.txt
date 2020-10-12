@@ -1,0 +1,644 @@
+diff --git a/dmd.sh b/dmd.sh
+index 4231141..f99bf9f 100755
+--- a/dmd.sh
++++ b/dmd.sh
+@@ -1 +1 @@
+-dmd -i source/app.d -Isource -L-lgmp -L-lmpfr -of dext -O3 -ffast-math
+\ No newline at end of file
++dmd -i source/app.d -Isource -L-lgmp -L-lmpfr -of dext
+\ No newline at end of file
+diff --git a/source/lang/bytecode.d b/source/lang/bytecode.d
+index 424ba63..f9457b2 100644
+--- a/source/lang/bytecode.d
++++ b/source/lang/bytecode.d
+@@ -175,13 +175,12 @@ enum Opcode
+     load,
+     // load from captured
+     loadc,
++    // store to locals
+     store,
+     istore,
+-    tstore,
+     // same but with operators like += and -=
+     opstore,
+     opistore,
+-    optstore,
+     // return a value
+     retval,
+     // return no value
+@@ -198,13 +197,13 @@ enum Opcode
+ 
+ enum int[Opcode] opSizes = [
+     // mat change: call, array, targeta, table, upcall
+-    Opcode.nop : 0, Opcode.push : 1, Opcode.pop : -1, Opcode.data : 0,
++    Opcode.nop : 0, Opcode.push : 1, Opcode.pop : -1,
+     Opcode.sub : 1, Opcode.bind : -1, Opcode.oplt : -1, Opcode.opgt : -1,
+     Opcode.oplte : -1, Opcode.opgte : -1, Opcode.opeq : -1, Opcode.opneq : -1,
+     Opcode.unpack : 1, Opcode.index : -1, Opcode.opneg : 0, Opcode.opadd : -1,
+     Opcode.opsub : -1, Opcode.opmul : -1, Opcode.opdiv : -1, Opcode.opmod : -1,
+     Opcode.load : 1, Opcode.loadc : 1, Opcode.store : 0, Opcode.istore : -1,
+-    Opcode.tstore : -1, Opcode.opistore : -1, Opcode.optstore : -1,
++    Opcode.opistore : -1, 
+     Opcode.retval : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
+     Opcode.iffalse : -1, Opcode.jump : 0, Opcode.argno: 1,
+ ];
+diff --git a/source/lang/dynamic.d b/source/lang/dynamic.d
+index 2af2935..d47f338 100644
+--- a/source/lang/dynamic.d
++++ b/source/lang/dynamic.d
+@@ -47,7 +47,6 @@ struct Dynamic
+         pro,
+         end,
+         pac,
+-        dat,
+     }
+ 
+     union Value
+@@ -331,7 +330,7 @@ struct Dynamic
+     pragma(inline, true) Array arr()
+     {
+         version (safe)
+-            if (type != Type.arr && type != Type.dat)
++            if (type != Type.arr)
+             {
+                 throw new Exception("expected array type");
+             }
+@@ -361,7 +360,7 @@ struct Dynamic
+     pragma(inline, true) Array* arrPtr()
+     {
+         version (safe)
+-            if (type != Type.arr && type != Type.dat)
++            if (type != Type.arr)
+             {
+                 throw new Exception("expected array type");
+             }
+diff --git a/source/lang/number.d b/source/lang/number.d
+index 896e30d..aed7e78 100644
+--- a/source/lang/number.d
++++ b/source/lang/number.d
+@@ -60,14 +60,14 @@ struct MpfrBigNumber
+ 
+     pragma(inline, true) this(SmallNumber other)
+     {
+-        mpfr_init2(mpfr, 80);
++        mpfr_init2(mpfr, 128);
+         mpfr_set_d(mpfr, other, mpfr_rnd_t.MPFR_RNDN);
+     }
+ 
+     pragma(inline, true) static MpfrBigNumber empty()
+     {
+         MpfrBigNumber ret = void;
+-        mpfr_init2(ret.mpfr, 256);
++        mpfr_init2(ret.mpfr, 128);
+         return ret;
+     }
+ 
+diff --git a/source/lang/vm.d b/source/lang/vm.d
+index 2b63a1e..d068140 100644
+--- a/source/lang/vm.d
++++ b/source/lang/vm.d
+@@ -26,107 +26,6 @@ enum string[2][] mutMap()
+     return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"], ["%=", "mod"]];
+ }
+ 
+-void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
+-{
+-    if (to.type == Dynamic.Type.sml || to.type == Dynamic.Type.big)
+-    {
+-        static if (op == "=")
+-        {
+-            locals[to.as!size_t] = from;
+-        }
+-        else
+-        {
+-            mixin("locals[to.as!size_t]" ~ op ~ "from;");
+-        }
+-    }
+-    else if (to.type == Dynamic.Type.dat)
+-    {
+-        Dynamic arr = to.arr[0];
+-        static if (op == "=")
+-        {
+-            switch (arr.type)
+-            {
+-            case Dynamic.Type.arr:
+-                arr.arr[to.arr[1].as!size_t] = from;
+-                break;
+-            case Dynamic.Type.tab:
+-                arr.tab[to.arr[1]] = from;
+-                break;
+-            default:
+-                throw new Exception("error: cannot store at index");
+-            }
+-        }
+-        else
+-        {
+-            switch (arr.type)
+-            {
+-            case Dynamic.Type.arr:
+-                mixin("arr.arr[to.arr[1].as!size_t]" ~ op ~ "from;");
+-                break;
+-            case Dynamic.Type.tab:
+-                mixin("arr.tab[to.arr[1]]" ~ op ~ "from;");
+-                break;
+-            default:
+-                throw new Exception("error: cannot store at index");
+-            }
+-        }
+-    }
+-    else if (to.type == Dynamic.type.str)
+-    {
+-        static if (op == "=")
+-        {
+-            locals[$ - 1].tab[to] = from;
+-        }
+-        else
+-        {
+-            Table tab = locals[$ - 1].tab;
+-            mixin("tab[to]" ~ op ~ "from;");
+-        }
+-    }
+-    else
+-    {
+-        assert(to.type == from.type);
+-        if (to.type == Dynamic.Type.arr)
+-        {
+-            Dynamic[] arr = from.arr;
+-            size_t index = 0;
+-            outwhile: while (index < to.arr.length)
+-            {
+-                Dynamic nto = (to.arr)[index];
+-                if (nto.type == Dynamic.Type.pac)
+-                {
+-                    index++;
+-                    size_t alen = from.arr.length - to.arr.length;
+-                    locals.store!op((to.arr)[index], dynamic(arr[index - 1 .. index + alen + 1]));
+-                    index++;
+-                    while (index < to.arr.length)
+-                    {
+-                        locals.store!op((to.arr)[index], arr[index + alen]);
+-                        index++;
+-                    }
+-                    break outwhile;
+-                }
+-                else
+-                {
+-                    locals.store!op(nto, arr[index]);
+-                }
+-                index++;
+-            }
+-        }
+-        else if (to.type == Dynamic.Type.tab)
+-        {
+-            foreach (v; to.tab.byKeyValue)
+-            {
+-                locals.store!op(v.value, (from.tab)[v.key]);
+-            }
+-        }
+-        else
+-        {
+-            assert(0);
+-        }
+-    }
+-}
+-
+ alias allocateStackAllowed = alloca;
+ 
+ Span[] spans;
+@@ -190,9 +89,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T
+         case Opcode.pop:
+             depth--;
+             break;
+-        case Opcode.data:
+-            stack[depth - 1].type = Dynamic.Type.dat;
+-            break;
+         case Opcode.sub:
+             Function built = new Function(func.funcs[cur.value]);
+             built.captured = null;
+@@ -427,11 +323,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T
+             }
+             depth -= 1;
+             break;
+-        case Opcode.tstore:
+-            depth -= 2;
+-            locals.store(stack[depth + 1], stack[depth]);
+-            depth++;
+-            break;
+         case Opcode.opstore:
+         switchOpp:
+             switch (func.instrs[++index].value)
+@@ -472,22 +363,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T
+             }
+             depth -= 2;
+             break;
+-        case Opcode.optstore:
+-            depth -= 2;
+-        switchOpt:
+-            switch (cur.value)
+-            {
+-            default:
+-                assert(0);
+-                static foreach (opm; mutMap)
+-                {
+-            case opm[1].to!AssignOp:
+-                    locals.store!(opm[0])(stack[depth + 1], stack[depth]);
+-                    break switchOpt;
+-                }
+-            }
+-            depth++;
+-            break;
+         case Opcode.retval:
+             Dynamic v = stack[--depth];
+             return v;
+diff --git a/source/lang/walk.d b/source/lang/walk.d
+index 927bd32..d507020 100644
+--- a/source/lang/walk.d
++++ b/source/lang/walk.d
+@@ -160,7 +160,6 @@ class Walker
+         if (args.length == 0)
+         {
+             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+-
+             func.constants ~= Dynamic.nil;
+         }
+         foreach (i, v; args)
+@@ -281,111 +280,166 @@ class Walker
+         pushInstr(func, Instr(mixin("Opcode.op" ~ op)));
+     }
+ 
+-    void walkSet(Node[] c)
++    void walkSetLeft(Node left)
+     {
+-        foreach (p; 0 .. c.length / 2)
+-        {
+-            walk(c[p * 2 + 1]);
+-        }
+-        foreach_reverse (p; 0 .. c.length / 2)
++        if (Call call = cast(Call) left)
+         {
+-            Node target = c[p * 2];
+-            if (cast(Call) target)
++            Ident id = cast(Ident) call.args[0];
++            switch (id.repr)
+             {
+-                Call call = cast(Call) target;
+-                Ident ident = cast(Ident) call.args[0];
+-                string name = ident.repr;
+-                switch (name)
++            case "@index":
++                walk(call.args[1]);
++                walk(call.args[2]);
++                break;
++            case "@array":
++                foreach_reverse (arg; call.args[1 .. $])
+                 {
+-                case "@index":
+-                    walk(call.args[1]);
+-                    walk(call.args[2]);
+-                    pushInstr(func, Instr(Opcode.istore));
+-
+-                    break;
+-                case "@table":
+-                case "@array":
+-                    walk(new Call(new Ident("@target"), [call]));
+-                    pushInstr(func, Instr(Opcode.tstore));
+-
+-                    break;
+-                default:
+-                    assert(0);
++                    walkSetLeft(arg);
+                 }
++                break;
++            default:
++                assert(0);
+             }
+-            else if (Ident ident = cast(Ident) target)
++        }
++        else if (Ident ident = cast(Ident) left)
++        {
++        }
++        else
++        {
++            throw new Exception("internal error");
++        }
++    }
++
++    void walkSetMatch(Node left, Node right)
++    {
++        if (cast(Call) left)
++        {
++            Call call = cast(Call) right;
++            if (call is null)
++            {
++                throw new Exception("assign target misplaced");
++            }
++            Ident id = cast(Ident) call.args[0];
++            switch (id.repr)
+             {
+-                uint* us = ident.repr in func.stab.byName;
+-                if (us is null)
++            case "@index":
++                walk(right);
++                break;
++            case "@array":
++                foreach (arg; call.args[1 .. $])
+                 {
+-                    uint place = func.stab.define(ident.repr);
+-                    pushInstr(func, Instr(Opcode.store, place));
++                    walk(arg);
+                 }
+-                else
++                break;
++            default:
++
++            }
++        }
++        else if (Ident ident = cast(Ident) left)
++        {
++            walk(right);
++        }
++        else
++        {
++            throw new Exception("internal error");
++        }
++    }
++
++    void walkSetFinal(Node left,)
++    {
++        if (Call call = cast(Call) left)
++        {
++            Ident id = cast(Ident) call.args[0];
++            switch (id.repr)
++            {
++            case "@index":
++                pushInstr(func, Instr(Opcode.istore));
++            doPop;
++            doPop;
++                break;
++            case "@array":
++                foreach_reverse (arg; call.args[1 .. $])
+                 {
+-                    pushInstr(func, Instr(Opcode.store, *us));
++                    walkSetFinal(arg);
+                 }
++                break;
++            default:
++                assert(0);
+             }
+-            else
++        }
++        else if (Ident ident = cast(Ident) left)
++        {
++            uint* us = ident.repr in func.stab.byName;
++            if (us is null)
+             {
+-                assert(0);
++                us = new uint(func.stab.define(ident.repr));
+             }
++            pushInstr(func, Instr(Opcode.store, *us));
++            doPop;
++        }
++        else
++        {
++            throw new Exception("internal error");
+         }
+     }
+ 
+-    void walkOpSet(Node[] c)
++    void walkOpSetFinal(Ident opid, Node left)
+     {
+-        Ident id = cast(Ident) c[0];
+-        c = c[1 .. $];
+-        foreach (p; 0 .. c.length / 2)
++        if (Call call = cast(Call) left)
+         {
+-            walk(c[p * 2 + 1]);
+-        }
+-        foreach_reverse (p; 0 .. c.length / 2)
+-        {
+-            Node target = c[p * 2];
+-            if (cast(Call) target)
++            Ident id = cast(Ident) call.args[0];
++            switch (id.repr)
+             {
+-                Call call = cast(Call) target;
+-                Ident ident = cast(Ident) call.args[0];
+-                string name = ident.repr;
+-                switch (name)
++            case "@index":
++                pushInstr(func, Instr(Opcode.istore));
++                doPop;
++                doPop;
++                break;
++            case "@array":
++                foreach_reverse (arg; call.args[1 .. $])
+                 {
+-                case "@index":
+-                    walk(call.args[1]);
+-                    walk(call.args[2]);
+-                    pushInstr(func, Instr(Opcode.opistore, id.repr.to!AssignOp));
+-
+-                    break;
+-                case "@table":
+-                case "@array":
+-                    walk(new Call(new Ident("@target"), [call]));
+-                    pushInstr(func, Instr(Opcode.optstore, id.repr.to!AssignOp));
+-
+-                    break;
+-                default:
+-                    assert(0);
++                    walkOpSetFinal(opid, arg);
+                 }
++                break;
++            default:
++                assert(0);
+             }
+-            else
++        }
++        else if (Ident ident = cast(Ident) left)
++        {
++            uint* us = ident.repr in func.stab.byName;
++            if (us is null)
+             {
+-                Ident ident = cast(Ident) target;
+-                uint* us = ident.repr in func.stab.byName;
+-                if (us is null)
+-                {
+-                    uint place = func.stab.define(ident.repr);
+-                    pushInstr(func, Instr(Opcode.opstore, place));
+-                }
+-                else
+-                {
+-                    pushInstr(func, Instr(Opcode.opstore, *us));
+-                }
+-                pushInstr(func, Instr(Opcode.push, id.repr.to!AssignOp));
+-                func.constants ~= dynamic(Dynamic.Type.nil);
++                us = new uint(func.stab.define(ident.repr));
+             }
++            pushInstr(func, Instr(Opcode.opstore, *us));
++            pushInstr(func, Instr(Opcode.push, opid.repr.to!AssignOp));
++            doPop;
++        }
++        else
++        {
++            throw new Exception("internal error");
+         }
+     }
+ 
++    void walkSet(Node[] args)
++    {
++        walkSetLeft(args[0]);
++        walkSetMatch(args[0], args[1]);
++        walkSetFinal(args[0]);
++        pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
++        func.constants ~= Dynamic.nil;
++    }
++
++    void walkOpSet(Node[] args)
++    {
++        walkSetLeft(args[1]);
++        walkSetMatch(args[1], args[2]);
++        walkOpSetFinal(cast(Ident) args[0], args[1]);
++        pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
++        func.constants ~= Dynamic.nil;
++    }
++
+     void walkReturn(Node[] args)
+     {
+         if (args.length == 0)
+@@ -411,14 +465,7 @@ class Walker
+         {
+             walk(i);
+         }
+-        if (isTarget)
+-        {
+-            pushInstr(func, Instr(Opcode.targeta), used);
+-        }
+-        else
+-        {
+-            pushInstr(func, Instr(Opcode.array), used);
+-        }
++        pushInstr(func, Instr(Opcode.array), used);
+         stackSize[0] = tmp + 1;
+ 
+     }
+@@ -451,24 +498,9 @@ class Walker
+ 
+     void walkIndex(Node[] args)
+     {
+-        if (isTarget)
+-        {
+-            isTarget = false;
+-            pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+-            uint used = stackSize[0];
+-            func.constants ~= dynamic(Dynamic.Type.end);
+-            walk(args[0]);
+-            walk(args[1]);
+-            isTarget = true;
+-            pushInstr(func, Instr(Opcode.targeta), stackSize[0] - used);
+-            pushInstr(func, Instr(Opcode.data));
+-        }
+-        else
+-        {
+-            walk(args[0]);
+-            walk(args[1]);
+-            pushInstr(func, Instr(Opcode.index));
+-        }
++        walk(args[0]);
++        walk(args[1]);
++        pushInstr(func, Instr(Opcode.index));
+     }
+ 
+     void walkUnpack(Node[] args)
+@@ -497,11 +529,13 @@ class Walker
+         }
+     }
+ 
+-    void walkPipeOp(Node[] args) {
++    void walkPipeOp(Node[] args)
++    {
+         walk(new Call(args[1], [args[0]]));
+     }
+ 
+-    void walkRevPipeOp(Node[] args) {
++    void walkRevPipeOp(Node[] args)
++    {
+         walk(new Call(args[0], [args[1]]));
+     }
+ 
+@@ -519,7 +553,7 @@ class Walker
+             walkArrowFun(c.args[1 .. $]);
+             break;
+         case "<|":
+-            walkRevPipeOp(c.args[1..$]);
++            walkRevPipeOp(c.args[1 .. $]);
+             break;
+         case "|>":
+             walkPipeOp(c.args[1 .. $]);
+@@ -660,24 +694,21 @@ class Walker
+         if (i.repr == "@nil" || i.repr == "nil")
+         {
+             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+-
+             func.constants ~= Dynamic.nil;
+         }
+         else if (i.repr == "true")
+         {
+             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+-
+             func.constants ~= dynamic(true);
+         }
+         else if (i.repr == "false")
+         {
+             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+-
+             func.constants ~= dynamic(false);
+         }
+         else if (i.repr.length != 0 && i.repr[0] == '$' && i.repr[1 .. $].isNumeric)
+         {
+-            pushInstr(func, Instr(Opcode.argno, i.repr[1..$].to!uint));
++            pushInstr(func, Instr(Opcode.argno, i.repr[1 .. $].to!uint));
+         }
+         else if (i.repr.isNumeric)
+         {
+@@ -686,35 +717,16 @@ class Walker
+         }
+         else
+         {
+-            if (isTarget)
++            uint* us = i.repr in func.stab.byName;
++            if (us !is null)
+             {
+-                uint* us = i.repr in func.stab.byName;
+-                uint v = void;
+-                if (us !is null)
+-                {
+-                    v = *us;
+-                }
+-                else
+-                {
+-                    v = func.stab.define(i.repr);
+-                }
+-                pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+-                func.constants ~= dynamic(v);
++                pushInstr(func, Instr(Opcode.load, *us));
+             }
+             else
+             {
+-                uint* us = i.repr in func.stab.byName;
+-                if (us !is null)
+-                {
+-                    pushInstr(func, Instr(Opcode.load, *us));
+-                }
+-                else
+-                {
+-                    uint v = func.doCapture(i.repr);
+-                    pushInstr(func, Instr(Opcode.loadc, v));
+-                }
++                uint v = func.doCapture(i.repr);
++                pushInstr(func, Instr(Opcode.loadc, v));
+             }
+-
+         }
+     }
+ }
