@@ -47,7 +47,6 @@ struct Dynamic
         pro,
         end,
         pac,
-        dat,
     }
 
     union Value
@@ -331,7 +330,7 @@ struct Dynamic
     pragma(inline, true) Array arr()
     {
         version (safe)
-            if (type != Type.arr && type != Type.dat)
+            if (type != Type.arr)
             {
                 throw new Exception("expected array type");
             }
@@ -361,7 +360,7 @@ struct Dynamic
     pragma(inline, true) Array* arrPtr()
     {
         version (safe)
-            if (type != Type.arr && type != Type.dat)
+            if (type != Type.arr)
             {
                 throw new Exception("expected array type");
             }

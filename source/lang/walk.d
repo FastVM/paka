@@ -160,7 +160,6 @@ class Walker
         if (args.length == 0)
         {
             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-
             func.constants ~= Dynamic.nil;
         }
         foreach (i, v; args)
@@ -281,109 +280,164 @@ class Walker
         pushInstr(func, Instr(mixin("Opcode.op" ~ op)));
     }
 
-    void walkSet(Node[] c)
+    void walkSetLeft(Node left)
     {
-        foreach (p; 0 .. c.length / 2)
+        if (Call call = cast(Call) left)
         {
-            walk(c[p * 2 + 1]);
-        }
-        foreach_reverse (p; 0 .. c.length / 2)
-        {
-            Node target = c[p * 2];
-            if (cast(Call) target)
+            Ident id = cast(Ident) call.args[0];
+            switch (id.repr)
             {
-                Call call = cast(Call) target;
-                Ident ident = cast(Ident) call.args[0];
-                string name = ident.repr;
-                switch (name)
+            case "@index":
+                walk(call.args[1]);
+                walk(call.args[2]);
+                break;
+            case "@array":
+                foreach_reverse (arg; call.args[1 .. $])
                 {
-                case "@index":
-                    walk(call.args[1]);
-                    walk(call.args[2]);
-                    pushInstr(func, Instr(Opcode.istore));
-
-                    break;
-                case "@table":
-                case "@array":
-                    walk(new Call(new Ident("@target"), [call]));
-                    pushInstr(func, Instr(Opcode.tstore));
-
-                    break;
-                default:
-                    assert(0);
+                    walkSetLeft(arg);
                 }
-            }
-            else if (Ident ident = cast(Ident) target)
-            {
-                uint* us = ident.repr in func.stab.byName;
-                if (us is null)
-                {
-                    uint place = func.stab.define(ident.repr);
-                    pushInstr(func, Instr(Opcode.store, place));
-                }
-                else
-                {
-                    pushInstr(func, Instr(Opcode.store, *us));
-                }
-            }
-            else
-            {
+                break;
+            default:
                 assert(0);
             }
         }
+        else if (Ident ident = cast(Ident) left)
+        {
+        }
+        else
+        {
+            throw new Exception("internal error");
+        }
     }
 
-    void walkOpSet(Node[] c)
+    void walkSetMatch(Node left, Node right)
     {
-        Ident id = cast(Ident) c[0];
-        c = c[1 .. $];
-        foreach (p; 0 .. c.length / 2)
+        if (cast(Call) left)
         {
-            walk(c[p * 2 + 1]);
-        }
-        foreach_reverse (p; 0 .. c.length / 2)
-        {
-            Node target = c[p * 2];
-            if (cast(Call) target)
+            Call call = cast(Call) right;
+            if (call is null)
             {
-                Call call = cast(Call) target;
-                Ident ident = cast(Ident) call.args[0];
-                string name = ident.repr;
-                switch (name)
-                {
-                case "@index":
-                    walk(call.args[1]);
-                    walk(call.args[2]);
-                    pushInstr(func, Instr(Opcode.opistore, id.repr.to!AssignOp));
-
-                    break;
-                case "@table":
-                case "@array":
-                    walk(new Call(new Ident("@target"), [call]));
-                    pushInstr(func, Instr(Opcode.optstore, id.repr.to!AssignOp));
-
-                    break;
-                default:
-                    assert(0);
-                }
+                throw new Exception("assign target misplaced");
             }
-            else
+            Ident id = cast(Ident) call.args[0];
+            switch (id.repr)
             {
-                Ident ident = cast(Ident) target;
-                uint* us = ident.repr in func.stab.byName;
-                if (us is null)
+            case "@index":
+                walk(right);
+                break;
+            case "@array":
+                foreach (arg; call.args[1 .. $])
                 {
-                    uint place = func.stab.define(ident.repr);
-                    pushInstr(func, Instr(Opcode.opstore, place));
+                    walk(arg);
                 }
-                else
-                {
-                    pushInstr(func, Instr(Opcode.opstore, *us));
-                }
-                pushInstr(func, Instr(Opcode.push, id.repr.to!AssignOp));
-                func.constants ~= dynamic(Dynamic.Type.nil);
+                break;
+            default:
+
             }
         }
+        else if (Ident ident = cast(Ident) left)
+        {
+            walk(right);
+        }
+        else
+        {
+            throw new Exception("internal error");
+        }
+    }
+
+    void walkSetFinal(Node left,)
+    {
+        if (Call call = cast(Call) left)
+        {
+            Ident id = cast(Ident) call.args[0];
+            switch (id.repr)
+            {
+            case "@index":
+                pushInstr(func, Instr(Opcode.istore));
+            doPop;
+            doPop;
+                break;
+            case "@array":
+                foreach_reverse (arg; call.args[1 .. $])
+                {
+                    walkSetFinal(arg);
+                }
+                break;
+            default:
+                assert(0);
+            }
+        }
+        else if (Ident ident = cast(Ident) left)
+        {
+            uint* us = ident.repr in func.stab.byName;
+            if (us is null)
+            {
+                us = new uint(func.stab.define(ident.repr));
+            }
+            pushInstr(func, Instr(Opcode.store, *us));
+            doPop;
+        }
+        else
+        {
+            throw new Exception("internal error");
+        }
+    }
+
+    void walkOpSetFinal(Ident opid, Node left)
+    {
+        if (Call call = cast(Call) left)
+        {
+            Ident id = cast(Ident) call.args[0];
+            switch (id.repr)
+            {
+            case "@index":
+                pushInstr(func, Instr(Opcode.istore));
+                doPop;
+                doPop;
+                break;
+            case "@array":
+                foreach_reverse (arg; call.args[1 .. $])
+                {
+                    walkOpSetFinal(opid, arg);
+                }
+                break;
+            default:
+                assert(0);
+            }
+        }
+        else if (Ident ident = cast(Ident) left)
+        {
+            uint* us = ident.repr in func.stab.byName;
+            if (us is null)
+            {
+                us = new uint(func.stab.define(ident.repr));
+            }
+            pushInstr(func, Instr(Opcode.opstore, *us));
+            pushInstr(func, Instr(Opcode.push, opid.repr.to!AssignOp));
+            doPop;
+        }
+        else
+        {
+            throw new Exception("internal error");
+        }
+    }
+
+    void walkSet(Node[] args)
+    {
+        walkSetLeft(args[0]);
+        walkSetMatch(args[0], args[1]);
+        walkSetFinal(args[0]);
+        pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+        func.constants ~= Dynamic.nil;
+    }
+
+    void walkOpSet(Node[] args)
+    {
+        walkSetLeft(args[1]);
+        walkSetMatch(args[1], args[2]);
+        walkOpSetFinal(cast(Ident) args[0], args[1]);
+        pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+        func.constants ~= Dynamic.nil;
     }
 
     void walkReturn(Node[] args)
@@ -411,14 +465,7 @@ class Walker
         {
             walk(i);
         }
-        if (isTarget)
-        {
-            pushInstr(func, Instr(Opcode.targeta), used);
-        }
-        else
-        {
-            pushInstr(func, Instr(Opcode.array), used);
-        }
+        pushInstr(func, Instr(Opcode.array), used);
         stackSize[0] = tmp + 1;
 
     }
@@ -451,24 +498,9 @@ class Walker
 
     void walkIndex(Node[] args)
     {
-        if (isTarget)
-        {
-            isTarget = false;
-            pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-            uint used = stackSize[0];
-            func.constants ~= dynamic(Dynamic.Type.end);
-            walk(args[0]);
-            walk(args[1]);
-            isTarget = true;
-            pushInstr(func, Instr(Opcode.targeta), stackSize[0] - used);
-            pushInstr(func, Instr(Opcode.data));
-        }
-        else
-        {
-            walk(args[0]);
-            walk(args[1]);
-            pushInstr(func, Instr(Opcode.index));
-        }
+        walk(args[0]);
+        walk(args[1]);
+        pushInstr(func, Instr(Opcode.index));
     }
 
     void walkUnpack(Node[] args)
@@ -497,11 +529,13 @@ class Walker
         }
     }
 
-    void walkPipeOp(Node[] args) {
+    void walkPipeOp(Node[] args)
+    {
         walk(new Call(args[1], [args[0]]));
     }
 
-    void walkRevPipeOp(Node[] args) {
+    void walkRevPipeOp(Node[] args)
+    {
         walk(new Call(args[0], [args[1]]));
     }
 
@@ -519,7 +553,7 @@ class Walker
             walkArrowFun(c.args[1 .. $]);
             break;
         case "<|":
-            walkRevPipeOp(c.args[1..$]);
+            walkRevPipeOp(c.args[1 .. $]);
             break;
         case "|>":
             walkPipeOp(c.args[1 .. $]);
@@ -660,24 +694,21 @@ class Walker
         if (i.repr == "@nil" || i.repr == "nil")
         {
             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-
             func.constants ~= Dynamic.nil;
         }
         else if (i.repr == "true")
         {
             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-
             func.constants ~= dynamic(true);
         }
         else if (i.repr == "false")
         {
             pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-
             func.constants ~= dynamic(false);
         }
         else if (i.repr.length != 0 && i.repr[0] == '$' && i.repr[1 .. $].isNumeric)
         {
-            pushInstr(func, Instr(Opcode.argno, i.repr[1..$].to!uint));
+            pushInstr(func, Instr(Opcode.argno, i.repr[1 .. $].to!uint));
         }
         else if (i.repr.isNumeric)
         {
@@ -686,35 +717,16 @@ class Walker
         }
         else
         {
-            if (isTarget)
+            uint* us = i.repr in func.stab.byName;
+            if (us !is null)
             {
-                uint* us = i.repr in func.stab.byName;
-                uint v = void;
-                if (us !is null)
-                {
-                    v = *us;
-                }
-                else
-                {
-                    v = func.stab.define(i.repr);
-                }
-                pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-                func.constants ~= dynamic(v);
+                pushInstr(func, Instr(Opcode.load, *us));
             }
             else
             {
-                uint* us = i.repr in func.stab.byName;
-                if (us !is null)
-                {
-                    pushInstr(func, Instr(Opcode.load, *us));
-                }
-                else
-                {
-                    uint v = func.doCapture(i.repr);
-                    pushInstr(func, Instr(Opcode.loadc, v));
-                }
+                uint v = func.doCapture(i.repr);
+                pushInstr(func, Instr(Opcode.loadc, v));
             }
-
         }
     }
 }
