@@ -223,9 +223,9 @@ struct Dynamic
             }
             if (a == b)
             {
-                return 1;
+                return 0;
             }
-            return 0;
+            return 1;
         case Type.big:
             if (other.type == Type.sml)
             {
