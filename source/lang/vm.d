@@ -9,6 +9,7 @@ import std.traits;
 import core.memory;
 import core.stdc.stdlib;
 import lang.srcloc;
+import lang.error;
 import lang.dynamic;
 import lang.bytecode;
 import lang.number;
@@ -37,7 +38,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
     }
     size_t index = 0;
     size_t depth = 0;
-    size_t argi = 0;
     Dynamic[] stack = void;
     Dynamic[] locals = void;
     scope (failure)
@@ -59,9 +59,9 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
         stack = ptr[0 .. func.stackSize];
         locals = ptr[func.stackSize .. func.stackSize + func.stab.byPlace.length + 1];
     }
-    foreach (v; args)
+    foreach (i, v; args)
     {
-        locals[argi++] = v;
+        locals[i] = v;
     }
     scope (exit)
     {
@@ -80,7 +80,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
         switch (cur.op)
         {
         default:
-            assert(0);
+            throw new RuntimeException("opcode not found: " ~ cur.op.to!string);
         case Opcode.nop:
             break;
         case Opcode.push:
@@ -127,7 +127,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 stack[depth - 1] = (*f.fun.del)(stack[depth .. depth + cur.value]);
                 break;
             case Dynamic.Type.pro:
-                if (f.fun.pro.self.length == 0)
+                if (f.fun.pro.self.length != 0)
                 {
                     stack[depth - 1] = run(f.fun.pro,
                             f.fun.pro.self ~ stack[depth .. depth + cur.value]);
@@ -138,7 +138,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 }
                 break;
             default:
-                throw new Exception("error: not a function: " ~ f.to!string);
+                throw new TypeException("error: not a function: " ~ f.to!string);
             }
             break;
         case Opcode.upcall:
@@ -172,10 +172,10 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 stack[depth - 1] = (*f.fun.del)(cargs);
                 break;
             case Dynamic.Type.pro:
-                stack[depth - 1] = run(f.fun.pro, cargs);
+                stack[depth - 1] = run(f.fun.pro, f.fun.pro.self ~ cargs);
                 break;
             default:
-                throw new Exception("error: not a function: " ~ f.to!string);
+                throw new TypeException("error: not a function: " ~ f.to!string);
             }
             stack[depth - 1] = result;
             break;
@@ -274,7 +274,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 stack[depth - 1] = (arr.tab)[stack[depth]];
                 break;
             default:
-                throw new Exception("error: cannot store at index");
+                throw new TypeException("error: cannot store at index");
             }
             break;
         case Opcode.opneg:
@@ -319,7 +319,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 (*stack[depth - 2].tabPtr)[stack[depth - 1]] = stack[depth - 3];
                 break;
             default:
-                throw new Exception("error: cannot store at index");
+                throw new TypeException("error: cannot store at index");
             }
             depth -= 1;
             break;
@@ -357,7 +357,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                         mixin("(*arr.tabPtr)[stack[depth-1]]" ~ opm[0] ~ " stack[depth-3];");
                         break switchOpi;
                     default:
-                        throw new Exception("error: cannot store at index");
+                        throw new TypeException("error: cannot store at index");
                     }
                 }
             }

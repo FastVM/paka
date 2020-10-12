@@ -3,6 +3,7 @@ module lang.lib.sys;
 import lang.dynamic;
 import lang.base;
 import lang.lib.sysenv;
+import lang.error;
 import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;
@@ -39,7 +40,7 @@ Dynamic syslibubothmap(Args args)
     Array ret;
     if (args[1].arr.length != args[2].arr.length)
     {
-        throw new Exception("bad lengths in dotmap");
+        throw new BoundsException("bad lengths in dotmap");
     }
     foreach (i; 0 .. args[1].arr.length)
     {
