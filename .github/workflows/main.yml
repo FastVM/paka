@@ -1,0 +1,22 @@
+name: build
+on: [push, pull_request]
+
+jobs:
+    build:
+        name: Build
+        runs-on: [ubuntu-latest]
+        
+        steps:
+        - uses: actions/checkout@v2
+        
+        - name: Install D compiler
+          uses: dlang-community/setup-dlang@v1
+          with:
+                  compiler: ldc-latest
+        - name: Build
+          run: |
+            ./ldc.sh
+            
+        - name: Test
+          run: |
+            time ./dext bench/fib.dext
