@@ -10,6 +10,7 @@ import lang.bytecode;
 import lang.base;
 import lang.dynamic;
 import lang.vm;
+import lang.error;
 
 enum string bashLine = "#!";
 enum string langLine = "#?";
@@ -61,7 +62,7 @@ Node parse(string code, string lang = "dext")
                 if (func.stab.byPlace[i] == "lang")
                 {
                     if (v.type != Dynamic.Type.str) {
-                        throw new Exception("language must be a str");
+                        throw new TypeException("language must be a str");
                     }
                     lang = v.str;
                 }
@@ -76,10 +77,10 @@ Node parse(string code, string lang = "dext")
     }
     else if (lang == "")
     {
-        throw new Exception("language not specified");
+        throw new CompileException("language not specified");
     }
     else
     {
-        throw new Exception("language not found: " ~ lang);
+        throw new CompileException("language not found: " ~ lang);
     }
 }

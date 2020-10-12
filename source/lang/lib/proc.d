@@ -2,6 +2,7 @@ module lang.lib.proc;
 
 import lang.dynamic;
 import lang.base;
+import lang.error;
 import std.typecons;
 import std.process;
 import std.algorithm;
@@ -30,7 +31,7 @@ Dynamic libshell(Dynamic[] args)
     Tuple!(int, "status", string, "output") output = executeShell(args[0].str);
     if (output.status != 0)
     {
-        throw new Exception("shell error: " ~ output.output.to!string);
+        throw new RuntimeException("shell error: " ~ output.output.to!string);
     }
     return dynamic(output.output);
 }
