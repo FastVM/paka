@@ -60,7 +60,7 @@ struct MpfrBigNumber
 
     pragma(inline, true) this(SmallNumber other)
     {
-        mpfr_init2(mpfr, 256);
+        mpfr_init2(mpfr, 80);
         mpfr_set_d(mpfr, other, mpfr_rnd_t.MPFR_RNDN);
     }
 
