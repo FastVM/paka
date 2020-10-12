@@ -12,6 +12,7 @@ import std.stdio;
 import core.memory;
 import lang.bytecode;
 import lang.vm;
+import lang.error;
 import lang.number;
 import lang.data.rope;
 import lang.data.mpfr;
@@ -195,7 +196,7 @@ struct Dynamic
                 return run(fun.pro, fun.pro.self ~ args);
             }
         default:
-            throw new Exception("error: not a function: " ~ this.to!string);
+            throw new TypeException("error: not a function: " ~ this.to!string);
         }
     }
 
@@ -285,7 +286,7 @@ struct Dynamic
                 return dynamic(arr ~ other.arr);
             }
         }
-        throw new Exception("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
+        throw new TypeException("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
     }
 
     pragma(inline, true) Dynamic opOpAssign(string op)(Dynamic other)
@@ -313,7 +314,7 @@ struct Dynamic
         version (safe)
             if (type != Type.log)
             {
-                throw new Exception("expected logical type");
+                throw new TypeException("expected logical type");
             }
         return value.log;
     }
@@ -323,7 +324,7 @@ struct Dynamic
         version (safe)
             if (type != Type.str)
             {
-                throw new Exception("expected string type");
+                throw new TypeException("expected string type");
             }
         return *value.str;
     }
@@ -333,7 +334,7 @@ struct Dynamic
         version (safe)
             if (type != Type.arr && type != Type.dat)
             {
-                throw new Exception("expected array type");
+                throw new TypeException("expected array type");
             }
         return *value.arr;
     }
@@ -343,7 +344,7 @@ struct Dynamic
         version (safe)
             if (type != Type.tab)
             {
-                throw new Exception("expected table type");
+                throw new TypeException("expected table type");
             }
         return *value.tab;
     }
@@ -353,7 +354,7 @@ struct Dynamic
         version (safe)
             if (type != Type.str)
             {
-                throw new Exception("expected string type");
+                throw new TypeException("expected string type");
             }
         return value.str;
     }
@@ -363,7 +364,7 @@ struct Dynamic
         version (safe)
             if (type != Type.arr && type != Type.dat)
             {
-                throw new Exception("expected array type");
+                throw new TypeException("expected array type");
             }
         return value.arr;
     }
@@ -373,7 +374,7 @@ struct Dynamic
         version (safe)
             if (type != Type.tab)
             {
-                throw new Exception("expected table type");
+                throw new TypeException("expected table type");
             }
         return value.tab;
     }
@@ -383,7 +384,7 @@ struct Dynamic
         version (safe)
             if (type != Type.fun && type != Type.pro && type != Type.del)
             {
-                throw new Exception("expected callable type");
+                throw new TypeException("expected callable type");
             }
         return value.fun;
     }

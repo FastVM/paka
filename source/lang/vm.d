@@ -9,6 +9,7 @@ import std.traits;
 import core.memory;
 import core.stdc.stdlib;
 import lang.srcloc;
+import lang.error;
 import lang.dynamic;
 import lang.bytecode;
 import lang.number;
@@ -24,107 +25,6 @@ enum string[2][] cmpMap()
 enum string[2][] mutMap()
 {
     return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"], ["%=", "mod"]];
-}
-
-void store(string op = "=")(Dynamic[] locals, Dynamic to, Dynamic from)
-{
-    if (to.type == Dynamic.Type.sml || to.type == Dynamic.Type.big)
-    {
-        static if (op == "=")
-        {
-            locals[to.as!size_t] = from;
-        }
-        else
-        {
-            mixin("locals[to.as!size_t]" ~ op ~ "from;");
-        }
-    }
-    else if (to.type == Dynamic.Type.dat)
-    {
-        Dynamic arr = to.arr[0];
-        static if (op == "=")
-        {
-            switch (arr.type)
-            {
-            case Dynamic.Type.arr:
-                arr.arr[to.arr[1].as!size_t] = from;
-                break;
-            case Dynamic.Type.tab:
-                arr.tab[to.arr[1]] = from;
-                break;
-            default:
-                throw new Exception("error: cannot store at index");
-            }
-        }
-        else
-        {
-            switch (arr.type)
-            {
-            case Dynamic.Type.arr:
-                mixin("arr.arr[to.arr[1].as!size_t]" ~ op ~ "from;");
-                break;
-            case Dynamic.Type.tab:
-                mixin("arr.tab[to.arr[1]]" ~ op ~ "from;");
-                break;
-            default:
-                throw new Exception("error: cannot store at index");
-            }
-        }
-    }
-    else if (to.type == Dynamic.type.str)
-    {
-        static if (op == "=")
-        {
-            locals[$ - 1].tab[to] = from;
-        }
-        else
-        {
-            Table tab = locals[$ - 1].tab;
-            mixin("tab[to]" ~ op ~ "from;");
-        }
-    }
-    else
-    {
-        assert(to.type == from.type);
-        if (to.type == Dynamic.Type.arr)
-        {
-            Dynamic[] arr = from.arr;
-            size_t index = 0;
-            outwhile: while (index < to.arr.length)
-            {
-                Dynamic nto = (to.arr)[index];
-                if (nto.type == Dynamic.Type.pac)
-                {
-                    index++;
-                    size_t alen = from.arr.length - to.arr.length;
-                    locals.store!op((to.arr)[index], dynamic(arr[index - 1 .. index + alen + 1]));
-                    index++;
-                    while (index < to.arr.length)
-                    {
-                        locals.store!op((to.arr)[index], arr[index + alen]);
-                        index++;
-                    }
-                    break outwhile;
-                }
-                else
-                {
-                    locals.store!op(nto, arr[index]);
-                }
-                index++;
-            }
-        }
-        else if (to.type == Dynamic.Type.tab)
-        {
-            foreach (v; to.tab.byKeyValue)
-            {
-                locals.store!op(v.value, (from.tab)[v.key]);
-            }
-        }
-        else
-        {
-            assert(0);
-        }
-    }
 }
 
 alias allocateStackAllowed = alloca;
@@ -160,9 +60,9 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
         stack = ptr[0 .. func.stackSize];
         locals = ptr[func.stackSize .. func.stackSize + func.stab.byPlace.length + 1];
     }
-    foreach (v; args)
+    foreach (i, v; args)
     {
-        locals[argi++] = v;
+        locals[i] = v;
     }
     scope (exit)
     {
@@ -189,9 +89,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
             break;
         case Opcode.pop:
             depth--;
-            break;
-        case Opcode.data:
-            stack[depth - 1].type = Dynamic.Type.dat;
             break;
         case Opcode.sub:
             Function built = new Function(func.funcs[cur.value]);
@@ -242,7 +139,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 }
                 break;
             default:
-                throw new Exception("error: not a function: " ~ f.to!string);
+                throw new TypeException("error: not a function: " ~ f.to!string);
             }
             break;
         case Opcode.upcall:
@@ -279,7 +176,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 stack[depth - 1] = run(f.fun.pro, cargs);
                 break;
             default:
-                throw new Exception("error: not a function: " ~ f.to!string);
+                throw new TypeException("error: not a function: " ~ f.to!string);
             }
             stack[depth - 1] = result;
             break;
@@ -378,7 +275,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 stack[depth - 1] = (arr.tab)[stack[depth]];
                 break;
             default:
-                throw new Exception("error: cannot store at index");
+                throw new TypeException("error: cannot store at index");
             }
             break;
         case Opcode.opneg:
@@ -423,14 +320,9 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 (*stack[depth - 2].tabPtr)[stack[depth - 1]] = stack[depth - 3];
                 break;
             default:
-                throw new Exception("error: cannot store at index");
+                throw new TypeException("error: cannot store at index");
             }
             depth -= 1;
-            break;
-        case Opcode.tstore:
-            depth -= 2;
-            locals.store(stack[depth + 1], stack[depth]);
-            depth++;
             break;
         case Opcode.opstore:
         switchOpp:
@@ -466,27 +358,11 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                         mixin("(*arr.tabPtr)[stack[depth-1]]" ~ opm[0] ~ " stack[depth-3];");
                         break switchOpi;
                     default:
-                        throw new Exception("error: cannot store at index");
+                        throw new TypeException("error: cannot store at index");
                     }
                 }
             }
             depth -= 2;
-            break;
-        case Opcode.optstore:
-            depth -= 2;
-        switchOpt:
-            switch (cur.value)
-            {
-            default:
-                assert(0);
-                static foreach (opm; mutMap)
-                {
-            case opm[1].to!AssignOp:
-                    locals.store!(opm[0])(stack[depth + 1], stack[depth]);
-                    break switchOpt;
-                }
-            }
-            depth++;
             break;
         case Opcode.retval:
             Dynamic v = stack[--depth];

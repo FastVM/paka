@@ -2,6 +2,7 @@ module lang.lib.arr;
 import lang.base;
 import lang.dynamic;
 import lang.number;
+import lang.error;
 import std.array;
 import std.algorithm;
 import std.stdio;
@@ -54,7 +55,7 @@ Dynamic librange(Args args)
         }
         return dynamic(ret);
     }
-    throw new Exception("bad number of arguments to range");
+    throw new TypeException("bad number of arguments to range");
 }
 
 Dynamic libmap(Args args)
