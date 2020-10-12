@@ -16,7 +16,7 @@ enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@target",
         "@return", "@if", "@fun", "@do", "@using", "F+", "-", "+", "*", "/",
         "@dotmap-both", "@dotmap-lhs", "@dotmap-rhs", "@dotmap-pre", "%",
-        "<", ">", "<=", ">=", "==", "!=", "...", "@index", "=>"
+        "<", ">", "<=", ">=", "==", "!=", "...", "@index", "=>", "|>", "<|"
     ];
 
 bool isUnpacking(Node[] args)
@@ -468,7 +468,6 @@ class Walker
             walk(args[0]);
             walk(args[1]);
             pushInstr(func, Instr(Opcode.index));
-
         }
     }
 
@@ -498,6 +497,14 @@ class Walker
         }
     }
 
+    void walkPipeOp(Node[] args) {
+        walk(new Call(args[1], [args[0]]));
+    }
+
+    void walkRevPipeOp(Node[] args) {
+        walk(new Call(args[0], [args[1]]));
+    }
+
     void walkSpecialCall(Call c)
     {
         final switch ((cast(Ident) c.args[0]).repr)
@@ -510,6 +517,12 @@ class Walker
             break;
         case "=>":
             walkArrowFun(c.args[1 .. $]);
+            break;
+        case "<|":
+            walkRevPipeOp(c.args[1..$]);
+            break;
+        case "|>":
+            walkPipeOp(c.args[1 .. $]);
             break;
         case "@set":
             walkSet(c.args[1 .. $]);

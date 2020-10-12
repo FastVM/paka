@@ -426,7 +426,7 @@ size_t[2] countDots(ref TokenArray tokens)
     while (tokens.length != 0 && tokens[$ - 1].isOperator("."))
     {
         post += 1;
-        tokens.nextIs(Token.Type.operator, ".");
+        tokens.tokens = tokens.tokens[0..$-1];
     }
     return [pre, post];
 }
