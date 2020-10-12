@@ -38,7 +38,6 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
     }
     size_t index = 0;
     size_t depth = 0;
-    size_t argi = 0;
     Dynamic[] stack = void;
     Dynamic[] locals = void;
     scope (failure)
@@ -128,7 +127,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 stack[depth - 1] = (*f.fun.del)(stack[depth .. depth + cur.value]);
                 break;
             case Dynamic.Type.pro:
-                if (f.fun.pro.self.length == 0)
+                if (f.fun.pro.self.length != 0)
                 {
                     stack[depth - 1] = run(f.fun.pro,
                             f.fun.pro.self ~ stack[depth .. depth + cur.value]);
@@ -173,7 +172,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 stack[depth - 1] = (*f.fun.del)(cargs);
                 break;
             case Dynamic.Type.pro:
-                stack[depth - 1] = run(f.fun.pro, cargs);
+                stack[depth - 1] = run(f.fun.pro, f.fun.pro.self ~ cargs);
                 break;
             default:
                 throw new TypeException("error: not a function: " ~ f.to!string);
