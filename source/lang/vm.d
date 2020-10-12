@@ -80,7 +80,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
         switch (cur.op)
         {
         default:
-            assert(0);
+            throw new RuntimeException("opcode not found: " ~ cur.op.to!string);
         case Opcode.nop:
             break;
         case Opcode.push:
