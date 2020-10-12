@@ -25,3 +25,4 @@ jobs:
         - name: Test
           run: |
             time ./dext bench/fib.dext
+            ./dext lang/good/*.dext
