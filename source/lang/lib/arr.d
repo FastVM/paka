@@ -15,7 +15,7 @@ Pair[] libarr()
                 dynamic(&libextend)), Pair("pop", dynamic(&libpop)),
         Pair("slice", dynamic(&libslice)), Pair("map", dynamic(&libmap)),
         Pair("filter", dynamic(&libfilter)), Pair("zip", dynamic(&libzip)),
-        Pair("range", dynamic(&librange)),
+        Pair("range", dynamic(&librange)), Pair("each", dynamic(&libmap)),
     ];
     return ret;
 }
@@ -70,6 +70,19 @@ Dynamic libmap(Args args)
         res ~= cur;
     }
     return dynamic(res);
+}
+
+Dynamic libeach(Args args)
+{
+    foreach (i; args[0].arr)
+    {
+        Dynamic cur = i;
+        foreach (f; args[1 .. $])
+        {
+            cur = f([cur]);
+        }
+    }
+    return Dynamic.nil;
 }
 
 Dynamic libfilter(Args args)
