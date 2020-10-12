@@ -13,6 +13,11 @@ jobs:
           uses: dlang-community/setup-dlang@v1
           with:
                   compiler: ldc-latest
+                  
+        - name: Install-Dependencies
+          run: |
+            sudo apt install libmpfr-dev libgmp-dev
+
         - name: Build
           run: |
             ./ldc.sh
