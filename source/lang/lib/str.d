@@ -18,7 +18,9 @@ Pair[] libstr()
         Pair("subs", dynamic(&libsubs)), Pair("to_upper",
                 dynamic(&libtoupper)), Pair("to_lower", dynamic(&libtolower)),
         Pair("to_number", dynamic(&libtonumber)),
-        Pair("slice", dynamic(&libslice)), Pair("strip", dynamic(&libstrip)),
+        Pair("slice", dynamic(&libslice)), Pair("strip",
+                dynamic(&libstrip)), Pair("char", dynamic(&libchar)),
+        Pair("ascii", dynamic(&libascii)),
     ];
     return ret;
 }
@@ -27,6 +29,16 @@ private:
 Dynamic liblen(Args args)
 {
     return dynamic(args[0].str.length);
+}
+
+Dynamic libascii(Args args)
+{
+    return dynamic(cast(double) args[0].str[0]);
+}
+
+Dynamic libchar(Args args)
+{
+    return dynamic(cast(string) [cast(char) args[0].as!size_t]);
 }
 
 Dynamic libsplit(Args args)

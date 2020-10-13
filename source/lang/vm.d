@@ -274,7 +274,7 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 stack[depth - 1] = (arr.tab)[stack[depth]];
                 break;
             default:
-                throw new TypeException("error: cannot store at index");
+                throw new TypeException("error: cannot store at index on a " ~ arr.type.to!string);
             }
             break;
         case Opcode.opneg:
@@ -310,18 +310,18 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
             locals[cur.value] = stack[depth - 1];
             break;
         case Opcode.istore:
-            switch (stack[depth - 2].type)
+            switch (stack[depth - 3].type)
             {
             case Dynamic.Type.arr:
-                (*stack[depth - 2].arrPtr)[stack[depth - 1].as!size_t] = stack[depth - 3];
+                (*stack[depth - 3].arrPtr)[stack[depth - 2].as!size_t] = stack[depth - 1];
                 break;
             case Dynamic.Type.tab:
-                (*stack[depth - 2].tabPtr)[stack[depth - 1]] = stack[depth - 3];
+                (*stack[depth - 3].tabPtr)[stack[depth - 2]] = stack[depth - 1];
                 break;
             default:
-                throw new TypeException("error: cannot store at index");
+                throw new TypeException("error: cannot store at index on a " ~ stack[depth - 3].type.to!string);
             }
-            depth -= 1;
+            depth -= 2;
             break;
         case Opcode.opstore:
         switchOpp:
@@ -346,18 +346,18 @@ pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T 
                 static foreach (opm; mutMap)
                 {
             case opm[1].to!AssignOp:
-                    Dynamic arr = stack[depth - 2];
+                    Dynamic arr = stack[depth - 3];
                     switch (arr.type)
                     {
                     case Dynamic.Type.arr:
-                        mixin("(*arr.arrPtr)[stack[depth-1].as!size_t]" ~ opm[0]
-                                ~ " stack[depth-3];");
+                        mixin("(*arr.arrPtr)[stack[depth-2].as!size_t]" ~ opm[0]
+                                ~ " stack[depth-1];");
                         break switchOpi;
                     case Dynamic.Type.tab:
-                        mixin("(*arr.tabPtr)[stack[depth-1]]" ~ opm[0] ~ " stack[depth-3];");
+                        mixin("(*arr.tabPtr)[stack[depth-2]]" ~ opm[0] ~ " stack[depth-1];");
                         break switchOpi;
                     default:
-                        throw new TypeException("error: cannot store at index");
+                        throw new TypeException("error: cannot store at index on a " ~ arr.type.to!string);
                     }
                 }
             }

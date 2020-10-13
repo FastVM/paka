@@ -4,7 +4,7 @@ import std.conv;
 import std.stdio;
 import lang.ast;
 import lang.dext.parse;
-import lang.dext.repl;
+import lang.bf.parse;
 import lang.walk;
 import lang.bytecode;
 import lang.base;
@@ -20,6 +20,7 @@ Node delegate(string code)[string] parsers;
 static this()
 {
     parsers["dext"] = (c) => lang.dext.parse.parse(c);
+    parsers["bf"] = (c) => lang.bf.parse.parse(c);
 }
 
 string readLine(ref string code)

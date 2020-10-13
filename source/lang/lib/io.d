@@ -5,6 +5,7 @@ import lang.base;
 import lang.vm;
 import std.stdio;
 import std.conv;
+import core.stdc.stdio;
 
 Pair[] libio()
 {
@@ -12,6 +13,7 @@ Pair[] libio()
         Pair("print", dynamic(&libprint)),
         Pair("put", dynamic(&libput)),
         Pair("readln", dynamic(&libreadln)),
+        Pair("get", dynamic(&libget)),
     ];
     return ret;
 }
@@ -53,4 +55,9 @@ Dynamic libput(Args args)
 Dynamic libreadln(Args args)
 {
     return dynamic(readln[0 .. $ - 1]);
+}
+
+Dynamic libget(Args args)
+{
+    return dynamic(cast(string) [cast(char) getchar]);
 }

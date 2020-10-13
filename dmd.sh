@@ -1,1 +1,1 @@
-dmd -i source/app.d -Isource -L-lgmp -L-lmpfr -of dext
+ldmd2 -i source/app.d -Isource -L-lgmp -L-lmpfr -ofdext

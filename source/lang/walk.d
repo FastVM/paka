@@ -312,13 +312,8 @@ class Walker
 
     void walkSetMatch(Node left, Node right)
     {
-        if (cast(Call) left)
+        if (Call call = cast(Call) left)
         {
-            Call call = cast(Call) right;
-            if (call is null)
-            {
-                throw new Exception("assign target misplaced");
-            }
             Ident id = cast(Ident) call.args[0];
             switch (id.repr)
             {
@@ -326,13 +321,13 @@ class Walker
                 walk(right);
                 break;
             case "@array":
-                foreach (arg; call.args[1 .. $])
+                foreach (arg; (cast(Call) right).args[1 .. $])
                 {
                     walk(arg);
                 }
                 break;
             default:
-
+                assert(0);
             }
         }
         else if (Ident ident = cast(Ident) left)
@@ -354,7 +349,6 @@ class Walker
             {
             case "@index":
                 pushInstr(func, Instr(Opcode.istore));
-            doPop;
             doPop;
                 break;
             case "@array":
@@ -391,8 +385,7 @@ class Walker
             switch (id.repr)
             {
             case "@index":
-                pushInstr(func, Instr(Opcode.istore));
-                doPop;
+                pushInstr(func, Instr(Opcode.opistore, opid.repr.to!AssignOp));
                 doPop;
                 break;
             case "@array":
