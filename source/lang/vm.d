@@ -31,7 +31,7 @@ alias allocateStackAllowed = alloca;
 
 Span[] spans;
 
-pragma(inline, false) Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
+Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
 {
     static foreach (I; T)
     {
