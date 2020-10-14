@@ -9,8 +9,8 @@ import std.conv;
 Pair[] libsysenv()
 {
     Pair[] ret = [
-        Pair("get", dynamic(&libget)), Pair("set", dynamic(&libset)),
-        Pair("replace", dynamic(&libreplace)),
+        Pair("get", &libget), Pair("set", &libset),
+        Pair("replace", &libreplace),
     ];
     return ret;
 }

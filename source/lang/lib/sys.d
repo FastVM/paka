@@ -14,7 +14,7 @@ import std.parallelism;
 Pair[] libsys()
 {
     Pair[] ret = [
-        Pair("leave", dynamic(&libleave)), Pair("args", dynamic(&libargs)),
+        Pair("leave", &libleave), Pair("args", &libargs),
     ];
     ret.addLib("env", libsysenv);
     return ret;

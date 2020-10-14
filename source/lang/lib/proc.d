@@ -14,7 +14,7 @@ import core.memory;
 Pair[] libproc()
 {
     Pair[] ret = [
-        Pair("system", dynamic(&libsystem)), Pair("shell", dynamic(&libshell))
+        Pair("system", &libsystem), Pair("shell", &libshell)
     ];
     return ret;
 }

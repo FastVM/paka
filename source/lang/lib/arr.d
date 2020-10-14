@@ -11,12 +11,12 @@ import std.conv;
 Pair[] libarr()
 {
     Pair[] ret = [
-        Pair("len", dynamic(&liblen)), Pair("split", dynamic(&libsplit)),
-        Pair("push", dynamic(&libpush)), Pair("extend",
-                dynamic(&libextend)), Pair("pop", dynamic(&libpop)),
-        Pair("slice", dynamic(&libslice)), Pair("map", dynamic(&libmap)),
-        Pair("filter", dynamic(&libfilter)), Pair("zip", dynamic(&libzip)),
-        Pair("range", dynamic(&librange)), Pair("each", dynamic(&libmap)),
+        Pair("len", &liblen), Pair("split", &libsplit),
+        Pair("push", &libpush), Pair("extend",
+                dynamic(&libextend)), Pair("pop", &libpop),
+        Pair("slice", &libslice), Pair("map", &libmap),
+        Pair("filter", &libfilter), Pair("zip", &libzip),
+        Pair("range", &librange), Pair("each", &libmap),
     ];
     return ret;
 }

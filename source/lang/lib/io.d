@@ -10,10 +10,10 @@ import core.stdc.stdio;
 Pair[] libio()
 {
     Pair[] ret = [
-        Pair("print", dynamic(&libprint)),
-        Pair("put", dynamic(&libput)),
-        Pair("readln", dynamic(&libreadln)),
-        Pair("get", dynamic(&libget)),
+        Pair("print", &libprint),
+        Pair("put", &libput),
+        Pair("readln", &libreadln),
+        Pair("get", &libget),
     ];
     return ret;
 }

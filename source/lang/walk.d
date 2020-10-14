@@ -143,6 +143,8 @@ class Walker
             uint place = func.stab.define(ident.repr);
             walk(args[1]);
             pushInstr(func, Instr(Opcode.store, place));
+            pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+            func.constants ~= Dynamic.nil;
         }
         else
         {
@@ -349,7 +351,6 @@ class Walker
             {
             case "@index":
                 pushInstr(func, Instr(Opcode.istore));
-            doPop;
                 break;
             case "@array":
                 foreach_reverse (arg; call.args[1 .. $])
@@ -369,7 +370,6 @@ class Walker
                 us = new uint(func.stab.define(ident.repr));
             }
             pushInstr(func, Instr(Opcode.store, *us));
-            doPop;
         }
         else
         {
@@ -386,7 +386,6 @@ class Walker
             {
             case "@index":
                 pushInstr(func, Instr(Opcode.opistore, opid.repr.to!AssignOp));
-                doPop;
                 break;
             case "@array":
                 foreach_reverse (arg; call.args[1 .. $])
@@ -407,7 +406,6 @@ class Walker
             }
             pushInstr(func, Instr(Opcode.opstore, *us));
             pushInstr(func, Instr(Opcode.push, opid.repr.to!AssignOp));
-            doPop;
         }
         else
         {

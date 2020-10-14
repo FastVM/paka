@@ -1,10 +1,8 @@
 local is_prime = function (num)
-    local test = 2
-    while test < num do
+    for test=2, num-1 do
         if num % test == 0 then
             return false
         end
-        test = test + 1
     end
     return true
 end

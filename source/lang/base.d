@@ -7,12 +7,18 @@ import lang.lib.io;
 import lang.lib.sys;
 import lang.lib.str;
 import lang.lib.arr;
+import lang.lib.tab;
 import lang.lib.proc;
 
 struct Pair
 {
     string name;
     Dynamic val;
+    this(T...)(string n, T v)
+    {
+        name = n;
+        val = dynamic(v);
+    }
 }
 
 Pair[][] rootBases;
@@ -49,7 +55,7 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
     {
         pairs ~= Pair(name ~ "." ~ entry.name, entry.val);
     }
-    Table dyn;
+    Table dyn = Table.empty;
     foreach (entry; lib)
     {
         if (!entry.name.canFind('.'))
@@ -63,13 +69,14 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
 Pair[] getRootBase()
 {
     Pair[] ret = [
-        Pair("_both_map", dynamic(&syslibubothmap)),
-        Pair("_lhs_map", dynamic(&syslibulhsmap)),
-        Pair("_rhs_map", dynamic(&sysliburhsmap)),
-        Pair("_pre_map", dynamic(&syslibupremap)),
+        Pair("_both_map", &syslibubothmap),
+        Pair("_lhs_map", &syslibulhsmap),
+        Pair("_rhs_map", &sysliburhsmap),
+        Pair("_pre_map", &syslibupremap),
     ];
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);
+    ret.addLib("tab", libtab);
     ret.addLib("io", libio);
     ret.addLib("sys", libsys);
     ret.addLib("proc", libproc);
