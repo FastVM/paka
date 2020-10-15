@@ -1,4 +1,16 @@
-x = 0;
-while (x < 1000) {
-    x += 1;
+def counter() {
+    x = [0];
+    return lambda () {
+        x[0] += 1;
+        return x[0];
+    };
 };
+
+count1 = counter();
+count2 = counter();
+
+io.print(count1());
+io.print(count1());
+io.print(count2());
+io.print(count2());
+io.print(count1());

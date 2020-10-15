@@ -1,1 +1,1 @@
-ldc2 -i source/app.d -Isource -L-lgmp -L-lmpfr -of dext -Oz -ffast-math -release -enable-inlining --boundscheck=off -flto-binary=/usr/lib/llvm-10/lib/LLVMgold.so -flto=full
+ldc2 -i source/app.d -Isource -L-lgmp -L-lmpfr -of dext -Oz -ffast-math -release -enable-inlining --boundscheck=off # -flto-binary=/usr/lib/llvm-10/lib/LLVMgold.so -flto=full

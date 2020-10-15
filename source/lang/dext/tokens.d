@@ -9,8 +9,10 @@ import lang.srcloc;
 
 /// operator precidence
 enum string[][] prec = [
-        ["+=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"], ["=>"], ["||", "&&"],
-        ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"], ["*", "/", "%"]
+        ["+=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"], ["=>"], ["||",
+            "&&"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"], [
+            "*", "/", "%"
+        ]
     ];
 
 /// operators that dont work like binary operators sometimes
@@ -18,7 +20,7 @@ enum string[] nops = [".", "*", "!", ",", ":"];
 
 /// language keywords
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "lambda",
+        "if", "else", "while", "return", "def", "lambda", "using", "table", "scope",
     ];
 
 /// gets the operators by length not precidence
@@ -204,14 +206,22 @@ Token readToken(ref string code, ref Location location)
             return consToken(Token.Type.operator, i);
         }
     }
-    if (peek.isAlphaNum || peek == '_' || peek == '?' || peek == '$')
+    if (peek.isAlphaNum || peek == '_' || peek == '$' || peek == '@')
     {
         bool isNumber = true;
         char[] ret;
-        while (peek.isAlphaNum || peek == '_' || peek == '$' || (isNumber && peek == '.'))
+        while (peek.isAlphaNum || peek == '_' || peek == '$' || peek == '@'
+                || (isNumber && peek == '.'))
         {
             isNumber = isNumber && (peek.isDigit || peek == '.');
-            ret ~= read;
+            if (peek != '@')
+            {
+                ret ~= read;
+            }
+            else {
+                consume;
+                ret ~= '.';
+            }
         }
         if (levels.canFind(ret))
         {

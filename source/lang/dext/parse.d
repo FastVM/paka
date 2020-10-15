@@ -324,12 +324,7 @@ alias readPostExpr = Spanning!readPostExprImpl;
 Node readPostExprImpl(ref TokenArray tokens)
 {
     Node last = void;
-    if (tokens[0].isKeyword("target"))
-    {
-        tokens.nextIs(Token.Type.keyword, "target");
-        last = new Call(new Ident("@target"), [tokens.readPostExpr]);
-    }
-    else if (tokens[0].isKeyword("lambda"))
+    if (tokens[0].isKeyword("lambda"))
     {
         tokens.nextIs(Token.Type.keyword, "lambda");
         if (tokens[0].isOpen("("))
@@ -360,6 +355,26 @@ Node readPostExprImpl(ref TokenArray tokens)
         tokens.nextIs(Token.Type.keyword, "if");
         last = tokens.readIf;
     }
+    else if (tokens[0].isKeyword("scope"))
+    {
+        tokens.nextIs(Token.Type.keyword, "scope");
+        Node node = tokens.readPostExpr;
+        last = new Call(new Call(new Ident("@fun"), [new Call(null), node]), null);
+    }
+    else if (tokens[0].isKeyword("using"))
+    {
+        tokens.nextIs(Token.Type.keyword, "using");
+        Node tab = tokens.readParens[0];
+        Node then = tokens.readBlock;
+        last = new Call(new Ident("@using"), [tab, then]);
+    }
+    else if (tokens[0].isKeyword("table"))
+    {
+        tokens.nextIs(Token.Type.keyword, "table");
+        Node tab = new Call(new Ident("@table"), null);
+        Node then = tokens.readBlock;
+        last = new Call(new Ident("@using"), [tab, then]);
+    }
     else if (tokens[0].isKeyword("while"))
     {
         tokens.nextIs(Token.Type.keyword, "while");
@@ -380,7 +395,6 @@ Node readPostExprImpl(ref TokenArray tokens)
     return tokens.readPostExtend(last);
 }
 
-// TODO: make * only work when unpacking is allowed
 /// read prefix before postfix expression.
 /// prefix is able to be +, - or *
 alias readPreExpr = Spanning!readPreExprImpl;

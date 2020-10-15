@@ -108,7 +108,7 @@ class Function
         {
             if (parent.parent is null)
             {
-                throw new UndefinedException("name not found " ~ name);
+                throw new UndefinedException("name not found: " ~ name);
             }
             parent.doCapture(name);
             capture ~= Capture(parent.captab.byName[name], true);
