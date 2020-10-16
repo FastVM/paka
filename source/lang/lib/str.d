@@ -20,12 +20,17 @@ Pair[] libstr()
         Pair("to_number", &libtonumber),
         Pair("slice", &libslice), Pair("strip",
                 dynamic(&libstrip)), Pair("char", &libchar),
-        Pair("ascii", &libascii),
+        Pair("ascii", &libascii), Pair("from", &libfrom),
     ];
     return ret;
 }
 
 private:
+Dynamic libfrom(Args args)
+{
+    return dynamic(args[0].to!string);
+}
+
 Dynamic liblen(Args args)
 {
     return dynamic(args[0].str.length);

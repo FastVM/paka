@@ -14,12 +14,19 @@ private:
 Pair[] libmeta()
 {
     Pair[] ret = [
-        Pair("of", &libmetaof),
+        Pair("get", &libmetaget),
+        Pair("set", &libmetaset),
     ];
     return ret;
 }
 
-Dynamic libmetaof(Dynamic[] args)
+Dynamic libmetaset(Dynamic[] args)
+{
+    args[0].tab.meta = args[1].tab;
+    return args[0];
+}
+
+Dynamic libmetaget(Dynamic[] args)
 {
     return dynamic(args[0].tab.meta);
 }

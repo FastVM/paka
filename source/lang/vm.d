@@ -14,7 +14,7 @@ import lang.dynamic;
 import lang.bytecode;
 import lang.number;
 
-alias LocalCallback = void delegate(ref size_t index, ref size_t depth,
+alias LocalCallback = void delegate(ref uint index, ref uint depth,
         ref Dynamic[] stack, ref Dynamic[] locals);
 
 enum string[2][] cmpMap()
@@ -24,7 +24,7 @@ enum string[2][] cmpMap()
 
 enum string[2][] mutMap()
 {
-    return [["+=", "add"], ["-=", "sub"], ["*=", "mul"], ["/=", "div"], ["%=", "mod"]];
+    return [["+", "add"], ["-", "sub"], ["*", "mul"], ["/", "div"], ["%", "mod"]];
 }
 
 alias allocateStackAllowed = alloca;
@@ -37,8 +37,8 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     {
         static assert(is(I == LocalCallback));
     }
-    size_t index = 0;
-    size_t depth = 0;
+    uint index = 0;
+    uint depth = 0;
     Dynamic* stack = void;
     Dynamic* locals = void;
     scope (failure)
@@ -78,7 +78,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         }
     }
     Instr* instrs = func.instrs.ptr;
-    while (true)
+    whileLopp: while (true)
     {
         Instr cur = instrs[index];
         switch (cur.op)
@@ -132,15 +132,10 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 stack[depth - 1] = (*f.fun.del)(stack[depth .. depth + cur.value]);
                 break;
             case Dynamic.Type.pro:
-                if (f.fun.pro.self.length != 0)
-                {
-                    stack[depth - 1] = run(f.fun.pro,
-                            f.fun.pro.self ~ stack[depth .. depth + cur.value]);
-                }
-                else
-                {
-                    stack[depth - 1] = run(f.fun.pro, stack[depth .. depth + cur.value]);
-                }
+                stack[depth - 1] = run(f.fun.pro, stack[depth .. depth + cur.value]);
+                break;
+            case Dynamic.Type.tab:
+                stack[depth - 1] = f.value.tab(stack[depth .. depth + cur.value]);
                 break;
             default:
                 throw new TypeException("error: not a function: " ~ f.to!string);
@@ -177,7 +172,10 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 stack[depth - 1] = (*f.fun.del)(cargs);
                 break;
             case Dynamic.Type.pro:
-                stack[depth - 1] = run(f.fun.pro, f.fun.pro.self ~ cargs);
+                stack[depth - 1] = run(f.fun.pro, cargs);
+                break;
+            case Dynamic.Type.tab:
+                stack[depth - 1] = f.value.tab(cargs);
                 break;
             default:
                 throw new TypeException("error: not a function: " ~ f.to!string);
@@ -287,23 +285,23 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             break;
         case Opcode.opadd:
             depth--;
-            stack[depth - 1] += stack[depth];
+            stack[depth - 1] = stack[depth - 1] + stack[depth];
             break;
         case Opcode.opsub:
             depth--;
-            stack[depth - 1] -= stack[depth];
+            stack[depth - 1] = stack[depth - 1] - stack[depth];
             break;
         case Opcode.opmul:
             depth--;
-            stack[depth - 1] *= stack[depth];
+            stack[depth - 1] = stack[depth - 1] * stack[depth];
             break;
         case Opcode.opdiv:
             depth--;
-            stack[depth - 1] /= stack[depth];
+            stack[depth - 1] = stack[depth - 1] / stack[depth];
             break;
         case Opcode.opmod:
             depth--;
-            stack[depth - 1] %= stack[depth];
+            stack[depth - 1] = stack[depth - 1] % stack[depth];
             break;
         case Opcode.load:
             stack[depth++] = locals[cur.value];
@@ -339,7 +337,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 static foreach (opm; mutMap)
                 {
             case opm[1].to!AssignOp:
-                    mixin("locals[cur.value]" ~ opm[0] ~ " stack[depth - 1];");
+                    mixin("locals[cur.value] = locals[cur.value] " ~ opm[0] ~ " stack[depth - 1];");
                     break switchOpp;
                 }
             }
@@ -358,11 +356,13 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                     switch (arr.type)
                     {
                     case Dynamic.Type.arr:
-                        mixin("(*arr.arrPtr)[stack[depth-2].as!size_t]" ~ opm[0]
+                        Array* arr2 = arr.arrPtr;
+                        size_t ind = stack[depth-2].as!size_t;
+                        mixin("(*arr2)[ind] = (*arr2)[ind] " ~ opm[0]
                                 ~ " stack[depth-1];");
                         break switchOpi;
                     case Dynamic.Type.tab:
-                        mixin("arr.tab[stack[depth-2]]" ~ opm[0] ~ " stack[depth-1];");
+                        mixin("arr.tab[stack[depth-2]] = arr.tab[stack[depth-2]] " ~ opm[0] ~ " stack[depth-1];");
                         break switchOpi;
                     default:
                         throw new TypeException(
@@ -397,6 +397,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.argno:
             stack[depth] = args[cur.value];
             depth++;
+            break;
         }
         index++;
     }

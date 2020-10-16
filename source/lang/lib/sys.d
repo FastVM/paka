@@ -15,9 +15,40 @@ Pair[] libsys()
 {
     Pair[] ret = [
         Pair("leave", &libleave), Pair("args", &libargs),
+        Pair("typeof", &libtypeof),
     ];
     ret.addLib("env", libsysenv);
     return ret;
+}
+
+Dynamic libtypeof(Args args)
+{
+    final switch (args[0].type) {
+        case Dynamic.Type.nil:
+            return dynamic("nil");
+        case Dynamic.Type.log:
+            return dynamic("logical");
+        case Dynamic.Type.sml:
+            return dynamic("number");
+        case Dynamic.Type.big:
+            return dynamic("number");
+        case Dynamic.Type.str:
+            return dynamic("string");
+        case Dynamic.Type.arr:
+            return dynamic("array");
+        case Dynamic.Type.tab:
+            return dynamic("table");
+        case Dynamic.Type.fun:
+            return dynamic("callable");
+        case Dynamic.Type.del:
+            return dynamic("callable");
+        case Dynamic.Type.pro:
+            return dynamic("callable");
+        case Dynamic.Type.end:
+            assert(0);
+        case Dynamic.Type.pac:
+            assert(0);
+    } 
 }
 
 Dynamic syslibmap(Args args)

@@ -1,0 +1,51 @@
+Type = table{
+    @of = lambda (arg) {
+        return arg.type;
+    };
+};
+Type.type = Type;
+tab.meta.set(Type, table {
+    @str = lambda (this) {
+        return "Type";
+    };
+});
+
+Number = table {
+    @add = lambda(x, y) {
+        return x.val + y.val;
+    };
+    @sub = lambda(x, y) {
+        return x.val - y.val;
+    };
+    @mul = lambda(x, y) {
+        return x.val * y.val;
+    };
+    @div = lambda(x, y) {
+        return x.val / y.val;
+    };
+    @mod = lambda(x, y) {
+        return x.val % y.val;
+    };
+    @str = lambda(this) {
+        return this.val;
+    };
+    @type = Type;
+};
+
+tab.meta.set(Number, table {
+    @str = lambda(this) {
+        return "Number";
+    };
+    @call = lambda(this, n) {
+        t = table {
+            @type = Number;
+            @val = n;
+        };
+        tab.meta.set(t, Number);
+    };
+});
+
+x = Number(10);
+y = Number(20);
+io.print(x + y);
+io.print(Type.of(x)(30));
