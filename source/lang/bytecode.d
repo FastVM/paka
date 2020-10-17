@@ -157,8 +157,6 @@ enum Opcode
     opneq,
     // build array
     array,
-    // build array that will be assigned to
-    targeta,
     // unpack into array
     unpack,
     // built table

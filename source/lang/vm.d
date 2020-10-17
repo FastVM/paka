@@ -14,7 +14,8 @@ import lang.dynamic;
 import lang.bytecode;
 import lang.number;
 
-alias LocalCallback = void delegate(Dynamic[] locals);
+alias LocalCallback = void delegate(uint index,
+        Dynamic* stack, Dynamic[] locals);
 
 enum string[2][] cmpMap()
 {
@@ -24,18 +25,6 @@ enum string[2][] cmpMap()
 enum string[2][] mutMap()
 {
     return [["+", "add"], ["-", "sub"], ["*", "mul"], ["/", "div"], ["%", "mod"]];
-}
-
-pragma(inline, true) T next2(T)(T v)
-{
-    v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v++;
-    return v;
 }
 
 alias allocateStackAllowed = alloca;
@@ -79,9 +68,8 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             static if (is(typeof(callback) == LocalCallback))
             {
                 {
-                    Dynamic[] st = stack[0 .. func.stackSize];
                     Dynamic[] lo = locals[0 .. func.stab.byPlace.length + 1];
-                    callback(lo);
+                    callback(index, stack, lo);
                 }
             }
         }
@@ -98,10 +86,10 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.nop:
             break;
         case Opcode.push:
-            stack[depth++] = func.constants[cur.value];
+            (*(stack++)) = func.constants[cur.value];
             break;
         case Opcode.pop:
-            depth--;
+            stack--;
             break;
         case Opcode.sub:
             Function built = new Function(func.funcs[cur.value]);
@@ -120,57 +108,57 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                     built.captured[i] = &locals[cap.from];
                 }
             }
-            stack[depth++] = dynamic(built);
+            (*(stack++)) = dynamic(built);
             break;
         case Opcode.bind:
-            depth--;
-            stack[depth - 1].tab[stack[depth]].fun.pro = new Function(
-                    stack[depth - 1].tab[stack[depth]].fun.pro);
-            stack[depth - 1].tab[stack[depth]].fun.pro.self = [stack[depth - 1]];
-            stack[depth - 1] = stack[depth - 1].tab[stack[depth]];
+            stack--;
+            (*(stack-1)).tab[(*stack)].fun.pro = new Function(
+                    (*(stack-1)).tab[(*stack)].fun.pro);
+            (*(stack-1)).tab[(*stack)].fun.pro.self = [(*(stack-1))];
+            (*(stack-1)) = (*(stack-1)).tab[(*stack)];
             break;
         case Opcode.call:
-            depth -= cur.value;
-            Dynamic f = stack[depth - 1];
+            stack -=cur.value;
+            Dynamic f = (*(stack-1));
             switch (f.type)
             {
             case Dynamic.Type.fun:
-                stack[depth - 1] = f.fun.fun(stack[depth .. depth + cur.value]);
+                (*(stack-1)) = f.fun.fun(stack[0 .. 0 + cur.value]);
                 break;
             case Dynamic.Type.del:
-                stack[depth - 1] = (*f.fun.del)(stack[depth .. depth + cur.value]);
+                (*(stack-1)) = (*f.fun.del)(stack[0 .. 0 + cur.value]);
                 break;
             case Dynamic.Type.pro:
-                stack[depth - 1] = run(f.fun.pro, stack[depth .. depth + cur.value]);
+                (*(stack-1)) = run(f.fun.pro, stack[0 .. 0 + cur.value]);
                 break;
             case Dynamic.Type.tab:
-                stack[depth - 1] = f.value.tab(stack[depth .. depth + cur.value]);
+                (*(stack-1)) = f.value.tab(stack[0 .. 0 + cur.value]);
                 break;
             default:
                 throw new TypeException("error: not a function: " ~ f.to!string);
             }
             break;
         case Opcode.upcall:
-            size_t end = depth;
-            depth--;
-            while (stack[depth].type != Dynamic.Type.end)
+            Dynamic* end = stack;
+            stack--;
+            while ((*stack).type != Dynamic.Type.end)
             {
-                depth--;
+                stack--;
             }
             Dynamic[] cargs;
-            for (size_t i = depth + 1; i < end; i++)
+            for (Dynamic* i = stack + 1; i < end; i++)
             {
-                if (stack[i].type == Dynamic.Type.pac)
+                if ((*i).type == Dynamic.Type.pac)
                 {
                     i++;
-                    cargs ~= stack[i].arr;
+                    cargs ~= (*i).arr;
                 }
                 else
                 {
-                    cargs ~= stack[i];
+                    cargs ~= (*i);
                 }
             }
-            Dynamic f = stack[depth - 1];
+            Dynamic f = (*(stack-1));
             Dynamic result = void;
             switch (f.type)
             {
@@ -178,164 +166,154 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 result = f.fun.fun(cargs);
                 break;
             case Dynamic.Type.del:
-                stack[depth - 1] = (*f.fun.del)(cargs);
+                (*(stack-1)) = (*f.fun.del)(cargs);
                 break;
             case Dynamic.Type.pro:
-                stack[depth - 1] = run(f.fun.pro, cargs);
+                (*(stack-1)) = run(f.fun.pro, cargs);
                 break;
             case Dynamic.Type.tab:
-                stack[depth - 1] = f.value.tab(cargs);
+                (*(stack-1)) = f.value.tab(cargs);
                 break;
             default:
                 throw new TypeException("error: not a function: " ~ f.to!string);
             }
-            stack[depth - 1] = result;
+            (*(stack-1)) = result;
             break;
         case Opcode.oplt:
-            depth -= 1;
-            stack[depth - 1] = dynamic(stack[depth - 1] < stack[depth]);
+            stack -=1;
+            (*(stack-1)) = dynamic((*(stack-1)) < (*stack));
             break;
         case Opcode.opgt:
-            depth -= 1;
-            stack[depth - 1] = dynamic(stack[depth - 1] > stack[depth]);
+            stack -=1;
+            (*(stack-1)) = dynamic((*(stack-1)) > (*stack));
             break;
         case Opcode.oplte:
-            depth -= 1;
-            stack[depth - 1] = dynamic(stack[depth - 1] <= stack[depth]);
+            stack -=1;
+            (*(stack-1)) = dynamic((*(stack-1)) <= (*stack));
             break;
         case Opcode.opgte:
-            depth -= 1;
-            stack[depth - 1] = dynamic(stack[depth - 1] >= stack[depth]);
+            stack -=1;
+            (*(stack-1)) = dynamic((*(stack-1)) >= (*stack));
             break;
         case Opcode.opeq:
-            depth -= 1;
-            stack[depth - 1] = dynamic(stack[depth - 1] == stack[depth]);
+            stack -=1;
+            (*(stack-1)) = dynamic((*(stack-1)) == (*stack));
             break;
         case Opcode.opneq:
-            depth -= 1;
-            stack[depth - 1] = dynamic(stack[depth - 1] != stack[depth]);
+            stack -=1;
+            (*(stack-1)) = dynamic((*(stack-1)) != (*stack));
             break;
         case Opcode.array:
-            size_t end = depth;
-            depth--;
-            while (stack[depth].type != Dynamic.Type.end)
+            Dynamic* end = stack;
+            stack--;
+            while ((*stack).type != Dynamic.Type.end)
             {
-                depth--;
+                stack--;
             }
             Dynamic[] arr;
-            for (size_t i = depth + 1; i < end; i++)
+            for (Dynamic* i = stack + 1; i < end; i++)
             {
-                if (stack[i].type == Dynamic.Type.pac)
+                if ((*i).type == Dynamic.Type.pac)
                 {
                     i++;
-                    arr ~= stack[i].arr;
+                    arr ~= (*i).arr;
                 }
                 else
                 {
-                    arr ~= stack[i];
+                    arr ~= (*i);
                 }
             }
-            stack[depth] = dynamic(arr);
-            depth++;
-            break;
-        case Opcode.targeta:
-            size_t end = depth;
-            depth--;
-            while (stack[depth].type != Dynamic.Type.end)
-            {
-                depth--;
-            }
-            stack[depth] = dynamic(stack[depth + 1 .. end].dup);
-            depth++;
+            (*stack) = dynamic(arr);
+            stack++;
             break;
         case Opcode.unpack:
-            stack[depth++] = dynamic(Dynamic.Type.pac);
+            (*(stack++)) = dynamic(Dynamic.Type.pac);
             break;
         case Opcode.table:
-            size_t end = depth;
-            while (stack[depth - 1].type != Dynamic.Type.end)
+            Dynamic* end = stack;
+            while ((*(stack-1)).type != Dynamic.Type.end)
             {
-                depth--;
+                stack--;
             }
             Dynamic[Dynamic] table;
-            for (size_t i = depth; i < end; i += 2)
+            for (Dynamic* i = stack; i < end; i += 2)
             {
-                if (stack[i].type == Dynamic.Type.pac)
+                if ((*i).type == Dynamic.Type.pac)
                 {
-                    foreach (kv; stack[i + 1].tab.byKeyValue)
+                    foreach (kv; (*(i + 1)).tab.byKeyValue)
                     {
                         table[kv.key] = kv.value;
                     }
                 }
                 else
                 {
-                    table[stack[i]] = stack[i + 1];
+                    table[*i] = (*(i + 1));
                 }
             }
-            stack[depth - 1] = dynamic(table);
+            (*(stack-1)) = dynamic(table);
             break;
         case Opcode.index:
-            depth--;
-            Dynamic arr = stack[depth - 1];
+            stack--;
+            Dynamic arr = (*(stack-1));
             switch (arr.type)
             {
             case Dynamic.Type.arr:
-                stack[depth - 1] = (arr.arr)[stack[depth].as!size_t];
+                (*(stack-1)) = (arr.arr)[(*stack).as!size_t];
                 break;
             case Dynamic.Type.tab:
-                stack[depth - 1] = (arr.tab)[stack[depth]];
+                (*(stack-1)) = (arr.tab)[(*stack)];
                 break;
             default:
                 throw new TypeException("error: cannot store at index on a " ~ arr.type.to!string);
             }
             break;
         case Opcode.opneg:
-            stack[depth - 1] = -stack[depth - 1];
+            (*(stack-1)) = -(*(stack-1));
             break;
         case Opcode.opadd:
-            depth--;
-            stack[depth - 1] = stack[depth - 1] + stack[depth];
+            stack--;
+            (*(stack-1)) = (*(stack-1)) + (*stack);
             break;
         case Opcode.opsub:
-            depth--;
-            stack[depth - 1] = stack[depth - 1] - stack[depth];
+            stack--;
+            (*(stack-1)) = (*(stack-1)) - (*stack);
             break;
         case Opcode.opmul:
-            depth--;
-            stack[depth - 1] = stack[depth - 1] * stack[depth];
+            stack--;
+            (*(stack-1)) = (*(stack-1)) * (*stack);
             break;
         case Opcode.opdiv:
-            depth--;
-            stack[depth - 1] = stack[depth - 1] / stack[depth];
+            stack--;
+            (*(stack-1)) = (*(stack-1)) / (*stack);
             break;
         case Opcode.opmod:
-            depth--;
-            stack[depth - 1] = stack[depth - 1] % stack[depth];
+            stack--;
+            (*(stack-1)) = (*(stack-1)) % (*stack);
             break;
         case Opcode.load:
-            stack[depth++] = locals[cur.value];
+            (*(stack++)) = locals[cur.value];
             break;
         case Opcode.loadc:
-            stack[depth++] = *func.captured[cur.value];
+            (*(stack++)) = *func.captured[cur.value];
             break;
         case Opcode.store:
-            locals[cur.value] = stack[depth - 1];
-            depth--;
+            locals[cur.value] = (*(stack-1));
+            stack--;
             break;
         case Opcode.istore:
-            switch (stack[depth - 3].type)
+            switch ((*(stack-3)).type)
             {
             case Dynamic.Type.arr:
-                (*stack[depth - 3].arrPtr)[stack[depth - 2].as!size_t] = stack[depth - 1];
+                (*(*(stack-3)).arrPtr)[(*(stack-2)).as!size_t] = (*(stack-1));
                 break;
             case Dynamic.Type.tab:
-                stack[depth - 3].tab.rawSet(stack[depth - 2], stack[depth - 1]);
+                (*(stack-3)).tab.rawSet((*(stack-2)), (*(stack-1)));
                 break;
             default:
                 throw new TypeException(
-                        "error: cannot store at index on a " ~ stack[depth - 3].type.to!string);
+                        "error: cannot store at index on a " ~ (*(stack-3)).type.to!string);
             }
-            depth -= 3;
+            stack -=3;
             break;
         case Opcode.opstore:
         switchOpp:
@@ -346,11 +324,11 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 static foreach (opm; mutMap)
                 {
             case opm[1].to!AssignOp:
-                    mixin("locals[cur.value] = locals[cur.value] " ~ opm[0] ~ " stack[depth - 1];");
+                    mixin("locals[cur.value] = locals[cur.value] " ~ opm[0] ~ " (*(stack-1));");
                     break switchOpp;
                 }
             }
-            depth--;
+            stack--;
             break;
         case Opcode.opistore:
         switchOpi:
@@ -361,18 +339,18 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 static foreach (opm; mutMap)
                 {
             case opm[1].to!AssignOp:
-                    Dynamic arr = stack[depth - 3];
+                    Dynamic arr = (*(stack-3));
                     switch (arr.type)
                     {
                     case Dynamic.Type.arr:
                         Array* arr2 = arr.arrPtr;
-                        size_t ind = stack[depth - 2].as!size_t;
-                        mixin("(*arr2)[ind] = (*arr2)[ind] " ~ opm[0] ~ " stack[depth-1];");
+                        size_t ind = (*(stack-2)).as!size_t;
+                        mixin("(*arr2)[ind] = (*arr2)[ind] " ~ opm[0] ~ " (*(stack - 1));");
                         break switchOpi;
                     case Dynamic.Type.tab:
                         mixin(
-                                "arr.tab.rawSet(stack[depth-2], arr.tab[stack[depth-2]] "
-                                ~ opm[0] ~ " stack[depth-1]);");
+                                "arr.tab.rawSet((*(stack - 2)), arr.tab[(*(stack - 2))] "
+                                ~ opm[0] ~ " (*(stack - 1)));");
                         break switchOpi;
                     default:
                         throw new TypeException(
@@ -380,22 +358,22 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                     }
                 }
             }
-            depth -= 3;
+            stack -=3;
             break;
         case Opcode.retval:
-            Dynamic v = stack[--depth];
+            Dynamic v = (*(--stack));
             return v;
         case Opcode.retnone:
             return Dynamic.nil;
         case Opcode.iftrue:
-            Dynamic val = stack[--depth];
+            Dynamic val = (*(--stack));
             if (val.type != Dynamic.Type.nil && (val.type != Dynamic.Type.log || val.log))
             {
                 index = cur.value;
             }
             break;
         case Opcode.iffalse:
-            Dynamic val = stack[--depth];
+            Dynamic val = (*(--stack));
             if (val.type == Dynamic.Type.nil || (val.type == Dynamic.Type.log && !val.log))
             {
                 index = cur.value;
@@ -405,8 +383,8 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             index = cur.value;
             break;
         case Opcode.argno:
-            stack[depth] = args[cur.value];
-            depth++;
+            (*stack) = args[cur.value];
+            stack++;
             break;
         }
         index++;

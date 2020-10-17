@@ -179,7 +179,7 @@ Dynamic dynamic(T...)(T a)
 
 struct Dynamic
 {
-    enum Type
+    enum Type: byte
     {
         nil,
         log,
@@ -213,7 +213,6 @@ struct Dynamic
         Callable fun;
     }
 
-align(4):
     Value value = void;
     Type type = Type.nil;
 

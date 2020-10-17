@@ -15,8 +15,9 @@ import std.functional;
 /// vm callback that sets the locals defined into the root base 
 LocalCallback exportLocalsToBaseCallback(Function func)
 {
-    LocalCallback ret = (ref uint index, ref uint depth, ref Dynamic[] stack, ref Dynamic[] locals) {
-        foreach (i, ref v; locals[0 .. func.stab.byPlace.length])
+    LocalCallback ret = (uint index,
+        Dynamic* stack, Dynamic[] locals) {
+        foreach (i, v; locals[0 .. func.stab.byPlace.length])
         {
             rootBase ~= Pair(func.stab.byPlace[i], v);
         }
@@ -25,9 +26,10 @@ LocalCallback exportLocalsToBaseCallback(Function func)
 }
 
 /// vm callback that prints the top of the stack for the end of the repl
-void printTop(ref uint index, ref uint depth, ref Dynamic[] stack, ref Dynamic[] locals)
+void printTop(uint index,
+        Dynamic* stack, Dynamic[] locals)
 {
-    writeln(stack[depth]);
+    writeln(*stack);
 }
 
 /// runs a repl for dext language
