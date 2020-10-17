@@ -14,8 +14,7 @@ import lang.dynamic;
 import lang.bytecode;
 import lang.number;
 
-alias LocalCallback = void delegate(ref uint index, ref uint depth,
-        ref Dynamic[] stack, ref Dynamic[] locals);
+alias LocalCallback = void delegate(Dynamic[] locals);
 
 enum string[2][] cmpMap()
 {
@@ -25,6 +24,18 @@ enum string[2][] cmpMap()
 enum string[2][] mutMap()
 {
     return [["+", "add"], ["-", "sub"], ["*", "mul"], ["/", "div"], ["%", "mod"]];
+}
+
+pragma(inline, true) T next2(T)(T v)
+{
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
 }
 
 alias allocateStackAllowed = alloca;
@@ -38,7 +49,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         static assert(is(I == LocalCallback));
     }
     uint index = 0;
-    uint depth = 0;
     Dynamic* stack = void;
     Dynamic* locals = void;
     scope (failure)
@@ -71,7 +81,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 {
                     Dynamic[] st = stack[0 .. func.stackSize];
                     Dynamic[] lo = locals[0 .. func.stab.byPlace.length + 1];
-                    callback(index, depth, st, lo);
+                    callback(lo);
                 }
             }
         }

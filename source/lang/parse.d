@@ -56,7 +56,7 @@ Node parse(string code, string lang = "dext")
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);
         func.captured = loadBase;
-        void findLang(ref uint index, ref uint depth, ref Dynamic[] stack, ref Dynamic[] locals)
+        void findLang(Dynamic[] locals)
         {
             foreach (i, ref v; locals[0 .. func.stab.byPlace.length])
             {

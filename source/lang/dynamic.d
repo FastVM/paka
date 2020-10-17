@@ -179,7 +179,7 @@ Dynamic dynamic(T...)(T a)
 
 struct Dynamic
 {
-    enum Type : long
+    enum Type
     {
         nil,
         log,
@@ -213,8 +213,9 @@ struct Dynamic
         Callable fun;
     }
 
-    Type type = Type.nil;
+align(4):
     Value value = void;
+    Type type = Type.nil;
 
     static Dynamic strToNum(string s)
     {
