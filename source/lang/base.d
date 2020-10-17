@@ -28,11 +28,6 @@ ref Pair[] rootBase(size_t index = rootBases.length - 1)
     return rootBases[index];
 }
 
-static this()
-{
-    rootBases ~= getRootBase;
-}
-
 size_t enterCtx()
 {
     rootBases ~= getRootBase;
@@ -51,19 +46,19 @@ void defineRoot(string name, Dynamic val)
 
 void addLib(ref Pair[] pairs, string name, Pair[] lib)
 {
-    foreach (entry; lib)
-    {
-        pairs ~= Pair(name ~ "." ~ entry.name, entry.val);
-    }
+    // foreach (entry; lib)
+    // {
+    //     pairs ~= Pair(name ~ "." ~ entry.name, entry.val);
+    // }
     Table dyn = Table.empty;
     foreach (entry; lib)
     {
         if (!entry.name.canFind('.'))
         {
-            dyn[dynamic(entry.name)] = entry.val;
+            dyn.rawSet(dynamic(entry.name), entry.val);
         }
     }
-    pairs ~= Pair(name, dynamic(dyn));
+    pairs ~= Pair(name, dyn);
 }
 
 Pair[] getRootBase()

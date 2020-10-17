@@ -15,7 +15,6 @@ Pair[] libsysenv()
     return ret;
 }
 
-private:
 Dynamic libget(Args args)
 {
     return dynamic(environment[args[0].str]);

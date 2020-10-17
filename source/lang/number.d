@@ -141,8 +141,6 @@ struct MpfrBigNumber
         {
         default:
             assert(0);
-            // case "%":
-            //     return "_fmod";
         case "+":
             return "_add";
         case "-":
@@ -216,29 +214,6 @@ struct MpfrBigNumber
     {
         return this - value * (this / value).rndz;
     }
-
-    // MpfrBigNumber opBinaryRight(string op, T)(const T value) const 
-    //         if (isNumericValue!T && op != "%")
-    // {
-    //     static if (op == "-" || op == "/" || op == "<<" || op == ">>")
-    //     {
-    //         MpfrBigNumber output = MpfrBigNumber.empty;
-    //         mixin(getFunction!(op, T, true)() ~ "(output, value, mpfr, mpfr_rnd_t.MPFR_RNDN);");
-    //         return output;
-    //     }
-    //     else
-    //     {
-    //         return opBinary!op(value);
-    //     }
-    // }
-
-    // MpfrBigNumber opBinaryRight(string op)(MpfrBigNumber value) const 
-    //         if (op == "%")
-    // {
-    //     MpfrBigNumber output = MpfrBigNumber.empty;
-    //     mpfr_fmod(output.mpfr, value.mpfr, mpfr, mpfr_rnd_t.MPFR_RNDN);
-    //     return output;
-    // }
 
     alias rndu = roundTo!(mpfr_rnd_t.MPFR_RNDU);
     alias rnda = roundTo!(mpfr_rnd_t.MPFR_RNDA);

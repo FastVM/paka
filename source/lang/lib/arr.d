@@ -16,12 +16,15 @@ Pair[] libarr()
                 dynamic(&libextend)), Pair("pop", &libpop),
         Pair("slice", &libslice), Pair("map", &libmap),
         Pair("filter", &libfilter), Pair("zip", &libzip),
-        Pair("range", &librange), Pair("each", &libmap),
+        Pair("range", &librange), Pair("each", &libeach),
     ];
     return ret;
 }
 
-private:
+/// returns a list
+/// with one arg it returns 0..$0
+/// with two args it returns $1..$1
+/// with three args it counts from $0 to $1 with interval $2
 Dynamic librange(Args args)
 {
     if (args.length == 1)
@@ -58,6 +61,7 @@ Dynamic librange(Args args)
     throw new TypeException("bad number of arguments to range");
 }
 
+/// returns an array where the function has been called on each element
 Dynamic libmap(Args args)
 {
     Dynamic[] res;
@@ -73,6 +77,7 @@ Dynamic libmap(Args args)
     return dynamic(res);
 }
 
+/// calls $1+ on each and returns nil
 Dynamic libeach(Args args)
 {
     foreach (i; args[0].arr)
@@ -86,6 +91,7 @@ Dynamic libeach(Args args)
     return Dynamic.nil;
 }
 
+/// creates new array with only the elemtns that $1 returnd true with
 Dynamic libfilter(Args args)
 {
     Dynamic[] res;
@@ -104,6 +110,7 @@ Dynamic libfilter(Args args)
     return dynamic(res);
 }
 
+/// zips arrays interleaving
 Dynamic libzip(Args args)
 {
     Dynamic[] res;
@@ -119,28 +126,33 @@ Dynamic libzip(Args args)
     return dynamic(res);
 }
 
+/// length of array
 Dynamic liblen(Args args)
 {
     return dynamic(args[0].arr.length);
 }
 
+/// splits array with deep equality by elemtns
 Dynamic libsplit(Args args)
 {
     return dynamic(args[0].arr.splitter(args[1]).map!(x => dynamic(x)).array);
 }
 
+/// pushes to an existing array, returning nil
 Dynamic libpush(Args args)
 {
     *args[0].arrPtr ~= args[1 .. $];
     return Dynamic.nil;
 }
 
+/// pops from an existing array, returning nil
 Dynamic libpop(Args args)
 {
     (*args[0].arrPtr).length--;
     return Dynamic.nil;
 }
 
+/// extends pushes arrays to array
 Dynamic libextend(Args args)
 {
     foreach (i; args[1 .. $])
@@ -150,14 +162,16 @@ Dynamic libextend(Args args)
     return Dynamic.nil;
 }
 
+/// slices array from 0..$1 for 1 argumnet
+/// slices array from $1..$2 for 2 argumnets
 Dynamic libslice(Args args)
 {
     if (args.length == 2)
     {
-        return dynamic(args[0].arr[args[1].as!size_t .. $]);
+        return dynamic(args[0].arr[args[1].as!size_t .. $].dup);
     }
     else
     {
-        return dynamic(args[0].arr[args[1].as!size_t .. args[2].as!size_t]);
+        return dynamic(args[0].arr[args[1].as!size_t .. args[2].as!size_t].dup);
     }
 }

@@ -69,6 +69,49 @@ class Table
         return meta[dynamic("cmp")]([dynamic(this), other]).opCmp(dynamicZero);
     }
 
+    Dynamic rawIndex(Dynamic value)
+    {
+        return table[value];
+    }
+
+    void rawSet(Dynamic key, Dynamic value)
+    {
+        table[key] = value;
+    }
+
+    void set(Dynamic key, Dynamic value)
+    {
+        Dynamic* metaset = dynamic("set") in meta;
+        if (metaset !is null) {
+            (*metaset)([dynamic(this), key, value]);
+        }
+        table[key] = value;
+    }
+
+    Dynamic opIndex(Dynamic key)
+    {
+        Dynamic* metaget = dynamic("get") in meta;
+        if (metaget !is null)
+        {
+            if (metaget.type == Dynamic.Type.tab)
+            {
+                Dynamic* val = key in table;
+                if (val !is null)
+                {
+                    return *val;
+                }
+                return (*metaget).tab[key];
+            }
+            return (*metaget)([dynamic(this), key]);
+        }
+        Dynamic* val = key in table;
+        if (val !is null)
+        {
+            return *val;
+        }
+        throw new TypeException("table item not found: " ~ key.to!string);
+    }
+
     Dynamic* opBinary(string op)(Dynamic other) if (op == "in")
     {
         return other in table;
@@ -78,19 +121,14 @@ class Table
     {
         enum string opname(string op)()
         {
-            switch (op) {
-            default:
-                assert(0);
-            case "+":
-                return "add";
-            case "-":
-                return "sub";
-            case "*":
-                return "mul";
-            case "/":
-                return "div";
-            case "%":
-                return "mod";
+            switch (op)
+            {
+            default : assert(0);
+            case "+" : return "add";
+            case "-" : return "sub";
+            case "*" : return "mul";
+            case "/" : return "div";
+            case "%" : return "mod";
             }
         }
         return meta[dynamic(opname!op)]([dynamic(this), other]);
@@ -105,11 +143,10 @@ class Table
     {
         enum string opname(string op)()
         {
-            switch (op) {
-            default:
-                assert(0);
-            case "-":
-                return "neg";
+            switch (op)
+            {
+            default : assert(0);
+            case "-" : return "neg";
             }
         }
         return meta[dynamic(opname!op)]([this]);
@@ -117,8 +154,9 @@ class Table
 
     override string toString()
     {
-        Dynamic *op = dynamic("str") in meta;
-        if (op is null) {
+        Dynamic* op = dynamic("str") in meta;
+        if (op is null)
+        {
             return table.to!string;
         }
         return (*op)([dynamic(this)]).to!string;
@@ -354,42 +392,41 @@ struct Dynamic
         return isEqual(this, other);
     }
 
-    Dynamic opBinary(string opp)(Dynamic other)
+    Dynamic opBinary(string op)(Dynamic other)
     {
-        enum string op = ' ' ~ opp ~ ' ';
         if (type == Type.sml)
         {
             if (other.type == Type.sml)
             {
-                SmallNumber res = mixin("value.sml" ~ op ~ "other.value.sml");
+                SmallNumber res = mixin("value.sml " ~ op ~ " other.value.sml");
                 if (res.fits)
                 {
                     return dynamic(res);
                 }
                 else
                 {
-                    return dynamic(mixin("value.sml.asBig" ~ op ~ "other.value.sml.asBig"));
+                    return dynamic(mixin("value.sml.asBig " ~ op ~ " other.value.sml.asBig"));
                 }
             }
             else if (other.type == Type.big)
             {
-                return dynamic(mixin("value.sml.asBig" ~ op ~ " *other.value.bnm"));
+                return dynamic(mixin("value.sml.asBig " ~ op ~ "  *other.value.bnm"));
             }
         }
         else if (type == Type.big)
         {
             if (other.type == Type.sml)
             {
-                return dynamic(mixin("*value.bnm" ~ op ~ "other.value.sml.asBig"));
+                return dynamic(mixin("*value.bnm " ~ op ~ " other.value.sml.asBig"));
             }
             else if (other.type == Type.big)
             {
-                return dynamic(mixin("*value.bnm" ~ op ~ "*other.value.bnm"));
+                return dynamic(mixin("*value.bnm " ~ op ~ " *other.value.bnm"));
             }
         }
         else if (type == Type.tab)
         {
-            return mixin("value.tab" ~ op ~ "other");
+            return mixin("value.tab " ~ op ~ " other");
         }
         static if (op == "~" || op == "+")
         {
@@ -441,7 +478,7 @@ struct Dynamic
                 return dynamic(ret);
             }
         }
-        throw new TypeException("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
+        throw new TypeException("invalid types: " ~ type.to!string ~ op ~ other.type.to!string);
     }
 
     Dynamic opUnary(string op)()
@@ -515,16 +552,6 @@ struct Dynamic
             }
         return value.arr;
     }
-
-    // Table* tabPtr()
-    // {
-    //     version (safe)
-    //         if (type != Type.tab)
-    //         {
-    //             throw new TypeException("expected table type");
-    //         }
-    //     return value.tab;
-    // }
 
     Value.Callable fun()
     {

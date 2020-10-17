@@ -17,8 +17,8 @@ Pair[] libio()
     ];
     return ret;
 }
-private:
 
+/// prints with newline
 Dynamic libprint(Args args)
 {
     foreach (i; args)
@@ -36,6 +36,7 @@ Dynamic libprint(Args args)
     return Dynamic.nil;
 }
 
+/// prints without newline
 Dynamic libput(Args args)
 {
     foreach (i; args)
@@ -52,11 +53,13 @@ Dynamic libput(Args args)
     return Dynamic.nil;
 }
 
+/// reads until newline
 Dynamic libreadln(Args args)
 {
     return dynamic(readln[0 .. $ - 1]);
 }
 
+/// gets a 1 length string
 Dynamic libget(Args args)
 {
     return dynamic(cast(string) [cast(char) getchar]);

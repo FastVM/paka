@@ -62,7 +62,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     {
         locals[i] = v;
     }
-    scope (exit)
+    scope (success)
     {
         static foreach (callback; rest)
         {
@@ -70,8 +70,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             {
                 {
                     Dynamic[] st = stack[0 .. func.stackSize];
-                    Dynamic[] lo = locals[func.stackSize .. func.stackSize
-                        + func.stab.byPlace.length + 1];
+                    Dynamic[] lo = locals[0 .. func.stab.byPlace.length + 1];
                     callback(index, depth, st, lo);
                 }
             }
@@ -320,7 +319,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 (*stack[depth - 3].arrPtr)[stack[depth - 2].as!size_t] = stack[depth - 1];
                 break;
             case Dynamic.Type.tab:
-                stack[depth - 3].tab[stack[depth - 2]] = stack[depth - 1];
+                stack[depth - 3].tab.rawSet(stack[depth - 2], stack[depth - 1]);
                 break;
             default:
                 throw new TypeException(
@@ -357,12 +356,13 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                     {
                     case Dynamic.Type.arr:
                         Array* arr2 = arr.arrPtr;
-                        size_t ind = stack[depth-2].as!size_t;
-                        mixin("(*arr2)[ind] = (*arr2)[ind] " ~ opm[0]
-                                ~ " stack[depth-1];");
+                        size_t ind = stack[depth - 2].as!size_t;
+                        mixin("(*arr2)[ind] = (*arr2)[ind] " ~ opm[0] ~ " stack[depth-1];");
                         break switchOpi;
                     case Dynamic.Type.tab:
-                        mixin("arr.tab[stack[depth-2]] = arr.tab[stack[depth-2]] " ~ opm[0] ~ " stack[depth-1];");
+                        mixin(
+                                "arr.tab.rawSet(stack[depth-2], arr.tab[stack[depth-2]] "
+                                ~ opm[0] ~ " stack[depth-1]);");
                         break switchOpi;
                     default:
                         throw new TypeException(

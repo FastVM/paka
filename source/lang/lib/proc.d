@@ -19,14 +19,17 @@ Pair[] libproc()
     return ret;
 }
 
-private:
-Dynamic libsystem(Dynamic[] args)
+// TODO: replace this with wsl compatable version
+/// evaluates command as arguments
+Dynamic libsystem(Args args)
 {
     string output = execute(args.map!(x => x.to!string).array).output;
     return dynamic(output);
 }
 
-Dynamic libshell(Dynamic[] args)
+// TODO: replace this with wsl compatable version
+/// evaluates command as shell
+Dynamic libshell(Args args)
 {
     Tuple!(int, "status", string, "output") output = executeShell(args[0].str);
     if (output.status != 0)

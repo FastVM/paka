@@ -24,6 +24,20 @@ Dynamic eval(size_t ctx, string code)
     return run(func, null, func.exportLocalsToBaseCallback);
 }
 
+Dynamic evalFile(string code) {
+    size_t ctx = enterCtx;
+    scope (exit)
+    {
+        exitCtx;
+    }
+    Node node = code.parse;
+    Walker walker = new Walker;
+    Function func = walker.walkProgram(node, ctx);
+    func.captured = loadBase;
+    Dynamic retval = run(func);
+    return retval;
+}
+
 void define(T)(size_t ctx, string name, T value)
 {
     ctx.rootBase ~= Pair(name, value.toDynamic);
