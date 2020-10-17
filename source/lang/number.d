@@ -28,9 +28,9 @@ static this()
 }
 
 alias SmallNumber = double;
-alias BigNumber = const(MpfrBigNumber);
+alias BigNumber = const MpfrBigNumber;
 
-pragma(inline, true) BigNumber asBig(T...)(T v)
+BigNumber asBig(T...)(T v)
 {
     return BigNumber(v);
 }
@@ -42,41 +42,46 @@ bool fits(SmallNumber num)
 
 struct MpfrBigNumber
 {
-    mpfr_t mpfr = void;
+    mpfr_t mpfr = mpfr_t.init;
     alias mpfr this;
 
     @disable this();
 
-    pragma(inline, true) bool fits() const
+    bool fits() const
     {
         return minSmall <= this && this <= maxSmall;
     }
 
-    pragma(inline, true) this(const(MpfrBigNumber) other)
+    this(MpfrBigNumber other)
     {
-        mpfr_init2(mpfr, mpfr_get_prec(other.mpfr));
+        mpfr = other.mpfr;
+    }
+
+    this(const(MpfrBigNumber) other)
+    {
+        mpfr_init2(mpfr, 128);
         mpfr_set(mpfr, other.mpfr, mpfr_rnd_t.MPFR_RNDN);
     }
 
-    pragma(inline, true) this(SmallNumber other)
+    this(SmallNumber other)
     {
         mpfr_init2(mpfr, 128);
         mpfr_set_d(mpfr, other, mpfr_rnd_t.MPFR_RNDN);
     }
 
-    pragma(inline, true) static MpfrBigNumber empty()
+    static MpfrBigNumber empty()
     {
         MpfrBigNumber ret = void;
         mpfr_init2(ret.mpfr, 128);
         return ret;
     }
 
-    pragma(inline, true) this(const string value)
+    this(const string value)
     {
         mpfr_init_set_str(mpfr, value.toStringz, 10, mpfr_rnd_t.MPFR_RNDN);
     }
 
-    pragma(inline, true) ~this()
+    ~this()
     {
         destroy!false(mpfr);
     }
@@ -110,34 +115,22 @@ struct MpfrBigNumber
         }
     }
 
-    pragma(inline, true) @property void precision(mpfr_prec_t p)
-    {
-        mpfr_set_prec(mpfr, p);
-    }
-
-    pragma(inline, true) @property mpfr_prec_t precision() const
-    {
-        return mpfr_get_prec(mpfr);
-    }
-
-
-    pragma(inline, true) int opCmp(T)(const T value) const if (isNumericValue!T)
+    int opCmp(T)(const T value) const if (isNumericValue!T)
     {
         mixin("return mpfr_cmp" ~ getTypeString!T() ~ "(mpfr, value);");
     }
 
-    pragma(inline, true) int opCmp(ref const(MpfrBigNumber) value)
+    int opCmp(ref const(MpfrBigNumber) value)
     {
         return mpfr_cmp(mpfr, value);
     }
 
-    pragma(inline, true) bool opEquals(T)(const T value) const 
-            if (isNumericValue!T)
+    bool opEquals(T)(const T value) const if (isNumericValue!T)
     {
         return opCmp(value) == 0;
     }
 
-    pragma(inline, true) bool opEquals(ref const(MpfrBigNumber) value)
+    bool opEquals(ref const(MpfrBigNumber) value)
     {
         return this is value || opCmp(value) == 0;
     }
@@ -207,78 +200,42 @@ struct MpfrBigNumber
         return "mpfr" ~ getFunctionSuffix!(op, T, isRight);
     }
 
-    pragma(inline, true) MpfrBigNumber opBinary(string op)(const(MpfrBigNumber) value)
-            if (op == "%")
+    MpfrBigNumber opBinary(string op, T)(const T value) const 
+            if (op != "%" && isNumericValue!T)
     {
+        const self = this;
         MpfrBigNumber output = MpfrBigNumber.empty;
-        mpfr_fmod(output.mpfr, mpfr, value.mpfr, mpfr_rnd_t.MPFR_RNDN);
+        mixin(getFunction!(op, T,
+                false)() ~ "(output.mpfr, self.mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
         return output;
     }
 
-    pragma(inline, true) MpfrBigNumber opBinary(string op)(SmallNumber value)
+    MpfrBigNumber opBinary(string op)(const MpfrBigNumber value) const if (op == "%")
     {
-        return mixin("this" ~ op ~ "value.asBig");
+        return this - value * (this / value).rndz;
     }
 
-    pragma(inline, true) MpfrBigNumber opBinaryRight(string op)(SmallNumber value)
-    {
-        return mixin("value.asBig" ~ op ~ "this");
-    }
+    alias rndu = roundTo!(mpfr_rnd_t.MPFR_RNDU);
+    alias rnda = roundTo!(mpfr_rnd_t.MPFR_RNDA);
+    alias rndd = roundTo!(mpfr_rnd_t.MPFR_RNDD);
+    alias rndz = roundTo!(mpfr_rnd_t.MPFR_RNDZ);
+    alias rndn = roundTo!(mpfr_rnd_t.MPFR_RNDZ);
 
-    pragma(inline, true) MpfrBigNumber opBinary(string op, T)(const T value)
-            if (isNumericValue!T && op == "%")
-    {
-        return this % value.asBig;
-    }
-
-    pragma(inline, true) MpfrBigNumber opBinary(string op, T)(const T value) const
-            if (isNumericValue!T && op != "%")
+    MpfrBigNumber roundTo(mpfr_rnd_t round)() const
     {
         MpfrBigNumber output = MpfrBigNumber.empty;
-        mixin(getFunction!(op, T, false)() ~ "(output, mpfr, value, mpfr_rnd_t.MPFR_RNDN);");
+        mpfr_rint(output.mpfr, mpfr, round);
         return output;
     }
 
-    pragma(inline, true) MpfrBigNumber opBinaryRight(string op, T)(const T value) const
-            if (isNumericValue!T && op != "%")
-    {
-        static if (op == "-" || op == "/" || op == "<<" || op == ">>")
-        {
-            MpfrBigNumber output = MpfrBigNumber.empty;
-            mixin(getFunction!(op, T, true)() ~ "(output, value, mpfr, mpfr_rnd_t.MPFR_RNDN);");
-            return output;
-        }
-        else
-        {
-            return opBinary!op(value);
-        }
-    }
-    pragma(inline, true) MpfrBigNumber opBinaryRight(string op, T)(const T value) const
-            if (isNumericValue!T && op == "%")
-    {
-        return this % MpfrBigNumber(value);
-    }
-
-    pragma(inline, true) MpfrBigNumber opUnary(string op)() const if (op == "-")
+    MpfrBigNumber opUnary(string op)() const if (op == "-")
     {
         MpfrBigNumber output = MpfrBigNumber.empty;
         mpfr_neg(output, mpfr, mpfr_rnd_t.MPFR_RNDN);
         return output;
     }
 
-    pragma(inline, true) MpfrBigNumber opUnary(string op)() if (op == "++")
-    {
-        mpfr_nextabove(this.mpfr);
-        return this;
-    }
-
-    pragma(inline, true) MpfrBigNumber opUnary(string op)() if (op == "--")
-    {
-        mpfr_nextbelow(this.mpfr);
-        return this;
-    }
-
-    pragma(inline, true) string toString() const
+    string toString() const
     {
         char[1024] buffer;
         const count = mpfr_snprintf(buffer.ptr, buffer.sizeof, "%Rg".ptr, &mpfr);

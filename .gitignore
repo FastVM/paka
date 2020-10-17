@@ -18,3 +18,4 @@ perf*
 vgcore*
 callgrind*
 vscode
+llvm

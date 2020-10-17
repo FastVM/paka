@@ -1,0 +1,19 @@
+body {
+    transform: rotate(0deg);
+}
+
+@keyframes rot {
+    0% {
+        transform: rotate(-0.3deg);
+    }
+    50% {
+        transform: rotate(0.3deg);
+    }
+    100% {
+        transform: rotate(-0.3deg);
+    }
+}
+
+* {
+    animation: rot 4s ease-in infinite;
+}

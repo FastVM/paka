@@ -4,7 +4,7 @@ import std.conv;
 import std.stdio;
 import lang.ast;
 import lang.dext.parse;
-import lang.dext.repl;
+import lang.bf.parse;
 import lang.walk;
 import lang.bytecode;
 import lang.base;
@@ -20,6 +20,7 @@ Node delegate(string code)[string] parsers;
 static this()
 {
     parsers["dext"] = (c) => lang.dext.parse.parse(c);
+    parsers["bf"] = (c) => lang.bf.parse.parse(c);
 }
 
 string readLine(ref string code)
@@ -55,7 +56,7 @@ Node parse(string code, string lang = "dext")
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);
         func.captured = loadBase;
-        void findLang(ref size_t index, ref size_t depth, ref Dynamic[] stack, ref Dynamic[] locals)
+        void findLang(ref uint index, ref uint depth, ref Dynamic[] stack, ref Dynamic[] locals)
         {
             foreach (i, ref v; locals[0 .. func.stab.byPlace.length])
             {

@@ -1,0 +1,15 @@
+count = 0;
+objs = [];
+while (count < 10) {
+    obj = scope table {
+        @val = count;
+        @get_val = lambda {
+            return @val;
+        };
+    };
+    arr.push(objs, obj);
+    count += 1;
+};
+
+io.print(objs[0].get_val());
+io.print(objs[count-1].get_val());

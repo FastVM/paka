@@ -30,18 +30,14 @@ void domain(string[] args)
         defaultGetoptPrinter("Help for 9c language.", info.options);
         return;
     }
+    size_t ctx = enterCtx;
+    scope (exit)
+    {
+        exitCtx;
+    }
     foreach (i; stmts)
     {
-        size_t ctx = enterCtx;
-        scope (exit)
-        {
-            exitCtx;
-        }
-        Node node = i.parse;
-        Walker walker = new Walker;
-        Function func = walker.walkProgram(node, ctx);
-        func.captured = loadBase;
-        Dynamic retval = run(func);
+        Dynamic retval = ctx.eval(i);
         if (retval.type != Dynamic.Type.nil)
         {
             writeln(retval);
@@ -49,17 +45,11 @@ void domain(string[] args)
     }
     foreach (i; scripts ~ args[1 .. $])
     {
-        size_t ctx = enterCtx;
-        scope (exit)
+        Dynamic retval = ctx.eval(cast(string) i.read);
+        if (retval.type != Dynamic.Type.nil)
         {
-            exitCtx;
+            writeln(retval);
         }
-        string code = cast(string) i.read;
-        Node node = code.parse;
-        Walker walker = new Walker;
-        Function func = walker.walkProgram(node, ctx);
-        func.captured = loadBase;
-        run(func);
     }
     if ((scripts ~ args[1 .. $]).length == 0)
     {
