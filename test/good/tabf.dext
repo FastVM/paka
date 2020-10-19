@@ -1,0 +1,29 @@
+
+def remove(name, vec) {
+    return tab.filter(vec) {
+        return $0 != name;
+    };
+};
+
+to_2d = vec => remove("z", vec);
+
+def double(vec) {
+    return tab.map(vec) {
+        return $1 * 2;
+    };
+};
+
+def cons_3d(x, y, z) {
+    return table {
+        @x = x;
+        @y = y;
+        @z = z;
+    };
+};
+
+t3 = cons_3d(1, 2, 3);
+io.print(t3);
+io.print(double(t3));
+t2 = to_2d(t3);
+io.print(t2);
+io.print(double(t2));

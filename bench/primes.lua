@@ -19,5 +19,5 @@ local sum_primes = function (upto)
     return ret
 end
 
-local res = sum_primes(20000)
+local res = sum_primes(50000)
 print(res)

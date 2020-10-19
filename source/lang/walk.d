@@ -14,10 +14,10 @@ import std.stdio;
 
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
-        "@if", "@fun", "@do", "@using", "F+", "-", "+", "*", "/", "@dotmap-both",
+        "@if", "@fun", "@do", "@using", "-", "+", "*", "/", "@dotmap-both",
         "@dotmap-lhs", "@dotmap-rhs", "@dotmap-pre", "%", "<", ">", "<=",
         ">=", "==", "!=", "...", "@index", "=>", "|>", "<|", "@using", "@env",
-        // "&&", "||",
+        "&&", "||",
     ];
 
 bool isUnpacking(Node[] args)
@@ -54,6 +54,7 @@ class Walker
 
     Function walkProgram(Node node, size_t ctx)
     {
+        writeln(node);
         envc = 0;
         func = new Function;
         func.parent = ctx.baseFunction;
@@ -581,6 +582,16 @@ class Walker
         walk(id);
     }
 
+    void walkLogicalAnd(Node[] args)
+    {
+        walk(new Call(new Ident("@if"), [args[0], args[1], new Ident("false")]));
+    }
+
+    void walkLogicalOr(Node[] args)
+    {
+        walk(new Call(new Ident("@if"), [args[0], new Ident("true"), args[1]]));
+    }
+
     void walkSpecialCall(Call c)
     {
         final switch ((cast(Ident) c.args[0]).repr)
@@ -681,6 +692,12 @@ class Walker
             break;
         case "==":
             walkBinary!"eq"(c.args[1 .. $]);
+            break;
+        case "&&":
+            walkLogicalAnd(c.args[1 .. $]);
+            break;
+        case "||":
+            walkLogicalOr(c.args[1 .. $]);
             break;
         case "...":
             walkUnpack(c.args[1 .. $]);

@@ -82,7 +82,8 @@ class Table
     void set(Dynamic key, Dynamic value)
     {
         Dynamic* metaset = dynamic("set") in meta;
-        if (metaset !is null) {
+        if (metaset !is null)
+        {
             (*metaset)([dynamic(this), key, value]);
         }
         table[key] = value;
@@ -179,7 +180,7 @@ Dynamic dynamic(T...)(T a)
 
 struct Dynamic
 {
-    enum Type: byte
+    enum Type : byte
     {
         nil,
         log,
@@ -586,10 +587,29 @@ struct Dynamic
             return mpfr_get_d(value.bnm.mpfr, mpfr_rnd_t.MPFR_RNDN);
         }
     }
+
+    bool isTruthy()
+    {
+        return type != Type.nil && (type != Type.log || value.log);
+    }
 }
 
 private bool isEqual(const Dynamic a, const Dynamic b)
 {
+    Dynamic[2][] n;
+    return isEqualRec(a,b,n);
+}
+
+private bool isEqualRec(const Dynamic a, const Dynamic b, ref Dynamic[2][] above)
+{
+    Dynamic[2] cur = [a, b];
+    foreach (i, p; above)
+    {
+        if (cur[0] is p[0] && cur[1] is p[1])
+        {
+            return true;
+        }
+    }
     if (b.type != a.type)
     {
         if (a.type == Dynamic.Type.sml)
@@ -608,7 +628,7 @@ private bool isEqual(const Dynamic a, const Dynamic b)
         }
         return false;
     }
-    if (a.value == b.value)
+    if (a is b)
     {
         return true;
     }
@@ -627,7 +647,25 @@ private bool isEqual(const Dynamic a, const Dynamic b)
     case Dynamic.Type.big:
         return *a.value.bnm == *b.value.bnm;
     case Dynamic.Type.arr:
-        return *a.value.arr == *b.value.arr;
+        above ~= cur;
+        scope(exit)
+        {
+            above.length--;
+        }
+        const Dynamic[] as = *a.value.arr;
+        const Dynamic[] bs = *b.value.arr;
+        if (as.length != bs.length)
+        {
+            return false;
+        }
+        foreach (i; 0 .. as.length)
+        {
+            if (!isEqualRec(as[i], bs[i], above))
+            {
+                return false;
+            }
+        }
+        return true;
     case Dynamic.Type.tab:
         return a.value.tab == b.value.tab;
     case Dynamic.Type.fun:
@@ -641,9 +679,12 @@ private bool isEqual(const Dynamic a, const Dynamic b)
 
 private string strFormat(Dynamic dyn, Dynamic[] before = null)
 {
-    if (canFind(before, dyn))
+    foreach (i, v; before)
     {
-        return "...";
+        if (dyn is v)
+        {
+            return "...";
+        }
     }
     before ~= dyn;
     scope (exit)

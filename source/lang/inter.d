@@ -10,7 +10,7 @@ import lang.bytecode;
 import lang.base;
 import lang.ast;
 import lang.dynamic;
-import lang.dext.parse;
+import lang.parse;
 import lang.vm;
 import lang.inter;
 import lang.dext.repl;

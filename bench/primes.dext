@@ -21,5 +21,5 @@ def sum_primes(upto) {
     return ret;
 };
 
-res = sum_primes(20000);
+res = sum_primes(50000);
 io.print(res);

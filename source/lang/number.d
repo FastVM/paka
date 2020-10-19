@@ -9,8 +9,8 @@ import core.memory;
 import lang.data.mpfr;
 import std.experimental.checkedint;
 
-private BigNumber maxSmall = void;
-private BigNumber minSmall = void;
+private BigNumber* maxSmall = void;
+private BigNumber* minSmall = void;
 
 extern (C) extern __gshared void* function(size_t s) __gmp_allocate_func;
 extern (C) extern __gshared void* function(void* p, size_t s, size_t o) __gmp_reallocate_func;
@@ -23,8 +23,8 @@ static this()
         return GC.realloc(p, s);
     };
     __gmp_free_func = function(void* p, size_t o) {};
-    maxSmall = int.max.asBig;
-    minSmall = int.min.asBig;
+    maxSmall = new BigNumber(int.max.asBig);
+    minSmall = new BigNumber(int.min.asBig);
 }
 
 alias SmallNumber = double;
@@ -49,7 +49,7 @@ struct MpfrBigNumber
 
     bool fits() const
     {
-        return minSmall <= this && this <= maxSmall;
+        return *minSmall <= this && this <= *maxSmall;
     }
 
     this(MpfrBigNumber other)
@@ -83,7 +83,7 @@ struct MpfrBigNumber
 
     ~this()
     {
-        destroy!false(mpfr);
+        mpfr_clear(mpfr);
     }
 
     private static template isNumericValue(T)

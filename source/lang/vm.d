@@ -46,14 +46,14 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     }
     if (func.flags & Function.Flags.isLocal)
     {
-        locals = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof,
+        locals = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1 + args.length) * Dynamic.sizeof,
                 0, typeid(Dynamic));
         stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof));
     }
     else
     {
         Dynamic* ptr = cast(Dynamic*) allocateStackAllowed(
-                (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
+                (func.stackSize + func.stab.byPlace.length + 1 + args.length) * Dynamic.sizeof);
         stack = ptr;
         locals = ptr + func.stackSize;
     }
