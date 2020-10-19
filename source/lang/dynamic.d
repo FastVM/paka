@@ -214,6 +214,7 @@ struct Dynamic
         Callable fun;
     }
 
+align(4):
     Value value = void;
     Type type = Type.nil;
 

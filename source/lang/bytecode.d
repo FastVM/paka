@@ -53,7 +53,7 @@ class Function
     }
 
     Capture[] capture = null;
-    Instr[] instrs = null;
+    ubyte[] instrs = null;
     Span[] spans = null;
     Dynamic[] constants = null;
     Function[] funcs = null;
@@ -122,7 +122,7 @@ class Function
     }
 }
 
-enum AssignOp : uint
+enum AssignOp : ubyte
 {
     add,
     sub,
@@ -131,7 +131,7 @@ enum AssignOp : uint
     mod,
 }
 
-enum Opcode
+enum Opcode : ubyte
 {
     // never generated
     nop,
@@ -206,9 +206,3 @@ enum int[Opcode] opSizes = [
     Opcode.retval : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
     Opcode.iffalse : -1, Opcode.jump : 0, Opcode.argno: 1,
 ];
-
-struct Instr
-{
-    Opcode op;
-    uint value;
-}

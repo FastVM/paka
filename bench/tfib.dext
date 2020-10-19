@@ -1,5 +1,0 @@
-fib = table {
-    @call = lambda (n) {
-        return fib.call
-    }
-}

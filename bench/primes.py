@@ -8,12 +8,12 @@ def is_prime(num):
 
 def sum_primes(upto):
     ret = 0
-    at = 0
+    at = 2
     while at < upto:
         if is_prime(at):
-            ret += at
+            ret += 1
         at += 1
     return ret
 
-res = sum_primes(20000)
+res = sum_primes(100000)
 print(res)
