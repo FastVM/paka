@@ -1,0 +1,8 @@
+mil = arr.range(1000 * 1000);
+
+t = {"res": 0};
+
+arr.each(mil) {
+    io.print($0);
+    t[$0] = $0;
+};

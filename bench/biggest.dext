@@ -1,0 +1,7 @@
+pow = 0;
+n = 1;
+while (n + 1 - n == 1) {
+    n *= 2;
+    pow += 1;
+};
+io.print(pow);

@@ -1,8 +1,10 @@
 module lang.base;
 
 import std.algorithm;
+import std.stdio;
 import lang.dynamic;
 import lang.bytecode;
+import lang.data.map;
 import lang.lib.io;
 import lang.lib.sys;
 import lang.lib.str;
@@ -50,12 +52,12 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
     // {
     //     pairs ~= Pair(name ~ "." ~ entry.name, entry.val);
     // }
-    Table dyn = Table.empty;
+    Map!(Dynamic, Dynamic) dyn;
     foreach (entry; lib)
     {
         if (!entry.name.canFind('.'))
         {
-            dyn.rawSet(dynamic(entry.name), entry.val);
+            dyn[dynamic(entry.name)] = entry.val;
         }
     }
     pairs ~= Pair(name, dyn);

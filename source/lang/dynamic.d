@@ -16,6 +16,7 @@ import lang.error;
 import lang.number;
 import lang.data.rope;
 import lang.data.mpfr;
+import lang.data.map;
 public import lang.number;
 
 version = safe;
@@ -25,7 +26,7 @@ alias Array = Dynamic[];
 
 class Table
 {
-    Dynamic[Dynamic] table;
+    Map!(Dynamic, Dynamic) table;
     Table metatable;
     alias table this;
 
@@ -36,7 +37,7 @@ class Table
 
     static Table empty()
     {
-        return new Table(null);
+        return new Table;
     }
 
     this()
@@ -64,6 +65,11 @@ class Table
         return metatable;
     }
 
+    int opApply(int delegate(Dynamic, Dynamic) dg)
+    {
+        return table.opApply(dg);
+    }
+
     int opCmp(Dynamic other)
     {
         return meta[dynamic("cmp")]([dynamic(this), other]).opCmp(dynamicZero);
@@ -86,7 +92,7 @@ class Table
         {
             (*metaset)([dynamic(this), key, value]);
         }
-        table[key] = value;
+        rawSet(key, value);
     }
 
     Dynamic opIndex(Dynamic key)
@@ -96,7 +102,7 @@ class Table
         {
             if (metaget.type == Dynamic.Type.tab)
             {
-                Dynamic* val = key in table;
+                Dynamic* val = key in this;
                 if (val !is null)
                 {
                     return *val;
@@ -105,7 +111,7 @@ class Table
             }
             return (*metaget)([dynamic(this), key]);
         }
-        Dynamic* val = key in table;
+        Dynamic* val = key in this;
         if (val !is null)
         {
             return *val;
@@ -113,7 +119,7 @@ class Table
         throw new TypeException("table item not found: " ~ key.to!string);
     }
 
-    Dynamic* opBinary(string op)(Dynamic other) if (op == "in")
+    Dynamic* opBinaryRight(string op)(Dynamic other) if (op == "in")
     {
         return other in table;
     }
@@ -263,7 +269,7 @@ align(4):
         type = Type.arr;
     }
 
-    this(Dynamic[Dynamic] tab)
+    this(Map!(Dynamic, Dynamic) tab)
     {
         value.tab = new Table(tab);
         type = Type.tab;
@@ -307,20 +313,20 @@ align(4):
         return ret;
     }
 
-    size_t toHash() const nothrow
-    {
-        switch (type)
-        {
-        default:
-            return hashOf(type) ^ hashOf(value);
-        case Type.str:
-            return hashOf(*value.str);
-        case Type.arr:
-            return hashOf(*value.arr);
-        case Type.tab:
-            return hashOf(value.tab.table);
-        }
-    }
+    // size_t toHash() const
+    // {
+    //     switch (type)
+    //     {
+    //     default:
+    //         return hashOf(type) ^ hashOf(value);
+    //     case Type.str:
+    //         return hashOf(*value.str);
+    //     case Type.arr:
+    //         return hashOf(*value.arr);
+    //     case Type.tab:
+    //         return hashOf(value.tab.table);
+    //     }
+    // }
 
     string toString()
     {
@@ -357,7 +363,8 @@ align(4):
         switch (t)
         {
         default:
-            assert(0);
+            // assert(0);
+            throw new TypeException("error: not comparable: " ~ this.to!string ~ " " ~ other.to!string);
         case Type.nil:
             return 0;
         case Type.log:
@@ -598,7 +605,7 @@ align(4):
 private bool isEqual(const Dynamic a, const Dynamic b)
 {
     Dynamic[2][] n;
-    return isEqualRec(a,b,n);
+    return isEqualRec(a, b, n);
 }
 
 private bool isEqualRec(const Dynamic a, const Dynamic b, ref Dynamic[2][] above)
@@ -649,7 +656,7 @@ private bool isEqualRec(const Dynamic a, const Dynamic b, ref Dynamic[2][] above
         return *a.value.bnm == *b.value.bnm;
     case Dynamic.Type.arr:
         above ~= cur;
-        scope(exit)
+        scope (exit)
         {
             above.length--;
         }
@@ -668,7 +675,31 @@ private bool isEqualRec(const Dynamic a, const Dynamic b, ref Dynamic[2][] above
         }
         return true;
     case Dynamic.Type.tab:
-        return a.value.tab == b.value.tab;
+        above ~= cur;
+        scope (exit)
+        {
+            above.length--;
+        }
+        Table at = cast(Table) a.value.tab;
+        Table bt = cast(Table) b.value.tab;
+        if (at.table.length != bt.table.length)
+        {
+            return false;
+        }
+        foreach (key, value; at)
+        {
+            Dynamic aValue = value;
+            const Dynamic* bValue = key in bt;
+            if (bValue is null)
+            {
+                return false;
+            }
+            if (!isEqualRec(aValue, *bValue, above))
+            {
+                return false;
+            }
+        }
+        return true;
     case Dynamic.Type.fun:
         return a.value.fun.fun == b.value.fun.fun;
     case Dynamic.Type.del:
@@ -727,7 +758,22 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         ret ~= "]";
         return cast(string) ret;
     case Dynamic.Type.tab:
-        return dyn.tab.to!string;
+        char[] ret;
+        ret ~= "{";
+        size_t i = 0;
+        foreach (key, value; dyn.tab)
+        {
+            if (i != 0)
+            {
+                ret ~= ", ";
+            }
+            ret ~= strFormat(key, before);
+            ret ~= ": ";
+            ret ~= strFormat(value, before);
+            i++;
+        }
+        ret ~= "}";
+        return cast(string) ret;
     case Dynamic.Type.fun:
         return "<function>";
     case Dynamic.Type.del:

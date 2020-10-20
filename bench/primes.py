@@ -15,5 +15,5 @@ def sum_primes(upto):
         at += 1
     return ret
 
-res = sum_primes(100000)
+res = sum_primes(30000)
 print(res)

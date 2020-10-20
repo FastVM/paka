@@ -13,6 +13,7 @@ import lang.error;
 import lang.dynamic;
 import lang.bytecode;
 import lang.number;
+import lang.data.map;
 
 alias LocalCallback = void delegate(uint index, Dynamic* stack, Dynamic[] locals);
 
@@ -93,6 +94,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         }
     }
     ubyte* instrs = func.instrs.ptr;
+    Dynamic* debugs = stack;
     whileLopp: while (true)
     {
         Opcode cur = cast(Opcode) instrs[index++];
@@ -253,14 +255,14 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             {
                 stack--;
             }
-            Dynamic[Dynamic] table;
+            Map!(Dynamic, Dynamic) table;
             for (Dynamic* i = stack; i < end; i += 2)
             {
                 if ((*i).type == Dynamic.Type.pac)
                 {
-                    foreach (kv; (*(i + 1)).tab.byKeyValue)
+                    foreach (key, value; (*(i + 1)).tab)
                     {
-                        table[kv.key] = kv.value;
+                        table[key] = value;
                     }
                 }
                 else
@@ -325,7 +327,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 (*(*(stack - 3)).arrPtr)[(*(stack - 2)).as!size_t] = (*(stack - 1));
                 break;
             case Dynamic.Type.tab:
-                (*(stack - 3)).tab.rawSet((*(stack - 2)), (*(stack - 1)));
+                (*(stack - 3)).tab.set((*(stack - 2)), (*(stack - 1)));
                 break;
             default:
                 throw new TypeException("error: cannot store at index on a " ~ (*(stack - 3))
@@ -369,7 +371,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                         break switchOpi;
                     case Dynamic.Type.tab:
                         mixin(
-                                "arr.tab.rawSet((*(stack - 2)), arr.tab[(*(stack - 2))] "
+                                "arr.tab.set((*(stack - 2)), arr.tab[(*(stack - 2))] "
                                 ~ opm[0] ~ " (*(stack - 1)));");
                         break switchOpi;
                     default:

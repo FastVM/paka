@@ -1,6 +1,7 @@
 module lang.lib.tab;
 import lang.base;
 import lang.dynamic;
+import lang.data.map;
 import std.stdio;
 
 Pair[] libtab()
@@ -30,10 +31,10 @@ Pair[] libraw()
 
 Dynamic libmap(Dynamic[] args)
 {
-    Dynamic[Dynamic] ret;
-    foreach (kv; args[0].tab.byKeyValue)
+    Map!(Dynamic, Dynamic) ret;
+    foreach (key, value; args[0].tab)
     {
-        ret[kv.key] = args[1]([kv.key, kv.value]);
+        ret[key] = args[1]([key, value]);
     }
     Table tab = new Table(ret, args[0].tab.meta);
     return dynamic(tab);
@@ -42,18 +43,18 @@ Dynamic libmap(Dynamic[] args)
 Dynamic libmaparr(Dynamic[] args)
 {
     Dynamic[] ret;
-    foreach (kv; args[0].tab.byKeyValue)
+    foreach (key, value; args[0].tab)
     {
-        ret ~= args[1]([kv.key, kv.value]);
+        ret ~= args[1]([key, value]);
     }
     return dynamic(ret);
 }
 
 Dynamic libeach(Dynamic[] args)
 {
-    foreach (kv; args[0].tab.byKeyValue)
+    foreach (key, value; args[0].tab)
     {
-        args[1]([kv.key, kv.value]);
+        args[1]([key, value]);
     }
     return Dynamic.init;
 }
@@ -61,11 +62,11 @@ Dynamic libeach(Dynamic[] args)
 Dynamic libfiltervalues(Dynamic[] args)
 {
     Dynamic[] ret;
-    foreach (kv; args[0].tab.byKeyValue)
+    foreach (key, value; args[0].tab)
     {
-        if (args[1]([kv.key, kv.value]).isTruthy)
+        if (args[1]([key, value]).isTruthy)
         {
-            ret ~= kv.value;
+            ret ~= value;
         }
     }
     return dynamic(ret);
@@ -74,11 +75,11 @@ Dynamic libfiltervalues(Dynamic[] args)
 Dynamic libfilterkeys(Dynamic[] args)
 {
     Dynamic[] ret;
-    foreach (kv; args[0].tab.byKeyValue)
+    foreach (key, value; args[0].tab)
     {
-        if (args[1]([kv.key, kv.value]).isTruthy)
+        if (args[1]([key, value]).isTruthy)
         {
-            ret ~= kv.key;
+            ret ~= key;
         }
     }
     return dynamic(ret);
@@ -86,12 +87,12 @@ Dynamic libfilterkeys(Dynamic[] args)
 
 Dynamic libfilter(Dynamic[] args)
 {
-    Dynamic[Dynamic] ret;
-    foreach (kv; args[0].tab.byKeyValue)
+    Map!(Dynamic, Dynamic) ret;
+    foreach (key, value; args[0].tab)
     {
-        if (args[1]([kv.key, kv.value]).isTruthy)
+        if (args[1]([key, value]).isTruthy)
         {
-            ret[kv.key] =  kv.value;
+            ret[key] =  value;
         }
     }
     Table tab = new Table(ret, args[0].tab.meta);

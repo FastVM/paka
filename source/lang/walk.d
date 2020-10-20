@@ -496,7 +496,7 @@ class Walker
         {
             walk(i);
         }
-        pushInstr(func, Opcode.array, [cast(ushort) used]);
+        pushInstr(func, Opcode.array);
         stackSize[0] = tmp + 1;
     }
 
