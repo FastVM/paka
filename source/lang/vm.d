@@ -255,7 +255,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             {
                 stack--;
             }
-            Map!(Dynamic, Dynamic) table;
+            Mapping table;
             for (Dynamic* i = stack; i < end; i += 2)
             {
                 if ((*i).type == Dynamic.Type.pac)

@@ -24,9 +24,12 @@ version = safe;
 alias Args = Dynamic[];
 alias Array = Dynamic[];
 
+alias Mapping = Dynamic[Dynamic];
+
 class Table
 {
-    Map!(Dynamic, Dynamic) table;
+    // Map!(Dynamic, Dynamic) table;
+    Dynamic[Dynamic] table;
     Table metatable;
     alias table this;
 
@@ -67,7 +70,14 @@ class Table
 
     int opApply(int delegate(Dynamic, Dynamic) dg)
     {
-        return table.opApply(dg);
+        foreach (Dynamic a, Dynamic b; table)
+        {
+            if (int res = dg(a, b))
+            {
+                return res;
+            }
+        }
+        return 0;
     }
 
     int opCmp(Dynamic other)
@@ -269,7 +279,7 @@ align(4):
         type = Type.arr;
     }
 
-    this(Map!(Dynamic, Dynamic) tab)
+    this(Mapping tab)
     {
         value.tab = new Table(tab);
         type = Type.tab;
@@ -313,20 +323,20 @@ align(4):
         return ret;
     }
 
-    // size_t toHash() const
-    // {
-    //     switch (type)
-    //     {
-    //     default:
-    //         return hashOf(type) ^ hashOf(value);
-    //     case Type.str:
-    //         return hashOf(*value.str);
-    //     case Type.arr:
-    //         return hashOf(*value.arr);
-    //     case Type.tab:
-    //         return hashOf(value.tab.table);
-    //     }
-    // }
+    size_t toHash() const nothrow
+    {
+        switch (type)
+        {
+        default:
+            return hashOf(type) ^ hashOf(value);
+        case Type.str:
+            return hashOf(*value.str);
+        case Type.arr:
+            return hashOf(*value.arr);
+        case Type.tab:
+            return hashOf(value.tab.table);
+        }
+    }
 
     string toString()
     {
@@ -364,7 +374,8 @@ align(4):
         {
         default:
             // assert(0);
-            throw new TypeException("error: not comparable: " ~ this.to!string ~ " " ~ other.to!string);
+            throw new TypeException(
+                    "error: not comparable: " ~ this.to!string ~ " " ~ other.to!string);
         case Type.nil:
             return 0;
         case Type.log:

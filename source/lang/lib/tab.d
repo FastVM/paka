@@ -31,7 +31,7 @@ Pair[] libraw()
 
 Dynamic libmap(Dynamic[] args)
 {
-    Map!(Dynamic, Dynamic) ret;
+    Mapping ret;
     foreach (key, value; args[0].tab)
     {
         ret[key] = args[1]([key, value]);
@@ -87,7 +87,7 @@ Dynamic libfilterkeys(Dynamic[] args)
 
 Dynamic libfilter(Dynamic[] args)
 {
-    Map!(Dynamic, Dynamic) ret;
+    Mapping ret;
     foreach (key, value; args[0].tab)
     {
         if (args[1]([key, value]).isTruthy)

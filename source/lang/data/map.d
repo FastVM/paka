@@ -122,8 +122,8 @@ class Map(Key, Value)
             key = k;
             value = v;
             length = 1;
-            left = new This;
-            right = new This;
+            left = new This(null);
+            right = new This(null);
             // writeln("  new: ", value);
         }
         else
@@ -158,7 +158,7 @@ class Map(Key, Value)
             {
                 return null;
             }
-            return right.has(k);
+            return k in right;
         }
         else if (c < 0)
         {
@@ -166,7 +166,7 @@ class Map(Key, Value)
             {
                 return null;
             }
-            return left.has(k);
+            return k in left;
         }
         else
         {
