@@ -1,8 +1,10 @@
 module lang.data.map;
 
 import core.memory;
+import lang.error;
 import std.algorithm;
 import std.stdio;
+import std.conv;
 
 int compare(T1, T2)(T1 a, T2 b)
 {
@@ -20,99 +22,118 @@ int compare(T1, T2)(T1 a, T2 b)
     }
 }
 
-// struct Map(Key, Value)
-// {
-//     MapData!(Key, Value) data; // = new MapData!(Key, Value);
-
-//     @disable this();
-
-//     this(MapData!(Key, Value) d)
-//     {
-//         data = d;
-//     }
-
-//     static This empty() {
-//         return new 
-//     }
-
-//     size_t length() const
-//     {
-//         return data.length;
-//     }
-
-//     int opApply(int delegate(Value) dg)
-//     {
-//         return data.opApply(dg);
-//     }
-
-//     int opApply(int delegate(Key, Value) dg)
-//     {
-//         return data.opApply(dg);
-//     }
-
-//     Value opIndex(Key k)
-//     {
-//         return data.get(k);
-//     }
-
-//     Value* opBinaryRight(string op)(Key k) if (op == "in")
-//     {
-//         return data.has(k);
-//     }
-
-//     void opIndexAssign(Value v, Key k)
-//     {
-//         data.set(k, v);
-//     }
-// }
+__gshared rebs = 0;
 
 class Map(Key, Value)
 {
     alias This = typeof(this);
-    This left;
-    This right;
-    Key key;
-    Value value;
+    This leftv;
+    This rightv;
+    Key key = void;
+    Value value = void;
     size_t length;
+    long children;
 
-    @disable this();
+    this(typeof(null) n = null)
+    {
+        length = 0;
+        children = 0;
+    }
 
-    this(typeof(null) n) {
-        
+    this(This l, This r, Key k, Value v)
+    {
+        right = r;
+        left = l;
+        key = k;
+        value = v;
+        length = left.length + right.length + 1;
+        children = max(left.children, right.children) + 1;
+    }
+
+    ref This left()
+    {
+        if (leftv is null)
+        {
+            leftv = new This;
+        }
+        return leftv;
+    }
+
+    ref This right()
+    {
+        if (rightv is null)
+        {
+            rightv = new This;
+        }
+        return rightv;
     }
 
     int opApply(int delegate(Value) dg)
     {
-        if (left !is null && left.opApply(dg))
+        if (length != 0)
         {
-            return 1;
-        }
-        if (length != 0 && dg(value))
-        {
-            return 1;
-        }
-        if (right !is null && right.opApply(dg))
-        {
-            return 1;
+            if (int res = left.opApply(dg))
+            {
+                return res;
+            }
+            if (int res = dg(value))
+            {
+                return res;
+            }
+            if (int res = right.opApply(dg))
+            {
+                return res;
+            }
         }
         return 0;
     }
 
     int opApply(int delegate(Key, Value) dg)
     {
-        if (left !is null && left.opApply(dg))
+        if (length != 0)
         {
-            return 1;
-        }
-        if (length != 0 && dg(key, value))
-        {
-            return 1;
-        }
-        if (right !is null && right.opApply(dg))
-        {
-            return 1;
+            if (int res = left.opApply(dg))
+            {
+                return res;
+            }
+            if (int res = dg(key, value))
+            {
+                return res;
+            }
+            if (int res = right.opApply(dg))
+            {
+                return res;
+            }
         }
         return 0;
+    }
+
+    void rebalance()
+    {
+        if (left.children - 1 > right.children)
+        {
+            This left2 = left;
+            This right2 = right;
+            left = left2.left;
+            right = new This(left2.right, right2, key, value);
+            key = left2.key;
+            value = left2.value;
+            assert(length == right.length + left.length + 1);
+            length = right.length + left.length + 1;
+            children = max(left.children, right.children) + 1;
+        }
+        if (right.children - 1 > left.children)
+        {
+            This left2 = left;
+            This right2 = right;
+            left = new This(left2, right2.left, key, value);
+            right = right2.right;
+            key = right2.key;
+            value = right2.value;
+            assert(length == right.length + left.length + 1);
+            length = right.length + left.length + 1;
+            children = max(left.children, right.children) + 1;
+        }
     }
 
     void opIndexAssign(Value v, Key k)
@@ -122,24 +143,27 @@ class Map(Key, Value)
             key = k;
             value = v;
             length = 1;
-            left = new This(null);
-            right = new This(null);
-            // writeln("  new: ", value);
+            children = 0;
+            // right = new This(null);
+            // left = new This(null);
         }
         else
         {
             int c = compare(key, k);
+            // writeln(key, " <=> ", k, " // ", c);
             if (c > 0)
             {
-                // writeln("  -> right");
-                right[k] = v;
-                length = left.length + right.length;
+                left[k] = v;
+                length = right.length + left.length + 1;
+                children = max(left.children, right.children) + 1;
+                rebalance;
             }
             else if (c < 0)
             {
-                // writeln("  -> left");
-                left[k] = v;
-                length = left.length + right.length;
+                right[k] = v;
+                length = right.length + left.length + 1;
+                children = max(left.children, right.children) + 1;
+                rebalance;
             }
             else
             {
@@ -151,43 +175,22 @@ class Map(Key, Value)
 
     Value* opBinaryRight(string op)(Key k) if (op == "in")
     {
+        if (length == 0)
+        {
+            return null;
+        }
         int c = compare(key, k);
         if (c > 0)
         {
-            if (right is null)
-            {
-                return null;
-            }
-            return k in right;
-        }
-        else if (c < 0)
-        {
-            if (left is null)
-            {
-                return null;
-            }
             return k in left;
         }
-        else
-        {
-            return &key;
-        }
-    }
-
-    ref Value opIndex(Key k)
-    {
-        int c = compare(key, k);
-        if (c > 0)
-        {
-            return right[k];
-        }
         else if (c < 0)
         {
-            return left[k];
+            return k in right;
         }
         else
         {
-            return value;
+            return &value;
         }
     }
 }

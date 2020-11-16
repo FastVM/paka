@@ -94,7 +94,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         }
     }
     ubyte* instrs = func.instrs.ptr;
-    Dynamic* debugs = stack;
     whileLopp: while (true)
     {
         Opcode cur = cast(Opcode) instrs[index++];
@@ -145,9 +144,9 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             case Dynamic.Type.fun:
                 (*(stack - 1)) = f.fun.fun(stack[0 .. 0 + instrs.get1!ushort(index)]);
                 break;
-            case Dynamic.Type.del:
-                (*(stack - 1)) = (*f.fun.del)(stack[0 .. 0 + instrs.get1!ushort(index)]);
-                break;
+            // case Dynamic.Type.del:
+            //     (*(stack - 1)) = (*f.fun.del)(stack[0 .. 0 + instrs.get1!ushort(index)]);
+            //     break;
             case Dynamic.Type.pro:
                 (*(stack - 1)) = run(f.fun.pro, stack[0 .. 0 + instrs.get1!ushort(index)]);
                 break;
@@ -185,9 +184,9 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             case Dynamic.Type.fun:
                 result = f.fun.fun(cargs);
                 break;
-            case Dynamic.Type.del:
-                (*(stack - 1)) = (*f.fun.del)(cargs);
-                break;
+            // case Dynamic.Type.del:
+            //     (*(stack - 1)) = (*f.fun.del)(cargs);
+            //     break;
             case Dynamic.Type.pro:
                 (*(stack - 1)) = run(f.fun.pro, cargs);
                 break;
@@ -255,7 +254,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             {
                 stack--;
             }
-            Mapping table;
+            Mapping table = emptyMapping;
             for (Dynamic* i = stack; i < end; i += 2)
             {
                 if ((*i).type == Dynamic.Type.pac)

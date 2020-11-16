@@ -510,9 +510,8 @@ class Walker
         {
             walk(i);
         }
-        pushInstr(func, Opcode.table, [cast(ushort) args.length], stackSize[0] - used);
+        pushInstr(func, Opcode.table, null, stackSize[0] - used);
         stackSize[0] = tmp + 1;
-
     }
 
     void walkTarget(Node[] args)

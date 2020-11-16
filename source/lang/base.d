@@ -52,7 +52,7 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
     // {
     //     pairs ~= Pair(name ~ "." ~ entry.name, entry.val);
     // }
-    Mapping dyn;
+    Mapping dyn = emptyMapping;
     foreach (entry; lib)
     {
         if (!entry.name.canFind('.'))

@@ -1,8 +1,40 @@
-mil = arr.range(1000 * 1000);
+a = {};
+b = {};
 
-t = {"res": 0};
+a.val = a;
+b.val = b;
 
-arr.each(mil) {
-    io.print($0);
-    t[$0] = $0;
+io.print(a == b, ": ", a, " == ", b);
+
+a[b] = a;
+b[b] = b;
+
+io.print(a == b, ": ", a, " == ", b);
+
+a = table {
+    @x = 2;
 };
+
+b = table {
+    @y = 2;
+};
+
+io.print((a < b) == (b > a));
+
+t = {};
+t[t] = t;
+io.print(t[t[t[t]][t[t]]][t][t[t[t]]] == t);
+
+t = {};
+a = [];
+t[a] = "ayy";
+arr.push(a, 0, 1, 2);
+io.print(t[[0, 1, 2]]);
+
+t = {};
+a = [0];
+t[a] = "key smaller";
+b = [1];
+t[b] = "key larger";
+a[0] = 2;
+io.print(t[a]);

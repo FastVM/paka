@@ -24,12 +24,22 @@ version = safe;
 alias Args = Dynamic[];
 alias Array = Dynamic[];
 
-alias Mapping = Dynamic[Dynamic];
+alias Mapping = Map!(Dynamic, Dynamic);
+Mapping emptyMapping()
+{
+    return new Mapping;
+}
+
+// size_t hashed = 0;
+// alias Mapping = Dynamic[Dynamic];
+// Mapping emptyMapping(){
+//     return Mapping.init;
+// }
 
 class Table
 {
     // Map!(Dynamic, Dynamic) table;
-    Dynamic[Dynamic] table;
+    Mapping table = emptyMapping;
     Table metatable;
     alias table this;
 
@@ -80,14 +90,18 @@ class Table
         return 0;
     }
 
-    int opCmp(Dynamic other)
-    {
-        return meta[dynamic("cmp")]([dynamic(this), other]).opCmp(dynamicZero);
-    }
+    // int opCmp(Dynamic other)
+    // {
+    //     return meta[dynamic("cmp")]([dynamic(this), other]).opCmp(dynamicZero);
+    // }
 
-    Dynamic rawIndex(Dynamic value)
+    Dynamic rawIndex(Dynamic key)
     {
-        return table[value];
+        if (Dynamic* d = key in table)
+        {
+            return *d;
+        }
+        throw new BoundsException("key not found: " ~ key.to!string);
     }
 
     void rawSet(Dynamic key, Dynamic value)
@@ -206,7 +220,7 @@ struct Dynamic
         arr,
         tab,
         fun,
-        del,
+        // del,
         pro,
         end,
         pac,
@@ -223,14 +237,12 @@ struct Dynamic
         union Callable
         {
             Dynamic function(Args) fun;
-            Dynamic delegate(Args)* del;
             Function pro;
         }
-
         Callable fun;
     }
 
-align(4):
+align(8):
     Value value = void;
     Type type = Type.nil;
 
@@ -297,11 +309,11 @@ align(4):
         type = Type.fun;
     }
 
-    this(Dynamic delegate(Args) del)
-    {
-        value.fun.del = [del].ptr;
-        type = Type.del;
-    }
+    // this(Dynamic delegate(Args) del)
+    // {
+    //     value.fun.del = [del].ptr;
+    //     type = Type.del;
+    // }
 
     this(Function pro)
     {
@@ -323,20 +335,44 @@ align(4):
         return ret;
     }
 
-    size_t toHash() const nothrow
-    {
-        switch (type)
-        {
-        default:
-            return hashOf(type) ^ hashOf(value);
-        case Type.str:
-            return hashOf(*value.str);
-        case Type.arr:
-            return hashOf(*value.arr);
-        case Type.tab:
-            return hashOf(value.tab.table);
-        }
-    }
+    // size_t toHash() const nothrow
+    // {
+    //     hashed++;
+    //     scope(exit)
+    //     {
+    //         hashed--;
+    //     }
+    //     if (hashed == 8) {
+    //         return 0;
+    //     }
+    //     final switch (type)
+    //     {
+    //     case Type.nil:
+    //         return 2;
+    //     case Type.log:
+    //         return cast(size_t) (value.log + 1);
+    //     case Type.sml:
+    //         return *cast(size_t*)&value.sml;
+    //     case Type.big:
+    //         return hashOf(value.bnm);
+    //     case Type.str:
+    //         return hashOf(*value.str);
+    //     case Type.arr:
+    //         return hashOf(*value.arr);
+    //     case Type.tab:
+    //         return hashOf(value.tab);
+    //     case Type.fun:
+    //         return hashOf(value.fun.fun);
+    //     case Type.del:
+    //         return hashOf(value.fun.del);
+    //     case Type.pro:
+    //         return hashOf(value.fun.pro);
+    //     case Type.end:
+    //         assert(0);
+    //     case Type.pac:
+    //         assert(0);
+    //     }
+    // }
 
     string toString()
     {
@@ -349,8 +385,8 @@ align(4):
         {
         case Dynamic.Type.fun:
             return fun.fun(args);
-        case Dynamic.Type.del:
-            return (*fun.del)(args);
+        // case Dynamic.Type.del:
+        //     return (*fun.del)(args);
         case Dynamic.Type.pro:
             if (fun.pro.self.length == 0)
             {
@@ -368,6 +404,11 @@ align(4):
     }
 
     int opCmp(Dynamic other)
+    {
+        return cmpDynamic(this, other);
+    }
+
+    int flatOpCmp(Dynamic other)
     {
         Type t = type;
         switch (t)
@@ -409,7 +450,7 @@ align(4):
 
     bool opEquals(const Dynamic other) const
     {
-        return isEqual(this, other);
+        return cmpDynamic(this, other) == 0;
     }
 
     Dynamic opBinary(string op)(Dynamic other)
@@ -576,7 +617,8 @@ align(4):
     Value.Callable fun()
     {
         version (safe)
-            if (type != Type.fun && type != Type.pro && type != Type.del)
+            // if (type != Type.fun && type != Type.pro && type != Type.del)
+            if (type != Type.fun && type != Type.pro)
             {
                 throw new TypeException("expected callable type");
             }
@@ -613,20 +655,40 @@ align(4):
     }
 }
 
-private bool isEqual(const Dynamic a, const Dynamic b)
+private int cmp(T)(T a, T b) if (!is(T == Function) && !is(T == Dynamic))
 {
-    Dynamic[2][] n;
-    return isEqualRec(a, b, n);
+    if (a == b)
+    {
+        return 0;
+    }
+    if (a < b)
+    {
+        return -1;
+    }
+    return 1;
 }
 
-private bool isEqualRec(const Dynamic a, const Dynamic b, ref Dynamic[2][] above)
+private int cmpFunction(const Function a, const Function b)
+{
+    return cmp(cast(void*) a, cast(void*) b);
+}
+
+Dynamic[2][] above;
+private int cmpDynamic(T...)(T a)
+{
+    int res = cmpDynamicImpl(a);
+    // writeln(a[0], ", ", a[1], " // ", res);
+    return res;
+}
+
+private int cmpDynamicImpl(const Dynamic a, const Dynamic b)
 {
     Dynamic[2] cur = [a, b];
     foreach (i, p; above)
     {
         if (cur[0] is p[0] && cur[1] is p[1])
         {
-            return true;
+            return 0;
         }
     }
     if (b.type != a.type)
@@ -635,36 +697,36 @@ private bool isEqualRec(const Dynamic a, const Dynamic b, ref Dynamic[2][] above
         {
             if (b.type == Dynamic.Type.big)
             {
-                return a.value.sml.asBig == *b.value.bnm;
+                return cmp(a.value.sml.asBig, *b.value.bnm);
             }
         }
         if (a.type == Dynamic.Type.big)
         {
             if (b.type == Dynamic.Type.sml)
             {
-                return *a.value.bnm == b.value.sml.asBig;
+                return cmp(*a.value.bnm, b.value.sml.asBig);
             }
         }
-        return false;
+        return cmp(a.type, b.type);
     }
     if (a is b)
     {
-        return true;
+        return 0;
     }
     switch (a.type)
     {
     default:
         assert(0);
     case Dynamic.Type.nil:
-        return true;
+        return 0;
     case Dynamic.Type.log:
-        return a.value.log == b.value.log;
+        return cmp(a.value.log, b.value.log);
     case Dynamic.Type.str:
-        return *a.value.str == *b.value.str;
+        return cmp(*a.value.str, *b.value.str);
     case Dynamic.Type.sml:
-        return a.value.sml == b.value.sml;
+        return cmp(a.value.sml, b.value.sml);
     case Dynamic.Type.big:
-        return *a.value.bnm == *b.value.bnm;
+        return cmp(*a.value.bnm, *b.value.bnm);
     case Dynamic.Type.arr:
         above ~= cur;
         scope (exit)
@@ -673,18 +735,18 @@ private bool isEqualRec(const Dynamic a, const Dynamic b, ref Dynamic[2][] above
         }
         const Dynamic[] as = *a.value.arr;
         const Dynamic[] bs = *b.value.arr;
-        if (as.length != bs.length)
+        if (int c = cmp(as.length, bs.length))
         {
-            return false;
+            return c;
         }
         foreach (i; 0 .. as.length)
         {
-            if (!isEqualRec(as[i], bs[i], above))
+            if (int res = cmpDynamic(as[i], bs[i]))
             {
-                return false;
+                return res;
             }
         }
-        return true;
+        return 0;
     case Dynamic.Type.tab:
         above ~= cur;
         scope (exit)
@@ -693,9 +755,9 @@ private bool isEqualRec(const Dynamic a, const Dynamic b, ref Dynamic[2][] above
         }
         Table at = cast(Table) a.value.tab;
         Table bt = cast(Table) b.value.tab;
-        if (at.table.length != bt.table.length)
+        if (int c = cmp(at.table.length, bt.table.length))
         {
-            return false;
+            return c;
         }
         foreach (key, value; at)
         {
@@ -703,20 +765,27 @@ private bool isEqualRec(const Dynamic a, const Dynamic b, ref Dynamic[2][] above
             const Dynamic* bValue = key in bt;
             if (bValue is null)
             {
-                return false;
+                foreach (key2, value2; bt)
+                {
+                    if (key2 !in at)
+                    {
+                        return cmpDynamic(key, key2);
+                    }
+                }
+                assert(0);
             }
-            if (!isEqualRec(aValue, *bValue, above))
+            if (int res = cmpDynamic(aValue, *bValue))
             {
-                return false;
+                return res;
             }
         }
-        return true;
+        return 0;
     case Dynamic.Type.fun:
-        return a.value.fun.fun == b.value.fun.fun;
-    case Dynamic.Type.del:
-        return a.value.fun.del == b.value.fun.del;
+        return cmp(a.value.fun.fun, b.value.fun.fun);
+    // case Dynamic.Type.del:
+    //     return cmp(a.value.fun.del, b.value.fun.del);
     case Dynamic.Type.pro:
-        return a.value.fun.pro == b.value.fun.pro;
+        return cmpFunction(a.value.fun.pro, b.value.fun.pro);
     }
 }
 
@@ -726,7 +795,7 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
     {
         if (dyn is v)
         {
-            return "...";
+            return "&" ~ i.to!string;
         }
     }
     before ~= dyn;
@@ -787,8 +856,8 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         return cast(string) ret;
     case Dynamic.Type.fun:
         return "<function>";
-    case Dynamic.Type.del:
-        return "<function>";
+    // case Dynamic.Type.del:
+    //     return "<function>";
     case Dynamic.Type.pro:
         return dyn.fun.pro.to!string;
     }

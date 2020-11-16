@@ -57,7 +57,7 @@ void replRun()
         func.captured = loadBase;
         Dynamic res = run(func, null, func.exportLocalsToBaseCallback);
         if (res.type != Dynamic.Type.nil) {
-            writeln(res);
+            writeln(res, '\r');
         }
     }
 }

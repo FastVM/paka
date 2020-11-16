@@ -162,6 +162,7 @@ class Reader
 				output.moveLeft;
 			}
 			input.noRawMode(term);
+			output.write('\r');
 			output.flush;
 			history = oldHistory;
 		}

@@ -10,7 +10,8 @@ Pair[] libtab()
         Pair("map_arr", &libmaparr), Pair("map", &libmap),
         Pair("each", &libeach), Pair("filter", &libfilter),
         Pair("filter_keys", &libfilterkeys),
-        Pair("filter_keys", &libfiltervalues),
+        Pair("filter_values", &libfiltervalues),
+        Pair("len", &liblen),
     ];
     ret.addLib("meta", libmeta);
     ret.addLib("raw", libraw);
@@ -31,7 +32,7 @@ Pair[] libraw()
 
 Dynamic libmap(Dynamic[] args)
 {
-    Mapping ret;
+    Mapping ret = emptyMapping;
     foreach (key, value; args[0].tab)
     {
         ret[key] = args[1]([key, value]);
@@ -87,7 +88,7 @@ Dynamic libfilterkeys(Dynamic[] args)
 
 Dynamic libfilter(Dynamic[] args)
 {
-    Mapping ret;
+    Mapping ret = emptyMapping;
     foreach (key, value; args[0].tab)
     {
         if (args[1]([key, value]).isTruthy)
@@ -112,11 +113,16 @@ Dynamic libmetaget(Dynamic[] args)
 
 Dynamic librawget(Dynamic[] args)
 {
-    return dynamic(args[0].tab.table[args[1]]);
+    return dynamic(args[0].tab.rawIndex(args[1]));
 }
 
 Dynamic librawset(Dynamic[] args)
 {
     args[0].tab.table[args[1]] = args[2];
     return Dynamic.nil;
+}
+
+Dynamic liblen(Dynamic[] args)
+{
+    return dynamic(args[0].tab.length);
 }
