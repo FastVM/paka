@@ -11,6 +11,7 @@ import lang.lib.str;
 import lang.lib.arr;
 import lang.lib.tab;
 import lang.lib.proc;
+public import lang.vm;
 
 struct Pair
 {

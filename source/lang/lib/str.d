@@ -26,86 +26,100 @@ Pair[] libstr()
 }
 
 /// calls tostring of object
-Dynamic libfrom(Args args)
+void libfrom(Cont cont, Args args)
 {
-    return dynamic(args[0].to!string);
+    cont(dynamic(args[0].to!string));
+    return;
 }
 
 /// gets length of string
-Dynamic liblen(Args args)
+void liblen(Cont cont, Args args)
 {
-    return dynamic(args[0].str.length);
+    cont(dynamic(args[0].str.length));
+    return;
 }
 
 /// reutrns ascii value of first char of string
-Dynamic libascii(Args args)
+void libascii(Cont cont, Args args)
 {
-    return dynamic(cast(double) args[0].str[0]);
+    cont(dynamic(cast(double) args[0].str[0]));
+    return;
 }
 
 /// reutrns first char of string
-Dynamic libchar(Args args)
+void libchar(Cont cont, Args args)
 {
-    return dynamic(cast(string) [cast(char) args[0].as!size_t]);
+    cont(dynamic(cast(string) [cast(char) args[0].as!size_t]));
+    return;
 }
 
 /// reutrns string split at deliminer
-Dynamic libsplit(Args args)
+void libsplit(Cont cont, Args args)
 {
-    return dynamic(args[0].str.splitter(args[1].str).map!(x => dynamic(x)).array);
+    cont(dynamic(args[0].str.splitter(args[1].str).map!(x => dynamic(x)).array));
+    return;
 }
 
 /// joins string to deliminer
-Dynamic libjoin(Args args)
+void libjoin(Cont cont, Args args)
 {
-    return dynamic(cast(string) args[1].arr.map!(x => x.str).joiner(args[0].str).array);
+    cont(dynamic(cast(string) args[1].arr.map!(x => x.str).joiner(args[0].str).array));
+    return;
 }
 
 /// reutrns string split at everey char
-Dynamic libchars(Args args)
+void libchars(Cont cont, Args args)
 {
-    return dynamic(args[0].str.map!(x => dynamic(x.to!string)).array);
+    cont(dynamic(args[0].str.map!(x => dynamic(x.to!string)).array));
+    return;
 }
 
 /// replaces all occurrences of deliminer within string
-Dynamic libsubs(Args args)
+void libsubs(Cont cont, Args args)
 {
-    return dynamic(cast(string) args[0].str.substitute(args[1].str, args[2].str).array);
+    cont(dynamic(cast(string) args[0].str.substitute(args[1].str, args[2].str).array));
+    return;
 }
 
 /// return uppercase ascii string
-Dynamic libtoupper(Args args)
+void libtoupper(Cont cont, Args args)
 {
-    return dynamic(args[0].str.toUpper);
+    cont(dynamic(args[0].str.toUpper));
+    return;
 }
 
 /// return lowercase ascii string
-Dynamic libtolower(Args args)
+void libtolower(Cont cont, Args args)
 {
-    return dynamic(args[0].str.toLower);
+    cont(dynamic(args[0].str.toLower));
+    return;
 }
 
 /// return string converted to string
-Dynamic libtonumber(Args args)
+void libtonumber(Cont cont, Args args)
 {
-    return Dynamic.strToNum(args[0].str);
+    cont(Dynamic.strToNum(args[0].str));
+    return;
 }
 
 /// return string without whitespace on either end
-Dynamic libstrip(Args args)
+void libstrip(Cont cont, Args args)
 {
-    return dynamic(args[0].str.strip);
+    cont(dynamic(args[0].str.strip));
+    return;
 }
 
 /// return sliced string similar to arr.slice
-Dynamic libslice(Args args)
+void libslice(Cont cont, Args args)
 {
     if (args.length == 2)
     {
-        return dynamic(args[0].str[args[1].as!size_t .. $]);
+        cont(dynamic(args[0].str[args[1].as!size_t .. $]));
+        return;
     }
     else
     {
-        return dynamic(args[0].str[args[1].as!size_t .. args[2].as!size_t]);
+        cont(dynamic(args[0].str[args[1].as!size_t .. args[2].as!size_t]));
+        return;
     }
 }

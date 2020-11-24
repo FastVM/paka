@@ -19,7 +19,7 @@ Pair[] libio()
 }
 
 /// prints with newline
-Dynamic libprint(Args args)
+void libprint(Cont cont, Args args)
 {
     foreach (i; args)
     {
@@ -33,11 +33,12 @@ Dynamic libprint(Args args)
         }
     }
     writeln;
-    return Dynamic.nil;
+    cont(Dynamic.nil);
+    return;
 }
 
 /// prints without newline
-Dynamic libput(Args args)
+void libput(Cont cont, Args args)
 {
     foreach (i; args)
     {
@@ -50,17 +51,20 @@ Dynamic libput(Args args)
             write(i);
         }
     }
-    return Dynamic.nil;
+    cont(Dynamic.nil);
+    return;
 }
 
 /// reads until newline
-Dynamic libreadln(Args args)
+void libreadln(Cont cont, Args args)
 {
-    return dynamic(readln[0 .. $ - 1]);
+    cont(dynamic(readln[0 .. $ - 1]));
+    return;
 }
 
 /// gets a 1 length string
-Dynamic libget(Args args)
+void libget(Cont cont, Args args)
 {
-    return dynamic(cast(string) [cast(char) getchar]);
+    cont(dynamic(cast(string) [cast(char) getchar]));
+    return;
 }

@@ -15,24 +15,27 @@ Pair[] libsysenv()
     return ret;
 }
 
-Dynamic libget(Args args)
+void libget(Cont cont, Args args)
 {
-    return dynamic(environment[args[0].str]);
+    cont(dynamic(environment[args[0].str]));
+    return;
 }
 
-Dynamic libset(Args args)
+void libset(Cont cont, Args args)
 {
     environment[args[0].str] = args[1].to!string;
-    return Dynamic.nil;
+    cont(Dynamic.nil);
+    return;
 }
 
-Dynamic libreplace(Args args)
+void libreplace(Cont cont, Args args)
 {
-    Dynamic ret = Dynamic.nil;
+    Dynamic retv = Dynamic.nil;
     if (args[0].str in environment)
     {
-        ret = dynamic(environment[args[0].str]);
+        retv = dynamic(environment[args[0].str]);
     }
     environment[args[0].str] = args[1].to!string;
-    return ret;
+    cont(retv);
+    return;
 }

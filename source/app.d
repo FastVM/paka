@@ -8,7 +8,6 @@ import lang.dynamic;
 import lang.parse;
 import lang.number;
 import lang.inter;
-import lang.dext.repl;
 import std.file;
 import std.stdio;
 import std.algorithm;
@@ -50,10 +49,6 @@ void domain(string[] args)
         {
             writeln(retval);
         }
-    }
-    if ((scripts ~ args[1 .. $]).length == 0)
-    {
-        replRun;
     }
 }
 

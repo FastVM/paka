@@ -13,19 +13,25 @@ import lang.dynamic;
 import lang.parse;
 import lang.vm;
 import lang.inter;
-import lang.dext.repl;
 
+bool okayToEval = true;
 Dynamic eval(size_t ctx, string code)
 {
     Node node = code.parse;
     Walker walker = new Walker;
     Function func = walker.walkProgram(node, ctx);
     func.captured = ctx.loadBase;
-    Dynamic retval = run(func, null, func.exportLocalsToBaseCallback);
+    Dynamic retval;
+    assert(okayToEval);
+    okayToEval = false;
+    loopRun((Dynamic d) { retval = d; }, func, null);
+    okayToEval = true;
     return retval;
 }
 
-Dynamic evalFile(string code) {
+bool okayToEvalFile = true;
+Dynamic evalFile(string code)
+{
     size_t ctx = enterCtx;
     scope (exit)
     {
@@ -35,7 +41,11 @@ Dynamic evalFile(string code) {
     Walker walker = new Walker;
     Function func = walker.walkProgram(node, ctx);
     func.captured = loadBase;
-    Dynamic retval = run(func);
+    assert(okayToEvalFile);
+    okayToEvalFile = false;
+    Dynamic retval;
+    loopRun((Dynamic d) { retval = d; }, func, null);
+    okayToEvalFile = true;
     return retval;
 }
 

@@ -1,0 +1,12 @@
+
+x = 0;
+
+cont = sys.callcc(cc => cc);
+
+x += 1;
+
+if (x < 5000000) {
+    cont(cont);
+};
+
+io.print(x);

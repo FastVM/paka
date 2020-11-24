@@ -6,123 +6,88 @@ import std.stdio;
 
 Pair[] libtab()
 {
-    Pair[] ret = [
-        Pair("map_arr", &libmaparr), Pair("map", &libmap),
-        Pair("each", &libeach), Pair("filter", &libfilter),
-        Pair("filter_keys", &libfilterkeys),
-        Pair("filter_values", &libfiltervalues),
-        Pair("len", &liblen),
-    ];
-    ret.addLib("meta", libmeta);
-    ret.addLib("raw", libraw);
+    Pair[] ret = [Pair("len", &liblen),];
     return ret;
 }
 
-Pair[] libmeta()
-{
-    Pair[] ret = [Pair("get", &libmetaget), Pair("set", &libmetaset),];
-    return ret;
-}
+// void libmap(Cont cont, Args args)
+// {
+//     Mapping ret = emptyMapping;
+//     foreach (key, value; args[0].tab)
+//     {
+//         ret[key] = args[1]([key, value]);
+//     }
+//     Table tab = new Table(ret);
+//     cont(dynamic(tab));
+//     return;
+// }
 
-Pair[] libraw()
-{
-    Pair[] ret = [Pair("get", &librawset), Pair("set", &librawget),];
-    return ret;
-}
+// void libmaparr(Cont cont, Args args)
+// {
+//     Dynamic[] ret;
+//     foreach (key, value; args[0].tab)
+//     {
+//         ret ~= args[1]([key, value]);
+//     }
+//     cont(dynamic(ret));
+//     return;
+// }
 
-Dynamic libmap(Dynamic[] args)
-{
-    Mapping ret = emptyMapping;
-    foreach (key, value; args[0].tab)
-    {
-        ret[key] = args[1]([key, value]);
-    }
-    Table tab = new Table(ret, args[0].tab.meta);
-    return dynamic(tab);
-}
+// void libeach(Cont cont, Args args)
+// {
+//     foreach (key, value; args[0].tab)
+//     {
+//         args[1]([key, value]);
+//     }
+//     cont(Dynamic.init);
+//     return;
+// }
 
-Dynamic libmaparr(Dynamic[] args)
-{
-    Dynamic[] ret;
-    foreach (key, value; args[0].tab)
-    {
-        ret ~= args[1]([key, value]);
-    }
-    return dynamic(ret);
-}
+// void libfiltervalues(Cont cont, Args args)
+// {
+//     Dynamic[] ret;
+//     foreach (key, value; args[0].tab)
+//     {
+//         if (args[1]([key, value]).isTruthy)
+//         {
+//             ret ~= value;
+//         }
+//     }
+//     cont(dynamic(ret));
+//     return;
+// }
 
-Dynamic libeach(Dynamic[] args)
-{
-    foreach (key, value; args[0].tab)
-    {
-        args[1]([key, value]);
-    }
-    return Dynamic.init;
-}
+// void libfilterkeys(Cont cont, Args args)
+// {
+//     Dynamic[] ret;
+//     foreach (key, value; args[0].tab)
+//     {
+//         if (args[1]([key, value]).isTruthy)
+//         {
+//             ret ~= key;
+//         }
+//     }
+//     cont(dynamic(ret));
+//     return;
+// }
 
-Dynamic libfiltervalues(Dynamic[] args)
-{
-    Dynamic[] ret;
-    foreach (key, value; args[0].tab)
-    {
-        if (args[1]([key, value]).isTruthy)
-        {
-            ret ~= value;
-        }
-    }
-    return dynamic(ret);
-}
+// void libfilter(Cont cont, Args args)
+// {
+//     Mapping ret = emptyMapping;
+//     foreach (key, value; args[0].tab)
+//     {
+//         if (args[1]([key, value]).isTruthy)
+//         {
+//             ret[key] = value;
+//         }
+//     }
+//     Table tab = new Table(ret);
+//     cont(dynamic(tab));
+//     return;
+// }
 
-Dynamic libfilterkeys(Dynamic[] args)
+void liblen(Cont cont, Args args)
 {
-    Dynamic[] ret;
-    foreach (key, value; args[0].tab)
-    {
-        if (args[1]([key, value]).isTruthy)
-        {
-            ret ~= key;
-        }
-    }
-    return dynamic(ret);
-}
-
-Dynamic libfilter(Dynamic[] args)
-{
-    Mapping ret = emptyMapping;
-    foreach (key, value; args[0].tab)
-    {
-        if (args[1]([key, value]).isTruthy)
-        {
-            ret[key] =  value;
-        }
-    }
-    Table tab = new Table(ret, args[0].tab.meta);
-    return dynamic(tab);
-}
-
-Dynamic libmetaset(Dynamic[] args)
-{
-    args[0].tab.meta = args[1].tab;
-    return args[0];
-}
-
-Dynamic libmetaget(Dynamic[] args)
-{
-    return dynamic(args[0].tab.meta);
-}
-
-Dynamic librawget(Dynamic[] args)
-{
-    return dynamic(args[0].tab.rawIndex(args[1]));
-}
-
-Dynamic librawset(Dynamic[] args)
-{
-    args[0].tab.table[args[1]] = args[2];
-    return Dynamic.nil;
-}
-
-Dynamic liblen(Dynamic[] args)
-{
-    return dynamic(args[0].tab.length);
+    cont(dynamic(args[0].tab.length));
+    return;
 }

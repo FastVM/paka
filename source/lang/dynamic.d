@@ -40,7 +40,6 @@ class Table
 {
     // Map!(Dynamic, Dynamic) table;
     Mapping table = emptyMapping;
-    Table metatable;
     alias table this;
 
     Table init()
@@ -60,22 +59,6 @@ class Table
     this(typeof(table) t)
     {
         table = t;
-        metatable = null;
-    }
-
-    this(typeof(table) t, Table m)
-    {
-        table = t;
-        metatable = m;
-    }
-
-    ref Table meta()
-    {
-        if (metatable is null)
-        {
-            metatable = Table.empty;
-        }
-        return metatable;
     }
 
     int opApply(int delegate(Dynamic, Dynamic) dg)
@@ -90,11 +73,6 @@ class Table
         return 0;
     }
 
-    // int opCmp(Dynamic other)
-    // {
-    //     return meta[dynamic("cmp")]([dynamic(this), other]).opCmp(dynamicZero);
-    // }
-
     Dynamic rawIndex(Dynamic key)
     {
         if (Dynamic* d = key in table)
@@ -104,37 +82,13 @@ class Table
         throw new BoundsException("key not found: " ~ key.to!string);
     }
 
-    void rawSet(Dynamic key, Dynamic value)
+    void set(Dynamic key, Dynamic value)
     {
         table[key] = value;
     }
 
-    void set(Dynamic key, Dynamic value)
-    {
-        Dynamic* metaset = dynamic("set") in meta;
-        if (metaset !is null)
-        {
-            (*metaset)([dynamic(this), key, value]);
-        }
-        rawSet(key, value);
-    }
-
     Dynamic opIndex(Dynamic key)
     {
-        Dynamic* metaget = dynamic("get") in meta;
-        if (metaget !is null)
-        {
-            if (metaget.type == Dynamic.Type.tab)
-            {
-                Dynamic* val = key in this;
-                if (val !is null)
-                {
-                    return *val;
-                }
-                return (*metaget).tab[key];
-            }
-            return (*metaget)([dynamic(this), key]);
-        }
         Dynamic* val = key in this;
         if (val !is null)
         {
@@ -143,54 +97,9 @@ class Table
         throw new TypeException("table item not found: " ~ key.to!string);
     }
 
-    Dynamic* opBinaryRight(string op)(Dynamic other) if (op == "in")
-    {
-        return other in table;
-    }
-
-    Dynamic opBinary(string op)(Dynamic other)
-    {
-        enum string opname(string op)()
-        {
-            switch (op)
-            {
-            default : assert(0);
-            case "+" : return "add";
-            case "-" : return "sub";
-            case "*" : return "mul";
-            case "/" : return "div";
-            case "%" : return "mod";
-            }
-        }
-        return meta[dynamic(opname!op)]([dynamic(this), other]);
-    }
-
-    Dynamic opCall(Dynamic[] args)
-    {
-        return meta[dynamic("call")](dynamic(this) ~ args);
-    }
-
-    Dynamic opUnary(string op)()
-    {
-        enum string opname(string op)()
-        {
-            switch (op)
-            {
-            default : assert(0);
-            case "-" : return "neg";
-            }
-        }
-        return meta[dynamic(opname!op)]([this]);
-    }
-
     override string toString()
     {
-        Dynamic* op = dynamic("str") in meta;
-        if (op is null)
-        {
-            return table.to!string;
-        }
-        return (*op)([dynamic(this)]).to!string;
+        return table.to!string;
     }
 }
 
@@ -220,7 +129,7 @@ struct Dynamic
         arr,
         tab,
         fun,
-        // del,
+        del,
         pro,
         end,
         pac,
@@ -236,9 +145,11 @@ struct Dynamic
         Table tab;
         union Callable
         {
-            Dynamic function(Args) fun;
+            void function(Cont, Args) fun;
+            void delegate(Cont, Args)* del;
             Function pro;
         }
+
         Callable fun;
     }
 
@@ -303,17 +214,17 @@ align(8):
         type = Type.tab;
     }
 
-    this(Dynamic function(Args) fun)
+    this(void function(Cont, Args) fun)
     {
         value.fun.fun = fun;
         type = Type.fun;
     }
 
-    // this(Dynamic delegate(Args) del)
-    // {
-    //     value.fun.del = [del].ptr;
-    //     type = Type.del;
-    // }
+    this(void delegate(Cont, Args) del)
+    {
+        value.fun.del = [del].ptr;
+        type = Type.del;
+    }
 
     this(Function pro)
     {
@@ -379,25 +290,27 @@ align(8):
         return this.strFormat;
     }
 
-    Dynamic opCall(Dynamic[] args)
+    void opCall(Cont cont, Dynamic[] args)
     {
         switch (type)
         {
         case Dynamic.Type.fun:
-            return fun.fun(args);
-        // case Dynamic.Type.del:
-        //     return (*fun.del)(args);
+            fun.fun(cont, args);
+            return;
+        case Dynamic.Type.del:
+            (*fun.del)(cont, args);
+            return;
         case Dynamic.Type.pro:
             if (fun.pro.self.length == 0)
             {
-                return run(fun.pro, args);
+                run(cont, fun.pro, args);
+                return;
             }
             else
             {
-                return run(fun.pro, fun.pro.self ~ args);
+                run(cont, fun.pro, fun.pro.self ~ args);
+                return;
             }
-        case Dynamic.Type.tab:
-            return value.tab(args);
         default:
             throw new TypeException("error: not a function: " ~ this.to!string);
         }
@@ -484,10 +397,6 @@ align(8):
             {
                 return dynamic(mixin("*value.bnm " ~ op ~ " *other.value.bnm"));
             }
-        }
-        else if (type == Type.tab)
-        {
-            return mixin("value.tab " ~ op ~ " other");
         }
         static if (op == "~" || op == "+")
         {
@@ -617,8 +526,7 @@ align(8):
     Value.Callable fun()
     {
         version (safe)
-            // if (type != Type.fun && type != Type.pro && type != Type.del)
-            if (type != Type.fun && type != Type.pro)
+            if (type != Type.fun && type != Type.pro && type != Type.del)
             {
                 throw new TypeException("expected callable type");
             }
@@ -782,8 +690,8 @@ private int cmpDynamicImpl(const Dynamic a, const Dynamic b)
         return 0;
     case Dynamic.Type.fun:
         return cmp(a.value.fun.fun, b.value.fun.fun);
-    // case Dynamic.Type.del:
-    //     return cmp(a.value.fun.del, b.value.fun.del);
+    case Dynamic.Type.del:
+        return cmp(a.value.fun.del, b.value.fun.del);
     case Dynamic.Type.pro:
         return cmpFunction(a.value.fun.pro, b.value.fun.pro);
     }
@@ -856,8 +764,8 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         return cast(string) ret;
     case Dynamic.Type.fun:
         return "<function>";
-    // case Dynamic.Type.del:
-    //     return "<function>";
+    case Dynamic.Type.del:
+        return "<function>";
     case Dynamic.Type.pro:
         return dyn.fun.pro.to!string;
     }

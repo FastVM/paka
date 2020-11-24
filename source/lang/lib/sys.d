@@ -24,52 +24,64 @@ Pair[] libsys()
     Pair[] ret = [
         Pair("leave", &libleave), Pair("args", &libargs),
         Pair("typeof", &libtypeof), Pair("import", &libimport),
-        Pair("assert", &libassert),
+        Pair("assert", &libassert), Pair("callcc", &libcallcc),
     ];
     ret.addLib("env", libsysenv);
     return ret;
 }
 
 /// asserts value is true, with error msg
-Dynamic libassert(Args args) {
+void libassert(Cont cont, Args args) {
     if (args[0].type == Dynamic.Type.nil || (args[0].type == Dynamic.Type.log && !args[0].log))
     {
         throw new AssertException("assert error: " ~ args[1].to!string);
     }
-    return Dynamic.nil;
+    cont(Dynamic.nil);
+    return;
 }
 
 /// imports value returning what it returned
-Dynamic libimport(Args args) {
+void libimport(Cont cont, Args args) {
     string code = cast(string) args[0].str.read;
     Dynamic retval = evalFile(code);
-    return retval;
+    cont(retval);
+    return;
 };
 
 /// returns type of value as a string
-Dynamic libtypeof(Args args)
+void libtypeof(Cont cont, Args args)
 {
     final switch (args[0].type) {
         case Dynamic.Type.nil:
-            return dynamic("nil");
+            cont(dynamic("nil"));
+            return;
         case Dynamic.Type.log:
-            return dynamic("logical");
+            cont(dynamic("logical"));
+            return;
         case Dynamic.Type.sml:
-            return dynamic("number");
+            cont(dynamic("number"));
+            return;
         case Dynamic.Type.big:
-            return dynamic("number");
+            cont(dynamic("number"));
+            return;
         case Dynamic.Type.str:
-            return dynamic("string");
+            cont(dynamic("string"));
+            return;
         case Dynamic.Type.arr:
-            return dynamic("array");
+            cont(dynamic("array"));
+            return;
         case Dynamic.Type.tab:
-            return dynamic("table");
+            cont(dynamic("table"));
+            return;
         case Dynamic.Type.fun:
-            return dynamic("callable");
-        // case Dynamic.Type.del:
-        //     return dynamic("callable");
+            cont(dynamic("callable"));
+            return;
+        case Dynamic.Type.del:
+            cont(dynamic("callable"));
+            return;
         case Dynamic.Type.pro:
-            return dynamic("callable");
+            cont(dynamic("callable"));
+            return;
         case Dynamic.Type.end:
             assert(0);
         case Dynamic.Type.pac:
@@ -77,79 +89,112 @@ Dynamic libtypeof(Args args)
     } 
 }
 
-/// internal map function
-Dynamic syslibmap(Args args)
+// /// internal map function
+// void syslibmap(Cont cont, Args args)
+// {
+//     Dynamic[] ret;
+//     foreach (i; 0 .. args[1].arr.length)
+//     {
+//         Dynamic[] fargs;
+//         foreach (j; args[1 .. $])
+//         {
+//             fargs ~= j.arr[i];
+//         }
+//         ret ~= args[0](fargs);
+//     }
+//     cont(dynamic(ret));
+//     return;
+// }
+
+// /// internal map function
+// void syslibubothmap(Cont cont, Args args)
+// {
+//     Array ret;
+//     if (args[1].arr.length != args[2].arr.length)
+//     {
+//         throw new BoundsException("bad lengths in dotmap");
+//     }
+//     foreach (i; 0 .. args[1].arr.length)
+//     {
+//         ret ~= args[0]([args[1].arr[i], args[2].arr[i]]);
+//     }
+//     cont(dynamic(ret));
+//     return;
+// }
+
+// /// internal map function
+// void syslibulhsmap(Cont cont, Args args)
+// {
+//     Array ret;
+//     foreach (i; args[1].arr)
+//     {
+//         ret ~= args[0]([i, args[2]]);
+//     }
+//     cont(dynamic(ret));
+//     return;
+// }
+
+// /// internal map function
+// void sysliburhsmap(Cont cont, Args args)
+// {
+//     Array ret;
+//     foreach (i; args[2].arr)
+//     {
+//         ret ~= args[0]([args[1], i]);
+//     }
+//     cont(dynamic(ret));
+//     return;
+// }
+
+// /// internal map function
+// void syslibupremap(Cont cont, Args args)
+// {
+//     Array ret;
+//     foreach (i; args[1].arr)
+//     {
+//         ret ~= args[0]([i]);
+//     }
+//     cont(dynamic(ret));
+//     return;
+// }
+
+void syslibubothmap(Cont cont, Args args)
 {
-    Dynamic[] ret;
-    foreach (i; 0 .. args[1].arr.length)
-    {
-        Dynamic[] fargs;
-        foreach (j; args[1 .. $])
-        {
-            fargs ~= j.arr[i];
-        }
-        ret ~= args[0](fargs);
-    }
-    return dynamic(ret);
+    assert(0);
+}
+void syslibulhsmap(Cont cont, Args args)
+{
+    assert(0);
+}
+void sysliburhsmap(Cont cont, Args args)
+{
+    assert(0);
+}
+void syslibupremap(Cont cont, Args args)
+{
+    assert(0);
 }
 
-/// internal map function
-Dynamic syslibubothmap(Args args)
-{
-    Array ret;
-    if (args[1].arr.length != args[2].arr.length)
-    {
-        throw new BoundsException("bad lengths in dotmap");
-    }
-    foreach (i; 0 .. args[1].arr.length)
-    {
-        ret ~= args[0]([args[1].arr[i], args[2].arr[i]]);
-    }
-    return dynamic(ret);
-}
-
-/// internal map function
-Dynamic syslibulhsmap(Args args)
-{
-    Array ret;
-    foreach (i; args[1].arr)
-    {
-        ret ~= args[0]([i, args[2]]);
-    }
-    return dynamic(ret);
-}
-
-/// internal map function
-Dynamic sysliburhsmap(Args args)
-{
-    Array ret;
-    foreach (i; args[2].arr)
-    {
-        ret ~= args[0]([args[1], i]);
-    }
-    return dynamic(ret);
-}
-
-/// internal map function
-Dynamic syslibupremap(Args args)
-{
-    Array ret;
-    foreach (i; args[1].arr)
-    {
-        ret ~= args[0]([i]);
-    }
-    return dynamic(ret);
-}
 
 /// exit function
-Dynamic libleave(Args args)
+void libleave(Cont cont, Args args)
 {
     exit(0);
     assert(0);
 }
 
 /// internal args
-Dynamic libargs(Args args)
+void libargs(Cont cont, Args args)
 {
-    return dynamic(Runtime.args.map!(x => dynamic(x)).array);
+    cont(dynamic(Runtime.args.map!(x => dynamic(x)).array));
+    return;
+}
+
+void libcallcc(Cont cont, Args args) {
+    Dynamic rec = void;
+    void newCont(Cont c2, Args a2) {
+        cont(a2[0]);
+    }
+    rec = dynamic(&newCont);
+    args[0](cont, [rec]);
 }

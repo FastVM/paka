@@ -14,9 +14,8 @@ Pair[] libarr()
         Pair("len", &liblen), Pair("split", &libsplit),
         Pair("push", &libpush), Pair("extend",
                 dynamic(&libextend)), Pair("pop", &libpop),
-        Pair("slice", &libslice), Pair("map", &libmap),
-        Pair("filter", &libfilter), Pair("zip", &libzip),
-        Pair("range", &librange), Pair("each", &libeach),
+        Pair("slice", &libslice), Pair("zip", &libzip),
+        Pair("range", &librange),
     ];
     return ret;
 }
@@ -25,7 +24,7 @@ Pair[] libarr()
 /// with one arg it returns 0..$0
 /// with two args it returns $1..$1
 /// with three args it counts from $0 to $1 with interval $2
-Dynamic librange(Args args)
+void librange(Cont cont, Args args)
 {
     if (args.length == 1)
     {
@@ -34,7 +33,8 @@ Dynamic librange(Args args)
         {
             ret ~= dynamic(i);
         }
-        return dynamic(ret);
+        cont(dynamic(ret));
+        return;
     }
     if (args.length == 2)
     {
@@ -43,7 +43,8 @@ Dynamic librange(Args args)
         {
             ret ~= dynamic(i);
         }
-        return dynamic(ret);
+        cont(dynamic(ret));
+        return;
     }
     if (args.length == 3)
     {
@@ -56,62 +57,66 @@ Dynamic librange(Args args)
             ret ~= dynamic(start);
             start += step;
         }
-        return dynamic(ret);
+        cont(dynamic(ret));
+        return;
     }
     throw new TypeException("bad number of arguments to range");
 }
 
-/// returns an array where the function has been called on each element
-Dynamic libmap(Args args)
-{
-    Dynamic[] res;
-    foreach (i; args[0].arr)
-    {
-        Dynamic cur = i;
-        foreach (f; args[1 .. $])
-        {
-            cur = f([cur]);
-        }
-        res ~= cur;
-    }
-    return dynamic(res);
-}
+// /// returns an array where the function has been called on each element
+// void libmap(Cont cont, Args args)
+// {
+//     Dynamic[] res;
+//     foreach (i; args[0].arr)
+//     {
+//         Dynamic cur = i;
+//         foreach (f; args[1 .. $])
+//         {
+//             cur = f([cur]);
+//         }
+//         res ~= cur;
+//     }
+//     cont(dynamic(res));
+//     return;
+// }
 
-/// calls $1+ on each and returns nil
-Dynamic libeach(Args args)
-{
-    foreach (i; args[0].arr)
-    {
-        Dynamic cur = i;
-        foreach (f; args[1 .. $])
-        {
-            cur = f([cur]);
-        }
-    }
-    return Dynamic.nil;
-}
+// /// calls $1+ on each and returns nil
+// void libeach(Cont cont, Args args)
+// {
+//     foreach (i; args[0].arr)
+//     {
+//         Dynamic cur = i;
+//         foreach (f; args[1 .. $])
+//         {
+//             cur = f([cur]);
+//         }
+//     }
+//     cont(Dynamic.nil);
+//     return;
+// }
 
-/// creates new array with only the elemtns that $1 returnd true with
-Dynamic libfilter(Args args)
-{
-    Dynamic[] res;
-    foreach (i; args[0].arr)
-    {
-        Dynamic cur = i;
-        foreach (f; args[1 .. $])
-        {
-            cur = f([cur]);
-        }
-        if (cur.type != Dynamic.Type.nil && (cur.type != Dynamic.Type.log || cur.log))
-        {
-            res ~= i;
-        }
-    }
-    return dynamic(res);
-}
+// /// creates new array with only the elemtns that $1 returnd true with
+// void libfilter(Cont cont, Args args)
+// {
+//     Dynamic[] res;
+//     foreach (i; args[0].arr)
+//     {
+//         Dynamic cur = i;
+//         foreach (f; args[1 .. $])
+//         {
+//             cur = f([cur]);
+//         }
+//         if (cur.type != Dynamic.Type.nil && (cur.type != Dynamic.Type.log || cur.log))
+//         {
+//             res ~= i;
+//         }
+//     }
+//     cont(dynamic(res));
+//     return;
+// }
 
 /// zips arrays interleaving
-Dynamic libzip(Args args)
+void libzip(Cont cont, Args args)
 {
     Dynamic[] res;
     foreach (i; 0 .. args[0].arr.length)
@@ -123,55 +128,63 @@ Dynamic libzip(Args args)
         }
         res ~= dynamic(sub);
     }
-    return dynamic(res);
+    cont(dynamic(res));
+    return;
 }
 
 /// length of array
-Dynamic liblen(Args args)
+void liblen(Cont cont, Args args)
 {
-    return dynamic(args[0].arr.length);
+    cont(dynamic(args[0].arr.length));
+    return;
 }
 
 /// splits array with deep equality by elemtns
-Dynamic libsplit(Args args)
+void libsplit(Cont cont, Args args)
 {
-    return dynamic(args[0].arr.splitter(args[1]).map!(x => dynamic(x)).array);
+    cont(dynamic(args[0].arr.splitter(args[1]).map!(x => dynamic(x)).array));
+    return;
 }
 
 /// pushes to an existing array, returning nil
-Dynamic libpush(Args args)
+void libpush(Cont cont, Args args)
 {
     *args[0].arrPtr ~= args[1 .. $];
-    return Dynamic.nil;
+    cont(Dynamic.nil);
+    return;
 }
 
 /// pops from an existing array, returning nil
-Dynamic libpop(Args args)
+void libpop(Cont cont, Args args)
 {
     (*args[0].arrPtr).length--;
-    return Dynamic.nil;
+    cont(Dynamic.nil);
+    return;
 }
 
 /// extends pushes arrays to array
-Dynamic libextend(Args args)
+void libextend(Cont cont, Args args)
 {
     foreach (i; args[1 .. $])
     {
         (*args[0].arrPtr) ~= i.arr;
     }
-    return Dynamic.nil;
+    cont(Dynamic.nil);
+    return;
 }
 
 /// slices array from 0..$1 for 1 argumnet
 /// slices array from $1..$2 for 2 argumnets
-Dynamic libslice(Args args)
+void libslice(Cont cont, Args args)
 {
     if (args.length == 2)
     {
-        return dynamic(args[0].arr[args[1].as!size_t .. $].dup);
+        cont(dynamic(args[0].arr[args[1].as!size_t .. $].dup));
+        return;
     }
     else
     {
-        return dynamic(args[0].arr[args[1].as!size_t .. args[2].as!size_t].dup);
+        cont(dynamic(args[0].arr[args[1].as!size_t .. args[2].as!size_t].dup));
+        return;
     }
 }
