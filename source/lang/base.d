@@ -10,6 +10,7 @@ import lang.lib.sys;
 import lang.lib.str;
 import lang.lib.arr;
 import lang.lib.tab;
+import lang.lib.thread;
 import lang.lib.proc;
 public import lang.vm;
 
@@ -73,6 +74,7 @@ Pair[] getRootBase()
         Pair("_pre_map", &syslibupremap),
     ];
     ret.addLib("str", libstr);
+    ret.addLib("thread", libthread);
     ret.addLib("arr", libarr);
     ret.addLib("tab", libtab);
     ret.addLib("io", libio);

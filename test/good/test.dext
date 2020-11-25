@@ -1,10 +1,12 @@
+io.print("should print multiples of 6");
 
-def fib(x) {
-    return if (x < 2) {
-        x;
-    } else {
-        fib(x-2) + fib(x-1);
-    };
+arr.each(arr.filter(
+    arr.map(arr.range(1, 10 * 2 + 1)) {
+        $0 * 3;
+    }) {
+        $0 % 2 == 0;
+}) {
+    io.print($0);
 };
 
-io.print(fib(30));
+io.print("should have printed multiples of 6");

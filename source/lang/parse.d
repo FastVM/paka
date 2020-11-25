@@ -46,32 +46,31 @@ Node parse(string code, string lang = "dext")
     }
     if (code.length > langLine.length && code[0 .. langLine.length] == langLine)
     {
-        lang = "dext";
-        // size_t ctx = enterCtx;
-        // scope (exit)
-        // {
-        //     exitCtx;
-        // }
-        // string line = code.readLine;
-        // Node node = line[langLine.length .. $].parse("dext");
-        // Walker walker = new Walker;
-        // Function func = walker.walkProgram(node, ctx);
-        // func.captured = loadBase;
-        // void findLang(uint index, Dynamic* stack, Dynamic[] locals)
-        // {
-        //     foreach (i, ref v; locals[0 .. func.stab.byPlace.length])
-        //     {
-        //         if (func.stab.byPlace[i] == "lang")
-        //         {
-        //             if (v.type != Dynamic.Type.str) {
-        //                 throw new TypeException("language must be a str");
-        //             }
-        //             lang = v.str;
-        //         }
-        //     }
-        // }
+        size_t ctx = enterCtx;
+        scope (exit)
+        {
+            exitCtx;
+        }
+        string line = code.readLine;
+        Node node = line[langLine.length .. $].parse("dext");
+        Walker walker = new Walker;
+        Function func = walker.walkProgram(node, ctx);
+        func.captured = loadBase;
+        void findLang(Dynamic[] locals)
+        {
+            foreach (i, ref v; locals[0 .. func.stab.byPlace.length])
+            {
+                if (func.stab.byPlace[i] == "lang")
+                {
+                    if (v.type != Dynamic.Type.str) {
+                        throw new TypeException("language must be a str");
+                    }
+                    lang = v.str;
+                }
+            }
+        }
 
-        // run(delegate(Dynamic d) {}, func, null, &findLang);
+        run(delegate(Dynamic d) {}, func, null, &findLang);
     }
     if (auto i = lang in parsers)
     {

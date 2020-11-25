@@ -15,6 +15,7 @@ Pair[] libsysenv()
     return ret;
 }
 
+private:
 void libget(Cont cont, Args args)
 {
     cont(dynamic(environment[args[0].str]));

@@ -1,0 +1,21 @@
+
+def fib(x) {
+    return if (x < 2) {
+        x;
+    } else {
+        fib(x-2) + fib(x-1);
+    };
+};
+
+def pfib(n) {
+    io.print(fib(n));
+};
+
+io.print("before");
+pfib(25);
+pfib(26);
+pfib(27);
+pfib(28);
+pfib(29);
+pfib(30);
+io.print("after");

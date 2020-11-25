@@ -1,12 +1,17 @@
-
-x = 0;
-
-cont = sys.callcc(cc => cc);
-
-x += 1;
-
-if (x < 5000000) {
-    cont(cont);
+def deep(n, f) {
+    return if (n > 0) {
+        deep(n-1, f);
+    } else {
+        f();
+    };
 };
 
-io.print(x);
+deep(10000) {
+    x = 0;
+    cont = sys.callcc(cc => cc);
+    x += 1;
+    if (x < 4500000) {
+        cont(cont);
+    };
+    io.print(x);
+};

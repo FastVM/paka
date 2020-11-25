@@ -8,6 +8,7 @@ import lang.dynamic;
 import lang.parse;
 import lang.number;
 import lang.inter;
+import lang.bytecode;
 import std.file;
 import std.stdio;
 import std.algorithm;
@@ -15,6 +16,16 @@ import std.conv;
 import std.string;
 import std.getopt;
 import core.memory;
+
+LocalCallback exportLocalsToBaseCallback(Function func)
+{
+    return (Dynamic[] locals) {
+        foreach (i, ref v; locals[0 .. func.stab.byPlace.length])
+        {
+            rootBase ~= Pair(func.stab.byPlace[i], v);
+        }
+    };
+}
 
 /// the actual main function, it does not handle errors
 void domain(string[] args)
@@ -48,6 +59,20 @@ void domain(string[] args)
         if (retval.type != Dynamic.Type.nil)
         {
             writeln(retval);
+        }
+    }
+    if (scripts.length == 0 && args[1 .. $].length == 0)
+    {
+        while (true)
+        {
+            write(">>> ");
+            string code = readln.strip;
+            code ~= ";";
+            Node node = code.parse;
+            Walker walker = new Walker;
+            Function func = walker.walkProgram(node, ctx);
+            func.captured = loadBase;
+            loopRun((Dynamic d) { writeln(d); }, func, null, func.exportLocalsToBaseCallback);
         }
     }
 }

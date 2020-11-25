@@ -16,7 +16,7 @@ import lang.number;
 import lang.data.map;
 public import lang.loop;
 
-alias LocalCallback = void delegate(uint index, Dynamic* stack, Dynamic[] locals);
+alias LocalCallback = void delegate(Dynamic[] locals);
 
 enum string[2][] cmpMap()
 {
@@ -124,12 +124,12 @@ void run(T...)(Cont retcont, Function func, Dynamic[] args, T rest)
                                 stack[0 .. 0 + instrs.get1!ushort(index)]);
                         return;
                     case Dynamic.Type.del:
-                        (*f.fun.del)(runMore(index).asPushable,
-                                stack[0 .. 0 + instrs.get1!ushort(index)]);
+                        (*f.fun.del)(runMore(index)
+                                .asPushable, stack[0 .. 0 + instrs.get1!ushort(index)]);
                         return;
                     case Dynamic.Type.pro:
-                        run(runMore(index).asPushable, f.fun.pro,
-                                stack[0 .. 0 + instrs.get1!ushort(index)]);
+                        run(runMore(index).asPushable,
+                                f.fun.pro, stack[0 .. 0 + instrs.get1!ushort(index)]);
                         return;
                     default:
                         throw new TypeException("error: not a function: " ~ f.to!string);
@@ -362,9 +362,17 @@ void run(T...)(Cont retcont, Function func, Dynamic[] args, T rest)
                     break;
                 case Opcode.retval:
                     Dynamic v = (*(--stack));
+                    foreach (local; rest)
+                    {
+                        local(locals[0..func.stab.byPlace.length + 1 + args.length]);
+                    }
                     retcont(v);
                     return;
                 case Opcode.retnone:
+                    foreach (local; rest)
+                    {
+                        local(locals[0..func.stab.byPlace.length + 1 + args.length]);
+                    }
                     retcont(Dynamic.nil);
                     return;
                 case Opcode.iftrue:
