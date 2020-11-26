@@ -22,3 +22,4 @@ llvm
 default.profdata
 default.profraw
 edit
+test.d

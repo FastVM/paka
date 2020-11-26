@@ -1,12 +1,22 @@
-io.print("should print multiples of 6");
+io.print("BEGIN");
 
-arr.each(arr.filter(
-    arr.map(arr.range(1, 10 * 2 + 1)) {
-        $0 * 3;
-    }) {
-        $0 % 2 == 0;
-}) {
-    io.print($0);
+def slow(n) {
+    while (n > 0) {
+        n -= 1;
+    };
 };
 
-io.print("should have printed multiples of 6");
+def fib(n) {
+    return if (n < 2) {
+        n;
+    } else {
+        fib(n-2) + fib(n-1);
+    };
+};
+
+arr.each(arr.range(16)) {
+    # slow(256 * 256 * 64);
+    fib(27);
+};
+
+io.print("END");

@@ -53,7 +53,7 @@ T get1(T)(ubyte* bytes, ref ushort index)
 
 void run(T...)(Cont retcont, Function func, Dynamic[] args, T rest)
 {
-    retcont.pushify;
+    // retcont.pushify;
     static foreach (I; T)
     {
         static assert(is(I == LocalCallback));
@@ -120,15 +120,14 @@ void run(T...)(Cont retcont, Function func, Dynamic[] args, T rest)
                     switch (f.type)
                     {
                     case Dynamic.Type.fun:
-                        f.fun.fun(runMore(index).asPushable,
+                        f.fun.fun(runMore(index),
                                 stack[0 .. 0 + instrs.get1!ushort(index)]);
                         return;
                     case Dynamic.Type.del:
-                        (*f.fun.del)(runMore(index)
-                                .asPushable, stack[0 .. 0 + instrs.get1!ushort(index)]);
+                        (*f.fun.del)(runMore(index), stack[0 .. 0 + instrs.get1!ushort(index)]);
                         return;
                     case Dynamic.Type.pro:
-                        run(runMore(index).asPushable,
+                        run(runMore(index),
                                 f.fun.pro, stack[0 .. 0 + instrs.get1!ushort(index)]);
                         return;
                     default:

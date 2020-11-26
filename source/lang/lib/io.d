@@ -10,12 +10,18 @@ import core.stdc.stdio;
 Pair[] libio()
 {
     Pair[] ret = [
-        Pair("print", &libprint),
-        Pair("put", &libput),
-        Pair("readln", &libreadln),
-        Pair("get", &libget),
+        Pair("print", &libprint), Pair("put", &libput),
+        Pair("readln", &libreadln), Pair("get", &libget),
     ];
     return ret;
+}
+
+void syncWrite(Args...)(Args args)
+{
+    synchronized
+    {
+        write(args);
+    }
 }
 
 /// prints with newline
@@ -25,14 +31,14 @@ void libprint(Cont cont, Args args)
     {
         if (i.type == Dynamic.Type.str)
         {
-            write(i.to!string[1..$-1]);
+            syncWrite(i.to!string[1 .. $ - 1]);
         }
         else
         {
-            write(i);
+            syncWrite(i);
         }
     }
-    writeln;
+    syncWrite("\n");
     cont(Dynamic.nil);
     return;
 }
@@ -44,11 +50,11 @@ void libput(Cont cont, Args args)
     {
         if (i.type == Dynamic.Type.str)
         {
-            write(i.to!string[1..$-1]);
+            syncWrite(i.to!string[1 .. $ - 1]);
         }
         else
         {
-            write(i);
+            syncWrite(i);
         }
     }
     cont(Dynamic.nil);
@@ -65,6 +71,6 @@ void libreadln(Cont cont, Args args)
 /// gets a 1 length string
 void libget(Cont cont, Args args)
 {
-    cont(dynamic(cast(string) [cast(char) getchar]));
+    cont(dynamic(cast(string)[cast(char) getchar]));
     return;
 }

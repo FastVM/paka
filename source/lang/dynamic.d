@@ -15,9 +15,13 @@ import lang.vm;
 import lang.error;
 import lang.number;
 import lang.data.rope;
-import lang.data.mpfr;
 import lang.data.map;
-public import lang.number;
+
+version (bigfloat)
+{
+    import lang.data.mpfr;
+    public import lang.number;
+}
 
 version = safe;
 
@@ -139,7 +143,10 @@ struct Dynamic
     {
         bool log;
         SmallNumber sml;
-        BigNumber* bnm;
+        version (bigfloat)
+        {
+            BigNumber* bnm;
+        }
         string* str;
         Array* arr;
         Table tab;
@@ -159,12 +166,19 @@ align(8):
 
     static Dynamic strToNum(string s)
     {
-        BigNumber big = BigNumber(s);
-        if (big.fits && !fastMathNotEnabled)
+        version (bigfloat)
         {
-            return dynamic(SmallNumber(mpfr_get_d(big, mpfr_rnd_t.MPFR_RNDN)));
+            BigNumber big = BigNumber(s);
+            if (big.fits && !fastMathNotEnabled)
+            {
+                return dynamic(SmallNumber(mpfr_get_d(big, mpfr_rnd_t.MPFR_RNDN)));
+            }
+            return dynamic(big);
         }
-        return dynamic(big);
+        else
+        {
+            return dynamic(s.to!SmallNumber);
+        }
     }
 
     this(Type t)
@@ -184,10 +198,14 @@ align(8):
         type = Type.sml;
     }
 
-    this(BigNumber num)
+    version (bigfloat)
     {
-        value.bnm = new BigNumber(num);
-        type = Type.big;
+
+        this(BigNumber num)
+        {
+            value.bnm = new BigNumber(num);
+            type = Type.big;
+        }
     }
 
     this(string str)
@@ -334,28 +352,46 @@ align(8):
             return 0;
         case Type.log:
             return value.log - other.log;
+            version (bigfloat)
+            {
         case Type.sml:
-            if (other.type == Type.big)
-            {
-                return value.sml.asBig.opCmp(*other.value.bnm);
-            }
-            SmallNumber a = value.sml;
-            SmallNumber b = other.value.sml;
-            if (a < b)
-            {
-                return -1;
-            }
-            if (a == b)
-            {
-                return 0;
-            }
-            return 1;
+                if (other.type == Type.big)
+                {
+                    return value.sml.asBig.opCmp(*other.value.bnm);
+                }
+                SmallNumber a = value.sml;
+                SmallNumber b = other.value.sml;
+                if (a < b)
+                {
+                    return -1;
+                }
+                if (a == b)
+                {
+                    return 0;
+                }
+                return 1;
         case Type.big:
-            if (other.type == Type.sml)
-            {
-                return (*value.bnm).opCmp(other.value.sml.asBig);
+                if (other.type == Type.sml)
+                {
+                    return (*value.bnm).opCmp(other.value.sml.asBig);
+                }
+                return (*value.bnm).opCmp(*other.value.bnm);
             }
-            return (*value.bnm).opCmp(*other.value.bnm);
+            else
+            {
+            case Type.sml:
+                SmallNumber a = value.sml;
+                SmallNumber b = other.value.sml;
+                if (a < b)
+                {
+                    return -1;
+                }
+                if (a == b)
+                {
+                    return 0;
+                }
+                return 1;
+            }
         case Type.str:
             return cmp(*value.str, other.str);
         }
@@ -368,36 +404,6 @@ align(8):
 
     Dynamic opBinary(string op)(Dynamic other)
     {
-        if (type == Type.sml)
-        {
-            if (other.type == Type.sml)
-            {
-                SmallNumber res = mixin("value.sml " ~ op ~ " other.value.sml");
-                if (res.fits)
-                {
-                    return dynamic(res);
-                }
-                else
-                {
-                    return dynamic(mixin("value.sml.asBig " ~ op ~ " other.value.sml.asBig"));
-                }
-            }
-            else if (other.type == Type.big)
-            {
-                return dynamic(mixin("value.sml.asBig " ~ op ~ "  *other.value.bnm"));
-            }
-        }
-        else if (type == Type.big)
-        {
-            if (other.type == Type.sml)
-            {
-                return dynamic(mixin("*value.bnm " ~ op ~ " other.value.sml.asBig"));
-            }
-            else if (other.type == Type.big)
-            {
-                return dynamic(mixin("*value.bnm " ~ op ~ " *other.value.bnm"));
-            }
-        }
         static if (op == "~" || op == "+")
         {
             if (type == Type.str && other.type == Type.str)
@@ -409,43 +415,106 @@ align(8):
                 return dynamic(arr ~ other.arr);
             }
         }
-        static if (op == "*")
+        version (bigfloat)
         {
-            if (type == Type.str && other.type == Type.sml)
+            if (type == Type.sml)
             {
-                string ret;
-                foreach (i; 0 .. other.value.sml)
+                if (other.type == Type.sml)
                 {
-                    ret ~= str;
+                    SmallNumber res = mixin("value.sml " ~ op ~ " other.value.sml");
+                    if (res.fits)
+                    {
+                        return dynamic(res);
+                    }
+                    else
+                    {
+                        return dynamic(mixin("value.sml.asBig " ~ op ~ " other.value.sml.asBig"));
+                    }
                 }
-                return dynamic(ret);
+                else if (other.type == Type.big)
+                {
+                    return dynamic(mixin("value.sml.asBig " ~ op ~ "  *other.value.bnm"));
+                }
             }
-            if (type == Type.str && other.type == Type.big)
+            else if (type == Type.big)
             {
-                string ret;
-                foreach (i; 0 .. other.as!size_t)
+                if (other.type == Type.sml)
                 {
-                    ret ~= str;
+                    return dynamic(mixin("*value.bnm " ~ op ~ " other.value.sml.asBig"));
                 }
-                return dynamic(ret);
+                else if (other.type == Type.big)
+                {
+                    return dynamic(mixin("*value.bnm " ~ op ~ " *other.value.bnm"));
+                }
             }
-            if (type == Type.arr && other.type == Type.sml)
+            static if (op == "*")
             {
-                Dynamic[] ret;
-                foreach (i; 0 .. other.value.sml)
+                if (type == Type.str && other.type == Type.sml)
                 {
-                    ret ~= arr;
+                    string ret;
+                    foreach (i; 0 .. other.value.sml)
+                    {
+                        ret ~= str;
+                    }
+                    return dynamic(ret);
                 }
-                return dynamic(ret);
+                if (type == Type.str && other.type == Type.big)
+                {
+                    string ret;
+                    foreach (i; 0 .. other.as!size_t)
+                    {
+                        ret ~= str;
+                    }
+                    return dynamic(ret);
+                }
+                if (type == Type.arr && other.type == Type.sml)
+                {
+                    Dynamic[] ret;
+                    foreach (i; 0 .. other.value.sml)
+                    {
+                        ret ~= arr;
+                    }
+                    return dynamic(ret);
+                }
+                if (type == Type.arr && other.type == Type.big)
+                {
+                    Dynamic[] ret;
+                    foreach (i; 0 .. other.as!size_t)
+                    {
+                        ret ~= arr;
+                    }
+                    return dynamic(ret);
+                }
             }
-            if (type == Type.arr && other.type == Type.big)
+        }
+        else {
+            if (type == Type.sml)
             {
-                Dynamic[] ret;
-                foreach (i; 0 .. other.as!size_t)
+                if (other.type == Type.sml)
                 {
-                    ret ~= arr;
+                    return dynamic(mixin("value.sml " ~ op ~ " other.value.sml"));
                 }
-                return dynamic(ret);
+            }
+            static if (op == "*")
+            {
+                if (type == Type.str && other.type == Type.sml)
+                {
+                    string ret;
+                    foreach (i; 0 .. other.value.sml)
+                    {
+                        ret ~= str;
+                    }
+                    return dynamic(ret);
+                }
+                if (type == Type.arr && other.type == Type.sml)
+                {
+                    Dynamic[] ret;
+                    foreach (i; 0 .. other.value.sml)
+                    {
+                        ret ~= arr;
+                    }
+                    return dynamic(ret);
+                }
             }
         }
         throw new TypeException("invalid types: " ~ type.to!string ~ op ~ other.type.to!string);
@@ -453,13 +522,20 @@ align(8):
 
     Dynamic opUnary(string op)()
     {
-        if (type == Type.sml)
+        version (bigfloat)
         {
-            return dynamic(mixin(op ~ "value.sml"));
+            if (type == Type.sml)
+            {
+                return dynamic(mixin(op ~ "value.sml"));
+            }
+            else
+            {
+                return dynamic(mixin(op ~ "*value.bnm"));
+            }
         }
         else
         {
-            return dynamic(mixin(op ~ "*value.bnm"));
+            return dynamic(mixin(op ~ "value.sml"));
         }
     }
 
@@ -535,25 +611,39 @@ align(8):
 
     T as(T)() if (is(T == size_t))
     {
-        if (type == Type.sml)
+        version (bigfloat)
         {
-            return cast(size_t) value.sml;
+            if (type == Type.sml)
+            {
+                return cast(size_t) value.sml;
+            }
+            else
+            {
+                return mpfr_get_ui(value.bnm.mpfr, mpfr_rnd_t.MPFR_RNDN);
+            }
         }
         else
         {
-            return mpfr_get_ui(value.bnm.mpfr, mpfr_rnd_t.MPFR_RNDN);
+            return cast(size_t) value.sml;
         }
     }
 
     T as(T)() if (is(T == double))
     {
-        if (type == Type.sml)
+        version (bigfloat)
         {
-            return cast(double) value.sml;
+            if (type == Type.sml)
+            {
+                return cast(double) value.sml;
+            }
+            else
+            {
+                return mpfr_get_d(value.bnm.mpfr, mpfr_rnd_t.MPFR_RNDN);
+            }
         }
         else
         {
-            return mpfr_get_d(value.bnm.mpfr, mpfr_rnd_t.MPFR_RNDN);
+            return cast(double) value.sml;
         }
     }
 
@@ -599,23 +689,26 @@ private int cmpDynamicImpl(const Dynamic a, const Dynamic b)
             return 0;
         }
     }
-    if (b.type != a.type)
+    version(bigfloat)
     {
-        if (a.type == Dynamic.Type.sml)
+        if (b.type != a.type)
         {
-            if (b.type == Dynamic.Type.big)
+            if (a.type == Dynamic.Type.sml)
             {
-                return cmp(a.value.sml.asBig, *b.value.bnm);
+                if (b.type == Dynamic.Type.big)
+                {
+                    return cmp(a.value.sml.asBig, *b.value.bnm);
+                }
             }
-        }
-        if (a.type == Dynamic.Type.big)
-        {
-            if (b.type == Dynamic.Type.sml)
+            if (a.type == Dynamic.Type.big)
             {
-                return cmp(*a.value.bnm, b.value.sml.asBig);
+                if (b.type == Dynamic.Type.sml)
+                {
+                    return cmp(*a.value.bnm, b.value.sml.asBig);
+                }
             }
+            return cmp(a.type, b.type);
         }
-        return cmp(a.type, b.type);
     }
     if (a is b)
     {
@@ -633,8 +726,11 @@ private int cmpDynamicImpl(const Dynamic a, const Dynamic b)
         return cmp(*a.value.str, *b.value.str);
     case Dynamic.Type.sml:
         return cmp(a.value.sml, b.value.sml);
-    case Dynamic.Type.big:
-        return cmp(*a.value.bnm, *b.value.bnm);
+    version(bigfloat)
+    {
+        case Dynamic.Type.big:
+            return cmp(*a.value.bnm, *b.value.bnm);
+    }
     case Dynamic.Type.arr:
         above ~= cur;
         scope (exit)
@@ -721,8 +817,11 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         return dyn.log.to!string;
     case Dynamic.Type.sml:
         return dyn.value.sml.to!string;
-    case Dynamic.Type.big:
-        return (*dyn.value.bnm).to!string;
+    version(bigfloat)
+    {
+        case Dynamic.Type.big:
+            return (*dyn.value.bnm).to!string;
+    }
     case Dynamic.Type.str:
         if (before.length == 0)
         {

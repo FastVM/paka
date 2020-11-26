@@ -15,6 +15,7 @@ import std.algorithm;
 import std.conv;
 import std.string;
 import std.getopt;
+import std.parallelism : totalCPUs;
 import core.memory;
 
 LocalCallback exportLocalsToBaseCallback(Function func)
@@ -30,15 +31,30 @@ LocalCallback exportLocalsToBaseCallback(Function func)
 /// the actual main function, it does not handle errors
 void domain(string[] args)
 {
+    cpuThreadsSpec = totalCPUs;
+    size_t cpuThreadsSpecLocal = 0;
+    size_t lcheck = checkin;
     string[] scripts;
     string[] stmts;
     bool repl = false;
-    auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-            &scripts, "math", &fastMathNotEnabled);
+    auto info = getopt(args, "repl", &repl, "eval", &stmts, "file", &scripts, "math",
+            &fastMathNotEnabled, "threads", &cpuThreadsSpecLocal, "checkin", &lcheck);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
         return;
+    }
+    if (lcheck == 0)
+    {
+        checkin = size_t.max;
+    }
+    else
+    {
+        checkin = lcheck - 1;
+    }
+    if (cpuThreadsSpecLocal != 0)
+    {
+        cpuThreadsSpec = cpuThreadsSpecLocal;
     }
     size_t ctx = enterCtx;
     scope (exit)

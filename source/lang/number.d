@@ -9,6 +9,9 @@ import core.memory;
 import lang.data.mpfr;
 import std.experimental.checkedint;
 
+alias SmallNumber = double;
+
+version(bigfloat):
 private BigNumber* maxSmall = void;
 private BigNumber* minSmall = void;
 
@@ -27,7 +30,6 @@ static this()
     minSmall = new BigNumber(int.min.asBig);
 }
 
-alias SmallNumber = double;
 alias BigNumber = const MpfrBigNumber;
 
 BigNumber asBig(T...)(T v)

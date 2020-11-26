@@ -7,6 +7,7 @@ import std.array;
 import std.algorithm;
 import std.stdio;
 import std.conv;
+import core.atomic;
 
 Pair[] libarr()
 {
@@ -28,7 +29,7 @@ void librange(Cont cont, Args args)
 {
     if (args.length == 1)
     {
-        Dynamic[] ret;
+        Array ret;
         foreach (i; cast(double) 0 .. args[0].as!double)
         {
             ret ~= dynamic(i);
@@ -38,7 +39,7 @@ void librange(Cont cont, Args args)
     }
     if (args.length == 2)
     {
-        Dynamic[] ret;
+        Array ret;
         foreach (i; args[0].as!double .. args[1].as!double)
         {
             ret ~= dynamic(i);
@@ -51,7 +52,7 @@ void librange(Cont cont, Args args)
         double start = args[0].as!double;
         double stop = args[1].as!double;
         double step = args[2].as!double;
-        Dynamic[] ret;
+        Array ret;
         while (start < stop)
         {
             ret ~= dynamic(start);
@@ -66,59 +67,64 @@ void librange(Cont cont, Args args)
 /// returns an array where the function has been called on each element
 void libmap(Cont cont, Args args)
 {
-    Dynamic[] res;
-    size_t count = args[0].arr.length;
-    void subcont(Dynamic d)
+    shared size_t count = args[0].arr.length;
+    Array res = new Dynamic[count];
+    Cont subcont(size_t n)
     {
-        count--;
-        res ~= d;
-        if (count == 0)
-        {
-            cont(dynamic(res));
-            return;
-        }
+        return (Dynamic d) {
+            core.atomic.atomicOp!"-="(count, 1);
+            res[n] = d;
+            if (count == 0)
+            {
+                cont(dynamic(res));
+                return;
+            }
+        };
     }
 
-    if (args[0].arr.length == 0)
+    if (count == 0)
     {
-        cont(dynamic(cast(Dynamic[])[]));
+        cont(dynamic(cast(Array)[]));
         return;
     }
-    foreach (cur; args[0].arr)
+    foreach (i, cur; args[0].arr)
     {
-        args[1](&subcont, [cur]);
+        args[1](subcont(i), [cur]);
     }
 }
 
 /// calls args[1] on each args[0] and returns nil
 void libeach(Cont cont, Args args)
 {
-    size_t count = args[0].arr.length;
-    void subcont(Dynamic d)
+    shared size_t count = args[0].arr.length;
+    Cont subcont(size_t n)
     {
-        count--;
-        if (count == 0)
-        {
-            cont(Dynamic.nil);
-            return;
-        }
+        return (Dynamic d) {
+            core.atomic.atomicOp!"-="(count, 1);
+            if (count == 0)
+            {
+                cont(Dynamic.nil);
+                return;
+            }
+        };
     }
 
-    if (args[0].arr.length == 0)
+    if (count == 0)
     {
         cont(Dynamic.nil);
         return;
     }
-    foreach (cur; args[0].arr)
+    foreach (i, cur; args[0].arr)
     {
-        args[1](&subcont, [cur]);
+        args[1](subcont(i), [cur]);
     }
 }
+
 
 /// creates new array with only the elemtns that $1 returnd true with
 void libfilter(Cont cont, Args args)
 {
-    Dynamic[] res;
+    Array res;
     size_t count = args[0].arr.length;
     void delegate(Dynamic) subcont(Dynamic from)
     {
@@ -138,7 +144,7 @@ void libfilter(Cont cont, Args args)
 
     if (count == 0)
     {
-        cont(dynamic(cast(Dynamic[])[]));
+        cont(dynamic(cast(Array)[]));
         return;
     }
     foreach (cur; args[0].arr)
@@ -150,10 +156,10 @@ void libfilter(Cont cont, Args args)
 /// zips arrays interleaving
 void libzip(Cont cont, Args args)
 {
-    Dynamic[] res;
+    Array res;
     foreach (i; 0 .. args[0].arr.length)
     {
-        Dynamic[] sub = new Dynamic[args.length];
+        Array sub = new Dynamic[args.length];
         foreach (k, ref v; sub)
         {
             v = args[k].arr[i];

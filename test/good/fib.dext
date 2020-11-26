@@ -13,9 +13,4 @@ def pfib(n) {
 
 io.print("before");
 pfib(25);
-pfib(26);
-pfib(27);
-pfib(28);
-pfib(29);
-pfib(30);
 io.print("after");
