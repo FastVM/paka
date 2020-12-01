@@ -13,10 +13,11 @@ import std.string;
 import std.stdio;
 
 enum string[] specialForms = [
-        "@def", "@set", "@opset", "@while", "@array", "@table", "@target",
-        "@return", "@if", "@fun", "@do", "@using", "F+", "-", "+", "*", "/",
-        "@dotmap-both", "@dotmap-lhs", "@dotmap-rhs", "@dotmap-pre", "%",
-        "<", ">", "<=", ">=", "==", "!=", "...", "@index", "=>", "|>", "<|"
+        "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
+        "@if", "@fun", "@do", "@using", "-", "+", "*", "/", "@dotmap-both",
+        "@dotmap-lhs", "@dotmap-rhs", "@dotmap-pre", "%", "<", ">", "<=",
+        ">=", "==", "!=", "...", "@index", "=>", "|>", "<|", "@using", "@env",
+        "&&", "||",
     ];
 
 bool isUnpacking(Node[] args)
@@ -47,9 +48,13 @@ class Walker
     int[2] stackSize;
     bool isTarget = false;
     Span[] nodes = [Span.init];
+    size_t identc;
+    string[] envs;
+    size_t envc;
 
     Function walkProgram(Node node, size_t ctx)
     {
+        envc = 0;
         func = new Function;
         func.parent = ctx.baseFunction;
         foreach (i; ctx.rootBase)
@@ -57,17 +62,32 @@ class Walker
             func.captab.define(i.name);
         }
         walk(node);
-        pushInstr(func, Instr(Opcode.retval));
+        pushInstr(func, Opcode.retval);
         func.stackSize = stackSize[1];
         func.resizeStack;
         return func;
     }
 
-    void pushInstr(Function func, Instr instr, int size = 0)
+    string genIdent()
     {
-        func.instrs ~= instr;
+        identc++;
+        return "_ident" ~ identc.to!string;
+    }
+
+    void modifyInstruction(T)(T index, ushort v)
+    {
+        func.instrs[index - 2 .. index] = *cast(ubyte[2]*)&v;
+    }
+
+    void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
+    {
+        func.instrs ~= cast(ubyte) op;
+        foreach (i; shorts)
+        {
+            func.instrs ~= *cast(ubyte[2]*)&i;
+        }
         func.spans ~= nodes[$ - 1];
-        int* psize = instr.op in opSizes;
+        int* psize = op in opSizes;
         if (psize !is null)
         {
             stackSize[0] += *psize;
@@ -103,7 +123,7 @@ class Walker
 
     void doPop()
     {
-        pushInstr(func, Instr(Opcode.pop));
+        pushInstr(func, Opcode.pop);
     }
 
     void walk(Node node)
@@ -142,7 +162,9 @@ class Walker
             Ident ident = cast(Ident) args[0];
             uint place = func.stab.define(ident.repr);
             walk(args[1]);
-            pushInstr(func, Instr(Opcode.store, place));
+            pushInstr(func, Opcode.store, [cast(ushort) place]);
+            pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
+            func.constants ~= Dynamic.nil;
         }
         else
         {
@@ -159,7 +181,7 @@ class Walker
     {
         if (args.length == 0)
         {
-            pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+            pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
             func.constants ~= Dynamic.nil;
         }
         foreach (i, v; args)
@@ -167,7 +189,6 @@ class Walker
             if (i != 0)
             {
                 doPop;
-
             }
             walk(v);
         }
@@ -176,31 +197,27 @@ class Walker
     void walkIf(Node[] args)
     {
         walk(args[0]);
+        pushInstr(func, Opcode.iffalse, [ushort.max]);
         size_t ifloc = func.instrs.length;
-        pushInstr(func, Instr(Opcode.iffalse));
-
         walk(args[1]);
-        func.instrs[ifloc].value = cast(uint) func.instrs.length;
+        pushInstr(func, Opcode.jump, [ushort.max]);
         size_t jumploc = func.instrs.length;
-        pushInstr(func, Instr(Opcode.jump));
+        modifyInstruction(ifloc, cast(ushort) (func.instrs.length));
         walk(args[2]);
-        func.instrs[jumploc].value = cast(uint)(func.instrs.length - 1);
+        modifyInstruction(jumploc, cast(ushort)(func.instrs.length));
     }
 
     void walkWhile(Node[] args)
     {
-        size_t redo = func.instrs.length - 1;
+        size_t redo = func.instrs.length;
         walk(args[0]);
+        pushInstr(func, Opcode.iffalse, [ushort.max]);
         size_t whileloc = func.instrs.length;
-        pushInstr(func, Instr(Opcode.iffalse));
-
         walk(args[1]);
         doPop;
-
-        pushInstr(func, Instr(Opcode.jump, cast(uint) redo));
-        func.instrs[whileloc].value = cast(uint)(func.instrs.length - 1);
-        pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-
+        pushInstr(func, Opcode.jump, [cast(ushort) redo]);
+        modifyInstruction(whileloc, cast(ushort)(func.instrs.length));
+        pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
         func.constants ~= Dynamic.nil;
     }
 
@@ -222,11 +239,11 @@ class Walker
             func.parent = last;
             newFunc.stab.set(argid.repr, cast(uint) 0);
             walk(args[1]);
-            pushInstr(func, Instr(Opcode.retval));
+            pushInstr(func, Opcode.retval);
             newFunc.stackSize = stackSize[1];
             stackSize = stackOld;
             func = last;
-            pushInstr(func, Instr(Opcode.sub, cast(uint) func.funcs.length));
+            pushInstr(func, Opcode.sub, [cast(ushort) func.funcs.length]);
 
             last.funcs ~= newFunc;
             newFunc.resizeStack;
@@ -252,18 +269,16 @@ class Walker
         {
             if (i != 0)
             {
-                pushInstr(func, Instr(Opcode.pop));
-
+                doPop;
             }
             walk(v);
         }
-        pushInstr(func, Instr(Opcode.retval));
+        pushInstr(func, Opcode.retval);
         func.stackSize = stackSize[1];
         func.resizeStack;
         stackSize = stackOld;
         func = lastFunc;
-        pushInstr(func, Instr(Opcode.sub, cast(uint) func.funcs.length));
-
+        pushInstr(func, Opcode.sub, [cast(ushort) func.funcs.length]);
         func.funcs ~= newFunc;
     }
 
@@ -271,13 +286,13 @@ class Walker
     {
         walk(args[0]);
         walk(args[1]);
-        pushInstr(func, Instr(mixin("Opcode.op" ~ op)));
+        pushInstr(func, mixin("Opcode.op" ~ op));
     }
 
     void walkUnary(string op)(Node[] args)
     {
         walk(args[0]);
-        pushInstr(func, Instr(mixin("Opcode.op" ~ op)));
+        pushInstr(func, mixin("Opcode.op" ~ op));
     }
 
     void walkSetLeft(Node left)
@@ -303,6 +318,18 @@ class Walker
         }
         else if (Ident ident = cast(Ident) left)
         {
+            if (ident.repr.length > 0 && ident.repr[0] == '.')
+            {
+                size_t pos = 0;
+                while (pos < ident.repr.length && ident.repr[pos] == '.')
+                {
+                    pos++;
+                }
+                Node envv = new Ident(envs[$ - pos]);
+                walk(envv);
+                Node at = new String(ident.repr[pos .. $]);
+                walk(at);
+            }
         }
         else
         {
@@ -312,13 +339,8 @@ class Walker
 
     void walkSetMatch(Node left, Node right)
     {
-        if (cast(Call) left)
+        if (Call call = cast(Call) left)
         {
-            Call call = cast(Call) right;
-            if (call is null)
-            {
-                throw new Exception("assign target misplaced");
-            }
             Ident id = cast(Ident) call.args[0];
             switch (id.repr)
             {
@@ -326,13 +348,13 @@ class Walker
                 walk(right);
                 break;
             case "@array":
-                foreach (arg; call.args[1 .. $])
+                foreach (arg; (cast(Call) right).args[1 .. $])
                 {
                     walk(arg);
                 }
                 break;
             default:
-
+                assert(0);
             }
         }
         else if (Ident ident = cast(Ident) left)
@@ -353,9 +375,7 @@ class Walker
             switch (id.repr)
             {
             case "@index":
-                pushInstr(func, Instr(Opcode.istore));
-            doPop;
-            doPop;
+                pushInstr(func, Opcode.istore);
                 break;
             case "@array":
                 foreach_reverse (arg; call.args[1 .. $])
@@ -369,13 +389,19 @@ class Walker
         }
         else if (Ident ident = cast(Ident) left)
         {
-            uint* us = ident.repr in func.stab.byName;
-            if (us is null)
+            if (ident.repr.length > 0 && ident.repr[0] == '.')
             {
-                us = new uint(func.stab.define(ident.repr));
+                pushInstr(func, Opcode.istore);
             }
-            pushInstr(func, Instr(Opcode.store, *us));
-            doPop;
+            else
+            {
+                uint* us = ident.repr in func.stab.byName;
+                if (us is null)
+                {
+                    us = new uint(func.stab.define(ident.repr));
+                }
+                pushInstr(func, Opcode.store, [cast(ushort)*us]);
+            }
         }
         else
         {
@@ -391,9 +417,7 @@ class Walker
             switch (id.repr)
             {
             case "@index":
-                pushInstr(func, Instr(Opcode.istore));
-                doPop;
-                doPop;
+                pushInstr(func, Opcode.opistore, [opid.repr.to!AssignOp]);
                 break;
             case "@array":
                 foreach_reverse (arg; call.args[1 .. $])
@@ -407,14 +431,21 @@ class Walker
         }
         else if (Ident ident = cast(Ident) left)
         {
-            uint* us = ident.repr in func.stab.byName;
-            if (us is null)
+            if (ident.repr.length > 0 && ident.repr[0] == '.')
             {
-                us = new uint(func.stab.define(ident.repr));
+                pushInstr(func, Opcode.opistore, [opid.repr.to!AssignOp]);
             }
-            pushInstr(func, Instr(Opcode.opstore, *us));
-            pushInstr(func, Instr(Opcode.push, opid.repr.to!AssignOp));
-            doPop;
+            else
+            {
+                uint* us = ident.repr in func.stab.byName;
+                if (us is null)
+                {
+                    us = new uint(func.stab.define(ident.repr));
+                }
+                pushInstr(func, Opcode.opstore, [
+                        cast(ushort)*us, cast(ushort) opid.repr.to!AssignOp
+                        ]);
+            }
         }
         else
         {
@@ -427,7 +458,7 @@ class Walker
         walkSetLeft(args[0]);
         walkSetMatch(args[0], args[1]);
         walkSetFinal(args[0]);
-        pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+        pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
         func.constants ~= Dynamic.nil;
     }
 
@@ -436,7 +467,7 @@ class Walker
         walkSetLeft(args[1]);
         walkSetMatch(args[1], args[2]);
         walkOpSetFinal(cast(Ident) args[0], args[1]);
-        pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+        pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
         func.constants ~= Dynamic.nil;
     }
 
@@ -444,12 +475,12 @@ class Walker
     {
         if (args.length == 0)
         {
-            pushInstr(func, Instr(Opcode.retnone));
+            pushInstr(func, Opcode.retnone);
         }
         else
         {
             walk(args[0]);
-            pushInstr(func, Instr(Opcode.retval));
+            pushInstr(func, Opcode.retval);
             doPop;
 
         }
@@ -458,31 +489,29 @@ class Walker
     void walkArray(Node[] args)
     {
         uint tmp = stackSize[0];
-        pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+        pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
         func.constants ~= dynamic(Dynamic.Type.end);
         int used = stackSize[0];
         foreach (i; args)
         {
             walk(i);
         }
-        pushInstr(func, Instr(Opcode.array), used);
+        pushInstr(func, Opcode.array);
         stackSize[0] = tmp + 1;
-
     }
 
     void walkTable(Node[] args)
     {
         uint tmp = stackSize[0];
-        pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+        pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
         func.constants ~= dynamic(Dynamic.Type.end);
         uint used = stackSize[0];
         foreach (i; args)
         {
             walk(i);
         }
-        pushInstr(func, Instr(Opcode.table, cast(uint) args.length), stackSize[0] - used);
+        pushInstr(func, Opcode.table, null, stackSize[0] - used);
         stackSize[0] = tmp + 1;
-
     }
 
     void walkTarget(Node[] args)
@@ -500,12 +529,12 @@ class Walker
     {
         walk(args[0]);
         walk(args[1]);
-        pushInstr(func, Instr(Opcode.index));
+        pushInstr(func, Opcode.index);
     }
 
     void walkUnpack(Node[] args)
     {
-        pushInstr(func, Instr(Opcode.unpack));
+        pushInstr(func, Opcode.unpack);
         walk(args[0]);
     }
 
@@ -537,6 +566,31 @@ class Walker
     void walkRevPipeOp(Node[] args)
     {
         walk(new Call(args[0], [args[1]]));
+    }
+
+    void walkUsing(Node[] args)
+    {
+        envs ~= genIdent;
+        scope (exit)
+        {
+            envs.length--;
+        }
+        Node id = new Ident(envs[$ - 1]);
+        walk(new Call(new Ident("@set"), [id, args[0]]));
+        doPop;
+        walk(args[1]);
+        doPop;
+        walk(id);
+    }
+
+    void walkLogicalAnd(Node[] args)
+    {
+        walk(new Call(new Ident("@if"), [args[0], args[1], new Ident("false")]));
+    }
+
+    void walkLogicalOr(Node[] args)
+    {
+        walk(new Call(new Ident("@if"), [args[0], new Ident("true"), args[1]]));
     }
 
     void walkSpecialCall(Call c)
@@ -585,8 +639,8 @@ class Walker
         case "@index":
             walkIndex(c.args[1 .. $]);
             break;
-        case "@target":
-            walkTarget(c.args[1 .. $]);
+        case "@using":
+            walkUsing(c.args[1 .. $]);
             break;
         case "@dotmap-both":
             walkDotmap!"_both_map"(c.args[1 .. $]);
@@ -640,6 +694,12 @@ class Walker
         case "==":
             walkBinary!"eq"(c.args[1 .. $]);
             break;
+        case "&&":
+            walkLogicalAnd(c.args[1 .. $]);
+            break;
+        case "||":
+            walkLogicalOr(c.args[1 .. $]);
+            break;
         case "...":
             walkUnpack(c.args[1 .. $]);
             break;
@@ -658,14 +718,13 @@ class Walker
             {
                 walk(c.args[0]);
                 uint used = stackSize[0];
-                pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-
+                pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
                 func.constants ~= dynamic(Dynamic.Type.end);
                 foreach (i; c.args[1 .. $])
                 {
                     walk(i);
                 }
-                pushInstr(func, Instr(Opcode.upcall, cast(uint)(c.args.length - 1)), used);
+                pushInstr(func, Opcode.upcall, [cast(ushort)(c.args.length - 1)], used);
 
             }
             else
@@ -676,7 +735,7 @@ class Walker
                 {
                     walk(i);
                 }
-                pushInstr(func, Instr(Opcode.call, cast(uint)(c.args.length - 1)), used);
+                pushInstr(func, Opcode.call, [cast(ushort)(c.args.length - 1)], used);
 
             }
         }
@@ -684,8 +743,7 @@ class Walker
 
     void walkExact(String s)
     {
-        pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
-
+        pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
         func.constants ~= dynamic(s.repr);
     }
 
@@ -693,26 +751,39 @@ class Walker
     {
         if (i.repr == "@nil" || i.repr == "nil")
         {
-            pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+            pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
             func.constants ~= Dynamic.nil;
         }
         else if (i.repr == "true")
         {
-            pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+            pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
             func.constants ~= dynamic(true);
         }
         else if (i.repr == "false")
         {
-            pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+            pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
             func.constants ~= dynamic(false);
         }
         else if (i.repr.length != 0 && i.repr[0] == '$' && i.repr[1 .. $].isNumeric)
         {
-            pushInstr(func, Instr(Opcode.argno, i.repr[1 .. $].to!uint));
+            pushInstr(func, Opcode.argno, [i.repr[1 .. $].to!ushort]);
+        }
+        else if (i.repr.length != 0 && i.repr[0] == '.')
+        {
+            size_t pos = 0;
+            while (pos < i.repr.length && i.repr[pos] == '.')
+            {
+                pos++;
+            }
+            Node envv = new Ident(envs[$ - pos]);
+            Node node = new Call(new Ident("@index"), [
+                    envv, new String(i.repr[pos .. $])
+                    ]);
+            walk(node);
         }
         else if (i.repr.isNumeric)
         {
-            pushInstr(func, Instr(Opcode.push, cast(uint) func.constants.length));
+            pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
             func.constants ~= Dynamic.strToNum(i.repr);
         }
         else
@@ -720,12 +791,12 @@ class Walker
             uint* us = i.repr in func.stab.byName;
             if (us !is null)
             {
-                pushInstr(func, Instr(Opcode.load, *us));
+                pushInstr(func, Opcode.load, [cast(ushort)*us]);
             }
             else
             {
                 uint v = func.doCapture(i.repr);
-                pushInstr(func, Instr(Opcode.loadc, v));
+                pushInstr(func, Opcode.loadc, [cast(ushort) v]);
             }
         }
     }

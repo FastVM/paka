@@ -1,18 +1,26 @@
 module lang.base;
 
 import std.algorithm;
+import std.stdio;
 import lang.dynamic;
 import lang.bytecode;
+import lang.data.map;
 import lang.lib.io;
 import lang.lib.sys;
 import lang.lib.str;
 import lang.lib.arr;
+import lang.lib.tab;
 import lang.lib.proc;
 
 struct Pair
 {
     string name;
     Dynamic val;
+    this(T...)(string n, T v)
+    {
+        name = n;
+        val = dynamic(v);
+    }
 }
 
 Pair[][] rootBases;
@@ -20,11 +28,6 @@ Pair[][] rootBases;
 ref Pair[] rootBase(size_t index = rootBases.length - 1)
 {
     return rootBases[index];
-}
-
-static this()
-{
-    rootBases ~= getRootBase;
 }
 
 size_t enterCtx()
@@ -45,11 +48,11 @@ void defineRoot(string name, Dynamic val)
 
 void addLib(ref Pair[] pairs, string name, Pair[] lib)
 {
-    foreach (entry; lib)
-    {
-        pairs ~= Pair(name ~ "." ~ entry.name, entry.val);
-    }
-    Table dyn;
+    // foreach (entry; lib)
+    // {
+    //     pairs ~= Pair(name ~ "." ~ entry.name, entry.val);
+    // }
+    Mapping dyn = emptyMapping;
     foreach (entry; lib)
     {
         if (!entry.name.canFind('.'))
@@ -57,19 +60,20 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
             dyn[dynamic(entry.name)] = entry.val;
         }
     }
-    pairs ~= Pair(name, dynamic(dyn));
+    pairs ~= Pair(name, dyn);
 }
 
 Pair[] getRootBase()
 {
     Pair[] ret = [
-        Pair("_both_map", dynamic(&syslibubothmap)),
-        Pair("_lhs_map", dynamic(&syslibulhsmap)),
-        Pair("_rhs_map", dynamic(&sysliburhsmap)),
-        Pair("_pre_map", dynamic(&syslibupremap)),
+        Pair("_both_map", &syslibubothmap),
+        Pair("_lhs_map", &syslibulhsmap),
+        Pair("_rhs_map", &sysliburhsmap),
+        Pair("_pre_map", &syslibupremap),
     ];
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);
+    ret.addLib("tab", libtab);
     ret.addLib("io", libio);
     ret.addLib("sys", libsys);
     ret.addLib("proc", libproc);

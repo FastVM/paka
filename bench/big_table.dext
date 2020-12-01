@@ -1,0 +1,10 @@
+
+def big(n) {
+    t = {};
+    arr.each(arr.range(1,n)) {
+        t[$0] = $0;
+    };
+    return t;
+};
+
+io.print(tab.len(big(1000000)));

@@ -9,13 +9,12 @@ import std.conv;
 Pair[] libsysenv()
 {
     Pair[] ret = [
-        Pair("get", dynamic(&libget)), Pair("set", dynamic(&libset)),
-        Pair("replace", dynamic(&libreplace)),
+        Pair("get", &libget), Pair("set", &libset),
+        Pair("replace", &libreplace),
     ];
     return ret;
 }
 
-private:
 Dynamic libget(Args args)
 {
     return dynamic(environment[args[0].str]);

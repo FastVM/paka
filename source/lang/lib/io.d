@@ -5,18 +5,20 @@ import lang.base;
 import lang.vm;
 import std.stdio;
 import std.conv;
+import core.stdc.stdio;
 
 Pair[] libio()
 {
     Pair[] ret = [
-        Pair("print", dynamic(&libprint)),
-        Pair("put", dynamic(&libput)),
-        Pair("readln", dynamic(&libreadln)),
+        Pair("print", &libprint),
+        Pair("put", &libput),
+        Pair("readln", &libreadln),
+        Pair("get", &libget),
     ];
     return ret;
 }
-private:
 
+/// prints with newline
 Dynamic libprint(Args args)
 {
     foreach (i; args)
@@ -34,6 +36,7 @@ Dynamic libprint(Args args)
     return Dynamic.nil;
 }
 
+/// prints without newline
 Dynamic libput(Args args)
 {
     foreach (i; args)
@@ -50,7 +53,14 @@ Dynamic libput(Args args)
     return Dynamic.nil;
 }
 
+/// reads until newline
 Dynamic libreadln(Args args)
 {
     return dynamic(readln[0 .. $ - 1]);
+}
+
+/// gets a 1 length string
+Dynamic libget(Args args)
+{
+    return dynamic(cast(string) [cast(char) getchar]);
 }

@@ -7,6 +7,7 @@ import lang.dynamic;
 import lang.dext.parse;
 import lang.vm;
 import lang.inter;
+import lang.atext;
 import std.stdio;
 import std.algorithm;
 import std.string;
@@ -15,9 +16,8 @@ import std.functional;
 /// vm callback that sets the locals defined into the root base 
 LocalCallback exportLocalsToBaseCallback(Function func)
 {
-    LocalCallback ret = (ref size_t index, ref size_t depth,
-            ref Dynamic[] stack, ref Dynamic[] locals) {
-        foreach (i, ref v; locals[0 .. func.stab.byPlace.length])
+    LocalCallback ret = (uint index, Dynamic* stack, Dynamic[] locals) {
+        foreach (i, v; locals[0 .. func.stab.byPlace.length])
         {
             rootBase ~= Pair(func.stab.byPlace[i], v);
         }
@@ -25,15 +25,11 @@ LocalCallback exportLocalsToBaseCallback(Function func)
     return ret;
 }
 
-/// vm callback that prints the top of the stack for the end of the repl
-void printTop(ref size_t index, ref size_t depth, ref Dynamic[] stack, ref Dynamic[] locals)
-{
-    writeln(stack[depth]);
-}
-
 /// runs a repl for dext language
 void replRun()
 {
+    char[][] history;
+    Reader reader = new Reader(history);
     size_t ctx = enterCtx;
     scope (exit)
     {
@@ -41,13 +37,27 @@ void replRun()
     }
     while (true)
     {
-        write(">>> ");
-        string code = readln.strip;
+        string code;
+        try
+        {
+            code = reader.readln(">>> ");
+        }
+        catch (ExitException ee)
+        {
+            if (ee.letter == 'c') {
+                continue;
+            }
+            writeln;
+            break;
+        }
         code ~= ";";
         Node node = code.parse;
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);
         func.captured = loadBase;
-        run(func, null, func.exportLocalsToBaseCallback, toDelegate(&printTop));
+        Dynamic res = run(func, null, func.exportLocalsToBaseCallback);
+        if (res.type != Dynamic.Type.nil) {
+            writeln(res, '\r');
+        }
     }
 }

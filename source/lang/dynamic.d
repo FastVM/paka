@@ -16,25 +16,201 @@ import lang.error;
 import lang.number;
 import lang.data.rope;
 import lang.data.mpfr;
-
+import lang.data.map;
 public import lang.number;
-
-alias Args = Dynamic[];
-alias Array = Dynamic[];
-alias Table = Dynamic[Dynamic];
 
 version = safe;
 
+alias Args = Dynamic[];
+alias Array = Dynamic[];
+
+alias Mapping = Map!(Dynamic, Dynamic);
+Mapping emptyMapping()
+{
+    return new Mapping;
+}
+
+// size_t hashed = 0;
+// alias Mapping = Dynamic[Dynamic];
+// Mapping emptyMapping(){
+//     return Mapping.init;
+// }
+
+class Table
+{
+    // Map!(Dynamic, Dynamic) table;
+    Mapping table = emptyMapping;
+    Table metatable;
+    alias table this;
+
+    Table init()
+    {
+        return Table.empty;
+    }
+
+    static Table empty()
+    {
+        return new Table;
+    }
+
+    this()
+    {
+    }
+
+    this(typeof(table) t)
+    {
+        table = t;
+        metatable = null;
+    }
+
+    this(typeof(table) t, Table m)
+    {
+        table = t;
+        metatable = m;
+    }
+
+    ref Table meta()
+    {
+        if (metatable is null)
+        {
+            metatable = Table.empty;
+        }
+        return metatable;
+    }
+
+    int opApply(int delegate(Dynamic, Dynamic) dg)
+    {
+        foreach (Dynamic a, Dynamic b; table)
+        {
+            if (int res = dg(a, b))
+            {
+                return res;
+            }
+        }
+        return 0;
+    }
+
+    // int opCmp(Dynamic other)
+    // {
+    //     return meta[dynamic("cmp")]([dynamic(this), other]).opCmp(dynamicZero);
+    // }
+
+    Dynamic rawIndex(Dynamic key)
+    {
+        if (Dynamic* d = key in table)
+        {
+            return *d;
+        }
+        throw new BoundsException("key not found: " ~ key.to!string);
+    }
+
+    void rawSet(Dynamic key, Dynamic value)
+    {
+        table[key] = value;
+    }
+
+    void set(Dynamic key, Dynamic value)
+    {
+        Dynamic* metaset = dynamic("set") in meta;
+        if (metaset !is null)
+        {
+            (*metaset)([dynamic(this), key, value]);
+        }
+        rawSet(key, value);
+    }
+
+    Dynamic opIndex(Dynamic key)
+    {
+        Dynamic* metaget = dynamic("get") in meta;
+        if (metaget !is null)
+        {
+            if (metaget.type == Dynamic.Type.tab)
+            {
+                Dynamic* val = key in this;
+                if (val !is null)
+                {
+                    return *val;
+                }
+                return (*metaget).tab[key];
+            }
+            return (*metaget)([dynamic(this), key]);
+        }
+        Dynamic* val = key in this;
+        if (val !is null)
+        {
+            return *val;
+        }
+        throw new TypeException("table item not found: " ~ key.to!string);
+    }
+
+    Dynamic* opBinaryRight(string op)(Dynamic other) if (op == "in")
+    {
+        return other in table;
+    }
+
+    Dynamic opBinary(string op)(Dynamic other)
+    {
+        enum string opname(string op)()
+        {
+            switch (op)
+            {
+            default : assert(0);
+            case "+" : return "add";
+            case "-" : return "sub";
+            case "*" : return "mul";
+            case "/" : return "div";
+            case "%" : return "mod";
+            }
+        }
+        return meta[dynamic(opname!op)]([dynamic(this), other]);
+    }
+
+    Dynamic opCall(Dynamic[] args)
+    {
+        return meta[dynamic("call")](dynamic(this) ~ args);
+    }
+
+    Dynamic opUnary(string op)()
+    {
+        enum string opname(string op)()
+        {
+            switch (op)
+            {
+            default : assert(0);
+            case "-" : return "neg";
+            }
+        }
+        return meta[dynamic(opname!op)]([this]);
+    }
+
+    override string toString()
+    {
+        Dynamic* op = dynamic("str") in meta;
+        if (op is null)
+        {
+            return table.to!string;
+        }
+        return (*op)([dynamic(this)]).to!string;
+    }
+}
+
+Dynamic dynamicZero;
+
+static this()
+{
+    dynamicZero = dynamic(0);
+}
+
 bool fastMathNotEnabled = false;
 
-pragma(inline, true) Dynamic dynamic(T...)(T a)
+Dynamic dynamic(T...)(T a)
 {
     return Dynamic(a);
 }
 
 struct Dynamic
 {
-    enum Type: long
+    enum Type : byte
     {
         nil,
         log,
@@ -44,7 +220,7 @@ struct Dynamic
         arr,
         tab,
         fun,
-        del,
+        // del,
         pro,
         end,
         pac,
@@ -57,26 +233,20 @@ struct Dynamic
         BigNumber* bnm;
         string* str;
         Array* arr;
-        Table* tab;
+        Table tab;
         union Callable
         {
             Dynamic function(Args) fun;
-            Dynamic delegate(Args)* del;
             Function pro;
         }
-
         Callable fun;
-
-        BigNumber big() const
-        {
-            return *bnm;
-        }
     }
 
-    Type type = Type.nil;
+align(8):
     Value value = void;
+    Type type = Type.nil;
 
-    pragma(inline, true) static Dynamic strToNum(string s)
+    static Dynamic strToNum(string s)
     {
         BigNumber big = BigNumber(s);
         if (big.fits && !fastMathNotEnabled)
@@ -86,72 +256,78 @@ struct Dynamic
         return dynamic(big);
     }
 
-    pragma(inline, true) this(Type t)
+    this(Type t)
     {
         type = t;
     }
 
-    pragma(inline, true) this(bool log)
+    this(bool log)
     {
         value.log = log;
         type = Type.log;
     }
 
-    pragma(inline, true) this(SmallNumber num)
+    this(SmallNumber num)
     {
         value.sml = num;
         type = Type.sml;
     }
 
-    pragma(inline, true) this(BigNumber num)
+    this(BigNumber num)
     {
         value.bnm = new BigNumber(num);
         type = Type.big;
     }
 
-    pragma(inline, true) this(string str)
+    this(string str)
     {
         value.str = [str].ptr;
         type = Type.str;
     }
 
-    pragma(inline, true) this(Array arr)
+    this(Array arr)
     {
         value.arr = [arr].ptr;
         type = Type.arr;
     }
 
-    pragma(inline, true) this(Table tab)
+    this(Mapping tab)
     {
-        value.tab = [tab].ptr;
+        value.tab = new Table(tab);
         type = Type.tab;
     }
 
-    pragma(inline, true) this(Dynamic function(Args) fun)
+    this(Table tab)
+    {
+        value.tab = tab;
+        type = Type.tab;
+    }
+
+    this(Dynamic function(Args) fun)
     {
         value.fun.fun = fun;
         type = Type.fun;
     }
 
-    pragma(inline, true) this(Dynamic delegate(Args) del)
-    {
-        value.fun.del = [del].ptr;
-        type = Type.del;
-    }
+    // this(Dynamic delegate(Args) del)
+    // {
+    //     value.fun.del = [del].ptr;
+    //     type = Type.del;
+    // }
 
-    pragma(inline, true) this(Function pro)
+    this(Function pro)
     {
         value.fun.pro = pro;
         type = Type.pro;
     }
 
-    pragma(inline, true) this(Dynamic other)
+    this(Dynamic other)
     {
         value = other.value;
         type = other.type;
     }
 
-    pragma(inline, true) static Dynamic nil()
+    static Dynamic nil()
     {
         Dynamic ret = dynamic(false);
         ret.value = Dynamic.Value.init;
@@ -159,53 +335,88 @@ struct Dynamic
         return ret;
     }
 
-    pragma(inline, true) size_t toHash() const nothrow
-    {
-        switch (type)
-        {
-        default:
-            return hashOf(type) ^ hashOf(value);
-        case Type.str:
-            return hashOf(*value.str);
-        case Type.arr:
-            return hashOf(*value.arr);
-        case Type.tab:
-            return hashOf(*value.tab);
-        }
-    }
+    // size_t toHash() const nothrow
+    // {
+    //     hashed++;
+    //     scope(exit)
+    //     {
+    //         hashed--;
+    //     }
+    //     if (hashed == 8) {
+    //         return 0;
+    //     }
+    //     final switch (type)
+    //     {
+    //     case Type.nil:
+    //         return 2;
+    //     case Type.log:
+    //         return cast(size_t) (value.log + 1);
+    //     case Type.sml:
+    //         return *cast(size_t*)&value.sml;
+    //     case Type.big:
+    //         return hashOf(value.bnm);
+    //     case Type.str:
+    //         return hashOf(*value.str);
+    //     case Type.arr:
+    //         return hashOf(*value.arr);
+    //     case Type.tab:
+    //         return hashOf(value.tab);
+    //     case Type.fun:
+    //         return hashOf(value.fun.fun);
+    //     case Type.del:
+    //         return hashOf(value.fun.del);
+    //     case Type.pro:
+    //         return hashOf(value.fun.pro);
+    //     case Type.end:
+    //         assert(0);
+    //     case Type.pac:
+    //         assert(0);
+    //     }
+    // }
 
-    pragma(inline, true) string toString()
+    string toString()
     {
         return this.strFormat;
     }
 
-    pragma(inline, true) Dynamic opCall(Dynamic[] args)
+    Dynamic opCall(Dynamic[] args)
     {
         switch (type)
         {
         case Dynamic.Type.fun:
             return fun.fun(args);
-        case Dynamic.Type.del:
-            return (*fun.del)(args);
+        // case Dynamic.Type.del:
+        //     return (*fun.del)(args);
         case Dynamic.Type.pro:
-            if (fun.pro.self.length == 0) {
+            if (fun.pro.self.length == 0)
+            {
                 return run(fun.pro, args);
             }
-            else {
+            else
+            {
                 return run(fun.pro, fun.pro.self ~ args);
             }
+        case Dynamic.Type.tab:
+            return value.tab(args);
         default:
             throw new TypeException("error: not a function: " ~ this.to!string);
         }
     }
 
-    pragma(inline, true) long opCmp(Dynamic other)
+    int opCmp(Dynamic other)
+    {
+        return cmpDynamic(this, other);
+    }
+
+    int flatOpCmp(Dynamic other)
     {
         Type t = type;
         switch (t)
         {
         default:
-            assert(0);
+            // assert(0);
+            throw new TypeException(
+                    "error: not comparable: " ~ this.to!string ~ " " ~ other.to!string);
         case Type.nil:
             return 0;
         case Type.log:
@@ -213,7 +424,7 @@ struct Dynamic
         case Type.sml:
             if (other.type == Type.big)
             {
-                return value.sml.asBig.opCmp(other.value.big);
+                return value.sml.asBig.opCmp(*other.value.bnm);
             }
             SmallNumber a = value.sml;
             SmallNumber b = other.value.sml;
@@ -229,17 +440,17 @@ struct Dynamic
         case Type.big:
             if (other.type == Type.sml)
             {
-                return value.big.opCmp(other.value.sml.asBig);
+                return (*value.bnm).opCmp(other.value.sml.asBig);
             }
-            return value.big.opCmp(other.value.big);
+            return (*value.bnm).opCmp(*other.value.bnm);
         case Type.str:
             return cmp(*value.str, other.str);
         }
     }
 
-    pragma(inline, true) bool opEquals(const Dynamic other) const
+    bool opEquals(const Dynamic other) const
     {
-        return isEqual(this, other);
+        return cmpDynamic(this, other) == 0;
     }
 
     Dynamic opBinary(string op)(Dynamic other)
@@ -248,31 +459,35 @@ struct Dynamic
         {
             if (other.type == Type.sml)
             {
-                SmallNumber res = mixin("value.sml" ~ op ~ "other.value.sml");
+                SmallNumber res = mixin("value.sml " ~ op ~ " other.value.sml");
                 if (res.fits)
                 {
                     return dynamic(res);
                 }
                 else
                 {
-                    return dynamic(mixin("value.sml.asBig" ~ op ~ "other.value.sml.asBig"));
+                    return dynamic(mixin("value.sml.asBig " ~ op ~ " other.value.sml.asBig"));
                 }
             }
             else if (other.type == Type.big)
             {
-                return dynamic(mixin("value.sml.asBig" ~ op ~ "other.value.big"));
+                return dynamic(mixin("value.sml.asBig " ~ op ~ "  *other.value.bnm"));
             }
         }
         else if (type == Type.big)
         {
             if (other.type == Type.sml)
             {
-                return dynamic(mixin("value.big" ~ op ~ "other.value.sml.asBig"));
+                return dynamic(mixin("*value.bnm " ~ op ~ " other.value.sml.asBig"));
             }
             else if (other.type == Type.big)
             {
-                return dynamic(mixin("value.big" ~ op ~ "other.value.big"));
+                return dynamic(mixin("*value.bnm " ~ op ~ " *other.value.bnm"));
             }
+        }
+        else if (type == Type.tab)
+        {
+            return mixin("value.tab " ~ op ~ " other");
         }
         static if (op == "~" || op == "+")
         {
@@ -285,18 +500,49 @@ struct Dynamic
                 return dynamic(arr ~ other.arr);
             }
         }
-        throw new TypeException("invalid types: " ~ type.to!string ~ ", " ~ other.type.to!string);
+        static if (op == "*")
+        {
+            if (type == Type.str && other.type == Type.sml)
+            {
+                string ret;
+                foreach (i; 0 .. other.value.sml)
+                {
+                    ret ~= str;
+                }
+                return dynamic(ret);
+            }
+            if (type == Type.str && other.type == Type.big)
+            {
+                string ret;
+                foreach (i; 0 .. other.as!size_t)
+                {
+                    ret ~= str;
+                }
+                return dynamic(ret);
+            }
+            if (type == Type.arr && other.type == Type.sml)
+            {
+                Dynamic[] ret;
+                foreach (i; 0 .. other.value.sml)
+                {
+                    ret ~= arr;
+                }
+                return dynamic(ret);
+            }
+            if (type == Type.arr && other.type == Type.big)
+            {
+                Dynamic[] ret;
+                foreach (i; 0 .. other.as!size_t)
+                {
+                    ret ~= arr;
+                }
+                return dynamic(ret);
+            }
+        }
+        throw new TypeException("invalid types: " ~ type.to!string ~ op ~ other.type.to!string);
     }
 
-    pragma(inline, true) Dynamic opOpAssign(string op)(Dynamic other)
-    {
-        Dynamic ret = mixin("this" ~ op ~ "other");
-        type = ret.type;
-        value = ret.value;
-        return this;
-    }
-
-    pragma(inline, true) Dynamic opUnary(string op)()
+    Dynamic opUnary(string op)()
     {
         if (type == Type.sml)
         {
@@ -304,11 +550,11 @@ struct Dynamic
         }
         else
         {
-            return dynamic(mixin(op ~ "value.big"));
+            return dynamic(mixin(op ~ "*value.bnm"));
         }
     }
 
-    pragma(inline, true) bool log()
+    bool log()
     {
         version (safe)
             if (type != Type.log)
@@ -318,7 +564,7 @@ struct Dynamic
         return value.log;
     }
 
-    pragma(inline, true) string str()
+    string str()
     {
         version (safe)
             if (type != Type.str)
@@ -328,7 +574,7 @@ struct Dynamic
         return *value.str;
     }
 
-    pragma(inline, true) Array arr()
+    Array arr()
     {
         version (safe)
             if (type != Type.arr)
@@ -338,37 +584,7 @@ struct Dynamic
         return *value.arr;
     }
 
-    pragma(inline, true) Table tab()
-    {
-        version (safe)
-            if (type != Type.tab)
-            {
-                throw new TypeException("expected table type");
-            }
-        return *value.tab;
-    }
-
-    pragma(inline, true) string* strPtr()
-    {
-        version (safe)
-            if (type != Type.str)
-            {
-                throw new TypeException("expected string type");
-            }
-        return value.str;
-    }
-
-    pragma(inline, true) Array* arrPtr()
-    {
-        version (safe)
-            if (type != Type.arr)
-            {
-                throw new TypeException("expected array type");
-            }
-        return value.arr;
-    }
-
-    pragma(inline, true) Table* tabPtr()
+    Table tab()
     {
         version (safe)
             if (type != Type.tab)
@@ -378,10 +594,31 @@ struct Dynamic
         return value.tab;
     }
 
-    pragma(inline, true) Value.Callable fun()
+    string* strPtr()
     {
         version (safe)
-            if (type != Type.fun && type != Type.pro && type != Type.del)
+            if (type != Type.str)
+            {
+                throw new TypeException("expected string type");
+            }
+        return value.str;
+    }
+
+    Array* arrPtr()
+    {
+        version (safe)
+            if (type != Type.arr)
+            {
+                throw new TypeException("expected array type");
+            }
+        return value.arr;
+    }
+
+    Value.Callable fun()
+    {
+        version (safe)
+            // if (type != Type.fun && type != Type.pro && type != Type.del)
+            if (type != Type.fun && type != Type.pro)
             {
                 throw new TypeException("expected callable type");
             }
@@ -396,7 +633,7 @@ struct Dynamic
         }
         else
         {
-            return mpfr_get_ui(value.big.mpfr, mpfr_rnd_t.MPFR_RNDN);
+            return mpfr_get_ui(value.bnm.mpfr, mpfr_rnd_t.MPFR_RNDN);
         }
     }
 
@@ -408,67 +645,158 @@ struct Dynamic
         }
         else
         {
-            return mpfr_get_d(value.big.mpfr, mpfr_rnd_t.MPFR_RNDN);
+            return mpfr_get_d(value.bnm.mpfr, mpfr_rnd_t.MPFR_RNDN);
         }
+    }
+
+    bool isTruthy()
+    {
+        return type != Type.nil && (type != Type.log || value.log);
     }
 }
 
-pragma(inline, true) private bool isEqual(const Dynamic a, const Dynamic b)
+private int cmp(T)(T a, T b) if (!is(T == Function) && !is(T == Dynamic))
 {
+    if (a == b)
+    {
+        return 0;
+    }
+    if (a < b)
+    {
+        return -1;
+    }
+    return 1;
+}
+
+private int cmpFunction(const Function a, const Function b)
+{
+    return cmp(cast(void*) a, cast(void*) b);
+}
+
+Dynamic[2][] above;
+private int cmpDynamic(T...)(T a)
+{
+    int res = cmpDynamicImpl(a);
+    // writeln(a[0], ", ", a[1], " // ", res);
+    return res;
+}
+
+private int cmpDynamicImpl(const Dynamic a, const Dynamic b)
+{
+    Dynamic[2] cur = [a, b];
+    foreach (i, p; above)
+    {
+        if (cur[0] is p[0] && cur[1] is p[1])
+        {
+            return 0;
+        }
+    }
     if (b.type != a.type)
     {
         if (a.type == Dynamic.Type.sml)
         {
             if (b.type == Dynamic.Type.big)
             {
-                return a.value.sml.asBig == b.value.big;
+                return cmp(a.value.sml.asBig, *b.value.bnm);
             }
         }
         if (a.type == Dynamic.Type.big)
         {
             if (b.type == Dynamic.Type.sml)
             {
-                return a.value.big == b.value.sml.asBig;
+                return cmp(*a.value.bnm, b.value.sml.asBig);
             }
         }
-        return false;
+        return cmp(a.type, b.type);
     }
-    if (a.value == b.value)
+    if (a is b)
     {
-        return true;
+        return 0;
     }
     switch (a.type)
     {
     default:
         assert(0);
     case Dynamic.Type.nil:
-        return true;
+        return 0;
     case Dynamic.Type.log:
-        return a.value.log == b.value.log;
+        return cmp(a.value.log, b.value.log);
     case Dynamic.Type.str:
-        return *a.value.str == *b.value.str;
+        return cmp(*a.value.str, *b.value.str);
     case Dynamic.Type.sml:
-        return a.value.sml == b.value.sml;
+        return cmp(a.value.sml, b.value.sml);
     case Dynamic.Type.big:
-        return a.value.big == b.value.big;
+        return cmp(*a.value.bnm, *b.value.bnm);
     case Dynamic.Type.arr:
-        return *a.value.arr == *b.value.arr;
+        above ~= cur;
+        scope (exit)
+        {
+            above.length--;
+        }
+        const Dynamic[] as = *a.value.arr;
+        const Dynamic[] bs = *b.value.arr;
+        if (int c = cmp(as.length, bs.length))
+        {
+            return c;
+        }
+        foreach (i; 0 .. as.length)
+        {
+            if (int res = cmpDynamic(as[i], bs[i]))
+            {
+                return res;
+            }
+        }
+        return 0;
     case Dynamic.Type.tab:
-        return *a.value.tab == *b.value.tab;
+        above ~= cur;
+        scope (exit)
+        {
+            above.length--;
+        }
+        Table at = cast(Table) a.value.tab;
+        Table bt = cast(Table) b.value.tab;
+        if (int c = cmp(at.table.length, bt.table.length))
+        {
+            return c;
+        }
+        foreach (key, value; at)
+        {
+            Dynamic aValue = value;
+            const Dynamic* bValue = key in bt;
+            if (bValue is null)
+            {
+                foreach (key2, value2; bt)
+                {
+                    if (key2 !in at)
+                    {
+                        return cmpDynamic(key, key2);
+                    }
+                }
+                assert(0);
+            }
+            if (int res = cmpDynamic(aValue, *bValue))
+            {
+                return res;
+            }
+        }
+        return 0;
     case Dynamic.Type.fun:
-        return a.value.fun.fun == b.value.fun.fun;
-    case Dynamic.Type.del:
-        return a.value.fun.del == b.value.fun.del;
+        return cmp(a.value.fun.fun, b.value.fun.fun);
+    // case Dynamic.Type.del:
+    //     return cmp(a.value.fun.del, b.value.fun.del);
     case Dynamic.Type.pro:
-        return a.value.fun.pro == b.value.fun.pro;
+        return cmpFunction(a.value.fun.pro, b.value.fun.pro);
     }
 }
 
 private string strFormat(Dynamic dyn, Dynamic[] before = null)
 {
-    if (canFind(before, dyn))
+    foreach (i, v; before)
     {
-        return "...";
+        if (dyn is v)
+        {
+            return "&" ~ i.to!string;
+        }
     }
     before ~= dyn;
     scope (exit)
@@ -486,7 +814,7 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
     case Dynamic.Type.sml:
         return dyn.value.sml.to!string;
     case Dynamic.Type.big:
-        return dyn.value.big.to!string;
+        return (*dyn.value.bnm).to!string;
     case Dynamic.Type.str:
         if (before.length == 0)
         {
@@ -512,24 +840,24 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
     case Dynamic.Type.tab:
         char[] ret;
         ret ~= "{";
-        size_t i;
-        foreach (v; dyn.tab.byKeyValue)
+        size_t i = 0;
+        foreach (key, value; dyn.tab)
         {
             if (i != 0)
             {
                 ret ~= ", ";
             }
-            ret ~= strFormat(v.key, before);
+            ret ~= strFormat(key, before);
             ret ~= ": ";
-            ret ~= strFormat(v.value, before);
+            ret ~= strFormat(value, before);
             i++;
         }
         ret ~= "}";
         return cast(string) ret;
     case Dynamic.Type.fun:
         return "<function>";
-    case Dynamic.Type.del:
-        return "<function>";
+    // case Dynamic.Type.del:
+    //     return "<function>";
     case Dynamic.Type.pro:
         return dyn.fun.pro.to!string;
     }

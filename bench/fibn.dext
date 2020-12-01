@@ -10,4 +10,4 @@ def fib(n) {
     return a;
 };
 
-io.print(fib(1000000));
+io.print(fib(100000));
