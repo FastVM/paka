@@ -1,5 +1,13 @@
 
 def fib(x) {
+    if (x < 2) {
+        return x;
+    } else {
+        return fib(x-2) + fib(x-1);
+    };
+};
+
+def fib(x) {
     return if (x < 2) {
         x;
     } else {
@@ -7,10 +15,4 @@ def fib(x) {
     };
 };
 
-def pfib(n) {
-    io.print(fib(n));
-};
-
-io.print("before");
-pfib(25);
-io.print("after");
+io.print(fib(35));

@@ -31,30 +31,50 @@ LocalCallback exportLocalsToBaseCallback(Function func)
 /// the actual main function, it does not handle errors
 void domain(string[] args)
 {
-    cpuThreadsSpec = totalCPUs;
-    size_t cpuThreadsSpecLocal = 0;
-    size_t lcheck = checkin;
+    version (threads)
+    {
+        cpuThreadsSpec = totalCPUs;
+        size_t cpuThreadsSpecLocal = 0;
+    }
     string[] scripts;
     string[] stmts;
     bool repl = false;
-    auto info = getopt(args, "repl", &repl, "eval", &stmts, "file", &scripts, "math",
-            &fastMathNotEnabled, "threads", &cpuThreadsSpecLocal, "checkin", &lcheck);
-    if (info.helpWanted)
+    version (threads)
     {
-        defaultGetoptPrinter("Help for 9c language.", info.options);
-        return;
-    }
-    if (lcheck == 0)
-    {
-        checkin = size_t.max;
+        version (bigfloat)
+        {
+            auto info = getopt(args, "repl", &repl, "eval", &stmts, "file", &scripts, "math",
+                    &fastMathNotEnabled, "threads", &cpuThreadsSpecLocal);
+        }
+        else
+        {
+            auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
+                    &scripts, "threads", &cpuThreadsSpecLocal);
+        }
     }
     else
     {
-        checkin = lcheck - 1;
+        version (bigfloat)
+        {
+            auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
+                    &scripts, "math", &fastMathNotEnabled);
+        }
+        else
+        {
+            auto info = getopt(args, "repl", &repl, "eval", &stmts, "file", &scripts);
+        }
     }
-    if (cpuThreadsSpecLocal != 0)
+    if (info.helpWanted)
     {
-        cpuThreadsSpec = cpuThreadsSpecLocal;
+        defaultGetoptPrinter("Help for dext language.", info.options);
+        return;
+    }
+    version (threads)
+    {
+        if (cpuThreadsSpecLocal != 0)
+        {
+            cpuThreadsSpec = cpuThreadsSpecLocal;
+        }
     }
     size_t ctx = enterCtx;
     scope (exit)
@@ -83,12 +103,17 @@ void domain(string[] args)
         {
             write(">>> ");
             string code = readln.strip;
-            code ~= ";";
+            code ~= "\n;";
             Node node = code.parse;
             Walker walker = new Walker;
             Function func = walker.walkProgram(node, ctx);
             func.captured = loadBase;
-            loopRun((Dynamic d) { writeln(d); }, func, null, func.exportLocalsToBaseCallback);
+            loopRun(delegate(Dynamic d) {
+                if (d != Dynamic.nil)
+                {
+                    writeln(d);
+                }
+            }, func, null, func.exportLocalsToBaseCallback);
         }
     }
 }

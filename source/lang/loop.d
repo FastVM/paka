@@ -2,144 +2,101 @@ module lang.loop;
 
 import std.stdio;
 import std.conv;
+import std.algorithm;
+import core.memory;
 import lang.vm;
 import lang.dynamic;
 import lang.bytecode;
 import lang.data.rope;
-import std.algorithm;
+import core.atomic;
 
-alias Cont = void delegate(Dynamic ret);
+alias RawCont = void delegate(Dynamic ret);
 
-immutable(void delegate())[] queue;
-
-void push(immutable void delegate() val)
+version (threads)
 {
-    queue ~= val;
-}
-
-Cont asPushable(Cont cont)
-{
-    return (Dynamic ret) { () { cont(ret); }.push; };
-}
-
-void pushify(ref Cont cont)
-{
-    Cont initcont = cont;
-    cont = (Dynamic ret) { () { initcont(ret); }.push; };
-}
-
-version (parallel)
-{
-    import std.concurrency;
-    import core.thread;
-    import core.atomic;
-
-    shared size_t checkin = 1;
-
-    enum Status
-    {
-        dead,
-    }
-
-    void mainRunner(Tid owner, size_t me)
-    {
-        bool running = true;
-        while (running)
-        {
-            receive((immutable void delegate() cur) {
-                size_t ran = 0;
-                cur();
-                while (queue.length > 0)
-                {
-                    while (queue.length > 1)
-                    {
-                        send(owner, queue[0]);
-                        queue = queue[1 .. $];
-                    }
-                    queue[0]();
-                    queue = queue[1 .. $];
-                    ran++;
-                }
-                immutable(void delegate())[] oldqueue = queue;
-                queue = null;
-                foreach (i; oldqueue)
-                {
-                    send(owner, i);
-                }
-                queue = null;
-                send(owner, me);
-            }, (Status st) { send(owner, st); running = false; });
-        }
-    }
-
+    import std.parallelism : parallel, TaskPool, task;
 
     size_t cpuThreadsSpec = 1;
+    __gshared TaskPool pool = null;
 
-    void loopRun(T...)(Cont retcont, Function func, Dynamic[] args, T rest)
+
+    struct Cont
     {
-        Tid[] tids;
-        bool[] available;
-        size_t running = cpuThreadsSpec;
-        foreach (me; 0 .. running)
+        RawCont cont;
+        Dynamic arg;
+        this(T...)(RawCont c)
         {
-            Tid tid = spawn(&mainRunner, thisTid, me);
-            tids ~= tid;
-            available ~= true;
-        }
-        void enque(T)(T v)
-        {
-            foreach (i, tid; tids)
-            {
-                if (available[i])
-                {
-                    available[i] = false;
-                    send(tid, v);
-                    return;
-                }
-            }
-            v.push;
+            cont = c;
         }
 
-        run((Dynamic args) {
-            foreach (tid; tids)
-            {
-                send(tid, Status.dead);
-            }
-            retcont(args);
-        }, func, args, rest);
-        immutable(void delegate())[] oldqueue = queue;
-        queue = null;
-        foreach (i; oldqueue)
+        void opCall() immutable
         {
-            enque(i);
+            cont(arg);
         }
-        while (running != 0)
+
+        void opCall(Dynamic a)
         {
-            receive((immutable void delegate() ask) { enque(ask); }, (Status st) {
-                running--;
-            }, (size_t flip) {
-                if (queue.length != 0)
-                {
-                    send(tids[flip], queue[0]);
-                    queue = queue[1 .. $];
-                }
-                else
-                {
-                    available[flip] = true;
-                }
-            });
+            arg = a;
+            pool.put(task(cont, arg));
         }
     }
+
+    Cont asCont(RawCont cont)
+    {
+        return Cont(cont);
+    }
+
+    void loopRun(A, T...)(A retcont, T args)
+    {
+        pool = new TaskPool(cpuThreadsSpec);
+        run((Dynamic arg) {
+            retcont(arg);
+            pool.stop;
+        }.asCont, args);
+    }
+
 }
 else
 {
-    void loopRun(T...)(Cont retcont, Function func, Dynamic[] args, T rest)
+    struct Cont
     {
-        run(retcont, func, args, rest);
-        while (queue.length != 0) {
-            void delegate() cur = queue[0];
-            queue = queue[1 .. $];
+        RawCont cont;
+        Dynamic arg;
+        this(T...)(RawCont c)
+        {
+            cont = c;
+        }
+
+        void opCall() immutable
+        {
+            cont(arg);
+        }
+
+        void opCall(Dynamic a)
+        {
+            arg = a;
+            synchronized
+            {
+                queue ~= this;
+            }
+        }
+    }
+
+    immutable(Cont)[] queue;
+
+    Cont asCont(RawCont cont)
+    {
+        return Cont(cont);
+    }
+
+    void loopRun(T...)(T args)
+    {
+        run(args);
+        while (queue.length != 0)
+        {
+            immutable Cont cur = queue[$ - 1];
+            queue.length--;
             cur();
-        }    
+        }
     }
 }

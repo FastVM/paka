@@ -1,22 +1,32 @@
 io.print("BEGIN");
 
+def rec(n) {
+    if (n > 0) {
+        rec(n-1);
+        rec(n-1);
+    };
+};
+
+def fib(n) {
+    if (n < 2) {
+        return n;
+    } else {
+        return fib(n-2) + fib(n-1);
+    };
+};
+
 def slow(n) {
     while (n > 0) {
         n -= 1;
     };
 };
 
-def fib(n) {
-    return if (n < 2) {
-        n;
-    } else {
-        fib(n-2) + fib(n-1);
-    };
-};
-
 arr.each(arr.range(16)) {
-    # slow(256 * 256 * 64);
-    fib(27);
+    slow(256 * 256 * 16);
+    # rec(18);
+    # fib(25);
+    io.print($0);
+    ;
 };
 
 io.print("END");

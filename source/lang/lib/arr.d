@@ -69,7 +69,7 @@ void libmap(Cont cont, Args args)
 {
     shared size_t count = args[0].arr.length;
     Array res = new Dynamic[count];
-    Cont subcont(size_t n)
+    RawCont subcont(size_t n)
     {
         return (Dynamic d) {
             core.atomic.atomicOp!"-="(count, 1);
@@ -97,16 +97,14 @@ void libmap(Cont cont, Args args)
 void libeach(Cont cont, Args args)
 {
     shared size_t count = args[0].arr.length;
-    Cont subcont(size_t n)
+    void subcont(Dynamic d)
     {
-        return (Dynamic d) {
-            core.atomic.atomicOp!"-="(count, 1);
-            if (count == 0)
-            {
-                cont(Dynamic.nil);
-                return;
-            }
-        };
+        core.atomic.atomicOp!"-="(count, 1);
+        if (count == 0)
+        {
+            cont(Dynamic.nil);
+            return;
+        }
     }
 
     if (count == 0)
@@ -116,10 +114,9 @@ void libeach(Cont cont, Args args)
     }
     foreach (i, cur; args[0].arr)
     {
-        args[1](subcont(i), [cur]);
+        args[1](&subcont, [cur]);
     }
 }
-
 
 /// creates new array with only the elemtns that $1 returnd true with
 void libfilter(Cont cont, Args args)

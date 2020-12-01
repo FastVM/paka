@@ -70,7 +70,7 @@ Node parse(string code, string lang = "dext")
             }
         }
 
-        run(delegate(Dynamic d) {}, func, null, &findLang);
+        run((Dynamic d) {}, func, null, &findLang);
     }
     if (auto i = lang in parsers)
     {

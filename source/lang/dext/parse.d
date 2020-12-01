@@ -5,6 +5,7 @@ import lang.dext.tokens;
 import std.stdio;
 import std.conv;
 import std.array;
+import std.traits;
 import std.algorithm;
 import lang.srcloc;
 
@@ -19,9 +20,10 @@ Location[] locs;
 
 /// wraps a function of type Node function(T...)(TokenArray tokens, T args).
 /// it gets the span of tokens consumed and it gives them a span
-template Spanning(alias F, T...)
+template Spanning(alias F)
 {
-    Node spanning(ref TokenArray tokens, T a)
+    alias T = Parameters!F[1 .. $];
+    Node Spanning(ref TokenArray tokens, T a)
     {
         TokenArray orig = tokens;
         if (orig.length != 0)
@@ -36,14 +38,12 @@ template Spanning(alias F, T...)
             }
         }
         Node ret = F(tokens, a);
-        if (orig.length > 0 && ret !is null)
+        if (orig.length != 0 && ret !is null)
         {
             ret.span = Span(orig[0].span.first, orig[orig.length - tokens.length - 1].span.last);
         }
         return ret;
     }
-
-    alias Spanning = spanning;
 }
 
 /// array that is bounds checked always and throws decent errors.
@@ -103,16 +103,13 @@ struct PushArray(T)
             tokens = tokens[1 .. $];
         }
     }
-    else
+    PushArray!T opSlice(size_t i, size_t j)
     {
-        PushArray!T opSlice(size_t i, size_t j)
+        if (j < i || tokens.length < j)
         {
-            if (j < i || tokens.length < j)
-            {
-                throw new Exception("parse error 2");
-            }
-            return PushArray(tokens[i .. j]);
+            throw new Exception("parse error 2");
         }
+        return PushArray(tokens[i .. j]);
     }
 
     /// appends to the array
@@ -253,7 +250,7 @@ alias readSquare = readOpen!"[]";
 alias readBrace = readOpen!"{}";
 
 /// after reading a small expression, read a postfix expression
-alias readPostExtend = Spanning!(readPostExtendImpl, Node);
+alias readPostExtend = Spanning!readPostExtendImpl;
 Node readPostExtendImpl(ref TokenArray tokens, Node last)
 {
     if (tokens.length == 0)
@@ -266,7 +263,9 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
         Node[] args = tokens.readParens;
         while (tokens.length != 0 && tokens[0].isOpen("{"))
         {
-            args ~= cast(Node) new Call(new Ident("@fun"), [new Call([]), tokens.readBlock]);
+            args ~= cast(Node) new Call(new Ident("@fun"), [
+                    new Call([]), tokens.readBlock
+                    ]);
         }
         ret = new Call(last, args);
     }
@@ -275,7 +274,9 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
         Node[] args;
         while (tokens[0].isOpen("{"))
         {
-            args ~= cast(Node) new Call(new Ident("@fun"), [new Call([]), tokens.readBlock]);
+            args ~= cast(Node) new Call(new Ident("@fun"), [
+                    new Call([]), tokens.readBlock
+                    ]);
         }
         ret = new Call(last, args);
     }
@@ -307,7 +308,7 @@ Node readIfImpl(ref TokenArray tokens)
     }
     Node iftrue = tokens.readBlock;
     Node iffalse;
-    if (tokens.length > 0 && tokens[0].isKeyword("else"))
+    if (tokens.length != 0 && tokens[0].isKeyword("else"))
     {
         tokens.nextIs(Token.Type.keyword, "else");
         iffalse = tokens.readBlock;
@@ -440,13 +441,13 @@ size_t[2] countDots(ref TokenArray tokens)
     while (tokens.length != 0 && tokens[$ - 1].isOperator("."))
     {
         post += 1;
-        tokens.tokens = tokens.tokens[0..$-1];
+        tokens.tokens = tokens.tokens[0 .. $ - 1];
     }
     return [pre, post];
 }
 
 /// reads any expresssion, level should start at zero
-alias readExpr = Spanning!(readExprImpl, size_t);
+alias readExpr = Spanning!readExprImpl;
 Node readExprImpl(ref TokenArray tokens, size_t level)
 {
     if (level == prec.length)
@@ -497,7 +498,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
         lastIsOp = token.isOperator && !token.isOperator(".");
         tokens.nextIsAny;
     }
-    if (opers.length > 0 && opers[0].isOperator("=>"))
+    if (opers.length != 0 && opers[0].isOperator("=>"))
     {
         Node ret = sub[$ - 1].readExpr(level + 1);
         foreach_reverse (v; sub[0 .. $ - 1])
@@ -632,8 +633,17 @@ alias readBlockBody = Spanning!readBlockBodyImpl;
 Node readBlockBodyImpl(ref TokenArray tokens)
 {
     Node[] ret;
-    while (tokens.length > 0 && !tokens[0].isClose("}"))
+    while (tokens.length != 0 && !tokens[0].isClose("}"))
     {
+        while (tokens.length != 0 && tokens[0].isComment)
+        {
+            tokens = tokens[1 .. $];
+            tokens.readStmt;
+        }
+        if (tokens.length == 0)
+        {
+            break;
+        }
         Node stmt = tokens.readStmt;
         if (stmt !is null)
         {

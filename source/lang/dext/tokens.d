@@ -20,7 +20,8 @@ enum string[] nops = [".", "*", "!", ",", ":"];
 
 /// language keywords
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "lambda", "using", "table", "scope",
+        "if", "else", "while", "return", "def", "lambda", "using", "table",
+        "scope",
     ];
 
 /// gets the operators by length not precidence
@@ -53,6 +54,8 @@ struct Token
         close,
         /// string literal
         string,
+        /// syntax comment beginning
+        comment,
     }
 
     Type type;
@@ -132,6 +135,11 @@ struct Token
     {
         return type == Type.comma;
     }
+
+    bool isComment()
+    {
+        return type == Type.comment;
+    }
 }
 
 /// reads a single token from a string
@@ -179,6 +187,12 @@ Token readToken(ref string code, ref Location location)
 
     if (peek == '#')
     {
+        consume;
+        if (peek == '#')
+        {
+            consume;
+            return consToken(Token.Type.comment, "##");
+        }
         while (peek != '\n')
         {
             consume;
@@ -218,7 +232,8 @@ Token readToken(ref string code, ref Location location)
             {
                 ret ~= read;
             }
-            else {
+            else
+            {
                 consume;
                 ret ~= '.';
             }

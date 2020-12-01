@@ -23,7 +23,13 @@ version (bigfloat)
     public import lang.number;
 }
 
-version = safe;
+version (unsafe)
+{
+}
+else
+{
+    version = safe;
+}
 
 alias Args = Dynamic[];
 alias Array = Dynamic[];
@@ -114,7 +120,10 @@ static this()
     dynamicZero = dynamic(0);
 }
 
-bool fastMathNotEnabled = false;
+version(bigfloat)
+{
+    bool fastMathNotEnabled = false;
+}
 
 Dynamic dynamic(T...)(T a)
 {
@@ -307,6 +316,11 @@ align(8):
     {
         return this.strFormat;
     }
+    
+    void opCall(T...)(RawCont rcont, T args)
+    {
+        opCall(rcont.asCont, args);
+    }    
 
     void opCall(Cont cont, Dynamic[] args)
     {
@@ -379,7 +393,7 @@ align(8):
             }
             else
             {
-            case Type.sml:
+        case Type.sml:
                 SmallNumber a = value.sml;
                 SmallNumber b = other.value.sml;
                 if (a < b)
@@ -487,7 +501,8 @@ align(8):
                 }
             }
         }
-        else {
+        else
+        {
             if (type == Type.sml)
             {
                 if (other.type == Type.sml)
@@ -689,7 +704,7 @@ private int cmpDynamicImpl(const Dynamic a, const Dynamic b)
             return 0;
         }
     }
-    version(bigfloat)
+    version (bigfloat)
     {
         if (b.type != a.type)
         {
@@ -726,11 +741,11 @@ private int cmpDynamicImpl(const Dynamic a, const Dynamic b)
         return cmp(*a.value.str, *b.value.str);
     case Dynamic.Type.sml:
         return cmp(a.value.sml, b.value.sml);
-    version(bigfloat)
-    {
-        case Dynamic.Type.big:
+        version (bigfloat)
+        {
+    case Dynamic.Type.big:
             return cmp(*a.value.bnm, *b.value.bnm);
-    }
+        }
     case Dynamic.Type.arr:
         above ~= cur;
         scope (exit)
@@ -817,11 +832,11 @@ private string strFormat(Dynamic dyn, Dynamic[] before = null)
         return dyn.log.to!string;
     case Dynamic.Type.sml:
         return dyn.value.sml.to!string;
-    version(bigfloat)
-    {
-        case Dynamic.Type.big:
+        version (bigfloat)
+        {
+    case Dynamic.Type.big:
             return (*dyn.value.bnm).to!string;
-    }
+        }
     case Dynamic.Type.str:
         if (before.length == 0)
         {
