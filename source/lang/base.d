@@ -76,14 +76,13 @@ Pair[] getRootBase()
     ret.addLib("tab", libtab);
     ret.addLib("io", libio);
     ret.addLib("sys", libsys);
-    ret.addLib("proc", libproc);
     return ret;
 }
 
 Function baseFunction(size_t ctx = rootBases.length - 1)
 {
     Function ret = new Function;
-    uint[string] byName;
+    Map!(string, uint) byName;
     foreach (i; ctx.rootBase)
     {
         byName[i.name] = cast(uint) byName.length;

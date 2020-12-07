@@ -179,7 +179,7 @@ Token readToken(ref string code, ref Location location)
 
     if (peek == '#')
     {
-        while (peek != '\n')
+        while (code.length != 0 && peek != '\n')
         {
             consume;
         }

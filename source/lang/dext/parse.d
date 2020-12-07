@@ -556,7 +556,9 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
             ret = new Call(new Ident(v.value), [ret, rhs]);
             if (cmpOps.canFind(v.value))
             {
-                assert(opers.length == 1);
+                if (opers.length != 1) {
+                    throw new Exception("cannot chain operator");
+                }
             }
             while (rhsc != 0 || lhsc != 0)
             {

@@ -1,7 +1,6 @@
 module lang.lib.arr;
 import lang.base;
 import lang.dynamic;
-import lang.number;
 import lang.error;
 import std.array;
 import std.algorithm;
@@ -17,6 +16,7 @@ Pair[] libarr()
         Pair("slice", &libslice), Pair("map", &libmap),
         Pair("filter", &libfilter), Pair("zip", &libzip),
         Pair("range", &librange), Pair("each", &libeach),
+        Pair("sorted", &libsorted),
     ];
     return ret;
 }
@@ -173,5 +173,16 @@ Dynamic libslice(Args args)
     else
     {
         return dynamic(args[0].arr[args[1].as!size_t .. args[2].as!size_t].dup);
+    }
+}
+
+Dynamic libsorted(Args args)
+{
+    if (args.length == 1) 
+    {
+        return args[0].arr.sort.array.dynamic;
+    }
+    else {
+        throw new Exception("bad number of arguments to sort");
     }
 }

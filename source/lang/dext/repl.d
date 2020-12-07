@@ -28,8 +28,7 @@ LocalCallback exportLocalsToBaseCallback(Function func)
 /// runs a repl for dext language
 void replRun()
 {
-    char[][] history;
-    Reader reader = new Reader(history);
+    Reader reader = new Reader();
     size_t ctx = enterCtx;
     scope (exit)
     {

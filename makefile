@@ -23,6 +23,13 @@ $(DOCS): $(patsubst docs/%.html,source/%.d,$@) makefile
 $(OBJS): $(patsubst out/%.o,source/%.d,$@) makefile
 	$(COMPILER) $(patsubst out/%.o,source/%.d,$@) -c -of$@ $(DLANG_FLAGS)
 
+dext.wasm:
+	./ldc/bin/ldc2 -I ./source -i ./source/app.d -of ./dext.o -march=wasm32 -Ildc/runtime/druntime/src -Ildc/runtime/phobos -mtriple=wasm32-unknown-unknown-webassembly -c
+	wasm-ld ./dext.o -o dext.wasm lib/libdruntime-ldc.a lib/libphobos2-ldc.a lib/wasi/libc.a -error-limit=0 --allow-undefined --export-dynamic
+
+wasm-run: dext.wasm
+	node --trace-warnings --experimental-wasm-bigint main.js
+
 .PHONY: clean
 clean:
-	rm -rf dext out docs
+	rm -rf dext out docs dext.o dext.wasm

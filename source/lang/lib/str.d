@@ -2,7 +2,6 @@ module lang.lib.str;
 
 import lang.base;
 import lang.dynamic;
-import lang.number;
 import std.array;
 import std.string;
 import std.algorithm;
@@ -52,7 +51,17 @@ Dynamic libchar(Args args)
 /// reutrns string split at deliminer
 Dynamic libsplit(Args args)
 {
-    return dynamic(args[0].str.splitter(args[1].str).map!(x => dynamic(x)).array);
+    Dynamic[] ret = args[0..1];
+    foreach (at; args[1..$])
+    {
+        Dynamic[] tmp = [];
+        foreach (str; ret) {
+            tmp ~= str.str.splitter(at.str).map!dynamic.array;
+        }
+        ret = tmp;
+    }
+    return dynamic(ret);
+    // return dynamic(args[0].str.splitter(args[1].str).map!(x => dynamic(x)).array);
 }
 
 /// joins string to deliminer

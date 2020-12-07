@@ -5,6 +5,7 @@ import lang.base;
 import lang.vm;
 import std.stdio;
 import std.conv;
+import std.file;
 import core.stdc.stdio;
 
 Pair[] libio()

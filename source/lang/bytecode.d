@@ -3,19 +3,15 @@ module lang.bytecode;
 import lang.dynamic;
 import lang.srcloc;
 import lang.error;
+import lang.data.map;
 import std.stdio;
 
 class Function
 {
     struct Lookup
     {
-        uint[string] byName;
+        Map!(string, uint) byName;
         string[] byPlace;
-        void clear()
-        {
-            byName = null;
-            byPlace = null;
-        }
 
         void set(string name, uint us)
         {
@@ -45,6 +41,7 @@ class Function
     {
         uint from;
         bool is2;
+        bool isArg;
     }
 
     enum Flags : ubyte
@@ -60,7 +57,7 @@ class Function
     Dynamic*[] captured = null;
     size_t stackSize = 0;
     Dynamic[] self = null;
-
+    string[] args = null;
     Lookup stab;
     Lookup captab;
     Function parent = null;
@@ -81,6 +78,7 @@ class Function
         captured = other.captured;
         stackSize = other.stackSize;
         self = other.self.dup;
+        args = other.args;
         stab = other.stab;
         captab = other.captab;
         flags = other.flags;
@@ -93,15 +91,22 @@ class Function
         {
             return *got;
         }
+        foreach (argno, argname; parent.args) {
+            if (argname == name) {
+                uint ret = captab.define(name);
+                capture ~= Capture(cast(uint) argno, false, true);
+                return ret;
+            }
+        }
         uint ret = captab.define(name);
-        if (name in parent.stab.byName)
+        if (uint* found = name in parent.stab.byName)
         {
-            capture ~= Capture(parent.stab.byName[name], false);
+            capture ~= Capture(parent.stab.byName[name], false, false);
             return ret;
         }
         else if (name in parent.captab.byName)
         {
-            capture ~= Capture(parent.captab.byName[name], true);
+            capture ~= Capture(parent.captab.byName[name], true, false);
             return ret;
         }
         else
@@ -111,7 +116,7 @@ class Function
                 throw new UndefinedException("name not found: " ~ name);
             }
             parent.doCapture(name);
-            capture ~= Capture(parent.captab.byName[name], true);
+            capture ~= Capture(parent.captab.byName[name], true, false);
             return ret;
         }
     }
@@ -138,8 +143,6 @@ enum Opcode : ubyte
     // stack ops
     push,
     pop,
-    // change data flag
-    data,
     // subroutine
     sub,
     // bind not implmented yet
@@ -191,18 +194,24 @@ enum Opcode : ubyte
     // jump to index
     jump,
     // arg number
-    argno
+    argno,
+    // all args as list
+    args,
 }
 
-enum int[Opcode] opSizes = [
-    // mat change: call, array, targeta, table, upcall
-    Opcode.nop : 0, Opcode.push : 1, Opcode.pop : -1,
-    Opcode.sub : 1, Opcode.bind : -1, Opcode.oplt : -1, Opcode.opgt : -1,
-    Opcode.oplte : -1, Opcode.opgte : -1, Opcode.opeq : -1, Opcode.opneq : -1,
-    Opcode.unpack : 1, Opcode.index : -1, Opcode.opneg : 0, Opcode.opadd : -1,
-    Opcode.opsub : -1, Opcode.opmul : -1, Opcode.opdiv : -1, Opcode.opmod : -1,
-    Opcode.load : 1, Opcode.loadc : 1, Opcode.store : -1, Opcode.istore : -3,
-    Opcode.opistore : -3, Opcode.opstore: -1,
-    Opcode.retval : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
-    Opcode.iffalse : -1, Opcode.jump : 0, Opcode.argno: 1,
-];
+enum int[] opSizes = [
+        // may change: call, array, table, upcall
+        Opcode.upcall: int.max,
+        Opcode.table: int.max,
+        Opcode.array: int.max,
+        Opcode.call: int.max,
+        Opcode.nop : 0, Opcode.push : 1, Opcode.pop : -1, Opcode.sub : 1,
+        Opcode.bind : -1, Opcode.oplt : -1, Opcode.opgt : -1, Opcode.oplte
+        : -1, Opcode.opgte : -1, Opcode.opeq : -1, Opcode.opneq : -1,
+        Opcode.unpack : 1, Opcode.index : -1, Opcode.opneg : 0, Opcode.opadd
+        : -1, Opcode.opsub : -1, Opcode.opmul : -1, Opcode.opdiv : -1,
+        Opcode.opmod : -1, Opcode.load : 1, Opcode.loadc : 1, Opcode.store : -1,
+        Opcode.istore : -3, Opcode.opistore : -3, Opcode.opstore : -1,
+        Opcode.retval : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
+        Opcode.iffalse : -1, Opcode.jump : 0, Opcode.argno : 1, Opcode.args : 1,
+    ];

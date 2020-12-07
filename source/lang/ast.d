@@ -4,6 +4,7 @@ import std.algorithm;
 import std.conv;
 import std.meta;
 import lang.srcloc;
+import lang.oplang.parse;
 
 /// all possible node types
 alias NodeTypes = AliasSeq!(Call, String, Ident);

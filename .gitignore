@@ -22,3 +22,9 @@ llvm
 default.profdata
 default.profraw
 test.dext
+proj
+lib
+ldc
+node_modules
+web
+dext.wasm

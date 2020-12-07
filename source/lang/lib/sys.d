@@ -17,16 +17,14 @@ import std.file;
 import std.array;
 import std.conv;
 import std.stdio;
-import std.parallelism: parallel;
 
 Pair[] libsys()
 {
     Pair[] ret = [
         Pair("leave", &libleave), Pair("args", &libargs),
-        Pair("typeof", &libtypeof), Pair("import", &libimport),
+        Pair("typeof", &libtypeof), 
         Pair("assert", &libassert),
     ];
-    ret.addLib("env", libsysenv);
     return ret;
 }
 
@@ -39,13 +37,6 @@ Dynamic libassert(Args args) {
     return Dynamic.nil;
 }
 
-/// imports value returning what it returned
-Dynamic libimport(Args args) {
-    string code = cast(string) args[0].str.read;
-    Dynamic retval = evalFile(code);
-    return retval;
-};
-
 /// returns type of value as a string
 Dynamic libtypeof(Args args)
 {
@@ -56,8 +47,6 @@ Dynamic libtypeof(Args args)
             return dynamic("logical");
         case Dynamic.Type.sml:
             return dynamic("number");
-        case Dynamic.Type.big:
-            return dynamic("number");
         case Dynamic.Type.str:
             return dynamic("string");
         case Dynamic.Type.arr:
@@ -66,10 +55,12 @@ Dynamic libtypeof(Args args)
             return dynamic("table");
         case Dynamic.Type.fun:
             return dynamic("callable");
-        // case Dynamic.Type.del:
-        //     return dynamic("callable");
+        case Dynamic.Type.del:
+            return dynamic("callable");
         case Dynamic.Type.pro:
             return dynamic("callable");
+        case Dynamic.Type.obj:
+            return dynamic("native");
         case Dynamic.Type.end:
             assert(0);
         case Dynamic.Type.pac:

@@ -12,7 +12,6 @@ import lang.srcloc;
 import lang.error;
 import lang.dynamic;
 import lang.bytecode;
-import lang.number;
 import lang.data.map;
 
 alias LocalCallback = void delegate(uint index, Dynamic* stack, Dynamic[] locals);
@@ -31,7 +30,7 @@ alias allocateStackAllowed = alloca;
 
 Span[] spans;
 
-T eat(T)(ubyte* bytes, ref ushort index)
+pragma(inline, true) T eat(T)(ubyte* bytes, ref ushort index)
 {
     scope (exit)
     {
@@ -40,12 +39,12 @@ T eat(T)(ubyte* bytes, ref ushort index)
     return *cast(T*)(bytes + index);
 }
 
-T get(T)(ubyte* bytes, ref ushort index)
+pragma(inline, true) T get(T)(ubyte* bytes, ref ushort index)
 {
     return *cast(T*)(bytes + index);
 }
 
-T get1(T)(ubyte* bytes, ref ushort index)
+pragma(inline, true) T get1(T)(ubyte* bytes, ref ushort index)
 {
     return *cast(T*)(bytes + index - T.sizeof);
 }
@@ -59,49 +58,35 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     ushort index = 0;
     Dynamic* stack = void;
     Dynamic* locals = void;
-    // scope (failure)
+    scope (failure)
+    {
+        spans ~= func.spans[index > func.spans.length ? $ - 1 : index];
+    }
+    locals = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof,
+            0, typeid(Dynamic));
+    stack = (cast(Dynamic*) GC.malloc(func.stackSize * Dynamic.sizeof));
+    // if (func.flags & Function.Flags.isLocal)
     // {
-    //     spans ~= func.spans[index];
+    //     locals = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1) * Dynamic.sizeof,
+    //             0, typeid(Dynamic));
+    //     stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof));
     // }
-    if (func.flags & Function.Flags.isLocal)
-    {
-        locals = cast(Dynamic*) GC.malloc((func.stab.byPlace.length + 1 + args.length) * Dynamic.sizeof,
-                0, typeid(Dynamic));
-        stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof));
-    }
-    else
-    {
-        Dynamic* ptr = cast(Dynamic*) allocateStackAllowed(
-                (func.stackSize + func.stab.byPlace.length + 1 + args.length) * Dynamic.sizeof);
-        stack = ptr;
-        locals = ptr + func.stackSize;
-    }
-    foreach (i, v; args)
-    {
-        locals[i] = v;
-    }
-    scope (success)
-    {
-        static foreach (callback; rest)
-        {
-            static if (is(typeof(callback) == LocalCallback))
-            {
-                {
-                    Dynamic[] lo = locals[0 .. func.stab.byPlace.length + 1];
-                    callback(index, stack, lo);
-                }
-            }
-        }
-    }
+    // else
+    // {
+    //     Dynamic* ptr = cast(Dynamic*) allocateStackAllowed(
+    //             (func.stackSize + func.stab.byPlace.length + 1) * Dynamic.sizeof);
+    //     locals = ptr + func.stackSize;
+    //     stack = ptr;
+    // }
     ubyte* instrs = func.instrs.ptr;
-    whileLopp: while (true)
+    while (true)
     {
         Opcode cur = cast(Opcode) instrs[index++];
         switch (cur)
         {
         default:
-            // throw new RuntimeException("opcode not found: " ~ cur.op.to!string);
-            assert(0);
+            assert(false);
+            // throw new RuntimeException("opcode not found: " ~ cur.to!string);
         case Opcode.nop:
             break;
         case Opcode.push:
@@ -121,6 +106,10 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 if (cap.is2)
                 {
                     built.captured[i] = func.captured[cap.from];
+                }
+                else if (cap.isArg)
+                {
+                    built.captured[i] = new Dynamic(args[cap.from]);
                 }
                 else
                 {
@@ -144,9 +133,9 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             case Dynamic.Type.fun:
                 (*(stack - 1)) = f.fun.fun(stack[0 .. 0 + instrs.get1!ushort(index)]);
                 break;
-            // case Dynamic.Type.del:
-            //     (*(stack - 1)) = (*f.fun.del)(stack[0 .. 0 + instrs.get1!ushort(index)]);
-            //     break;
+            case Dynamic.Type.del:
+                (*(stack - 1)) = (*f.fun.del)(stack[0 .. 0 + instrs.get1!ushort(index)]);
+                break;
             case Dynamic.Type.pro:
                 (*(stack - 1)) = run(f.fun.pro, stack[0 .. 0 + instrs.get1!ushort(index)]);
                 break;
@@ -184,9 +173,9 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             case Dynamic.Type.fun:
                 result = f.fun.fun(cargs);
                 break;
-            // case Dynamic.Type.del:
-            //     (*(stack - 1)) = (*f.fun.del)(cargs);
-            //     break;
+            case Dynamic.Type.del:
+                (*(stack - 1)) = (*f.fun.del)(cargs);
+                break;
             case Dynamic.Type.pro:
                 (*(stack - 1)) = run(f.fun.pro, cargs);
                 break;
@@ -283,7 +272,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 (*(stack - 1)) = (arr.tab)[(*stack)];
                 break;
             default:
-                throw new TypeException("error: cannot store at index on a " ~ arr.type.to!string);
+                throw new TypeException("error: cannot store index a " ~ arr.type.to!string);
             }
             break;
         case Opcode.opneg:
@@ -351,7 +340,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             stack--;
             break;
         case Opcode.opistore:
-            ushort val = instrs.eat!ushort(index);
         switchOpi:
             switch (instrs.eat!ushort(index))
             {
@@ -383,8 +371,28 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             break;
         case Opcode.retval:
             Dynamic v = (*(--stack));
+            static foreach (callback; rest)
+            {
+                static if (is(typeof(callback) == LocalCallback))
+                {
+                    {
+                        Dynamic[] lo = locals[0 .. func.stab.byPlace.length + 1].array;
+                        callback(index, stack, lo);
+                    }
+                }
+            }
             return v;
         case Opcode.retnone:
+            static foreach (callback; rest)
+            {
+                static if (is(typeof(callback) == LocalCallback))
+                {
+                    {
+                        Dynamic[] lo = locals[0 .. func.stab.byPlace.length + 1].array;
+                        callback(index, stack, lo);
+                    }
+                }
+            }
             return Dynamic.nil;
         case Opcode.iftrue:
             Dynamic val = (*(--stack));
@@ -416,6 +424,10 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             break;
         case Opcode.argno:
             (*stack) = args[instrs.eat!ushort(index)];
+            stack++;
+            break;
+        case Opcode.args:
+            (*stack) = dynamic(args);
             stack++;
             break;
         }

@@ -5,7 +5,6 @@ import lang.base;
 import lang.bytecode;
 import lang.dynamic;
 import lang.ssize;
-import lang.number;
 import lang.srcloc;
 import std.algorithm;
 import std.conv;
@@ -87,10 +86,10 @@ class Walker
             func.instrs ~= *cast(ubyte[2]*)&i;
         }
         func.spans ~= nodes[$ - 1];
-        int* psize = op in opSizes;
-        if (psize !is null)
+        int psize = opSizes[op];
+        if (psize != int.max)
         {
-            stackSize[0] += *psize;
+            stackSize[0] += psize;
         }
         else
         {
@@ -160,9 +159,27 @@ class Walker
         if (args[0].id == "ident")
         {
             Ident ident = cast(Ident) args[0];
-            uint place = func.stab.define(ident.repr);
-            walk(args[1]);
-            pushInstr(func, Opcode.store, [cast(ushort) place]);
+            uint place = void;
+            if (ident.repr.length > 0 && ident.repr[0] == '.')
+            {
+                size_t pos = 0;
+                while (pos < ident.repr.length && ident.repr[pos] == '.')
+                {
+                    pos++;
+                }
+                Node envv = new Ident(envs[$ - pos]);
+                walk(envv);
+                Node at = new String(ident.repr[pos .. $]);
+                walk(at);
+                walk(args[1]);
+                pushInstr(func, Opcode.istore);
+            }
+            else
+            {
+                place = func.stab.define(ident.repr);
+                walk(args[1]);
+                pushInstr(func, Opcode.store, [cast(ushort) place]);
+            }
             pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
             func.constants ~= Dynamic.nil;
         }
@@ -202,7 +219,7 @@ class Walker
         walk(args[1]);
         pushInstr(func, Opcode.jump, [ushort.max]);
         size_t jumploc = func.instrs.length;
-        modifyInstruction(ifloc, cast(ushort) (func.instrs.length));
+        modifyInstruction(ifloc, cast(ushort)(func.instrs.length));
         walk(args[2]);
         modifyInstruction(jumploc, cast(ushort)(func.instrs.length));
     }
@@ -237,7 +254,8 @@ class Walker
             func.flags |= Function.Flags.isLocal;
             func = newFunc;
             func.parent = last;
-            newFunc.stab.set(argid.repr, cast(uint) 0);
+            // newFunc.stab.set(argid.repr, cast(uint) 0);
+            newFunc.args = [argid.repr];
             walk(args[1]);
             pushInstr(func, Opcode.retval);
             newFunc.stackSize = stackSize[1];
@@ -258,13 +276,13 @@ class Walker
         stackSize = [0, 0];
         Function newFunc = new Function;
         func.flags |= Function.Flags.isLocal;
-        func = newFunc;
-        func.parent = lastFunc;
         foreach (i, v; argl.args)
         {
             Ident id = cast(Ident) v;
-            func.stab.set(id.repr, cast(uint) i);
+            newFunc.args ~= id.repr;
         }
+        func = newFunc;
+        func.parent = lastFunc;
         foreach (i, v; args[1 .. $])
         {
             if (i != 0)
@@ -724,7 +742,7 @@ class Walker
                 {
                     walk(i);
                 }
-                pushInstr(func, Opcode.upcall, [cast(ushort)(c.args.length - 1)], used);
+                pushInstr(func, Opcode.upcall, [], used);
 
             }
             else
@@ -764,6 +782,10 @@ class Walker
             pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
             func.constants ~= dynamic(false);
         }
+        else if (i.repr == "$")
+        {
+            pushInstr(func, Opcode.args);
+        }
         else if (i.repr.length != 0 && i.repr[0] == '$' && i.repr[1 .. $].isNumeric)
         {
             pushInstr(func, Opcode.argno, [i.repr[1 .. $].to!ushort]);
@@ -788,15 +810,27 @@ class Walker
         }
         else
         {
-            uint* us = i.repr in func.stab.byName;
-            if (us !is null)
+            bool unfound = true;
+            foreach (argno, argname; func.args)
             {
-                pushInstr(func, Opcode.load, [cast(ushort)*us]);
+                if (argname == i.repr)
+                {
+                    pushInstr(func, Opcode.argno, [cast(ushort) argno]);
+                    unfound = false;
+                }
             }
-            else
+            if (unfound)
             {
-                uint v = func.doCapture(i.repr);
-                pushInstr(func, Opcode.loadc, [cast(ushort) v]);
+                uint* us = i.repr in func.stab.byName;
+                if (us !is null)
+                {
+                    pushInstr(func, Opcode.load, [cast(ushort)*us]);
+                }
+                else
+                {
+                    uint v = func.doCapture(i.repr);
+                    pushInstr(func, Opcode.loadc, [cast(ushort) v]);
+                }
             }
         }
     }
