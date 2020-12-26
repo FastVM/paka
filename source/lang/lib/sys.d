@@ -56,8 +56,6 @@ Dynamic libtypeof(Args args)
             return dynamic("logical");
         case Dynamic.Type.sml:
             return dynamic("number");
-        case Dynamic.Type.big:
-            return dynamic("number");
         case Dynamic.Type.str:
             return dynamic("string");
         case Dynamic.Type.arr:
@@ -66,10 +64,12 @@ Dynamic libtypeof(Args args)
             return dynamic("table");
         case Dynamic.Type.fun:
             return dynamic("callable");
-        // case Dynamic.Type.del:
-        //     return dynamic("callable");
+        case Dynamic.Type.del:
+            return dynamic("callable");
         case Dynamic.Type.pro:
             return dynamic("callable");
+        case Dynamic.Type.obj:
+            return dynamic("native");
         case Dynamic.Type.end:
             assert(0);
         case Dynamic.Type.pac:

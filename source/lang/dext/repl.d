@@ -17,9 +17,9 @@ import std.functional;
 LocalCallback exportLocalsToBaseCallback(Function func)
 {
     LocalCallback ret = (uint index, Dynamic* stack, Dynamic[] locals) {
-        foreach (i, v; locals[0 .. func.stab.byPlace.length])
+        foreach (i, v; locals[0 .. func.stab.length])
         {
-            rootBase ~= Pair(func.stab.byPlace[i], v);
+            rootBase ~= Pair(func.stab[i], v);
         }
     };
     return ret;

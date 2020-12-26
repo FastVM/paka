@@ -58,9 +58,9 @@ Node parse(string code, string lang = "dext")
         func.captured = loadBase;
         void findLang(uint index, Dynamic* stack, Dynamic[] locals)
         {
-            foreach (i, ref v; locals[0 .. func.stab.byPlace.length])
+            foreach (i, ref v; locals[0 .. func.stab.length])
             {
-                if (func.stab.byPlace[i] == "lang")
+                if (func.stab[i] == "lang")
                 {
                     if (v.type != Dynamic.Type.str) {
                         throw new TypeException("language must be a str");

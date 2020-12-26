@@ -20,7 +20,8 @@ enum string[] nops = [".", "*", "!", ",", ":"];
 
 /// language keywords
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "lambda", "using", "table", "scope",
+        "if", "else", "while", "return", "def", "lambda", "using", "table",
+        "scope", "alias",
     ];
 
 /// gets the operators by length not precidence
@@ -179,7 +180,7 @@ Token readToken(ref string code, ref Location location)
 
     if (peek == '#')
     {
-        while (peek != '\n')
+        while (code.length != 0 && peek != '\n')
         {
             consume;
         }
@@ -218,7 +219,8 @@ Token readToken(ref string code, ref Location location)
             {
                 ret ~= read;
             }
-            else {
+            else
+            {
                 consume;
                 ret ~= '.';
             }

@@ -6,10 +6,10 @@ import lang.bytecode;
 import lang.base;
 import lang.dynamic;
 import lang.parse;
-import lang.number;
 import lang.inter;
 import lang.dext.repl;
 import std.file;
+import std.path;
 import std.stdio;
 import std.algorithm;
 import std.conv;
@@ -23,12 +23,13 @@ void domain(string[] args)
     string[] scripts;
     string[] stmts;
     bool repl = false;
+    bool disWanted = false;
     auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-            &scripts, "math", &fastMathNotEnabled);
+            &scripts, "math", &fastMathNotEnabled, "dis", &disWanted);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
-        return;
+        return;  
     }
     size_t ctx = enterCtx;
     scope (exit)
@@ -37,21 +38,38 @@ void domain(string[] args)
     }
     foreach (i; stmts)
     {
-        Dynamic retval = ctx.eval(i);
-        if (retval.type != Dynamic.Type.nil)
-        {
-            writeln(retval);
+        if (disWanted) {
+            writeln(ctx.dis(i ~ ";"));
+        }
+        else {
+            Dynamic retval = ctx.eval(i ~ ";");
+            if (retval.type != Dynamic.Type.nil)
+            {
+                writeln(retval);
+            }
         }
     }
     foreach (i; scripts ~ args[1 .. $])
     {
-        Dynamic retval = ctx.eval(cast(string) i.read);
-        if (retval.type != Dynamic.Type.nil)
-        {
-            writeln(retval);
+        if (disWanted) {
+            writeln(ctx.dis(cast(string) i.read ~ ";"));
+        }
+        else {
+            string cdir = getcwd;
+            scope (exit)
+            {
+                cdir.chdir;
+            }
+            string code = cast(string) i.read;
+            i.dirName.chdir;
+            Dynamic retval = ctx.eval(code);
+            if (retval.type != Dynamic.Type.nil)
+            {
+                writeln(retval);
+            }
         }
     }
-    if ((scripts ~ args[1 .. $]).length == 0)
+    if (((scripts ~ args[1 .. $]).length == 0 || repl) && !disWanted)
     {
         replRun;
     }

@@ -1,10 +1,11 @@
 
 def fib(x) {
-    return if (x < 2) {
-        x;
+    if (x < 2) {
+        return x;
     } else {
-        fib(x-2) + fib(x-1);
+        return fib(x-2) + fib(x-1);
     };
 };
 
 io.print(fib(35));
+

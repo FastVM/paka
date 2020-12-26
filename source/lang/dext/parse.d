@@ -266,16 +266,20 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
         Node[] args = tokens.readParens;
         while (tokens.length != 0 && tokens[0].isOpen("{"))
         {
-            args ~= cast(Node) new Call(new Ident("@fun"), [new Call([]), tokens.readBlock]);
+            args ~= cast(Node) new Call(new Ident("@fun"), [
+                    new Call([]), tokens.readBlock
+                    ]);
         }
         ret = new Call(last, args);
     }
     else if (tokens[0].isOpen("{"))
     {
         Node[] args;
-        while (tokens[0].isOpen("{"))
+        while (tokens.length != 0 && tokens[0].isOpen("{"))
         {
-            args ~= cast(Node) new Call(new Ident("@fun"), [new Call([]), tokens.readBlock]);
+            args ~= cast(Node) new Call(new Ident("@fun"), [
+                    new Call([]), tokens.readBlock
+                    ]);
         }
         ret = new Call(last, args);
     }
@@ -440,7 +444,7 @@ size_t[2] countDots(ref TokenArray tokens)
     while (tokens.length != 0 && tokens[$ - 1].isOperator("."))
     {
         post += 1;
-        tokens.tokens = tokens.tokens[0..$-1];
+        tokens.tokens = tokens.tokens[0 .. $ - 1];
     }
     return [pre, post];
 }
@@ -556,7 +560,10 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
             ret = new Call(new Ident(v.value), [ret, rhs]);
             if (cmpOps.canFind(v.value))
             {
-                assert(opers.length == 1);
+                if (opers.length != 1)
+                {
+                    throw new Exception("cannot chain operator");
+                }
             }
             while (rhsc != 0 || lhsc != 0)
             {
@@ -608,6 +615,15 @@ Node readStmtImpl(ref TokenArray tokens)
     if (stmtTokens.length == 0)
     {
         return null;
+    }
+    if (stmtTokens[0].isKeyword("alias"))
+    {
+        stmtTokens.nextIs(Token.Type.keyword, "alias");
+        Node name = new Ident(stmtTokens[0].value);
+        stmtTokens.nextIs(Token.Type.ident);
+        stmtTokens.nextIs(Token.Type.operator, "=");
+        Node expr = stmtTokens.readExpr(0);
+        return new Call(new Ident("@alias"), [name, expr]);
     }
     if (stmtTokens[0].isKeyword("return"))
     {

@@ -5,6 +5,7 @@ import lang.base;
 import lang.vm;
 import std.stdio;
 import std.conv;
+import std.file;
 import core.stdc.stdio;
 
 Pair[] libio()
@@ -14,6 +15,7 @@ Pair[] libio()
         Pair("put", &libput),
         Pair("readln", &libreadln),
         Pair("get", &libget),
+        Pair("slurp", &libslurp),
     ];
     return ret;
 }
@@ -63,4 +65,10 @@ Dynamic libreadln(Args args)
 Dynamic libget(Args args)
 {
     return dynamic(cast(string) [cast(char) getchar]);
+}
+
+/// reads an entire file
+Dynamic libslurp(Args args)
+{
+    return dynamic(cast(string) args[0].str.read);
 }

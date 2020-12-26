@@ -1,5 +1,6 @@
-x = [];
-y = [];
-arr.push(x, y);
-arr.push(y, x);
-io.print(x == y);
+
+fbr = fiber.cons() {
+    io.print(10);
+};
+
+fbr.call(1);

@@ -193,4 +193,10 @@ class Map(Key, Value)
             return &value;
         }
     }
+
+    override string toString() 
+    {
+        // throw new Exception("should not be here");
+        return "Map(...)";
+    }
 }

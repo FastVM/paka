@@ -11,6 +11,7 @@ import lang.lib.str;
 import lang.lib.arr;
 import lang.lib.tab;
 import lang.lib.proc;
+import lang.lib.fiber;
 
 struct Pair
 {
@@ -48,10 +49,6 @@ void defineRoot(string name, Dynamic val)
 
 void addLib(ref Pair[] pairs, string name, Pair[] lib)
 {
-    // foreach (entry; lib)
-    // {
-    //     pairs ~= Pair(name ~ "." ~ entry.name, entry.val);
-    // }
     Mapping dyn = emptyMapping;
     foreach (entry; lib)
     {
@@ -71,6 +68,7 @@ Pair[] getRootBase()
         Pair("_rhs_map", &sysliburhsmap),
         Pair("_pre_map", &syslibupremap),
     ];
+    ret.addLib("fiber", libfiber);
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);
     ret.addLib("tab", libtab);

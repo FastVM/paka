@@ -33,6 +33,7 @@ class Reader
 	long index = 0;
 	long lastRender = 0;
 	size_t histIndex = 0;
+	bool smart = false;
 	this(char[][] h, File i = stdin, File o = stdout)
 	{
 		history = h ~ [[]];
@@ -162,7 +163,6 @@ class Reader
 				output.moveLeft;
 			}
 			input.noRawMode(term);
-			output.write('\r');
 			output.flush;
 			history = oldHistory;
 		}
@@ -295,8 +295,7 @@ class Reader
 	string readln(string prompt = null)
 	{
 		output.write(prompt);
-		string ret = read;
-		output.writeln;
+		string ret = smart ? read : input.readln[0 .. $ - 1];
 		return ret;
 	}
 }
@@ -348,7 +347,7 @@ void clearScreen(File f)
 	f.printStill("\x1b[2J");
 }
 
-void printStill(bool fl=true, T...)(File output, T as)
+void printStill(bool fl = true, T...)(File output, T as)
 {
 	size_t count;
 	foreach (a; as)
@@ -361,7 +360,8 @@ void printStill(bool fl=true, T...)(File output, T as)
 	{
 		output.moveLeft;
 	}
-	static if (fl) {
+	static if (fl)
+	{
 		output.flush;
 	}
 }
