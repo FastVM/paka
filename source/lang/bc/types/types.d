@@ -3,11 +3,13 @@ module lang.bc.types.types;
 import std.conv;
 import std.stdio;
 import std.algorithm;
+import std.array;
+import lang.bytecode;
 
-Object[] above;
 Object[] checked;
-Object[] tied;
 TypeBox[2][] duplicated;
+void*[] tied;
+void*[] above;
 void*[] opEqualsCmp;
 void*[] typeCmp;
 
@@ -26,6 +28,11 @@ string deepcopy(string v)
     return v.dup;
 }
 
+Function deepcopy(Function v)
+{
+    return v;
+}
+
 K[V] deepcopy(K, V)(K[V] a)
 {
     K[V] ret;
@@ -38,7 +45,7 @@ K[V] deepcopy(K, V)(K[V] a)
 
 class TypeBox
 {
-    RuntimeType* rtt;
+    private RuntimeType* rtt;
     TypeBox[] children;
     TypeBox generic()
     {
@@ -73,9 +80,13 @@ class TypeBox
         return ret;
     }
 
-    T as(T)()
+    ref T as(T)()
     {
-        return cast(T)*rtt;
+        if (!cast(T)*rtt)
+        {
+            throw new Exception("bad type: " ~ to!string(*rtt) ~ " not " ~ typeid(*rtt).to!string);
+        }
+        return *cast(T*)rtt;
     }
 
     bool casts1(T)()
@@ -132,9 +143,9 @@ class TypeBox
     void set(TypeBox other)
     {
         rtt = other.rtt;
-        if (!tied.canFind(this))
+        if (!tied.canFind(cast(void*) this))
         {
-            tied ~= this;
+            tied ~= cast(void*) this;
             scope (exit)
             {
                 tied.length--;
@@ -146,23 +157,82 @@ class TypeBox
         }
     }
 
-    // void tie(TypeBox to)
-    // {
-    //     // *to.rtt = *rtt;
-    //     *rtt = *to.rtt;
-    //     children ~= to;
-    //     to.children ~= this;
-    // }
+    void tie(TypeBox to)
+    {
+        // *to.rtt = *rtt;
+        *rtt = *to.rtt;
+        children ~= to;
+        to.children ~= this;
+    }
+
+    void cleanUnionRemoveVoid()
+    {
+        filter(ty => ty.type != typeid(VoidType));
+    }
+
+    void cleanUnionFlatten()
+    {
+        if (type == typeid(UnionType))
+        {
+            if (as!UnionType.optionTypes.length == 0)
+            {
+                set(.type!VoidType);
+            }
+            else if (as!UnionType.optionTypes.length == 1)
+            {
+                set(as!UnionType.optionTypes[0]);
+            }
+            else
+            {
+                TypeBox[] boxes = as!UnionType.optionTypes;
+                as!UnionType.optionTypes = null;
+                foreach (opt; boxes)
+                {
+                    opt.cleanUnionFlatten;
+                    if (opt.type == typeid(UnionType))
+                    {
+                        foreach (opt2; opt.as!UnionType.optionTypes)
+                        {
+                            if (!as!UnionType.optionTypes.canFind(opt2))
+                            {
+                                as!UnionType.optionTypes ~= opt2;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (!as!UnionType.optionTypes.canFind(opt))
+                        {
+                            as!UnionType.optionTypes ~= opt;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     void unite(TypeBox other)
     {
         if (other.type != type && other.type != typeid(UnionType))
         {
             *rtt = new UnionType([copy, other]);
+            cleanUnionRemoveVoid;
+            cleanUnionFlatten;
         }
-        if (!tied.canFind(this))
+        if (type == typeid(UnionType) && other.type == typeid(UnionType))
         {
-            tied ~= this;
+            foreach (ty; other.as!UnionType.optionTypes)
+            {
+                if (!as!UnionType.optionTypes.canFind(ty))
+                {
+                    as!UnionType.optionTypes ~= ty;
+                }
+            }
+            cleanUnionFlatten;
+        }
+        if (!tied.canFind(cast(void*) this))
+        {
+            tied ~= cast(void*) this;
             scope (exit)
             {
                 tied.length--;
@@ -188,14 +258,15 @@ class TypeBox
                     ut.optionTypes ~= utitem;
                 }
             }
+            cleanUnionFlatten;
         }
-        else
+        else // if (type != typeid(VoidType))
         {
             assert(fn(this));
         }
-        if (!tied.canFind(this))
+        if (!tied.canFind(cast(void*) this))
         {
-            tied ~= this;
+            tied ~= cast(void*) this;
             scope (exit)
             {
                 tied.length--;
@@ -209,9 +280,9 @@ class TypeBox
 
     void given(TypeBox other)
     {
-        if (type == typeid(NullType))
+        if (type == typeid(VoidType))
         {
-            if (other.type != typeid(NullType))
+            if (other.type != typeid(VoidType))
             {
                 *rtt = *other.rtt;
             }
@@ -224,9 +295,9 @@ class TypeBox
         {
             unite(other);
         }
-        if (!tied.canFind(this))
+        if (!tied.canFind(cast(void*) this))
         {
-            tied ~= this;
+            tied ~= cast(void*) this;
             scope (exit)
             {
                 tied.length--;
@@ -298,7 +369,7 @@ class EnumType : RuntimeType
     }
 }
 
-class NullType : EnumType
+class VoidType : EnumType
 {
     override string toString()
     {
@@ -373,11 +444,11 @@ class ArrayType : RuntimeType
 
     override string toString()
     {
-        if (above.canFind(this))
+        if (above.canFind(cast(void*) this))
         {
             return "...";
         }
-        above ~= this;
+        above ~= cast(void*) this;
         scope (exit)
         {
             above.length--;
@@ -423,11 +494,11 @@ class TupleType : RuntimeType
 
     override string toString()
     {
-        if (above.canFind(this))
+        if (above.canFind(cast(void*) this))
         {
             return "...";
         }
-        above ~= this;
+        above ~= cast(void*) this;
         scope (exit)
         {
             above.length--;
@@ -440,6 +511,8 @@ class FunctionType : RuntimeType
 {
     TypeBox returnType;
     TypeBox argumentsType;
+    TypeBox[] capture;
+    Function[] generatedFrom;
 
     this()
     {
@@ -451,11 +524,17 @@ class FunctionType : RuntimeType
         argumentsType = a;
     }
 
+    void add(Function f)
+    {
+        generatedFrom ~= f;
+    }
+
     override RuntimeType deepcopy()
     {
         FunctionType ret = new FunctionType;
         ret.returnType = returnType.deepcopy;
         ret.argumentsType = argumentsType.deepcopy;
+        ret.generatedFrom = generatedFrom.deepcopy;
         return cast(RuntimeType) ret;
     }
 
@@ -476,11 +555,11 @@ class FunctionType : RuntimeType
 
     override string toString()
     {
-        if (above.canFind(this))
+        if (above.canFind(cast(void*) this))
         {
             return "...";
         }
-        above ~= this;
+        above ~= cast(void*) this;
         scope (exit)
         {
             above.length--;
@@ -529,11 +608,11 @@ class MappingType : RuntimeType
 
     override string toString()
     {
-        if (above.canFind(this))
+        if (above.canFind(cast(void*) this))
         {
             return "...";
         }
-        above ~= this;
+        above ~= cast(void*) this;
         scope (exit)
         {
             above.length--;
@@ -569,11 +648,11 @@ class ClassType : RuntimeType
 
     override string toString()
     {
-        if (above.canFind(this))
+        if (above.canFind(cast(void*) this))
         {
             return "...";
         }
-        above ~= this;
+        above ~= cast(void*) this;
         scope (exit)
         {
             above.length--;
@@ -618,11 +697,11 @@ class UnionType : RuntimeType
 
     override string toString()
     {
-        if (above.canFind(this))
+        if (above.canFind(cast(void*) this))
         {
             return "...";
         }
-        above ~= this;
+        above ~= cast(void*) this;
         scope (exit)
         {
             above.length--;

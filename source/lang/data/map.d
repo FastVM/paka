@@ -144,13 +144,10 @@ class Map(Key, Value)
             value = v;
             length = 1;
             children = 0;
-            // right = new This(null);
-            // left = new This(null);
         }
         else
         {
             int c = compare(key, k);
-            // writeln(key, " <=> ", k, " // ", c);
             if (c > 0)
             {
                 left[k] = v;
