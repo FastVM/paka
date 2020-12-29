@@ -47,6 +47,7 @@ class TypeBox
 {
     private RuntimeType* rtt;
     TypeBox[] children;
+
     TypeBox generic()
     {
         return this;
@@ -54,14 +55,8 @@ class TypeBox
 
     TypeInfo type()
     {
+        assert(rtt);
         return typeid(*rtt);
-    }
-
-    TypeBox copy()
-    {
-        TypeBox ret = new TypeBox;
-        ret.rtt = [*rtt].ptr;
-        return ret;
     }
 
     TypeBox deepcopy()
@@ -75,6 +70,7 @@ class TypeBox
         }
         TypeBox ret = new TypeBox;
         duplicated ~= [this, ret];
+        assert(rtt);
         ret.rtt = [(*rtt).deepcopy].ptr;
         duplicated.length--;
         return ret;
@@ -82,11 +78,12 @@ class TypeBox
 
     ref T as(T)()
     {
+        assert(rtt);
         if (!cast(T)*rtt)
         {
             throw new Exception("bad type: " ~ to!string(*rtt) ~ " not " ~ typeid(*rtt).to!string);
         }
-        return *cast(T*)rtt;
+        return *cast(T*) rtt;
     }
 
     bool casts1(T)()
@@ -160,14 +157,10 @@ class TypeBox
     void tie(TypeBox to)
     {
         // *to.rtt = *rtt;
+        assert(rtt);
         *rtt = *to.rtt;
         children ~= to;
         to.children ~= this;
-    }
-
-    void cleanUnionRemoveVoid()
-    {
-        filter(ty => ty.type != typeid(VoidType));
     }
 
     void cleanUnionFlatten()
@@ -176,7 +169,7 @@ class TypeBox
         {
             if (as!UnionType.optionTypes.length == 0)
             {
-                set(.type!VoidType);
+                set(.type!UnionType);
             }
             else if (as!UnionType.optionTypes.length == 1)
             {
@@ -215,8 +208,8 @@ class TypeBox
     {
         if (other.type != type && other.type != typeid(UnionType))
         {
-            *rtt = new UnionType([copy, other]);
-            cleanUnionRemoveVoid;
+            assert(rtt);
+            *rtt = new UnionType([this, other]);
             cleanUnionFlatten;
         }
         if (type == typeid(UnionType) && other.type == typeid(UnionType))
@@ -260,7 +253,7 @@ class TypeBox
             }
             cleanUnionFlatten;
         }
-        else // if (type != typeid(VoidType))
+        else
         {
             assert(fn(this));
         }
@@ -280,21 +273,7 @@ class TypeBox
 
     void given(TypeBox other)
     {
-        if (type == typeid(VoidType))
-        {
-            if (other.type != typeid(VoidType))
-            {
-                *rtt = *other.rtt;
-            }
-            else
-            {
-                unite(other);
-            }
-        }
-        else
-        {
-            unite(other);
-        }
+        unite(other);
         if (!tied.canFind(cast(void*) this))
         {
             tied ~= cast(void*) this;
@@ -309,6 +288,15 @@ class TypeBox
         }
     }
 
+    // TypeBox eval()
+    // {
+    //     if (ExprType et = cast(ExprType) this)
+    //     {
+    //         return et.eval;
+    //     }
+    //     return this;
+    // }
+
     override bool opEquals(Object other)
     {
         if (typeCmp.canFind(cast(void*) this))
@@ -321,11 +309,14 @@ class TypeBox
             typeCmp.length--;
         }
         TypeBox otherBox = cast(TypeBox) other;
+        assert(rtt);
+        assert(otherBox.rtt);
         return *rtt == *otherBox.rtt;
     }
 
     override string toString()
     {
+        assert(rtt);
         return to!string(*rtt);
     }
 }
@@ -356,6 +347,361 @@ class RuntimeType
     }
 }
 
+class ExprType : RuntimeType
+{
+    // override TypeBox eval()
+    // {
+    //     assert(0);
+    // }
+}
+
+class ValueExprType : ExprType
+{
+    TypeBox value;
+    this()
+    {
+    }
+
+    this(TypeBox v)
+    {
+        value = v;
+    }
+
+    override RuntimeType deepcopy()
+    {
+        foreach (kv; duplicated)
+        {
+            if (kv[0] == this)
+            {
+                return cast(ValueExprType) kv[1];
+            }
+        }
+        ValueExprType ret = new ValueExprType;
+        duplicated ~= [this, cast(TypeBox) ret];
+        ret.value = value.deepcopy;
+        duplicated.length--;
+        return ret;
+    }
+
+    override bool opEquals(Object other)
+    {
+        if (typeCmp.canFind(cast(void*) this))
+        {
+            return true;
+        }
+        typeCmp ~= cast(void*) this;
+        scope (exit)
+        {
+            typeCmp.length--;
+        }
+        return typeid(this) == typeid(other) && value == (cast(ValueExprType) other).value;
+    }
+
+    // override TypeBox eval()
+    // {
+    //     return value;
+    // }
+
+    override string toString()
+    {
+        if (above.canFind(cast(void*) this))
+        {
+            return "...";
+        }
+        above ~= cast(void*) this;
+        scope (exit)
+        {
+            above.length--;
+        }
+        return value.to!string;
+    }
+}
+
+class FailExprType : ExprType
+{
+    string message;
+    this()
+    {
+    }
+
+    this(string m)
+    {
+        message = m;
+    }
+
+    override RuntimeType deepcopy()
+    {
+        return this;
+    }
+
+    override bool opEquals(Object other)
+    {
+        return typeid(this) == typeid(other);
+    }
+
+    // override TypeBox eval()
+    // {
+    //     throw new Exception("type assert fail: " ~ message);
+    // }
+
+    override string toString()
+    {
+        return "Fail[\"" ~ message ~ "\"]";
+    }
+}
+
+class CondExprType : ExprType
+{
+    ExprType cond;
+    ExprType iftrue;
+    ExprType iffalse;
+
+    this()
+    {
+    }
+
+    this(ExprType c, ExprType t, ExprType f)
+    {
+        cond = c;
+        iftrue = t;
+        iffalse = f;
+    }
+
+    // override TypeBox eval()
+    // {
+    //     if ((cast(BooleanExprType) cond.eval).isTrue)
+    //     {
+    //         return iftrue.eval;
+    //     }
+    //     else
+    //     {
+    //         return iffalse.eval;
+    //     }
+    // }
+
+    override RuntimeType deepcopy()
+    {
+        foreach (kv; duplicated)
+        {
+            if (kv[0] == this)
+            {
+                return kv[1];
+            }
+        }
+        CondExprType ret = new CondExprType;
+        duplicated ~= [this, cast(TypeBox) ret];
+        ret.cond = cast(ExprType) cond.deepcopy;
+        ret.iftrue = cast(ExprType) iftrue.deepcopy;
+        ret.iffalse = cast(ExprType) iffalse.deepcopy;
+        duplicated.length--;
+        return ret;
+    }
+
+    override bool opEquals(Object other)
+    {
+        if (typeCmp.canFind(cast(void*) this))
+        {
+            return true;
+        }
+        typeCmp ~= cast(void*) this;
+        scope (exit)
+        {
+            typeCmp.length--;
+        }
+        return typeid(this) == typeid(other) && cond == (cast(CondExprType) other).cond
+            && iftrue == (cast(CondExprType) other).iftrue && iffalse == (cast(CondExprType) other);
+    }
+
+    override string toString()
+    {
+        if (above.canFind(cast(void*) this))
+        {
+            return "...";
+        }
+        above ~= cast(void*) this;
+        scope (exit)
+        {
+            above.length--;
+        }
+        return "Cond[" ~ cond.to!string ~ ", " ~ iftrue.to!string ~ ", " ~ iffalse.to!string ~ "]";
+    }
+}
+
+class BooleanExprType : ExprType
+{
+    bool isTrue;
+
+    this()
+    {
+    }
+
+    this(bool i)
+    {
+        isTrue = i;
+    }
+
+    // override TypeBox eval()
+    // {
+    //     return this;
+    // }
+
+    override RuntimeType deepcopy()
+    {
+        return new BooleanExprType(isTrue);
+    }
+
+    override string toString()
+    {
+        return "Boolean[" ~ isTrue.to!string ~ "]";
+    }
+
+    override bool opEquals(Object other)
+    {
+        return typeid(this) == typeid(other) && this.isTrue == (cast(BooleanExprType) other).isTrue;
+    }
+}
+
+class MatchExprType : BooleanExprType
+{
+    ExprType lhs;
+    ExprType rhs;
+
+    this()
+    {
+    }
+
+    this(ExprType l, ExprType r)
+    {
+        lhs = l;
+        rhs = r;
+    }
+
+    // override TypeBox eval()
+    // {
+    //     return new BooleanExprType(lhs.eval == rhs.eval);
+    // }
+
+    override RuntimeType deepcopy()
+    {
+        foreach (kv; duplicated)
+        {
+            if (kv[0] == this)
+            {
+                return kv[1];
+            }
+        }
+        AndExprType ret = new AndExprType;
+        duplicated ~= [this, cast(TypeBox) ret];
+        ret.lhs = cast(ExprType) lhs.deepcopy;
+        ret.rhs = cast(ExprType) rhs.deepcopy;
+        duplicated.length--;
+        return ret;
+    }
+
+    override bool opEquals(Object other)
+    {
+        if (typeCmp.canFind(cast(void*) this))
+        {
+            return true;
+        }
+        typeCmp ~= cast(void*) this;
+        scope (exit)
+        {
+            typeCmp.length--;
+        }
+        return typeid(this) == typeid(other) && lhs == (cast(AndExprType) other)
+            .lhs && rhs == (cast(AndExprType) other).rhs;
+    }
+
+    override string toString()
+    {
+        if (above.canFind(cast(void*) this))
+        {
+            return "...";
+        }
+        above ~= cast(void*) this;
+        scope (exit)
+        {
+            above.length--;
+        }
+        return "Match[" ~ lhs.to!string ~ ", " ~ rhs.to!string ~ "]";
+    }
+}
+
+class AndExprType : BooleanExprType
+{
+    ExprType lhs;
+    ExprType rhs;
+
+    this()
+    {
+    }
+
+    this(ExprType l, ExprType r)
+    {
+        lhs = l;
+        rhs = r;
+    }
+
+    // override TypeBox eval()
+    // {
+    //     if ((cast(BooleanExprType) lhs.eval).isTrue)
+    //     {
+    //         if ((cast(BooleanExprType) rhs.eval).isTrue)
+    //         {
+    //             return new BooleanExprType(true);
+    //         }
+    //     }
+    //     return new BooleanExprType(false);
+    // }
+
+    override RuntimeType deepcopy()
+    {
+        foreach (kv; duplicated)
+        {
+            if (kv[0] == this)
+            {
+                return kv[1];
+            }
+        }
+        AndExprType ret = new AndExprType;
+        duplicated ~= [this, cast(TypeBox) ret];
+        ret.lhs = cast(ExprType) lhs.deepcopy;
+        ret.rhs = cast(ExprType) rhs.deepcopy;
+        duplicated.length--;
+        return ret;
+    }
+
+    override bool opEquals(Object other)
+    {
+        if (typeCmp.canFind(cast(void*) this))
+        {
+            return true;
+        }
+        typeCmp ~= cast(void*) this;
+        scope (exit)
+        {
+            typeCmp.length--;
+        }
+        return typeid(this) == typeid(other) && lhs == (cast(AndExprType) other)
+            .lhs && rhs == (cast(AndExprType) other).rhs;
+    }
+
+    override string toString()
+    {
+        if (above.canFind(cast(void*) this))
+        {
+            return "...";
+        }
+        above ~= cast(void*) this;
+        scope (exit)
+        {
+            above.length--;
+        }
+        return "And[" ~ lhs.to!string ~ ", " ~ rhs.to!string ~ "]";
+    }
+}
+
 class EnumType : RuntimeType
 {
     override RuntimeType deepcopy()
@@ -366,14 +712,6 @@ class EnumType : RuntimeType
     override bool opEquals(Object other)
     {
         return typeid(this) == typeid(other);
-    }
-}
-
-class VoidType : EnumType
-{
-    override string toString()
-    {
-        return "Void";
     }
 }
 
@@ -512,7 +850,6 @@ class FunctionType : RuntimeType
     TypeBox returnType;
     TypeBox argumentsType;
     TypeBox[] capture;
-    Function[] generatedFrom;
 
     this()
     {
@@ -524,17 +861,11 @@ class FunctionType : RuntimeType
         argumentsType = a;
     }
 
-    void add(Function f)
-    {
-        generatedFrom ~= f;
-    }
-
     override RuntimeType deepcopy()
     {
         FunctionType ret = new FunctionType;
         ret.returnType = returnType.deepcopy;
         ret.argumentsType = argumentsType.deepcopy;
-        ret.generatedFrom = generatedFrom.deepcopy;
         return cast(RuntimeType) ret;
     }
 

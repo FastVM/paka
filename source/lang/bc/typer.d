@@ -83,7 +83,7 @@ class TypeGenerator : OpcodeIterator
                 TupleType tt = argumentsType.as!TupleType;
                 while (cap.from >= tt.elementTypes.length)
                 {
-                    tt.elementTypes ~= type!VoidType;
+                    tt.elementTypes ~= type!UnionType;
                 }
                 captureTypes ~= argumentsType.as!TupleType.elementTypes[cap.from];
             }
@@ -101,7 +101,7 @@ override:
         aboveStack ~= func;
         if (!tester[$ - 1])
         {
-            returnTypeArray ~= type!VoidType;
+            returnTypeArray ~= type!UnionType;
             argumentsTypeArray ~= type!TupleType;
 
         }
@@ -109,7 +109,7 @@ override:
         localTypesArray.length++;
         foreach (lt; 0 .. func.stab.length)
         {
-            localTypes ~= type!VoidType;
+            localTypes ~= type!UnionType;
         }
     }
 
@@ -118,17 +118,17 @@ override:
         TypeSignature sig1 = TypeSignature(returnType.deepcopy, argumentsType.deepcopy);
         if (!tester[$ - 1])
         {
-            while (true)
-            {
-                tester ~= true;
-                walk(func);
-                tester.length--;
-                if (sig1 == signature)
-                {
-                    break;
-                }
-                sig1 = signature;
-            }
+            // while (true)
+            // {
+            //     tester ~= true;
+            //     walk(func);
+            //     tester.length--;
+            //     if (sig1 == signature)
+            //     {
+            //         break;
+            //     }
+            //     sig1 = signature;
+            // }
             TypeBox functy = type!FunctionType(returnType, argumentsType);
             knownTypes[func] = functy;
         }
@@ -160,10 +160,11 @@ override:
 
     void got(Opcode op)
     {
-        // writeln;
-        // writeln("stack: ", stackTypes);
+        writeln;
+        writeln("stack: ", stackTypes);
         // writeln("local: ", localTypes);
-        writeln(func.captab.byPlace, ":", func.stab.byPlace, " ", op);
+        writeln(op);
+        // writeln(func.captab.byPlace, ":", func.stab.byPlace, " ", op);
     }
 
     void nop()
@@ -208,7 +209,6 @@ override:
             TypeBox[] cap = buildCapture(subFunc);
             tester ~= false;
             walk(subFunc);
-            knownTypes[subFunc].as!FunctionType.generatedFrom ~= subFunc;
             knownTypes[subFunc].as!FunctionType.capture = cap;
             captureTypesArray.length--;
             tester.length--;
@@ -229,7 +229,7 @@ override:
         {
             while (index >= funcArgTypes.length)
             {
-                funcArgTypes ~= type!VoidType;
+                funcArgTypes ~= type!UnionType;
             }
             // writeln("idx: ", funcArgTypes[index]);
             // funcArgTypes[index].unite(value);
@@ -237,38 +237,10 @@ override:
             // writeln("idx: ", funcArgTypes[index]);
             // writeln;
             funcArgTypes[index].given(value);
+            value.given(funcArgTypes[index]);
         }
-        // subfunc.as!FunctionType
-        //     .argumentsType
-        //     .as!TupleType
-        //     .elementTypes = funcArgTypes;
         stackTypes[$ - 1] = subfunc.as!FunctionType.returnType;
-        subfunc.as!FunctionType.returnType.set(stackTypes[$ - 1]);
-        Function[] generatedFrom = subfunc.as!FunctionType.generatedFrom;
-        assert(generatedFrom.length == 1);
-        Function regenerate = generatedFrom[0];
-        if (!aboveStack.canFind(regenerate))
-        {
-            TypeBox sig1 = subfunc.deepcopy;
-            while (true)
-            {
-                returnTypeArray ~= subfunc.as!FunctionType.returnType;
-                argumentsTypeArray ~= subfunc.as!FunctionType.argumentsType;
-                captureTypesArray ~= subfunc.as!FunctionType.capture;
-                tester ~= true;
-                walk(regenerate);
-                tester.length--;
-                returnTypeArray.length--;
-                argumentsTypeArray.length--;
-                captureTypesArray.length--;
-                if (sig1 == subfunc)
-                {
-                    break;
-                }
-                sig1 = subfunc.deepcopy;
-            }
-            knownTypes[regenerate] = sig1;
-        }
+        // subfunc.as!FunctionType.returnType.set(stackTypes[$ - 1]);
     }
 
     void upcall()
@@ -336,46 +308,79 @@ override:
         TypeBox rhs = stackTypes[$ - 1];
         stackTypes.length--;
         TypeBox lhs = stackTypes[$ - 1];
-        if (lhs.type == typeid(VoidType) && rhs.type == typeid(VoidType))
-        {
-            TypeBox ut = type!VoidType;
-            ut.given(type!NumberType);
-            ut.given(type!StringType);
-            lhs.given(ut);
-            rhs.given(ut);
-            return;
-        }
-        if (lhs.type == typeid(VoidType))
-        {
-            lhs.given(rhs);
-        }
-        else if (rhs.type == typeid(VoidType))
-        {
-            rhs.given(lhs);
-        }
-        bool okay = false;
-        TypeBox res = type!VoidType;
-        if (lhs.same(type!NumberType) && rhs.same(type!NumberType))
-        {
-            res.given(type!NumberType);
-            okay = true;
-        }
-        if (lhs.same(type!StringType) && rhs.same(type!StringType))
-        {
-            res.given(type!StringType);
-            okay = true;
-        }
-        if (!okay)
-        {
-            throw new Exception(
-                    "type error: cannot perform: { " ~ lhs.to!string ~ " + " ~ rhs.to!string ~ " }");
-        }
-        res.children ~= [lhs, rhs];
-        // lhs.set(res);
-        // rhs.set(res);
-        lhs.tie(res);
-        rhs.tie(res);
-        stackTypes[$ - 1] = res;
+
+        // if (lhs.type == typeid(VoidType) && rhs.type == typeid(VoidType))
+        // {
+        //     TypeBox ut = type!VoidType;
+        //     ut.given(type!NumberType);
+        //     ut.given(type!StringType);
+        //     lhs.given(ut);
+        //     rhs.given(ut);
+        //     return;
+        // }
+        // if (lhs.type == typeid(VoidType))
+        // {
+        //     lhs.given(rhs);
+        // }
+        // else if (rhs.type == typeid(VoidType))
+        // {
+        //     rhs.given(lhs);
+        // }
+        // bool okay = false;
+        // TypeBox res = type!VoidType;
+        // if (lhs.same(type!NumberType) && rhs.same(type!NumberType))
+        // {
+        //     res.given(type!NumberType);
+        //     okay = true;
+        // }
+        // if (lhs.same(type!StringType) && rhs.same(type!StringType))
+        // {
+        //     res.given(type!StringType);
+        //     okay = true;
+        // }
+        // if (!okay)
+        // {
+        //     throw new Exception(
+        //             "type error: cannot perform: { " ~ lhs.to!string ~ " + " ~ rhs.to!string ~ " }");
+        // }
+        // res.children ~= [lhs, rhs];
+        // // lhs.set(res);
+        // // rhs.set(res);
+        // lhs.tie(res);
+        // rhs.tie(res);
+        // stackTypes[$ - 1] = res;
+
+        // dfmt off
+        stackTypes[$ - 1] = new CondExprType(
+            new MatchExprType(
+                new ValueExprType(lhs), 
+                new ValueExprType(type!NumberType),
+            ),
+            new CondExprType(
+                new MatchExprType(
+                    new ValueExprType(rhs), 
+                    new ValueExprType(type!NumberType),
+                ),
+                new ValueExprType(type!NumberType),
+                new FailExprType("type error: cannot perform: { " ~ lhs.to!string ~ " + " ~ rhs.to!string ~ " }"),
+            ),
+            new CondExprType(
+                new MatchExprType(
+                    new ValueExprType(lhs), 
+                    new ValueExprType(type!StringType),
+                ),
+                new CondExprType(
+                    new MatchExprType(
+                        new ValueExprType(rhs), 
+                        new ValueExprType(type!StringType),
+                    ),
+                    new ValueExprType(type!StringType),
+                    new FailExprType("type error: cannot perform: { " ~ lhs.to!string ~ " + " ~ rhs.to!string ~ " }"),
+                ),
+                new FailExprType("type error: cannot perform: { " ~ lhs.to!string ~ " + " ~ rhs.to!string ~ " }"),
+            ),
+        );
+        // dfmt on
     }
 
     void opsub()
@@ -460,7 +465,7 @@ override:
         TupleType tt = argumentsType.as!TupleType;
         while (argIndex >= tt.elementTypes.length)
         {
-            tt.elementTypes ~= type!VoidType;
+            tt.elementTypes ~= type!UnionType;
         }
         stackTypes ~= tt.elementTypes[argIndex];
     }
