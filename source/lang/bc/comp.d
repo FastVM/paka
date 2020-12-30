@@ -1,1 +1,0 @@
-module lang.bc.comp;

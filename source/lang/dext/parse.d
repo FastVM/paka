@@ -26,7 +26,7 @@ template Spanning(alias F, T...)
         TokenArray orig = tokens;
         if (orig.length != 0)
         {
-            locs ~= orig[0].span.first;
+            locs ~= orig[0].span.last;
         }
         scope (success)
         {

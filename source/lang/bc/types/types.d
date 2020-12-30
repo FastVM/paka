@@ -8,7 +8,10 @@ import lang.bytecode;
 
 Object[] checked;
 TypeBox[2][] duplicated;
+void*[] transformed;
+void*[] asmanys;
 void*[] tied;
+void*[] tried;
 void*[] above;
 void*[] opEqualsCmp;
 void*[] typeCmp;
@@ -59,6 +62,13 @@ class TypeBox
         return typeid(*rtt);
     }
 
+    TypeBox copy()
+    {
+        TypeBox ret = new TypeBox;
+        ret.rtt = [*rtt].ptr;
+        return ret;
+    }
+
     TypeBox deepcopy()
     {
         foreach (kv; duplicated)
@@ -76,35 +86,89 @@ class TypeBox
         return ret;
     }
 
-    ref T as(T)()
+    void transform(void delegate(Object) dg)
+    {
+        foreach (key; transformed)
+        {
+            if (key == cast(void*) this)
+            {
+                return;
+            }
+        }
+        transformed ~= cast(void*) this;
+        assert(rtt);
+        dg(this);
+        (*rtt).transform(dg);
+        transformed.length--;
+    }
+
+    TypeBox flat()
+    {
+        TypeBox next = deepcopy;
+        next.transform((Object obj) {
+            if (TypeBox tb = cast(TypeBox) obj)
+            {
+                tb.cleanUnionFlatten;
+            }
+        });
+        return next;
+    }
+
+    T[] asMany(T)()
     {
         assert(rtt);
-        if (!cast(T)*rtt)
+        if (asmanys.canFind(cast(void*) this))
         {
-            throw new Exception("bad type: " ~ to!string(*rtt) ~ " not " ~ typeid(*rtt).to!string);
+            return null;
         }
-        return *cast(T*) rtt;
+        asmanys ~= cast(void*) this;
+        scope (exit)
+        {
+            asmanys.length--;
+        }
+        if (cast(T)*rtt)
+        {
+            return [*cast(T*) rtt];
+        }
+        if (UnionType ut = cast(UnionType)*rtt)
+        {
+            T[] ret;
+            foreach (i; ut.optionTypes)
+            {
+                if (i.casts1!T)
+                {
+                    ret ~= i.asMany!T;
+                }
+            }
+            return ret;
+        }
+        throw new Exception("bad type: " ~ to!string(*rtt) ~ " not " ~ typeid(T).to!string);
+    }
+
+    T as(T)()
+    {
+        T[] many = asMany!T;
+        assert(many.length == 1);
+        return many[0];
     }
 
     bool casts1(T)()
     {
-        if (type == typeid(UnionType))
+        assert(rtt);
+        if (tried.canFind(cast(void*) this))
         {
-            bool canIt = false;
-            foreach (ty; as!UnionType.optionTypes)
-            {
-                if (ty.same!T)
-                {
-                    canIt = true;
-                    break;
-                }
-            }
-            return canIt;
+            return true;
         }
-        else
+        tried ~= cast(void*) this;
+        scope (exit)
         {
-            return type == typeid(T);
+            tried.length--;
         }
+        if (cast(T)*rtt)
+        {
+            return true;
+        }
+        return false;
     }
 
     bool same(TypeBox other)
@@ -130,6 +194,10 @@ class TypeBox
                 }
             }
             return canIt;
+        }
+        else if (type == typeid(AnyType))
+        {
+            return true;
         }
         else
         {
@@ -206,13 +274,12 @@ class TypeBox
 
     void unite(TypeBox other)
     {
-        if (other.type != type && other.type != typeid(UnionType))
+        if ((other.type != type && other.type != typeid(UnionType)) || type != typeid(UnionType))
         {
-            assert(rtt);
-            *rtt = new UnionType([this, other]);
-            cleanUnionFlatten;
+            TypeBox nt = .type!UnionType([copy, other]);
+            set(nt);
         }
-        if (type == typeid(UnionType) && other.type == typeid(UnionType))
+        else if (type == typeid(UnionType) && other.type == typeid(UnionType))
         {
             foreach (ty; other.as!UnionType.optionTypes)
             {
@@ -221,7 +288,6 @@ class TypeBox
                     as!UnionType.optionTypes ~= ty;
                 }
             }
-            cleanUnionFlatten;
         }
         if (!tied.canFind(cast(void*) this))
         {
@@ -251,7 +317,6 @@ class TypeBox
                     ut.optionTypes ~= utitem;
                 }
             }
-            cleanUnionFlatten;
         }
         else
         {
@@ -273,7 +338,14 @@ class TypeBox
 
     void given(TypeBox other)
     {
-        unite(other);
+        if (type == typeid(AnyType))
+        {
+            set(other);
+        }
+        else
+        {
+            unite(other);
+        }
         if (!tied.canFind(cast(void*) this))
         {
             tied ~= cast(void*) this;
@@ -345,360 +417,10 @@ class RuntimeType
     {
         assert(0);
     }
-}
 
-class ExprType : RuntimeType
-{
-    // override TypeBox eval()
-    // {
-    //     assert(0);
-    // }
-}
-
-class ValueExprType : ExprType
-{
-    TypeBox value;
-    this()
+    void transform(void delegate(Object) dg)
     {
-    }
-
-    this(TypeBox v)
-    {
-        value = v;
-    }
-
-    override RuntimeType deepcopy()
-    {
-        foreach (kv; duplicated)
-        {
-            if (kv[0] == this)
-            {
-                return cast(ValueExprType) kv[1];
-            }
-        }
-        ValueExprType ret = new ValueExprType;
-        duplicated ~= [this, cast(TypeBox) ret];
-        ret.value = value.deepcopy;
-        duplicated.length--;
-        return ret;
-    }
-
-    override bool opEquals(Object other)
-    {
-        if (typeCmp.canFind(cast(void*) this))
-        {
-            return true;
-        }
-        typeCmp ~= cast(void*) this;
-        scope (exit)
-        {
-            typeCmp.length--;
-        }
-        return typeid(this) == typeid(other) && value == (cast(ValueExprType) other).value;
-    }
-
-    // override TypeBox eval()
-    // {
-    //     return value;
-    // }
-
-    override string toString()
-    {
-        if (above.canFind(cast(void*) this))
-        {
-            return "...";
-        }
-        above ~= cast(void*) this;
-        scope (exit)
-        {
-            above.length--;
-        }
-        return value.to!string;
-    }
-}
-
-class FailExprType : ExprType
-{
-    string message;
-    this()
-    {
-    }
-
-    this(string m)
-    {
-        message = m;
-    }
-
-    override RuntimeType deepcopy()
-    {
-        return this;
-    }
-
-    override bool opEquals(Object other)
-    {
-        return typeid(this) == typeid(other);
-    }
-
-    // override TypeBox eval()
-    // {
-    //     throw new Exception("type assert fail: " ~ message);
-    // }
-
-    override string toString()
-    {
-        return "Fail[\"" ~ message ~ "\"]";
-    }
-}
-
-class CondExprType : ExprType
-{
-    ExprType cond;
-    ExprType iftrue;
-    ExprType iffalse;
-
-    this()
-    {
-    }
-
-    this(ExprType c, ExprType t, ExprType f)
-    {
-        cond = c;
-        iftrue = t;
-        iffalse = f;
-    }
-
-    // override TypeBox eval()
-    // {
-    //     if ((cast(BooleanExprType) cond.eval).isTrue)
-    //     {
-    //         return iftrue.eval;
-    //     }
-    //     else
-    //     {
-    //         return iffalse.eval;
-    //     }
-    // }
-
-    override RuntimeType deepcopy()
-    {
-        foreach (kv; duplicated)
-        {
-            if (kv[0] == this)
-            {
-                return kv[1];
-            }
-        }
-        CondExprType ret = new CondExprType;
-        duplicated ~= [this, cast(TypeBox) ret];
-        ret.cond = cast(ExprType) cond.deepcopy;
-        ret.iftrue = cast(ExprType) iftrue.deepcopy;
-        ret.iffalse = cast(ExprType) iffalse.deepcopy;
-        duplicated.length--;
-        return ret;
-    }
-
-    override bool opEquals(Object other)
-    {
-        if (typeCmp.canFind(cast(void*) this))
-        {
-            return true;
-        }
-        typeCmp ~= cast(void*) this;
-        scope (exit)
-        {
-            typeCmp.length--;
-        }
-        return typeid(this) == typeid(other) && cond == (cast(CondExprType) other).cond
-            && iftrue == (cast(CondExprType) other).iftrue && iffalse == (cast(CondExprType) other);
-    }
-
-    override string toString()
-    {
-        if (above.canFind(cast(void*) this))
-        {
-            return "...";
-        }
-        above ~= cast(void*) this;
-        scope (exit)
-        {
-            above.length--;
-        }
-        return "Cond[" ~ cond.to!string ~ ", " ~ iftrue.to!string ~ ", " ~ iffalse.to!string ~ "]";
-    }
-}
-
-class BooleanExprType : ExprType
-{
-    bool isTrue;
-
-    this()
-    {
-    }
-
-    this(bool i)
-    {
-        isTrue = i;
-    }
-
-    // override TypeBox eval()
-    // {
-    //     return this;
-    // }
-
-    override RuntimeType deepcopy()
-    {
-        return new BooleanExprType(isTrue);
-    }
-
-    override string toString()
-    {
-        return "Boolean[" ~ isTrue.to!string ~ "]";
-    }
-
-    override bool opEquals(Object other)
-    {
-        return typeid(this) == typeid(other) && this.isTrue == (cast(BooleanExprType) other).isTrue;
-    }
-}
-
-class MatchExprType : BooleanExprType
-{
-    ExprType lhs;
-    ExprType rhs;
-
-    this()
-    {
-    }
-
-    this(ExprType l, ExprType r)
-    {
-        lhs = l;
-        rhs = r;
-    }
-
-    // override TypeBox eval()
-    // {
-    //     return new BooleanExprType(lhs.eval == rhs.eval);
-    // }
-
-    override RuntimeType deepcopy()
-    {
-        foreach (kv; duplicated)
-        {
-            if (kv[0] == this)
-            {
-                return kv[1];
-            }
-        }
-        AndExprType ret = new AndExprType;
-        duplicated ~= [this, cast(TypeBox) ret];
-        ret.lhs = cast(ExprType) lhs.deepcopy;
-        ret.rhs = cast(ExprType) rhs.deepcopy;
-        duplicated.length--;
-        return ret;
-    }
-
-    override bool opEquals(Object other)
-    {
-        if (typeCmp.canFind(cast(void*) this))
-        {
-            return true;
-        }
-        typeCmp ~= cast(void*) this;
-        scope (exit)
-        {
-            typeCmp.length--;
-        }
-        return typeid(this) == typeid(other) && lhs == (cast(AndExprType) other)
-            .lhs && rhs == (cast(AndExprType) other).rhs;
-    }
-
-    override string toString()
-    {
-        if (above.canFind(cast(void*) this))
-        {
-            return "...";
-        }
-        above ~= cast(void*) this;
-        scope (exit)
-        {
-            above.length--;
-        }
-        return "Match[" ~ lhs.to!string ~ ", " ~ rhs.to!string ~ "]";
-    }
-}
-
-class AndExprType : BooleanExprType
-{
-    ExprType lhs;
-    ExprType rhs;
-
-    this()
-    {
-    }
-
-    this(ExprType l, ExprType r)
-    {
-        lhs = l;
-        rhs = r;
-    }
-
-    // override TypeBox eval()
-    // {
-    //     if ((cast(BooleanExprType) lhs.eval).isTrue)
-    //     {
-    //         if ((cast(BooleanExprType) rhs.eval).isTrue)
-    //         {
-    //             return new BooleanExprType(true);
-    //         }
-    //     }
-    //     return new BooleanExprType(false);
-    // }
-
-    override RuntimeType deepcopy()
-    {
-        foreach (kv; duplicated)
-        {
-            if (kv[0] == this)
-            {
-                return kv[1];
-            }
-        }
-        AndExprType ret = new AndExprType;
-        duplicated ~= [this, cast(TypeBox) ret];
-        ret.lhs = cast(ExprType) lhs.deepcopy;
-        ret.rhs = cast(ExprType) rhs.deepcopy;
-        duplicated.length--;
-        return ret;
-    }
-
-    override bool opEquals(Object other)
-    {
-        if (typeCmp.canFind(cast(void*) this))
-        {
-            return true;
-        }
-        typeCmp ~= cast(void*) this;
-        scope (exit)
-        {
-            typeCmp.length--;
-        }
-        return typeid(this) == typeid(other) && lhs == (cast(AndExprType) other)
-            .lhs && rhs == (cast(AndExprType) other).rhs;
-    }
-
-    override string toString()
-    {
-        if (above.canFind(cast(void*) this))
-        {
-            return "...";
-        }
-        above ~= cast(void*) this;
-        scope (exit)
-        {
-            above.length--;
-        }
-        return "And[" ~ lhs.to!string ~ ", " ~ rhs.to!string ~ "]";
+        assert(0);
     }
 }
 
@@ -709,9 +431,22 @@ class EnumType : RuntimeType
         return cast(RuntimeType) this;
     }
 
+    override void transform(void delegate(Object) dg)
+    {
+        dg(this);
+    }
+
     override bool opEquals(Object other)
     {
         return typeid(this) == typeid(other);
+    }
+}
+
+class AnyType : EnumType
+{
+    override string toString()
+    {
+        return "Any";
     }
 }
 
@@ -766,6 +501,12 @@ class ArrayType : RuntimeType
         return cast(RuntimeType) ret;
     }
 
+    override void transform(void delegate(Object) dg)
+    {
+        elementType.transform(dg);
+        dg(this);
+    }
+
     override bool opEquals(Object other)
     {
         if (opEqualsCmp.canFind(cast(void*) this))
@@ -815,6 +556,15 @@ class TupleType : RuntimeType
         return cast(RuntimeType) ret;
     }
 
+    override void transform(void delegate(Object) dg)
+    {
+        foreach (elementType; elementTypes)
+        {
+            elementType.transform(dg);
+        }
+        dg(this);
+    }
+
     override bool opEquals(Object other)
     {
         if (opEqualsCmp.canFind(cast(void*) this))
@@ -849,7 +599,6 @@ class FunctionType : RuntimeType
 {
     TypeBox returnType;
     TypeBox argumentsType;
-    TypeBox[] capture;
 
     this()
     {
@@ -861,12 +610,24 @@ class FunctionType : RuntimeType
         argumentsType = a;
     }
 
+    static TypeBox any()
+    {
+        return type!FunctionType(type!AnyType, type!TupleType([type!AnyType]));
+    }
+
     override RuntimeType deepcopy()
     {
         FunctionType ret = new FunctionType;
         ret.returnType = returnType.deepcopy;
         ret.argumentsType = argumentsType.deepcopy;
         return cast(RuntimeType) ret;
+    }
+
+    override void transform(void delegate(Object) dg)
+    {
+        returnType.transform(dg);
+        argumentsType.transform(dg);
+        dg(this);
     }
 
     override bool opEquals(Object other)
@@ -922,6 +683,13 @@ class MappingType : RuntimeType
         return cast(RuntimeType) ret;
     }
 
+    override void transform(void delegate(Object) dg)
+    {
+        keyType.transform(dg);
+        valueType.transform(dg);
+        dg(this);
+    }
+
     override bool opEquals(Object other)
     {
         if (opEqualsCmp.canFind(cast(void*) this))
@@ -961,6 +729,15 @@ class ClassType : RuntimeType
         ClassType ret = new ClassType;
         ret.memberTypes = memberTypes.deepcopy;
         return cast(RuntimeType) ret;
+    }
+
+    override void transform(void delegate(Object) dg)
+    {
+        foreach (name, memberType; memberTypes)
+        {
+            memberType.transform(dg);
+        }
+        dg(this);
     }
 
     override bool opEquals(Object other)
@@ -1010,6 +787,15 @@ class UnionType : RuntimeType
         UnionType ret = new UnionType;
         ret.optionTypes = optionTypes.deepcopy;
         return cast(RuntimeType) ret;
+    }
+
+    override void transform(void delegate(Object) dg)
+    {
+        foreach (optionType; optionTypes)
+        {
+            optionType.transform(dg);
+        }
+        dg(this);
     }
 
     override bool opEquals(Object other)

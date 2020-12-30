@@ -341,45 +341,6 @@ pragma(inline, true):
         return ret;
     }
 
-    // size_t toHash() const nothrow
-    // {
-    //     hashed++;
-    //     scope(exit)
-    //     {
-    //         hashed--;
-    //     }
-    //     if (hashed == 8) {
-    //         return 0;
-    //     }
-    //     final switch (type)
-    //     {
-    //     case Type.nil:
-    //         return 2;
-    //     case Type.log:
-    //         return cast(size_t) (value.log + 1);
-    //     case Type.sml:
-    //         return *cast(size_t*)&value.sml;
-    //     case Type.big:
-    //         return hashOf(value.bnm);
-    //     case Type.str:
-    //         return hashOf(*value.str);
-    //     case Type.arr:
-    //         return hashOf(*value.arr);
-    //     case Type.tab:
-    //         return hashOf(value.tab);
-    //     case Type.fun:
-    //         return hashOf(value.fun.fun);
-    //     case Type.del:
-    //         return hashOf(value.fun.del);
-    //     case Type.pro:
-    //         return hashOf(value.fun.pro);
-    //     case Type.end:
-    //         assert(0);
-    //     case Type.pac:
-    //         assert(0);
-    //     }
-    // }
-
     string toString()
     {
         return this.strFormat;
@@ -731,8 +692,8 @@ private int cmpDynamicImpl(const Dynamic a, const Dynamic b)
         return 0;
     case Dynamic.Type.fun:
         return cmp(a.value.fun.fun, b.value.fun.fun);
-        // case Dynamic.Type.del:
-        //     return cmp(a.value.fun.del, b.value.fun.del);
+    case Dynamic.Type.del:
+        return cmp(a.value.fun.del, b.value.fun.del);
     case Dynamic.Type.pro:
         return cmpFunction(a.value.fun.pro, b.value.fun.pro);
     }
