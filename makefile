@@ -1,21 +1,22 @@
 
 COMPILER=ldmd2
 LINKER=ld
-LINK_FLAGS=gmp mpfr
 OUTPUT=dextc
-DLANG_OPTIMIZE=-O3 -ffast-math -g --boundscheck=off -release
+DLANG_OPTIMIZE=
 DLANG_FLAGS=$(DLANG_OPTIMIZE) -Isource
-DLANG_SOURCE=$(shell find source | grep \.d$)
+QUEST_SOURCE=$(shell find source/lang/quest)
+DLANG_SOURCE=$(shell find source | grep -E \\.d$)
 OBJS=$(DLANG_SOURCE:source/%.d=out/%.o)
 DOCS=$(DLANG_SOURCE:source/%.d=docs/%.html)
-LTO_BINARY=-flto-binary=/usr/lib/llvm-10/lib/LLVMgold.so
-LTO=-flto=full $(LTO_BINARY)
+
+echo:
+	echo $(DLANG_SOURCE)
 
 docs: $(DOCS)
-	$(COMPILER) $(OBJS) $(patsubst %,-L-l%,$(LINK_FLAGS)) -ofdext $(LTO)
+	$(COMPILER) $(OBJS) -of=dext $(LTO)
 
 dext: $(OBJS) 
-	$(COMPILER) $(OBJS) $(patsubst %,-L-l%,$(LINK_FLAGS)) -ofdext $(LTO)
+	$(COMPILER) $(OBJS) -of=dext $(LTO)
 
 $(DOCS): $(patsubst docs/%.html,source/%.d,$@) makefile
 	$(COMPILER) $(patsubst docs/%.html,source/%.d,$@) -c -Df$@ -of$(patsubst docs/%.html,out/%.o,$@) $(DLANG_FLAGS)

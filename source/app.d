@@ -24,8 +24,9 @@ void domain(string[] args)
     string[] stmts;
     bool repl = false;
     bool disWanted = false;
+    bool echo = false;
     auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-            &scripts, "math", &fastMathNotEnabled, "dis", &disWanted);
+            &scripts, "dis", &disWanted, "echo", &echo);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
@@ -43,7 +44,7 @@ void domain(string[] args)
         }
         else {
             Dynamic retval = ctx.eval(i ~ ";");
-            if (retval.type != Dynamic.Type.nil)
+            if (echo && retval.type != Dynamic.Type.nil)
             {
                 writeln(retval);
             }
@@ -63,7 +64,7 @@ void domain(string[] args)
             string code = cast(string) i.read;
             i.dirName.chdir;
             Dynamic retval = ctx.eval(code);
-            if (retval.type != Dynamic.Type.nil)
+            if (echo && retval.type != Dynamic.Type.nil)
             {
                 writeln(retval);
             }

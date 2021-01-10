@@ -18,6 +18,7 @@ perf*
 vgcore*
 callgrind*
 vscode
+.vscode
 llvm
 default.profdata
 default.profraw

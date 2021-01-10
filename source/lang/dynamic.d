@@ -27,11 +27,14 @@ Mapping emptyMapping()
     return new Mapping;
 }
 
+Table[] beforeTables;
+
+void*[] lookingFor;
 class Table
 {
     Mapping table = emptyMapping;
     Table metatable;
-    Object native;
+    void* native;
     alias table this;
 
     Table init()
@@ -46,32 +49,74 @@ class Table
 
     this()
     {
+        table = emptyMapping;
     }
 
     this(typeof(table) t)
     {
+        assert(t !is null);
         table = t;
         metatable = null;
     }
 
     this(typeof(table) t, Table m)
     {
+        assert(t !is null);
         table = t;
         metatable = m;
     }
 
-    this(typeof(table) t, Object n)
+    this(typeof(table) t, void* n)
     {
+        assert(t !is null);
         table = t;
         metatable = null;
         native = n;
     }
 
-    this(typeof(table) t, Table m, Object n)
+    this(typeof(table) t, Table m, void* n)
     {
         table = t;
         metatable = m;
         native = n;
+    }
+
+    Table withGet(Table newget)
+    {
+        if (Dynamic* get = "get".dynamic in table)
+        {
+            *get.value.arr ~= newget.dynamic;
+        }
+        else
+        {
+            table["get".dynamic] = [newget.dynamic].dynamic;
+        }
+        return this;
+    }
+
+    Table withGet(Args...)(Args args) if (args.length != 1)
+    {
+        if (args.length == 0)
+        {
+            return this;
+        }
+        return withGet(args[0]).withGet(args[1 .. $]);
+    }
+
+    Table withProto(Table proto)
+    {
+        withGet(proto);
+        meta.withGet(proto.meta);
+        return this;
+    }
+
+    Table withProto(Args...)(Args args) if (args.length != 1)
+    {
+        if (args.length == 0)
+        {
+            return this;
+        }
+        return withProto(args[0]).withProto(args[1 .. $]);
     }
 
     ref Table meta()
@@ -83,17 +128,30 @@ class Table
         return metatable;
     }
 
-    int opApply(int delegate(Dynamic, Dynamic) dg)
-    {
-        foreach (Dynamic a, Dynamic b; table)
-        {
-            if (int res = dg(a, b))
-            {
-                return res;
-            }
-        }
-        return 0;
-    }
+    // int opApply(int delegate(Dynamic, Dynamic) dg)
+    // {
+    //     void*[] had = null;
+    //     Table self = this;
+    //     while (self !is null)
+    //     {
+    //         had ~= cast(void*) self;
+    //         foreach (Dynamic a, Dynamic b; self.table)
+    //         {
+    //             if (int res = dg(a, b))
+    //             {
+    //                 return res;
+    //             }
+    //         }
+    //         if (Dynamic* get = "get".dynamic in meta)
+    //         {
+    //             if (get.type == Dynamic.type.tab && !had.canFind(cast(void*) get.tab))
+    //             {
+    //                 self = get.tab;
+    //             }
+    //         }
+    //     }
+    //     return 0;
+    // }
 
     Dynamic rawIndex(Dynamic key)
     {
@@ -121,31 +179,53 @@ class Table
 
     Dynamic opIndex(Dynamic key)
     {
-        Dynamic* metaget = dynamic("get") in meta;
-        if (metaget !is null)
-        {
-            if (metaget.type == Dynamic.Type.tab)
-            {
-                Dynamic* val = key in this;
-                if (val !is null)
-                {
-                    return *val;
-                }
-                return (*metaget).tab[key];
-            }
-            return (*metaget)([dynamic(this), key]);
-        }
-        Dynamic* val = key in this;
-        if (val !is null)
+        if (Dynamic* val = key in this)
         {
             return *val;
         }
-        throw new TypeException("table item not found: " ~ key.to!string);
+        throw new BoundsException("key not found: " ~ key.to!string);
     }
 
     Dynamic* opBinaryRight(string op)(Dynamic other) if (op == "in")
     {
-        return other in table;
+        foreach (i; lookingFor)
+        {
+            if (i == cast(void*) this)
+            {
+                return null;
+            }
+        }
+        lookingFor ~= cast(void*) this;
+        scope (exit)
+        {
+            lookingFor.length--;
+        }
+        Dynamic* ret = other in table;
+        if (ret)
+        {
+            return ret;
+        }
+        if (meta.length == 0)
+        {
+            return null;
+        }
+        Dynamic* metaget = "get".dynamic in meta;
+        if (metaget !is null && metaget.type == Dynamic.Type.arr)
+        {
+            foreach (getter; metaget.arr)
+            {
+                if (Dynamic* got = other in getter.tab)
+                {
+                    return got;
+                }
+            }
+            return null;
+        }
+        if (metaget !is null && metaget.type == Dynamic.Type.tab)
+        {
+            return other in (*metaget).tab;
+        }
+        return null;
     }
 
     Dynamic opBinary(string op)(Dynamic other)
@@ -167,7 +247,11 @@ class Table
 
     Dynamic opCall(Dynamic[] args)
     {
-        return meta[dynamic("call")](dynamic(this) ~ args);
+        if (Dynamic* dyn = "self".dynamic in meta)
+        {
+            return meta[dynamic("call")](dyn.arr ~ args);
+        }
+        return meta[dynamic("call")](args);
     }
 
     Dynamic opUnary(string op)()
@@ -185,13 +269,35 @@ class Table
 
     override string toString()
     {
-        Dynamic* op = dynamic("str") in meta;
-        if (op !is null)
+        foreach (i, v; beforeTables)
         {
-            return (*op)([dynamic(this)]).to!string;
+            if (v is this)
+            {
+                return "&" ~ i.to!string;
+            }
         }
+        beforeTables ~= this;
+        scope (exit)
+        {
+            beforeTables.length--;
+        }
+        Dynamic* str = "str".dynamic in meta;
+        if (str !is null)
+        {
+            Dynamic res = (*str)([dynamic(this)]);
+            if (res.type != Dynamic.Type.str)
+            {
+                throw new TypeException("str must return a string");
+            }
+            return res.str;
+        }
+        return rawToString;
+    }
+
+    string rawToString()
+    {
         char[] ret;
-        ret ~= "{";
+        ret ~= "table {";
         size_t i = 0;
         foreach (key, value; table)
         {
@@ -208,8 +314,6 @@ class Table
         return cast(string) ret;
     }
 }
-
-bool fastMathNotEnabled = false;
 
 pragma(inline, true) Dynamic dynamic(T...)(T a)
 {
@@ -600,13 +704,63 @@ private int cmpFunction(const Function a, const Function b)
     return cmp(cast(void*) a, cast(void*) b);
 }
 
-Dynamic[2][] above;
 private int cmpDynamic(T...)(T a)
 {
     int res = cmpDynamicImpl(a);
     return res;
 }
 
+Table[2][] tableAbove;
+int cmpTable(Table at, Table bt)
+{
+    foreach (i, p; tableAbove)
+    {
+        if (at is p[0] && bt is p[1])
+        {
+            return 0;
+        }
+    }
+    tableAbove ~= [at, bt];
+    scope (exit)
+    {
+        tableAbove.length--;
+    }
+    bool noMeta = at.metatable is null && bt.metatable is null;
+    if (Dynamic* mcmp = "cmp".dynamic in at.meta)
+    {
+        return cast(int)(*mcmp)([at.dynamic, bt.dynamic]).as!double;
+    }
+    if (int c = cmp(at.table.length, bt.table.length))
+    {
+        return c;
+    }
+    foreach (key, value; at)
+    {
+        const Dynamic* bValue = key in bt;
+        if (bValue is null)
+        {
+            foreach (key2, value2; bt)
+            {
+                if (key2 !in at)
+                {
+                    return cmpDynamic(key, key2);
+                }
+            }
+            assert(0);
+        }
+        if (int res = cmpDynamic(value, *bValue))
+        {
+            return res;
+        }
+    }
+    if (noMeta)
+    {
+        return 0;
+    }
+    return cmpTable(at.meta, bt.meta);
+}
+
+Dynamic[2][] above;
 private int cmpDynamicImpl(const Dynamic a, const Dynamic b)
 {
     Dynamic[2] cur = [a, b];
@@ -665,31 +819,7 @@ private int cmpDynamicImpl(const Dynamic a, const Dynamic b)
         }
         Table at = cast(Table) a.value.tab;
         Table bt = cast(Table) b.value.tab;
-        if (int c = cmp(at.table.length, bt.table.length))
-        {
-            return c;
-        }
-        foreach (key, value; at)
-        {
-            Dynamic aValue = value;
-            const Dynamic* bValue = key in bt;
-            if (bValue is null)
-            {
-                foreach (key2, value2; bt)
-                {
-                    if (key2 !in at)
-                    {
-                        return cmpDynamic(key, key2);
-                    }
-                }
-                assert(0);
-            }
-            if (int res = cmpDynamic(aValue, *bValue))
-            {
-                return res;
-            }
-        }
-        return 0;
+        return cmpTable(at, bt);
     case Dynamic.Type.fun:
         return cmp(a.value.fun.fun, b.value.fun.fun);
     case Dynamic.Type.del:
@@ -723,7 +853,8 @@ private string strFormat(Dynamic dyn)
     case Dynamic.Type.log:
         return dyn.log.to!string;
     case Dynamic.Type.sml:
-        if (dyn.value.sml % 1 == 0 && dyn.value.sml > long.min && dyn.value.sml < long.max) {
+        if (dyn.value.sml % 1 == 0 && dyn.value.sml > long.min && dyn.value.sml < long.max)
+        {
             return to!string(cast(long) dyn.value.sml);
         }
         return dyn.value.sml.to!string;

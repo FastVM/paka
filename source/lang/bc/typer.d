@@ -175,11 +175,6 @@ override:
 
     void got(Opcode op)
     {
-        // writeln;
-        // writeln("stack: ", stackTypes);
-        // writeln("local: ", localTypes);
-        // writeln(op);
-        // writeln(func.captab.byPlace, ":", func.stab.byPlace, " ", op);
     }
 
     void nop()

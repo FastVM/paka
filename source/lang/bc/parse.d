@@ -82,7 +82,6 @@ InstructionSpec readInstr(Function within, ref string code)
         Dynamic value = within.readValue(code);
         spec.values[key] = value;
     }
-    writeln(spec);
     return spec;
 }
 

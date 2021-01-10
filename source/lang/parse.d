@@ -3,6 +3,7 @@ module lang.parse;
 import std.conv;
 import std.stdio;
 import lang.ast;
+import lang.quest.parse;
 import lang.dext.parse;
 import lang.bf.parse;
 import lang.walk;
@@ -19,6 +20,7 @@ Node delegate(string code)[string] parsers;
 
 static this()
 {
+    parsers["quest"] = (c) => lang.quest.parse.parse(c);
     parsers["dext"] = (c) => lang.dext.parse.parse(c);
     parsers["bf"] = (c) => lang.bf.parse.parse(c);
 }

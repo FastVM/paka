@@ -113,11 +113,11 @@ class Walker
             return false;
         }
         Ident ident = cast(Ident) node;
-        if (!specialForms.canFind(ident.repr))
+        if (specialForms.canFind(ident.repr) || (ident.repr.length != 0 && ident.repr[0] == '@'))
         {
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     void doPop()
@@ -630,8 +630,11 @@ class Walker
 
     void walkSpecialCall(Call c)
     {
-        final switch ((cast(Ident) c.args[0]).repr)
+        switch ((cast(Ident) c.args[0]).repr)
         {
+        default:
+            walkUnknownSpecialCall((cast(Ident) c.args[0]).repr, c.args[1 .. $]);
+            break;
         case "@def":
             walkDef(c.args[1 .. $]);
             break;
@@ -744,6 +747,21 @@ class Walker
         }
     }
 
+    void walkUnknownSpecialCall(string name, Node[] args)
+    {
+        import lang.quest.walk : questTransforms;
+
+        Node delegate(Node[])* transform = name in questTransforms;
+        if (transform !is null)
+        {
+            walk((*transform)(args));
+        }
+        else
+        {
+            throw new Exception("Unknown special call: " ~ name);
+        }
+    }
+
     void walkExact(Call c)
     {
         if (isSpecialCall(c.args[0]))
@@ -782,58 +800,106 @@ class Walker
     void walkExact(String s)
     {
         pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
-        func.constants ~= dynamic(s.repr);
+        func.constants ~= dynamic(nameFormat(s.repr));
+    }
+
+    string nameFormat(string input)
+    {
+        string irepr;
+        size_t index;
+        while (index < input.length)
+        {
+            char cur = input[index];
+            stdout.flush;
+            if (cur == '\\')
+            {
+                index++;
+                cur = input[index];
+                irepr ~= cur;
+            }
+            else if (cur == '{')
+            {
+                index++;
+                string num;
+                while (true)
+                {
+                    cur = input[index];
+                    if (cur == '}')
+                    {
+                        break;
+                    }
+                    num ~= cur;
+                    index++;
+                }
+                double asNumber = num.to!double;
+                if (asNumber % 1 != 0)
+                {
+                    throw new Exception("invalid string escape: {" ~ num ~ "}");
+                }
+                else if (char.min > asNumber || asNumber >= char.max) {
+                    throw new Exception("invalid string escape: not ascii: {" ~ num ~ "}");
+                }
+                irepr ~= cast(char) asNumber;
+            }
+            else
+            {
+                irepr ~= cur;
+            }
+            index++;
+        }
+        return irepr;
     }
 
     void walkExact(Ident i)
     {
-        if (i.repr == "@nil" || i.repr == "nil")
+        string irepr = nameFormat(i.repr);
+        if (irepr == "@nil" || irepr == "nil")
         {
             pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
             func.constants ~= Dynamic.nil;
         }
-        else if (i.repr == "true")
+        else if (irepr == "true")
         {
             pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
             func.constants ~= dynamic(true);
         }
-        else if (i.repr == "false")
+        else if (irepr == "false")
         {
             pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
             func.constants ~= dynamic(false);
         }
-        // else if (i.repr == "$args")
-        // {
-        //     pushInstr(func, Opcode.args);
-        // }
-        else if (i.repr.length != 0 && i.repr[0] == '$' && i.repr[1 .. $].isNumeric)
+        else if (irepr == "$args")
         {
-            pushInstr(func, Opcode.argno, [i.repr[1 .. $].to!ushort]);
+            pushInstr(func, Opcode.args);
         }
-        else if (i.repr.length != 0 && i.repr[0] == '.')
+        else if (irepr.length != 0 && irepr[0] == '$' && irepr[1 .. $].isNumeric)
+        {
+            pushInstr(func, Opcode.argno, [irepr[1 .. $].to!ushort]);
+        }
+        else if (irepr.length != 0 && irepr[0] == '.')
         {
             size_t pos = 0;
-            while (pos < i.repr.length && i.repr[pos] == '.')
+            while (pos < irepr.length && irepr[pos] == '.')
             {
                 pos++;
             }
             Node envv = new Ident(envs[$ - pos]);
             Node node = new Call(new Ident("@index"), [
-                    envv, new String(i.repr[pos .. $])
+                    envv, new String(irepr[pos .. $])
                     ]);
             walk(node);
         }
-        else if (i.repr.isNumeric)
+        else if (irepr.isNumeric)
         {
             pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
-            func.constants ~= Dynamic.strToNum(i.repr);
+            func.constants ~= Dynamic.strToNum(irepr);
         }
         else
         {
             bool unfound = true;
             foreach (argno, argname; func.args)
             {
-                if (argname == i.repr)
+                if (argname == irepr)
                 {
                     pushInstr(func, Opcode.argno, [cast(ushort) argno]);
                     unfound = false;
@@ -841,20 +907,21 @@ class Walker
             }
             if (unfound)
             {
-                immutable(uint)* us = i.repr in func.stab.byNameImmutable;
+                immutable(uint)* us = irepr in func.stab.byNameImmutable;
                 Function.Lookup.Flags flags = void;
                 if (us !is null)
                 {
                     pushInstr(func, Opcode.load, [cast(ushort)*us]);
-                    flags = func.stab.flags(i.repr);
+                    flags = func.stab.flags(irepr);
                 }
                 else
                 {
-                    uint v = func.doCapture(i.repr);
+                    uint v = func.doCapture(irepr);
                     pushInstr(func, Opcode.loadc, [cast(ushort) v]);
-                    flags = func.captab.flags(i.repr);
+                    flags = func.captab.flags(irepr);
                 }
-                if (flags & Function.Lookup.Flags.callImplicit) {
+                if (flags & Function.Lookup.Flags.callImplicit)
+                {
                     uint used = stackSize[0];
                     pushInstr(func, Opcode.call, [0], used);
                 }
