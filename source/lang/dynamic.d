@@ -2,11 +2,6 @@ module lang.dynamic;
 
 import std.algorithm;
 import std.conv;
-import std.format;
-import std.functional;
-import std.math;
-import std.traits;
-import std.typecons;
 import std.array;
 import std.stdio;
 import core.memory;

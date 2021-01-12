@@ -1,4 +1,4 @@
-module lang.quest.tokens;
+module quest.tokens;
 
 import std.ascii;
 import std.conv;

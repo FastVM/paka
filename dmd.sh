@@ -1,1 +1,1 @@
-dmd -i source/app.d -Isource -debug=false
+dmd -i source/app.d -Isource

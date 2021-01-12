@@ -1,12 +1,10 @@
-module lang.quest.base;
+module quest.base;
 
-import std.conv;
-import std.stdio;
 import lang.base;
 import lang.dynamic;
-import lang.quest.dynamic;
-import lang.quest.qscope;
-import lang.quest.maker;
+import quest.dynamic;
+import quest.qscope;
+import quest.maker;
 
 Pair[] questBaseLibs()
 {
@@ -30,7 +28,7 @@ Dynamic qnull(Args args)
 
 Dynamic loadcurrent(Args args)
 {
-    return qScopes[$ - 1].dynamic;
+    return topScope.dynamic;
 }
 
 Dynamic colon(Args args)

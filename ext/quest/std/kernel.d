@@ -1,9 +1,9 @@
-module lang.quest.std.kernel;
+module quest.std.kernel;
 
 import std.stdio;
 import lang.dynamic;
-import lang.quest.maker;
-import lang.quest.qscope;
+import quest.maker;
+import quest.qscope;
 
 Dynamic globalDisp(Args args)
 {
@@ -15,6 +15,7 @@ Dynamic globalDisp(Args args)
         }
         write(val);
     }
+    writeln;
     return makeNull;
 }
 
@@ -28,7 +29,6 @@ Dynamic globalDispn(Args args)
         }
         write(val);
     }
-    writeln;
     return makeNull;
 }
 

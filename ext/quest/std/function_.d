@@ -1,12 +1,12 @@
-module lang.quest.std.function_;
+module quest.std.function_;
 
 import std.conv;
 import std.stdio;
 import std.algorithm;
 import lang.dynamic;
-import lang.quest.qscope;
-import lang.quest.maker;
-import lang.quest.globals;
+import quest.qscope;
+import quest.maker;
+import quest.globals;
 
 Dynamic functionText(Args args)
 {
@@ -28,7 +28,7 @@ Dynamic functionCall(Args args)
         qScopeExit;
     }
     if (args.length == 0) {
-        return qScopes[$-1].dynamic;
+        return topScope.dynamic;
     }
     try
     {
@@ -37,7 +37,7 @@ Dynamic functionCall(Args args)
     }
     catch (ReturnValueFlowException rvfe)
     {
-        if (rvfe.qscope is qScopes[$ - 1])
+        if (rvfe.qscope is topScope)
         {
             return rvfe.value;
         }

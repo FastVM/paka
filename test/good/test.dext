@@ -1,6 +1,1 @@
-
-fbr = fiber.cons() {
-    io.print(10);
-};
-
-fbr.call(1);
+io.print("dext: ", "howdy");

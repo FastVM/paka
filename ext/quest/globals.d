@@ -1,20 +1,18 @@
-module lang.quest.globals;
+module quest.globals;
 
-import std.stdio;
-import std.functional;
-import std.algorithm;
 import lang.dynamic;
-import lang.quest.qscope;
-import lang.quest.dynamic;
-import lang.quest.maker;
-import lang.quest.std.kernel;
-import lang.quest.std.basic;
-import lang.quest.std.null_;
-import lang.quest.std.comparable;
-import lang.quest.std.number;
-import lang.quest.std.text;
-import lang.quest.std.function_;
-import lang.quest.std.object;
+import quest.qscope;
+import quest.dynamic;
+import quest.maker;
+import quest.std.kernel;
+import quest.std.basic;
+import quest.std.boolean;
+import quest.std.null_;
+import quest.std.comparable;
+import quest.std.number;
+import quest.std.text;
+import quest.std.function_;
+import quest.std.object;
 
 Table gobject = null;
 Table globalObject()
@@ -101,6 +99,24 @@ Table globalText()
         gstring.table = mapping;
     }
     return gstring;
+}
+
+Table gbool = null;
+Table globalBoolean()
+{
+    if (gstring is null)
+    {
+        Mapping meta = emptyMapping;
+        gbool = new Table(emptyMapping, new Table(meta).withProto(globalBasic, globalCmp, globalObject));
+        Mapping mapping = emptyMapping;
+        mapping["@text".qdynamic] = qdynamic(&booleanText);
+        mapping["@num".qdynamic] = qdynamic(&booleanNum);
+        mapping["@bool".qdynamic] = qdynamic(&booleanBool);
+        mapping["!".qdynamic] = qdynamic(&booleanNot);
+        mapping["<=>".qdynamic] = qdynamic(&booleanCmp);
+        gbool.table = mapping;
+    }
+    return gbool;
 }
 
 Table gnull = null;

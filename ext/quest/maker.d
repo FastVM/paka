@@ -1,14 +1,14 @@
-module lang.quest.maker;
+module quest.maker;
 
 import std.stdio;
 import lang.dynamic;
-import lang.quest.globals;
-import lang.quest.qscope;
-import lang.quest.dynamic;
-import lang.quest.std.null_;
-import lang.quest.std.number;
-import lang.quest.std.function_;
-import lang.quest.std.object;
+import quest.globals;
+import quest.qscope;
+import quest.dynamic;
+import quest.std.null_;
+import quest.std.number;
+import quest.std.function_;
+import quest.std.object;
 
 Dynamic makeText(string str)
 {
@@ -16,12 +16,6 @@ Dynamic makeText(string str)
     mapping["val".dynamic] = str.dynamic;
     return new Table(emptyMapping, new Table(mapping).withProto(globalText)).dynamic;
 }
-
-string getString(Dynamic arg)
-{
-    return arg.getValue.str;
-}
-
 Dynamic getValue(Dynamic arg)
 {
     if (arg.type != Dynamic.Type.tab)
@@ -44,9 +38,19 @@ void setValue(ref Dynamic arg, Dynamic val)
     arg.tab.meta["val".dynamic] = val;
 }
 
+string getString(Dynamic arg)
+{
+    return arg.getValue.str;
+}
+
 double getNumber(Dynamic arg)
 {
     return arg.getValue.as!double;
+}
+
+bool getBoolean(Dynamic arg)
+{
+    return arg.getValue.log;
 }
 
 Dynamic makeFunction(Dynamic fun)
@@ -59,9 +63,8 @@ Dynamic makeFunction(Dynamic fun)
         mapping["scope".dynamic] = globalObject.dynamic;
     }
     else {
-        mapping["scope".dynamic] = qScopes[$-1].dynamic;
+        mapping["scope".dynamic] = topScope.dynamic;
     }
-    // mapping["str".dynamic] = dynamic(&functionStr);
     mapping["call".dynamic] = (Args args) {
         return (*("val".dynamic in ret.meta.table))(args);
     }.dynamic;
@@ -70,8 +73,13 @@ Dynamic makeFunction(Dynamic fun)
 
 Dynamic makeNull()
 {
-    // Mapping meta = emptyMapping;
-    // meta["val".dynamic] = Dynamic.nil;
-    // Dynamic ret = new Table(emptyMapping, new Table(meta).withProto(globalNull)).dynamic;
     return globalNull.dynamic;
+}
+
+Dynamic makeBoolean(bool log)
+{
+    Mapping mapping = emptyMapping;
+    mapping["val".dynamic] = log.dynamic;
+    Dynamic ret = new Table(emptyMapping, new Table(mapping).withProto(globalBoolean)).dynamic;
+    return ret;
 }

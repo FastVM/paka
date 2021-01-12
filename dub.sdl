@@ -3,3 +3,11 @@ description "Dext Interpreter"
 authors "Shaw Summa"
 copyright "Copyright © 2020, Shaw Summa"
 license "MIT"
+dflags "-defaultlib=libphobos2.so" platform="dmd"
+subPackage {
+	name "quest"
+	targetType "dynamicLibrary"
+	sourcePaths "source" "ext/quest"
+	importPaths "source" "ext/quest"
+	dflags "-defaultlib=libphobos2.so" platform="dmd"
+}

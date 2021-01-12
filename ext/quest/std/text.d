@@ -1,13 +1,13 @@
-module lang.quest.std.text;
+module quest.std.text;
 
 import std.stdio;
 import std.conv;
 import std.algorithm;
 import lang.dynamic;
-import lang.quest.qscope;
-import lang.quest.dynamic;
-import lang.quest.maker;
-import lang.quest.globals;
+import quest.qscope;
+import quest.dynamic;
+import quest.maker;
+import quest.globals;
 
 Dynamic textText(Args args)
 {
@@ -29,7 +29,7 @@ Dynamic textMetaStr(Args args)
 
 Dynamic textSet(Args args)
 {
-    return qScopes[$-1][".=".qdynamic](qScopes[$-1].dynamic ~ args);
+    return topScope[".=".qdynamic](topScope.dynamic ~ args);
 }
 
 Dynamic textAdd(Args args)

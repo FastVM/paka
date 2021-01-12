@@ -295,8 +295,14 @@ class Reader
 	string readln(string prompt = null)
 	{
 		output.write(prompt);
-		string ret = smart ? read : input.readln[0 .. $ - 1];
-		return ret;
+		if (smart) {
+			string ret = read;
+			output.write("\n\r");
+			return ret;
+		}
+		else {
+			return input.readln[0 .. $ - 1];
+		}
 	}
 }
 

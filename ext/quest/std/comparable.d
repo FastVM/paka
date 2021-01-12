@@ -1,10 +1,10 @@
-module lang.quest.std.comparable;
+module quest.std.comparable;
 
 import std.conv;
 import std.stdio;
 import lang.dynamic;
-import lang.quest.maker;
-import lang.quest.qscope;
+import quest.maker;
+import quest.qscope;
 import lang.error;
 
 Dynamic cmpLt(Args args)

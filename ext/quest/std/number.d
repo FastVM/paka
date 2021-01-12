@@ -1,12 +1,12 @@
-module lang.quest.std.number;
+module quest.std.number;
 
 import std.conv;
 import std.stdio;
 import std.algorithm;
 import lang.dynamic;
-import lang.quest.qscope;
-import lang.quest.maker;
-import lang.quest.globals;
+import quest.qscope;
+import quest.maker;
+import quest.globals;
 
 Dynamic numberText(Args args)
 {

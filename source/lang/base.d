@@ -5,7 +5,7 @@ import std.stdio;
 import lang.dynamic;
 import lang.bytecode;
 import lang.data.map;
-import lang.quest.base;
+import lang.plugin.plugins;
 import lang.lib.io;
 import lang.lib.sys;
 import lang.lib.str;
@@ -68,7 +68,7 @@ Pair[] getRootBase()
         Pair("_lhs_map", &syslibulhsmap),
         Pair("_rhs_map", &sysliburhsmap),
         Pair("_pre_map", &syslibupremap),
-    ] ~ questBaseLibs;
+    ] ~ pluginLib;
     ret.addLib("fiber", libfiber);
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);
@@ -87,7 +87,7 @@ Function baseFunction(size_t ctx = rootBases.length - 1)
     {
         byName[i.name] = cast(uint) byName.length;
     }
-    string[] byPlace = ["print"];
+    string[] byPlace = [];
     ret.stab = Function.Lookup(byName, byPlace);
     return ret;
 }

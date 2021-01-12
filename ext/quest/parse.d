@@ -1,13 +1,12 @@
-module lang.quest.parse;
+module quest.parse;
 
-import std.stdio;
 import std.conv;
 import std.array;
 import std.algorithm;
 import lang.srcloc;
 import lang.walk;
 import lang.ast;
-import lang.quest.tokens;
+import quest.tokens;
 
 /// safe array of tokens
 alias TokenArray = PushArray!Token;

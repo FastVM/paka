@@ -1,22 +1,19 @@
-module lang.quest.qscope;
+module quest.qscope;
 
-import std.stdio;
 import std.conv;
-import std.algorithm;
 import lang.dynamic;
-import lang.quest.globals;
-import lang.quest.dynamic;
+import quest.globals;
+import quest.dynamic;
 
 Table[] qScopes;
 
-static this()
+ref Table topScope()
 {
-    qScopes ~= baseScope;
-}
-
-static ~this()
-{
-    qScopes.length--;
+    if (qScopes.length == 0)
+    {
+        qScopes ~= baseScope;
+    }
+    return qScopes[$ - 1];
 }
 
 class ReturnValueFlowException : Exception

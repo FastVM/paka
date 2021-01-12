@@ -3,9 +3,7 @@ module lang.parse;
 import std.conv;
 import std.stdio;
 import lang.ast;
-import lang.quest.parse;
 import lang.dext.parse;
-import lang.bf.parse;
 import lang.walk;
 import lang.bytecode;
 import lang.base;
@@ -17,13 +15,6 @@ enum string bashLine = "#!";
 enum string langLine = "#?";
 
 Node delegate(string code)[string] parsers;
-
-static this()
-{
-    parsers["quest"] = (c) => lang.quest.parse.parse(c);
-    parsers["dext"] = (c) => lang.dext.parse.parse(c);
-    parsers["bf"] = (c) => lang.bf.parse.parse(c);
-}
 
 string readLine(ref string code)
 {
@@ -40,7 +31,7 @@ string readLine(ref string code)
     return ret;
 }
 
-Node parse(string code, string lang = "dext")
+Node parse(string code, string langname = "dext")
 {
     if (code.length > bashLine.length && code[0 .. bashLine.length] == bashLine)
     {
@@ -67,23 +58,27 @@ Node parse(string code, string lang = "dext")
                     if (v.type != Dynamic.Type.str) {
                         throw new TypeException("language must be a str");
                     }
-                    lang = v.str;
+                    langname = v.str;
                 }
             }
         }
 
         run(func, null, &findLang);
     }
-    if (auto i = lang in parsers)
+    if (auto i = langname in parsers)
     {
         return (*i)(code);
     }
-    else if (lang == "")
+    else if (langname == "dext")
+    {
+        return lang.dext.parse.parse(code);
+    }
+    else if (langname == "")
     {
         throw new CompileException("language not specified");
     }
     else
     {
-        throw new CompileException("language not found: " ~ lang);
+        throw new CompileException("language not found: " ~ langname);
     }
 }

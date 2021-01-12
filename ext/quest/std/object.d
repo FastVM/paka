@@ -1,14 +1,14 @@
-module lang.quest.std.object;
+module quest.std.object;
 
 import std.conv;
 import std.stdio;
 import std.math;
 import lang.error;
 import lang.dynamic;
-import lang.quest.maker;
-import lang.quest.dynamic;
-import lang.quest.qscope;
-import lang.quest.globals;
+import quest.maker;
+import quest.dynamic;
+import quest.qscope;
+import quest.globals;
 
 Dynamic objectStrToAtText(Args args)
 {

@@ -11,6 +11,8 @@ import std.conv;
 import std.string;
 import std.stdio;
 
+Node delegate(Node[])[string] transformers;
+
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
         "@if", "@fun", "@do", "@using", "-", "+", "*", "/", "@dotmap-both",
@@ -749,9 +751,7 @@ class Walker
 
     void walkUnknownSpecialCall(string name, Node[] args)
     {
-        import lang.quest.walk : questTransforms;
-
-        Node delegate(Node[])* transform = name in questTransforms;
+        Node delegate(Node[])* transform = name in transformers;
         if (transform !is null)
         {
             walk((*transform)(args));

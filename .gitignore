@@ -7,7 +7,9 @@ docs/
 app
 dext
 *.exe
+*.a
 *.o
+*.so
 *.obj
 *.lst
 dub.selections.json
@@ -24,3 +26,6 @@ default.profdata
 default.profraw
 test.dext
 proj
+remake
+dexts
+dlang

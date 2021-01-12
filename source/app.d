@@ -8,30 +8,47 @@ import lang.dynamic;
 import lang.parse;
 import lang.inter;
 import lang.dext.repl;
+import lang.plugin.loader;
 import std.file;
 import std.path;
 import std.stdio;
+import std.process;
 import std.algorithm;
 import std.conv;
 import std.string;
 import std.getopt;
-import core.memory;
+import core.stdc.stdlib;
 
 /// the actual main function, it does not handle errors
 void domain(string[] args)
 {
     string[] scripts;
     string[] stmts;
+    string[] langs;
+    string[] search;
     bool repl = false;
     bool disWanted = false;
     bool echo = false;
     auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-            &scripts, "dis", &disWanted, "echo", &echo);
+            &scripts, "dis", &disWanted, "echo", &echo, "load", &langs, "path", &search);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
         return;  
     }
+    string libpathold = environment["LD_LIBRARY_PATH"];
+    string libpathnew = libpathold;
+    foreach (i; search)
+    {
+        libpathnew ~= ":";
+        libpathnew ~= i;
+    }
+    environment["LD_LIBRARY_PATH"] = libpathnew;
+    foreach (name; langs)
+    {
+        linkLang("libdext_" ~ name ~ ".so");
+    }
+    environment["LD_LIBRARY_PATH"] = libpathold;
     size_t ctx = enterCtx;
     scope (exit)
     {

@@ -1,4 +1,4 @@
-module lang.quest.std.null_;
+module quest.std.null_;
 
 import lang.dynamic;
 

@@ -1,8 +1,8 @@
-module lang.quest.dynamic;
+module quest.dynamic;
 
 import std.conv;
 import lang.dynamic;
-import lang.quest.maker;
+import quest.maker;
 
 Dynamic qdynamic(T)(T arg) if (!is(T == Dynamic))
 {
@@ -15,6 +15,8 @@ Dynamic qdynamic(Dynamic val)
     {
     default:
         throw new Exception("cannot make quest value from: " ~ val.to!string);
+    case Dynamic.type.log:
+        return val.log.makeBoolean;
     case Dynamic.type.sml:
         return val.as!double.makeNumber;
     case Dynamic.type.str:

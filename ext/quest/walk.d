@@ -1,12 +1,11 @@
-module lang.quest.walk;
+module quest.walk;
 
 import std.stdio;
 import lang.ast;
 
-Node delegate(Node[])[string] questTransforms;
-
-static this()
+Node delegate(Node[])[string] questTransforms()
 {
+    Node delegate(Node[])[string] questTransforms;
     Node questString(string name)
     {
         return new Call(new Ident("@quest.string"), [new String(name)]);
@@ -205,6 +204,7 @@ static this()
             }
         }
         assert(false);
-        // return new Call(new Ident("@set"), args);
     };
+
+    return questTransforms;
 }
