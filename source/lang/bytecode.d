@@ -86,11 +86,12 @@ class Function
     Function[] funcs = null;
     Dynamic*[] captured = null;
     size_t stackSize = 0;
+    int[size_t] stackAt = null;
     Dynamic[] self = null;
     string[] args = null;
+    Function parent = null;
     Lookup stab;
     Lookup captab;
-    Function parent = null;
     Flags flags = cast(Flags) 0;
 
     this()

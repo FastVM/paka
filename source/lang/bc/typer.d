@@ -64,6 +64,8 @@ class TypeGenerator : OpcodeIterator
             assert(0);
         case Dynamic.Type.nil:
             return type!NilType;
+        case Dynamic.Type.log:
+            return type!LogicalType;
         case Dynamic.Type.sml:
             return type!NumberType;
         case Dynamic.Type.str:
@@ -175,6 +177,7 @@ override:
 
     void got(Opcode op)
     {
+        // assert(stackTypes.length == func.stackAt[bytepos]);
     }
 
     void nop()
@@ -571,17 +574,18 @@ override:
 
     void iftrue(ushort jumpIndex)
     {
-        assert(0);
+        // assert(0);
     }
 
     void iffalse(ushort jumpIndex)
     {
-        assert(0);
+        // assert(0);
+        
     }
 
     void jump(ushort jumpIndex)
     {
-        assert(0);
+        // assert(0);
     }
 
     void argno(ushort argIndex)

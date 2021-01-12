@@ -20,6 +20,7 @@ import lang.dext.repl;
 import lang.bc.dump;
 import lang.bc.parse;
 import lang.bc.typer;
+import lang.bc.compiler;
 
 Dynamic eval(size_t ctx, string code)
 {

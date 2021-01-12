@@ -82,6 +82,7 @@ class Walker
 
     void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     {
+        func.stackAt[func.instrs.length] = stackSize[0];
         func.instrs ~= cast(ubyte) op;
         foreach (i; shorts)
         {

@@ -15,6 +15,7 @@ void*[] tried;
 void*[] above;
 void*[] opEqualsCmp;
 void*[] typeCmp;
+void*[] cleaned;
 
 T[] deepcopy(T)(T[] v)
 {
@@ -250,6 +251,10 @@ class TypeBox
                 foreach (opt; boxes)
                 {
                     opt.cleanUnionFlatten;
+                    if (type != typeid(UnionType))
+                    {
+                        continue;
+                    }
                     if (opt.type == typeid(UnionType))
                     {
                         foreach (opt2; opt.as!UnionType.optionTypes)

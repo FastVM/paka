@@ -1,1 +1,0 @@
-dmd -i source/app.d -Isource

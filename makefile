@@ -28,12 +28,12 @@ endif
 ifeq ($(DC_TYPE),gdc)
 $(error The $(DC_TYPE) compiler family cannot compile Dext yet)
 endif
-ifeq ($(DC_TYPE),FALSE)
-$(error Unknown D compiler type $(DC_TYPE), must be one of: ldc dmd)
+ifeq ($(DC_TYPE_OK),FALSE)
+$(error Unknown D compiler family $(DC_TYPE), must be in the dmd or ldc family)
 endif
 
 ifeq ($(LINK),)
-LINK=$(DC)
+LINK=$(DC_CMD)
 endif
 LD=$(LINK)
 
@@ -102,6 +102,21 @@ LD_LINK_IN_DEXT=$(LD_LINK_IN) -ldl
 LD_CMD_OUT_FLAG=-o
 endif
 
+FROM_DIR=$(dir $(realpath $(firstword $(MAKEFILE_LIST))))
+OUT_DIR=$(FROM_DIR)/dlang
+ifeq ($(shell which $(DC_CMD)),)
+ifneq ($(LD_CMD),$(DC_CMD))
+$(error Cannot specify linker when using $(DC_CMD) from local path)
+endif
+ifeq ($(DC_TYPE),dmd)
+DC_CMD_PRE=dmd
+endif
+ifeq ($(DC_TYPE),ldc)
+DC_CMD_PRE=ldc2
+endif
+DC_CMD:=$(OUT_DIR)/$(DC_CMD_PRE).sh
+ALL_REQURED+=getcomp
+endif
 
 ALL_DO_OPT=UNKNOWN
 
@@ -206,36 +221,63 @@ EXTRA_LIBS=$(LIBS)
 RAW_EXTRA_LIBS=
 FULL_RAW_EXTRA_LIBS=$(RAW_EXTRA_LIBS) $(patsubst %,out/lib/libdext_%.so,$(EXTRA_LIBS))
 
+RUN=@
+INFO=@echo
+
 ifeq ($(DC_TYPE),dmd)
 	REALOCATON_MODE_TO_PIC=-fPIC
 else
 	REALOCATON_MODE_TO_PIC=-relocation-model=pic
 endif
 
-dext: out/dext/dext
-	@cp out/dext/dext ./dext
+dext: all out/dext/dext
+	$(RUN) cp out/dext/dext ./dext
 
-quest: out/lib/libdext_quest.so
-	@ # @cp out/lib/libdext_quest.so ./
+quest: all out/lib/libdext_quest.so
 
 clean-dext: dummy
-	@rm -rf out/dext/dext dext
+	$(RUN) rm -rf out/dext/dext dext
 
 clean: dummy
-	@rm -rf out dext
+	$(RUN) rm -rf out dext
 
 out/dext/dext: out/dext
-	$(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c -i source/app.d -Isource -of=out/dext/app.o
-	$(LD_CMD) $(FULL_DFLAGS) $(LD_CMD_OUT_FLAG)out/dext/dext out/dext/app.o $(LD_LINK_IN_DEXT) $(DFL_FLAG_DEXT)
+	$(INFO) Compiling: out/dext/app.o from source/app.d
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c -i source/app.d -Isource -of=out/dext/app.o
+	$(INFO) Linking: out/dext/app.o into out/dext/dext
+	$(RUN) $(LD_CMD) $(FULL_DFLAGS) $(LD_CMD_OUT_FLAG)out/dext/dext out/dext/app.o $(LD_LINK_IN_DEXT) $(DFL_FLAG_DEXT)
 
 out/lib/libdext_quest.so: out/lib
-	$(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/quest/plugin.d -Isource -Iext -od=out/quest -of=out/quest/plugin.o
-	$(LD_CMD) $(FULL_DFLAGS) -shared $(LD_CMD_OUT_FLAG)out/lib/libdext_quest.so out/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+	$(INFO) Compiling: out/quest/plugin.o from ext/quest/plugin.d
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/quest/plugin.d -Isource -Iext -od=out/quest -of=out/quest/plugin.o
+	$(INFO) Linking: out/lib/libdext_quest.so
+	$(RUN) $(LD_CMD) $(FULL_DFLAGS) -shared $(LD_CMD_OUT_FLAG)out/lib/libdext_quest.so out/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+
+INSTALLER=bash $(OUT_DIR)/install.sh
+DO_INSTALL=$(DC_CMD)
+ENV=\$$
+
+$(DC_CMD): $(OUT_DIR)/install.sh
+	$(INFO) Installing D Compiler
+	$(RUN) $(INSTALLER) install --path $(OUT_DIR) $(COMPILER) > $(OUT_DIR)/info.sh
+	$(RUN) rm -f $(DC_CMD)
+	$(RUN) echo "#!/usr/bin/env bash" > $(DC_CMD)
+	$(RUN) ($(INSTALLER) get-path --path $(OUT_DIR) $(DC_CMD_PRE) | tr "\n" " "; echo $(ENV)@) >> $(DC_CMD)
+	$(RUN) chmod +x $(DC_CMD)
+
+getcomp: $(DO_INSTALL)
+
+$(OUT_DIR)/install.sh:
+	$(RUN) mkdir -p $(OUT_DIR)
+	$(INFO) Downloading D Compiler
+	$(RUN) curl https://dlang.org/install.sh > $(OUT_DIR)/install.sh 2>/dev/null
+
+all: $(ALL_REQURED)
 
 out/lib:
-	@mkdir -p out/lib
+	$(RUN) mkdir -p out/lib
 
 out/dext:
-	@mkdir -p out/dext
+	$(RUN) mkdir -p out/dext
 
 dummy:
