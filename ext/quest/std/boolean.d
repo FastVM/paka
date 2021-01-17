@@ -11,11 +11,11 @@ import quest.globals;
 
 Dynamic booleanText(Args args)
 {
-    if (args[0].tab is globalNumber)
+    if (args[0].isNumber)
     {
-        return "Boolean".makeText;
+        return "Boolean".qdynamic;
     }
-    return args[0].tab.meta["val".dynamic].log.to!string.makeText;
+    return args[0].tab.meta["val".dynamic].log.to!string.qdynamic;
 }
 
 Dynamic booleanNum(Args args)
@@ -31,12 +31,12 @@ Dynamic booleanNum(Args args)
 
 Dynamic booleanBool(Args args)
 {
-    return args[0].getBoolean.makeBoolean;
+    return args[0].getBoolean.qdynamic;
 }
 
 Dynamic booleanNot(Args args)
 {
-    return qdynamic(args[0].getBoolean);
+    return args[0].getBoolean.qdynamic;
 }
 
 Dynamic booleanCmp(Args args)
@@ -44,11 +44,11 @@ Dynamic booleanCmp(Args args)
     bool lhs = args[0].getBoolean;
     bool rhs = args[1].getBoolean;
     if (lhs < rhs) {
-        return makeNumber(-1);
+        return qdynamic(-1);
     } 
     if (lhs == rhs)
     {
-        return 0.makeNumber;
+        return 0.qdynamic;
     }
-    return 1.makeNumber;
+    return 1.qdynamic;
 }

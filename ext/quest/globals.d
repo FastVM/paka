@@ -12,6 +12,7 @@ import quest.std.comparable;
 import quest.std.number;
 import quest.std.text;
 import quest.std.function_;
+import quest.std.array;
 import quest.std.object;
 
 Table gobject = null;
@@ -74,12 +75,31 @@ Table globalNumber()
         mapping["*".qdynamic] = qdynamic(&numberMul);
         mapping["/".qdynamic] = qdynamic(&numberDiv);
         mapping["%".qdynamic] = qdynamic(&numberMod);
+        mapping["**".qdynamic] = qdynamic(&numberPow);
+        mapping["&".qdynamic] = qdynamic(&numberBitAnd);
+        mapping["|".qdynamic] = qdynamic(&numberBitOr);
+        mapping["^".qdynamic] = qdynamic(&numberBitXor);
+        mapping["<<".qdynamic] = qdynamic(&numberBitShiftLeft);
+        mapping[">>".qdynamic] = qdynamic(&numberBitShiftRight);
         mapping["+=".qdynamic] = qdynamic(&numberSetAdd);
         mapping["-=".qdynamic] = qdynamic(&numberSetSub);
         mapping["*=".qdynamic] = qdynamic(&numberSetMul);
         mapping["/=".qdynamic] = qdynamic(&numberSetDiv);
         mapping["%=".qdynamic] = qdynamic(&numberSetMod);
         mapping["<=>".qdynamic] = qdynamic(&numberCmp);
+        mapping["**=".qdynamic] = qdynamic(&numberSetPow);
+        mapping["&=".qdynamic] = qdynamic(&numberSetBitAnd);
+        mapping["|=".qdynamic] = qdynamic(&numberSetBitOr);
+        mapping["^=".qdynamic] = qdynamic(&numberSetBitXor);
+        mapping["<<=".qdynamic] = qdynamic(&numberSetBitShiftLeft);
+        mapping[">>=".qdynamic] = qdynamic(&numberSetBitShiftRight);
+        mapping["-@".qdynamic] = qdynamic(&numberNeg);
+        mapping["+@".qdynamic] = qdynamic(&numberPos);
+        mapping["~".qdynamic] = qdynamic(&numberBitNot);
+        mapping["!".qdynamic] = qdynamic(&numberNot);
+        mapping["()".qdynamic] = qdynamic(&numberCall);
+        mapping["==".qdynamic] = qdynamic(&numberEq);
+        mapping["upto".qdynamic] = qdynamic(&numberUpto);
     }
     return gnumber;
 }
@@ -91,7 +111,8 @@ Table globalText()
     {
         Mapping meta = emptyMapping;
         meta["str".dynamic] = dynamic(&textMetaStr);
-        gstring = new Table(emptyMapping, new Table(meta).withProto(globalBasic, globalCmp, globalObject));
+        gstring = new Table(emptyMapping, new Table(meta).withProto(globalBasic,
+                globalCmp, globalObject));
         Mapping mapping = emptyMapping;
         mapping["@text".qdynamic] = qdynamic(&textText);
         mapping["=".qdynamic] = qdynamic(&textSet);
@@ -101,13 +122,27 @@ Table globalText()
     return gstring;
 }
 
+Table garray = null;
+Table globalList()
+{
+    if (garray is null)
+    {
+        Mapping meta = emptyMapping;
+        Mapping mapping = emptyMapping;
+        garray = new Table(mapping, new Table(meta).withProto(globalBasic, globalObject));
+        mapping["@text".qdynamic] = qdynamic(&arrayText);
+    }
+    return garray;
+}
+
 Table gbool = null;
 Table globalBoolean()
 {
     if (gstring is null)
     {
         Mapping meta = emptyMapping;
-        gbool = new Table(emptyMapping, new Table(meta).withProto(globalBasic, globalCmp, globalObject));
+        gbool = new Table(emptyMapping, new Table(meta).withProto(globalBasic,
+                globalCmp, globalObject));
         Mapping mapping = emptyMapping;
         mapping["@text".qdynamic] = qdynamic(&booleanText);
         mapping["@num".qdynamic] = qdynamic(&booleanNum);
@@ -147,14 +182,20 @@ Table globalFunction()
     return gfunc;
 }
 
-Table baseScope() {
-    Mapping mapping = emptyMapping;
-    mapping["disp".qdynamic] = qdynamic(&globalDisp);
-    mapping["dispn".qdynamic] = qdynamic(&globalDispn);
-    mapping["return".qdynamic] = qdynamic(&globalReturn);
-    mapping["Number".qdynamic] = globalNumber.qdynamic;
-    mapping["Text".qdynamic] = globalText.qdynamic;
-    mapping["Function".qdynamic] = globalFunction.qdynamic;
-    mapping["Object".qdynamic] = globalObject.qdynamic;
-    return new Table(mapping, new Table().withProto(globalObject));
-}
+Table gscope = null;
+Table globalScope()
+{
+    if (gfunc is null)
+    {
+        Mapping mapping = emptyMapping;
+        gscope = new Table(mapping, new Table().withProto(globalObject));
+        mapping["disp".qdynamic] = qdynamic(&globalDisp);
+        mapping["dispn".qdynamic] = qdynamic(&globalDispn);
+        mapping["return".qdynamic] = qdynamic(&globalReturn);
+        mapping["Number".qdynamic] = globalNumber.qdynamic;
+        mapping["Text".qdynamic] = globalText.qdynamic;
+        mapping["Function".qdynamic] = globalFunction.qdynamic;
+        mapping["Object".qdynamic] = globalObject.qdynamic;
+    }
+    return gscope;
+    }

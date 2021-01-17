@@ -21,6 +21,7 @@ docs.json
 docs/
 dub.selections.json
 dub_platform_probe*
+UnicodeData.txt
 llvm
 out*
 perf*

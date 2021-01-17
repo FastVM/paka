@@ -30,7 +30,7 @@ Pair[] libraw()
     return ret;
 }
 
-Dynamic libmap(Dynamic[] args)
+Dynamic libmap(Args args)
 {
     Mapping ret = emptyMapping;
     foreach (key, value; args[0].tab)
@@ -41,7 +41,7 @@ Dynamic libmap(Dynamic[] args)
     return dynamic(tab);
 }
 
-Dynamic libmaparr(Dynamic[] args)
+Dynamic libmaparr(Args args)
 {
     Dynamic[] ret;
     foreach (key, value; args[0].tab)
@@ -51,7 +51,7 @@ Dynamic libmaparr(Dynamic[] args)
     return dynamic(ret);
 }
 
-Dynamic libeach(Dynamic[] args)
+Dynamic libeach(Args args)
 {
     foreach (key, value; args[0].tab)
     {
@@ -60,7 +60,7 @@ Dynamic libeach(Dynamic[] args)
     return Dynamic.init;
 }
 
-Dynamic libfiltervalues(Dynamic[] args)
+Dynamic libfiltervalues(Args args)
 {
     Dynamic[] ret;
     foreach (key, value; args[0].tab)
@@ -73,7 +73,7 @@ Dynamic libfiltervalues(Dynamic[] args)
     return dynamic(ret);
 }
 
-Dynamic libfilterkeys(Dynamic[] args)
+Dynamic libfilterkeys(Args args)
 {
     Dynamic[] ret;
     foreach (key, value; args[0].tab)
@@ -86,7 +86,7 @@ Dynamic libfilterkeys(Dynamic[] args)
     return dynamic(ret);
 }
 
-Dynamic libfilter(Dynamic[] args)
+Dynamic libfilter(Args args)
 {
     Mapping ret = emptyMapping;
     foreach (key, value; args[0].tab)
@@ -100,29 +100,29 @@ Dynamic libfilter(Dynamic[] args)
     return dynamic(tab);
 }
 
-Dynamic libmetaset(Dynamic[] args)
+Dynamic libmetaset(Args args)
 {
     args[0].tab.meta = args[1].tab;
     return args[0];
 }
 
-Dynamic libmetaget(Dynamic[] args)
+Dynamic libmetaget(Args args)
 {
     return dynamic(args[0].tab.meta);
 }
 
-Dynamic librawget(Dynamic[] args)
+Dynamic librawget(Args args)
 {
     return dynamic(args[0].tab.rawIndex(args[1]));
 }
 
-Dynamic librawset(Dynamic[] args)
+Dynamic librawset(Args args)
 {
     args[0].tab.table[args[1]] = args[2];
     return Dynamic.nil;
 }
 
-Dynamic liblen(Dynamic[] args)
+Dynamic liblen(Args args)
 {
     return dynamic(args[0].tab.length);
 }

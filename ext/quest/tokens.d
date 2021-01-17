@@ -21,10 +21,11 @@ enum string[][] prec = [
     ["<<", ">>"], 
     ["+", "-"],
     ["*", "/", "%"],
+    ["**"],
 ];
 // dfmt on
 
-enum string[] nops = [".", "::", "**"];
+enum string[] nops = [".", ".?", "::", "!", "~", "+", "-"];
 
 enum string[] levels()
 {

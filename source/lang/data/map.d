@@ -22,8 +22,6 @@ int compare(T1, T2)(T1 a, T2 b)
     }
 }
 
-__gshared rebs = 0;
-
 class Map(Key, Value)
 {
     alias This = typeof(this);

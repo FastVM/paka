@@ -11,16 +11,16 @@ import quest.globals;
 
 Dynamic textText(Args args)
 {
-    if (args[0].tab is globalText)
+    if (args[0].isText)
     {
-        return "String".makeText;
+        return "String".qdynamic;
     }
-    return args[0].tab.meta["val".dynamic].str.makeText;
+    return args[0].tab.meta["val".dynamic].str.qdynamic;
 }
 
 Dynamic textMetaStr(Args args)
 {
-    if (args[0].tab is globalText)
+    if (args[0].isText)
     {
         return "String".dynamic;
     }
@@ -34,7 +34,7 @@ Dynamic textSet(Args args)
 
 Dynamic textAdd(Args args)
 {
-    return makeText(args[0].getString ~ args[1].getString);
+    return qdynamic(args[0].getString ~ args[1].getString);
 }
 
 Dynamic textCmp(Args args)
@@ -42,11 +42,11 @@ Dynamic textCmp(Args args)
     string lhs = args[0].getString;
     string rhs = args[1].getString;
     if (lhs < rhs) {
-        return makeNumber(-1);
+        return qdynamic(-1);
     } 
     if (lhs == rhs)
     {
-        return 0.makeNumber;
+        return 0.qdynamic;
     }
-    return 1.makeNumber;
+    return 1.qdynamic;
 }

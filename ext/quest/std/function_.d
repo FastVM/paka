@@ -7,32 +7,43 @@ import lang.dynamic;
 import quest.qscope;
 import quest.maker;
 import quest.globals;
+import quest.dynamic;
 
 Dynamic functionText(Args args)
 {
-    if (args[0].tab is globalFunction)
+    if (args[0].isFunction)
     {
-        return "Function".makeText;
+        return "Function".qdynamic;
     }
-    return makeText("Function(\"\")");
+    return qdynamic("Function(\"\")");
 }
 
 Dynamic functionCall(Args args)
 {
-    if (Dynamic* scope_ = "scope".dynamic in args[0].tab.meta)
+    Dynamic fun = args[0];
+    if (fun.type != Dynamic.Type.tab)
+    {
+        return fun(args[1..$]);
+    }
+    bool hasScope;
+    if (Dynamic* scope_ = "scope".dynamic in fun.tab.meta)
     {
         qScopeEnter(scope_.tab, args[1..$]);
+        hasScope = true;
     }
     scope(exit)
     {
-        qScopeExit;
+        if (hasScope)
+        {
+            qScopeExit;
+        }
     }
     if (args.length == 0) {
         return topScope.dynamic;
     }
     try
     {
-        Dynamic ret = args[0](args[1 .. $]);
+        Dynamic ret = fun(args[1 .. $]);
         return ret;
     }
     catch (ReturnValueFlowException rvfe)

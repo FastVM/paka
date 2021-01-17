@@ -144,7 +144,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 (*(stack - 1)) = run(f.fun.pro, stack[0 .. 0 + instrs.get1!ushort(index)]);
                 break;
             case Dynamic.Type.tab:
-                (*(stack - 1)) = f.value.tab(stack[0 .. 0 + instrs.get1!ushort(index)]);
+                (*(stack - 1)) = f.tab()(stack[0 .. 0 + instrs.get1!ushort(index)]);
                 break;
             default:
                 throw new TypeException("error: not a function: " ~ f.to!string);
@@ -184,7 +184,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 result = run(f.fun.pro, cargs);
                 break;
             case Dynamic.Type.tab:
-                result = f.value.tab(cargs);
+                result = f.tab()(cargs);
                 break;
             default:
                 throw new TypeException("error: not a function: " ~ f.to!string);

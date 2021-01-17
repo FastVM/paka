@@ -4,15 +4,12 @@ import std.stdio;
 import lang.dynamic;
 import quest.maker;
 import quest.qscope;
+import quest.dynamic;
 
 Dynamic globalDisp(Args args)
 {
     foreach (key, val; args)
     {
-        if (key != 0)
-        {
-            write(' ');
-        }
         write(val);
     }
     writeln;
@@ -23,10 +20,6 @@ Dynamic globalDispn(Args args)
 {
     foreach (key, val; args)
     {
-        if (key != 0)
-        {
-            write(' ');
-        }
         write(val);
     }
     return makeNull;

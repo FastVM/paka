@@ -37,6 +37,10 @@ Node delegate(Node[])[string] questTransforms()
         return new Call(new Ident("_quest_cons_value"), args);
     };
 
+    questTransforms["@quest.array"] = (Node[] args) {
+        return new Call(new Ident("_quest_cons_value"), [new Call(new Ident("@array"), args)]);
+    };
+
     questTransforms["@quest.dot"] = (Node[] args) {
         return new Call(new Ident("_quest_index"), args);
     };
@@ -163,12 +167,12 @@ Node delegate(Node[])[string] questTransforms()
     };
 
     questTransforms["@quest.enter"] = (Node[] args) {
-        return new Call(new Ident("_quest_enter"), [new Ident("$args")]);
+        return new Call(new Ident("_quest_enter"), args);
     };
 
     questTransforms["@quest.exit"] = (Node[] args) {
         return new Call(new Ident("@return"), [
-                new Call(new Ident("_quest_exit"), null)
+                new Call(new Ident("_quest_exit"), args)
                 ]);
     };
 
@@ -178,6 +182,17 @@ Node delegate(Node[])[string] questTransforms()
         block ~= args;
         Node ret = new Call(new Ident("@fun"), block);
         return new Call(new Ident("_quest_cons_value"), [ret]);
+    };
+
+    questTransforms["@quest.base"] = (Node[] args) {
+        return new Call(new Ident("_quest_base_scope"), null);
+    };
+
+    questTransforms["@quest.program"] = (Node[] args) {
+        Node[] block;
+        block ~= new Call(new Ident("@quest.enter"), [new Call(new Ident("@quest.base"), null)]);
+        block ~= new Call(new Ident("@quest.exit"), args);
+        return new Call(new Ident("@do"), block);
     };
 
     questTransforms["@quest.set.to"] = (Node[] args) {

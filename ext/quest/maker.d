@@ -10,27 +10,13 @@ import quest.std.number;
 import quest.std.function_;
 import quest.std.object;
 
-Dynamic makeText(string str)
-{
-    Mapping mapping = emptyMapping;
-    mapping["val".dynamic] = str.dynamic;
-    return new Table(emptyMapping, new Table(mapping).withProto(globalText)).dynamic;
-}
 Dynamic getValue(Dynamic arg)
 {
-    if (arg.type != Dynamic.Type.tab)
+    if (arg.type == Dynamic.Type.tab)
     {
-        return arg;
+        return arg.tab.meta["val".dynamic];
     }
-    return arg.tab.meta["val".dynamic];
-}
-
-Dynamic makeNumber(double num)
-{
-    Mapping mapping = emptyMapping;
-    mapping["val".dynamic] = num.dynamic;
-    Dynamic ret = new Table(emptyMapping, new Table(mapping).withProto(globalNumber)).dynamic;
-    return ret;
+    return arg;
 }
 
 void setValue(ref Dynamic arg, Dynamic val)
@@ -53,22 +39,49 @@ bool getBoolean(Dynamic arg)
     return arg.getValue.log;
 }
 
+Dynamic makeText(string str)
+{
+    Mapping mapping = emptyMapping;
+    mapping["val".dynamic] = str.dynamic;
+    return new Table(emptyMapping, new Table(mapping).withProto(globalText)).dynamic;
+}
+
+Dynamic makeNumber(double num)
+{
+    Mapping mapping = emptyMapping;
+    mapping["val".dynamic] = num.dynamic;
+    Dynamic ret = new Table(emptyMapping, new Table(mapping).withProto(globalNumber)).dynamic;
+    return ret;
+}
+
 Dynamic makeFunction(Dynamic fun)
 {
     Mapping mapping = emptyMapping;
     Table ret = new Table(emptyMapping, new Table(mapping).withProto(globalFunction));
     mapping["val".dynamic] = fun;
-    if (qScopes.length == 0)
+    if (qScopes.length > 0)
     {
-        mapping["scope".dynamic] = globalObject.dynamic;
-    }
-    else {
         mapping["scope".dynamic] = topScope.dynamic;
     }
+    // if (qScopes.length == 0)
+    // {
+    //     mapping["scope".dynamic] = globalObject.dynamic;
+    // }
+    // else {
+    //     mapping["scope".dynamic] = topScope.dynamic;
+    // }
     mapping["call".dynamic] = (Args args) {
         return (*("val".dynamic in ret.meta.table))(args);
     }.dynamic;
     return ret.dynamic;
+}
+
+Dynamic makeList(Dynamic[] arr)
+{
+    Mapping mapping = emptyMapping;
+    mapping["val".dynamic] = arr.dynamic;
+    Dynamic ret = new Table(emptyMapping, new Table(mapping).withProto(globalList)).dynamic;
+    return ret;
 }
 
 Dynamic makeNull()

@@ -11,7 +11,6 @@ import lang.lib.sys;
 import lang.lib.str;
 import lang.lib.arr;
 import lang.lib.tab;
-import lang.lib.proc;
 import lang.lib.fiber;
 
 struct Pair
@@ -75,7 +74,6 @@ Pair[] getRootBase()
     ret.addLib("tab", libtab);
     ret.addLib("io", libio);
     ret.addLib("sys", libsys);
-    ret.addLib("proc", libproc);
     return ret;
 }
 

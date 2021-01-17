@@ -1,5 +1,6 @@
 module quest.parse;
 
+import std.stdio;
 import std.conv;
 import std.array;
 import std.algorithm;
@@ -9,7 +10,7 @@ import lang.ast;
 import quest.tokens;
 
 /// safe array of tokens
-alias TokenArray = PushArray!Token;
+alias TokenList = PushList!Token;
 
 /// operators for comparrason
 enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
@@ -19,13 +20,13 @@ Location[] locs;
 
 size_t pdepth = 0;
 
-/// wraps a function of type Node function(T...)(TokenArray tokens, T args).
+/// wraps a function of type Node function(T...)(TokenList tokens, T args).
 /// it gets the span of tokens consumed and it gives them a span
 template Spanning(alias F, T...)
 {
-    Node spanning(ref TokenArray tokens, T a)
+    Node spanning(ref TokenList tokens, T a)
     {
-        TokenArray orig = tokens;
+        TokenList orig = tokens;
         if (orig.length != 0)
         {
             locs ~= orig[0].span.last;
@@ -49,8 +50,8 @@ template Spanning(alias F, T...)
 }
 
 /// array that is bounds checked always and throws decent errors.
-/// usually used as a TokenArray.
-struct PushArray(T)
+/// usually used as a TokenList.
+struct PushList(T)
 {
     /// the tokens is just an array
     T[] tokens;
@@ -107,13 +108,13 @@ struct PushArray(T)
     }
     else
     {
-        PushArray!T opSlice(size_t i, size_t j)
+        PushList!T opSlice(size_t i, size_t j)
         {
             if (j < i || tokens.length < j)
             {
                 throw new Exception("parse error 2");
             }
-            return PushArray(tokens[i .. j]);
+            return PushList(tokens[i .. j]);
         }
     }
 
@@ -173,7 +174,7 @@ struct PushArray(T)
 }
 
 /// implements errors when the parser knows what should be next
-void skip(ref TokenArray tokens, string name)
+void skip(ref TokenList tokens, string name)
 {
     if (tokens.length == 0 || tokens[0].value != name)
     {
@@ -181,7 +182,7 @@ void skip(ref TokenArray tokens, string name)
     }
 }
 
-void stripNewlines(ref TokenArray tokens)
+void stripNewlines(ref TokenList tokens)
 {
     while (tokens.length != 0 && tokens[0].isEol)
     {
@@ -189,7 +190,7 @@ void stripNewlines(ref TokenArray tokens)
     }
 }
 
-Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
+Node[] readOpen(string v)(ref TokenList tokens) if (v != "{}")
 {
     Node[] args;
     tokens.match(Token.Type.open, [v[0]]);
@@ -207,7 +208,7 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
     return args;
 }
 
-Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
+Node[] readOpen(string v)(ref TokenList tokens) if (v == "{}")
 {
     Node[] args;
     tokens.match(Token.Type.open, [v[0]]);
@@ -228,7 +229,7 @@ alias readSquare = readOpen!"[]";
 alias readBrace = readOpen!"{}";
 
 alias readPreExpr = Spanning!readPreExprImpl;
-Node readPreExprImpl(ref TokenArray tokens)
+Node readPreExprImpl(ref TokenList tokens)
 {
     if (tokens[0].isOperator)
     {
@@ -242,7 +243,7 @@ Node readPreExprImpl(ref TokenArray tokens)
 }
 
 alias readPostExtend = Spanning!(readPostExtendImpl, Node);
-Node readPostExtendImpl(ref TokenArray tokens, Node last)
+Node readPostExtendImpl(ref TokenList tokens, Node last)
 {
     if (tokens.length == 0)
     {
@@ -310,7 +311,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
 }
 
 alias readPostExpr = Spanning!readPostExprImpl;
-Node readPostExprImpl(ref TokenArray tokens)
+Node readPostExprImpl(ref TokenList tokens)
 {
     Node last = void;
     if (tokens[0].isOpen("("))
@@ -360,14 +361,14 @@ Node readPostExprImpl(ref TokenArray tokens)
 }
 
 alias readExpr = Spanning!(readExprImpl, size_t);
-Node readExprImpl(ref TokenArray tokens, size_t level)
+Node readExprImpl(ref TokenList tokens, size_t level)
 {
     if (level == prec.length)
     {
         return tokens.readPreExpr;
     }
-    TokenArray[] sub = [TokenArray.init];
-    TokenArray opers = TokenArray.init;
+    TokenList[] sub = [TokenList.init];
+    TokenList opers = TokenList.init;
     bool lastIsOp = true;
     size_t depth = 0;
     while (tokens.length != 0)
@@ -396,7 +397,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
             {
                 if (token.isOperator(op) && !lastIsOp)
                 {
-                    sub ~= TokenArray.init;
+                    sub ~= TokenList.init;
                     opers ~= token;
                     found = true;
                     break;
@@ -504,7 +505,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
 }
 
 alias readStmt = Spanning!readStmtImpl;
-Node readStmtImpl(ref TokenArray tokens)
+Node readStmtImpl(ref TokenList tokens)
 {
     Token[] stmtTokensRaw;
     size_t depth;
@@ -516,6 +517,10 @@ Node readStmtImpl(ref TokenArray tokens)
         }
         if (tokens[0].isClose)
         {
+            if (depth == 0)
+            {
+                break;
+            }
             depth--;
         }
         if (!tokens[0].isEol)
@@ -531,7 +536,7 @@ Node readStmtImpl(ref TokenArray tokens)
         }
         tokens.nextIsAny;
     }
-    TokenArray stmtTokens = TokenArray(stmtTokensRaw);
+    TokenList stmtTokens = TokenList(stmtTokensRaw);
     if (stmtTokens.length == 0)
     {
         return null;
@@ -540,7 +545,7 @@ Node readStmtImpl(ref TokenArray tokens)
 }
 
 alias readBlockBody = Spanning!readBlockBodyImpl;
-Node readBlockBodyImpl(ref TokenArray tokens)
+Node readBlockBodyImpl(ref TokenList tokens)
 {
     Node[] ret;
     while (tokens.length > 0 && !tokens[0].isClose("}"))
@@ -555,7 +560,7 @@ Node readBlockBodyImpl(ref TokenArray tokens)
 }
 
 alias readBlock = Spanning!readBlockImpl;
-Node readBlockImpl(ref TokenArray tokens)
+Node readBlockImpl(ref TokenList tokens)
 {
     tokens.nextIs(Token.Type.open, "{");
     Node ret = readBlockBody(tokens);
@@ -568,11 +573,11 @@ Node readBlockImpl(ref TokenArray tokens)
 
 Node parse(string code)
 {
-    TokenArray tokens = TokenArray(code.tokenize);
+    TokenList tokens = TokenList(code.tokenize);
     try
     {
         Node node = tokens.readBlockBody;
-        return node;
+        return new Call(new Ident("@quest.program"), (cast(Call) node).args[1..$]);
     }
     catch (Exception e)
     {

@@ -1,6 +1,7 @@
 module quest.qscope;
 
 import std.conv;
+import std.stdio;
 import lang.dynamic;
 import quest.globals;
 import quest.dynamic;
@@ -9,10 +10,7 @@ Table[] qScopes;
 
 ref Table topScope()
 {
-    if (qScopes.length == 0)
-    {
-        qScopes ~= baseScope;
-    }
+    assert(qScopes.length != 0);
     return qScopes[$ - 1];
 }
 

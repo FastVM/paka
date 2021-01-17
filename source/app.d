@@ -12,7 +12,6 @@ import lang.plugin.loader;
 import std.file;
 import std.path;
 import std.stdio;
-import std.process;
 import std.algorithm;
 import std.conv;
 import std.string;
@@ -25,30 +24,21 @@ void domain(string[] args)
     string[] scripts;
     string[] stmts;
     string[] langs;
-    string[] search;
+    string lnd;
     bool repl = false;
-    bool disWanted = false;
     bool echo = false;
     auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-            &scripts, "dis", &disWanted, "echo", &echo, "load", &langs, "path", &search);
+            &scripts, "echo", &echo, "load", &langs, "lang", &lnd);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
         return;  
     }
-    string libpathold = environment["LD_LIBRARY_PATH"];
-    string libpathnew = libpathold;
-    foreach (i; search)
+    langNameDefault = lnd;
+    foreach (i; langs)
     {
-        libpathnew ~= ":";
-        libpathnew ~= i;
+        linkLang(i);
     }
-    environment["LD_LIBRARY_PATH"] = libpathnew;
-    foreach (name; langs)
-    {
-        linkLang("libdext_" ~ name ~ ".so");
-    }
-    environment["LD_LIBRARY_PATH"] = libpathold;
     size_t ctx = enterCtx;
     scope (exit)
     {
@@ -56,38 +46,28 @@ void domain(string[] args)
     }
     foreach (i; stmts)
     {
-        if (disWanted) {
-            writeln(ctx.dis(i ~ ";"));
-        }
-        else {
-            Dynamic retval = ctx.eval(i ~ ";");
-            if (echo && retval.type != Dynamic.Type.nil)
-            {
-                writeln(retval);
-            }
+        Dynamic retval = ctx.eval(i ~ ";");
+        if (echo && retval.type != Dynamic.Type.nil)
+        {
+            writeln(retval);
         }
     }
     foreach (i; scripts ~ args[1 .. $])
     {
-        if (disWanted) {
-            writeln(ctx.dis(cast(string) i.read ~ ";"));
+        string cdir = getcwd;
+        scope (exit)
+        {
+            cdir.chdir;
         }
-        else {
-            string cdir = getcwd;
-            scope (exit)
-            {
-                cdir.chdir;
-            }
-            string code = cast(string) i.read;
-            i.dirName.chdir;
-            Dynamic retval = ctx.eval(code);
-            if (echo && retval.type != Dynamic.Type.nil)
-            {
-                writeln(retval);
-            }
+        string code = cast(string) i.read;
+        i.dirName.chdir;
+        Dynamic retval = ctx.eval(code);
+        if (echo && retval.type != Dynamic.Type.nil)
+        {
+            writeln(retval);
         }
     }
-    if (((scripts ~ args[1 .. $]).length == 0 || repl) && !disWanted)
+    if (repl)
     {
         replRun;
     }

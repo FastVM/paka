@@ -9,10 +9,11 @@ import quest.maker;
 import quest.dynamic;
 import quest.qscope;
 import quest.globals;
+import quest.dynamic;
 
 Dynamic objectStrToAtText(Args args)
 {
-    if (args[0].tab is globalObject)
+    if (args[0].isObject)
     {
         return "Object".dynamic;
     }
@@ -51,13 +52,12 @@ Dynamic objectStrToAtText(Args args)
 
 Dynamic objectDotEquals(Args args)
 {
-    args[0].tab[args[1]] = args[2].getValue.qdynamic;
-    return args[2];
+    return args[0].qstore(args[1], args[2]);
 }
 
 Dynamic objectCmp(Args args)
 {
-    return args[0].opCmp(args[1]).makeNumber;
+    return args[0].opCmp(args[1]).qdynamic;
 }
 
 Dynamic objectMetaCmp(Args args)

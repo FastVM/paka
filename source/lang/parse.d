@@ -14,6 +14,8 @@ import lang.error;
 enum string bashLine = "#!";
 enum string langLine = "#?";
 
+string langNameDefault = "dext";
+
 Node delegate(string code)[string] parsers;
 
 string readLine(ref string code)
@@ -31,7 +33,7 @@ string readLine(ref string code)
     return ret;
 }
 
-Node parse(string code, string langname = "dext")
+Node parse(string code, string langname = langNameDefault)
 {
     if (code.length > bashLine.length && code[0 .. bashLine.length] == bashLine)
     {

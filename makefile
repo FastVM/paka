@@ -32,10 +32,9 @@ ifeq ($(DC_TYPE_OK),FALSE)
 $(error Unknown D compiler family $(DC_TYPE), must be in the dmd or ldc family)
 endif
 
-ifeq ($(LINK),)
-LINK=$(DC_CMD)
+ifeq ($(LD),)
+LD=$(DC_CMD)
 endif
-LD=$(LINK)
 
 LD_TYPE_FOUND=
 ifneq ($(findstring ld,$(LD)),)
@@ -71,7 +70,7 @@ else
 LD_TYPE=$(LD_TYPE_FOUND)
 endif
 
-LD_CMD=$(LINK)
+LD_CMD=$(LD)
 
 ifeq ($(LD_TYPE),c)
 LFLAGS_EXTRA=-Wl,--export-dynamic
@@ -216,42 +215,60 @@ DEF_FLAG=
 DEF_FLAG_LIBS=-shared $(DEF_FLAG)
 DEF_FLAG_DEXT=
 endif
-LIBS=
-EXTRA_LIBS=$(LIBS)
-RAW_EXTRA_LIBS=
-FULL_RAW_EXTRA_LIBS=$(RAW_EXTRA_LIBS) $(patsubst %,out/lib/libdext_%.so,$(EXTRA_LIBS))
 
 RUN=@
 INFO=@echo
 
 ifeq ($(DC_TYPE),dmd)
-	REALOCATON_MODE_TO_PIC=-fPIC
+REALOCATON_MODE_TO_PIC=-fPIC
 else
-	REALOCATON_MODE_TO_PIC=-relocation-model=pic
+REALOCATON_MODE_TO_PIC=-relocation-model=pic
+endif
+
+ifeq ($(shell test -e ./out/lib/UnicodeData.txt && echo -n yes),yes)
+CURL_CMD_FOR=@:
+else
+CURL_CMDS_NEEDED=$(RUN) curl https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt > ./out/lib/UnicodeData.txt
 endif
 
 dext: all out/dext/dext
 	$(RUN) cp out/dext/dext ./dext
 
+dext.o: all out/dext/app.o
+	$(RUN) cp out/dext/app.o ./dext.o
+
+out/dext/dext: out/dext/app.o
+	$(INFO) Linking: out/dext/app.o
+	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)out/dext/dext out/dext/app.o $(LD_LINK_IN_DEXT) $(DFL_FLAG_DEXT)
+
+out/dext/app.o: out/dext
+	$(INFO) Compiling: source/app.d
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c -i source/app.d -Isource -of=out/dext/app.o
+
+unicode: libdext_unicode.so
+	$(RUN) cp out/lib/libdext_unicode.so unicode.so
+
+libdext_unicode.so: all out/lib
+	$(CURL_CMDS_NEEDED) 
+	$(INFO) Compiling: ext/unicode/plugin.d
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/unicode/plugin.d -Isource -Iext -od=out/unicode -of=out/unicode/plugin.o -J./out/lib
+	$(INFO) Linking: out/lib/libdext_unicode.so
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)out/lib/libdext_unicode.so out/unicode/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+
 quest: all out/lib/libdext_quest.so
+	$(RUN) cp out/lib/libdext_quest.so quest.so
+
+out/lib/libdext_quest.so: out/lib
+	$(INFO) Compiling: ext/quest/plugin.d
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/quest/plugin.d -Isource -Iext -od=out/quest -of=out/quest/plugin.o
+	$(INFO) Linking: out/quest/plugin.o
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)out/lib/libdext_quest.so out/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
 clean-dext: dummy
 	$(RUN) rm -rf out/dext/dext dext
 
 clean: dummy
-	$(RUN) rm -rf out dext
-
-out/dext/dext: out/dext
-	$(INFO) Compiling: out/dext/app.o from source/app.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c -i source/app.d -Isource -of=out/dext/app.o
-	$(INFO) Linking: out/dext/app.o into out/dext/dext
-	$(RUN) $(LD_CMD) $(FULL_DFLAGS) $(LD_CMD_OUT_FLAG)out/dext/dext out/dext/app.o $(LD_LINK_IN_DEXT) $(DFL_FLAG_DEXT)
-
-out/lib/libdext_quest.so: out/lib
-	$(INFO) Compiling: out/quest/plugin.o from ext/quest/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/quest/plugin.d -Isource -Iext -od=out/quest -of=out/quest/plugin.o
-	$(INFO) Linking: out/lib/libdext_quest.so
-	$(RUN) $(LD_CMD) $(FULL_DFLAGS) -shared $(LD_CMD_OUT_FLAG)out/lib/libdext_quest.so out/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+	$(RUN) rm -rf out dext quest.so unicode.so
 
 INSTALLER=bash $(OUT_DIR)/install.sh
 DO_INSTALL=$(DC_CMD)
