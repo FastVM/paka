@@ -6,7 +6,6 @@ import paka.lib.sys;
 import paka.lib.str;
 import paka.lib.arr;
 import paka.lib.tab;
-import paka.lib.fiber;
 
 Pair[] dextBaseLibs()
 {
@@ -15,7 +14,6 @@ Pair[] dextBaseLibs()
     ret ~= Pair("_lhs_map", &syslibulhsmap);
     ret ~= Pair("_rhs_map", &sysliburhsmap);
     ret ~= Pair("_pre_map", &syslibupremap);
-    ret.addLib("fiber", libfiber);
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);
     ret.addLib("tab", libtab);

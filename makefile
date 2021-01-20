@@ -4,8 +4,7 @@ else
 DC_CMD=dmd
 endif
 
-ifdef DC_TYPE
-else
+ifeq ($(DC_TYPE),)
 ifneq ($(findstring gdc,$(DC_CMD)),)
 DC_TYPE_FOUND=gdc
 endif
@@ -26,10 +25,13 @@ ifeq ($(DC_TYPE),ldc)
 DC_TYPE_OK=TRUE
 endif
 ifeq ($(DC_TYPE),gdc)
-$(error The $(DC_TYPE) compiler family cannot compile purr yet)
+DC_TYPE_OK=TRUE
 endif
+# ifeq ($(DC_TYPE),gdc)
+# $(error The $(DC_TYPE) compiler family cannot compile purr yet)
+# endif
 ifeq ($(DC_TYPE_OK),FALSE)
-$(error Unknown D compiler family $(DC_TYPE), must be in the dmd or ldc family)
+$(error Unknown D compiler family $(DC_TYPE), must be in the dmd or ldc or gdc family)
 endif
 
 ifeq ($(LD),)
@@ -65,12 +67,25 @@ ifneq ($(findstring clang,$(LD)),)
 LD_TYPE_FOUND=c
 endif
 
-ifdef LD_TYPE
-else
+ifeq ($(LD_TYPE),)
 LD_TYPE=$(LD_TYPE_FOUND)
 endif
 
 LD_CMD=$(LD)
+
+ifeq ($(LD_TYPE),d)
+ifeq ($(LD_DC_TYPE),)
+ifneq ($(findstring gdc,$(LD_CMD)),)
+LD_DC_TYPE=gdc
+endif
+ifneq ($(findstring dmd,$(LD_CMD)),)
+LD_DC_TYPE=dmd
+endif
+ifneq ($(findstring ldc,$(LD_CMD)),)
+LD_DC_TYPE=ldc
+endif
+endif
+endif
 
 ifeq ($(LD_TYPE),c)
 LFLAGS_EXTRA=-Wl,--export-dynamic
@@ -81,24 +96,46 @@ LFLAGS_EXTRA=-export-dynamic -l:libgcc_s.so.1 -l:crt1.o -lc -l:crti.o -l:crtn.o 
 endif
 
 ifeq ($(LD_TYPE),d)
-ifeq ($(DC_TYPE),ldc)
-LD_LINK_IN_CORRECT_STD=-defaultlib= -L-l:libphobos2-ldc-shared.so -L-l:libdruntime-ldc-shared.so
-else
+ifeq ($(DC_TYPE),dmd)
 LD_LINK_IN_CORRECT_STD=-defaultlib= -L-l:libphobos2.so -L-l:libdruntime-ldc-shared.so
 endif
-LD_CMD_OUT_FLAG=-of=
+ifeq ($(DC_TYPE),gdc)
+LD_LINK_IN_CORRECT_STD=-L-l:libgphobos.so.1 -L-l:libgdruntime.so.1
+endif
+ifeq ($(DC_TYPE),ldc)
+LD_LINK_IN_CORRECT_STD=-defaultlib= -L-l:libphobos2-ldc-shared.so -L-l:libdruntime-ldc-shared.so
+endif
 LD_LINK_IN=$(patsubst %,-L%,$(LFLAGS)) $(LD_LINK_IN_CORRECT_STD) -L-export-dynamic
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
 LD_LINK_IN_purr=$(LD_LINK_IN) -L-ldl
 else
-ifeq ($(DC_TYPE),ldc)
-LD_LINK_IN_STD=-l:libdruntime-ldc-shared.so -l:libphobos2-ldc-shared.so
-else
-LD_LINK_IN_STD=-lphobos2
+ifeq ($(DC_TYPE),dmd)
+LD_LINK_IN_CORRECT_STD=-lphobos2
 endif
-LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) 
+ifeq ($(DC_TYPE),gdc)
+LD_LINK_IN_CORRECT_STD=-l:libgphobos.so.1 -l:libgdruntime.so.1
+endif
+ifeq ($(DC_TYPE),ldc)
+LD_LINK_IN_CORRECT_STD=-l:libdruntime-ldc-shared.so -l:libphobos2-ldc-shared.so
+endif
+LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_CORRECT_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) 
 LD_LINK_IN_purr=$(LD_LINK_IN) -ldl
+endif
+
+ifeq ($(LD_TYPE),d)
+ifeq ($(LD_DC_TYPE),gdc)
 LD_CMD_OUT_FLAG=-o
+else
+LD_CMD_OUT_FLAG=-of=
+endif
+else
+LD_CMD_OUT_FLAG=-o
+endif
+
+ifeq ($(DC_TYPE),gdc)
+DC_CMD_OUT_FLAG=-o
+else
+DC_CMD_OUT_FLAG=-of=
 endif
 
 FROM_DIR=$(dir $(realpath $(firstword $(MAKEFILE_LIST))))
@@ -219,60 +256,69 @@ endif
 RUN=@
 INFO=@echo
 
-ifeq ($(DC_TYPE),dmd)
-REALOCATON_MODE_TO_PIC=-fPIC
-else
+ifeq ($(DC_TYPE),ldc)
 REALOCATON_MODE_TO_PIC=-relocation-model=pic
+else
+REALOCATON_MODE_TO_PIC=-fPIC
 endif
 
-ifeq ($(shell test -e ./bin/lib/UnicodeData.txt && echo -n yes),yes)
+ifeq ($(shell test -e ./$(BIN)/lib/UnicodeData.txt && echo -n yes),yes)
 CURL_CMD_FOR=@:
 else
-CURL_CMDS_NEEDED=$(RUN) curl https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt > ./bin/lib/UnicodeData.txt
+CURL_CMDS_NEEDED=$(RUN) curl https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt > ./$(BIN)/lib/UnicodeData.txt
 endif
+
+rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
+ifeq ($(DC_TYPE),gdc)
+dlangsrc=$(call rwildcard,$1,*.d)
+else
+dlangsrc=-i $1/$2
+endif
+
+BIN=bin
 
 all: purr paka quest unicode
 
-purr: bin/purr
+purr: $(BIN)/purr
 
-bin/purr: dcomp bin/purr.o
-	$(INFO) Linking: bin/purr
-	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)bin/purr bin/purr.o $(LD_LINK_IN_purr) $(DFL_FLAG_purr)
+$(BIN)/purr: dcomp $(BIN)/purr.o
+	$(INFO) Linking: $(BIN)/purr
+	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)$(BIN)/purr $(BIN)/purr.o $(LD_LINK_IN_purr) $(DFL_FLAG_purr)
 
-bin/purr.o: bin
+$(BIN)/purr.o: $(BIN)
 	$(INFO) Compiling: purr/app.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c -i purr/app.d -Ipurr -of=bin/purr.o
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c $(call dlangsrc,purr,app.d) -Ipurr $(DC_CMD_OUT_FLAG)$(BIN)/purr.o
 
 unicode: libpurr_unicode.so
-	$(RUN) cp bin/lib/libpurr_unicode.so unicode.so
+	$(RUN) cp $(BIN)/lib/libpurr_unicode.so unicode.so
 
-libpurr_unicode.so: dcomp bin/lib
+libpurr_unicode.so: dcomp $(BIN)/lib
 	$(CURL_CMDS_NEEDED) 
 	$(INFO) Compiling: ext/unicode/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/unicode/plugin.d -Ipurr -Iext -od=bin/unicode -of=bin/unicode/plugin.o -J./bin/lib
-	$(INFO) Linking: bin/lib/libpurr_unicode.so
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpurr_unicode.so bin/unicode/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/unicode,plugin.d) -Ipurr -Iext -od=$(BIN)/unicode $(DC_CMD_OUT_FLAG)$(BIN)/unicode/plugin.o -J./$(BIN)/lib
+	$(INFO) Linking: $(BIN)/lib/libpurr_unicode.so
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_unicode.so $(BIN)/unicode/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
-quest: dcomp bin/lib/libpurr_quest.so
-	$(RUN) cp bin/lib/libpurr_quest.so quest.so
+quest: dcomp $(BIN)/lib/libpurr_quest.so
+	$(RUN) cp $(BIN)/lib/libpurr_quest.so quest.so
 
-bin/lib/libpurr_quest.so: bin/lib
+$(BIN)/lib/libpurr_quest.so: $(BIN)/lib $(BIN)/quest
 	$(INFO) Compiling: ext/quest/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/quest/plugin.d -Ipurr -Iext -od=bin/quest -of=bin/quest/plugin.o
-	$(INFO) Linking: bin/quest/plugin.o
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpurr_quest.so bin/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/quest,plugin.d) -Ipurr -Iext -od=$(BIN)/quest $(DC_CMD_OUT_FLAG)$(BIN)/quest/plugin.o
+	$(INFO) Linking: $(BIN)/quest/plugin.o
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_quest.so $(BIN)/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
-paka: dcomp bin/lib/libpurr_dext.so
-	$(RUN) cp bin/lib/libpurr_dext.so paka.so
+paka: dcomp $(BIN)/lib/libpurr_paka.so
+	$(RUN) cp $(BIN)/lib/libpurr_paka.so paka.so
 
-bin/lib/libpurr_dext.so: bin/lib
+$(BIN)/lib/libpurr_paka.so: $(BIN)/lib $(BIN)/paka
 	$(INFO) Compiling: ext/paka/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/paka/plugin.d -Ipurr -Iext -od=bin/paka -of=bin/paka/plugin.o
-	$(INFO) Linking: bin/paka/plugin.o
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpurr_dext.so bin/paka/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/paka,plugin.d) -Ipurr -Iext -od=$(BIN)/paka $(DC_CMD_OUT_FLAG)$(BIN)/paka/plugin.o
+	$(INFO) Linking: $(BIN)/paka/plugin.o
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_paka.so $(BIN)/paka/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
 clean: dummy
-	$(RUN) rm -rf bin quest.so unicode.so
+	$(RUN) rm -rf $(BIN) quest.so unicode.so
 
 INSTALLER=bash $(OUT_DIR)/install.sh
 DO_INSTALL=$(DC_CMD)
@@ -295,10 +341,16 @@ $(OUT_DIR)/install.sh:
 
 dcomp: $(ALL_REQURED)
 
-bin:
-	$(RUN) mkdir bin
+$(BIN):
+	$(RUN) mkdir -p $(BIN)
 
-bin/lib: bin
-	$(RUN) mkdir -p bin/lib
+$(BIN)/lib: $(BIN)
+	$(RUN) mkdir -p $(BIN)/lib
+
+$(BIN)/paka: $(BIN)
+	$(RUN) mkdir -p $(BIN)/paka
+
+$(BIN)/quest: $(BIN)
+	$(RUN) mkdir -p $(BIN)/quest
 
 dummy:

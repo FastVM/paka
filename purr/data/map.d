@@ -1,4 +1,4 @@
-module lang.data.map;
+module purr.data.map;
 
 import core.memory;
 import purr.error;

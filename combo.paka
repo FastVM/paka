@@ -1,0 +1,30 @@
+#?lang="paka";
+
+targets = ["paka", "purr"];
+dc = ["ldc2", "dmd", "gdc"];
+ld = ["ldc2", "dmd", "gdc", "gcc", "clang", "ld.bfd", "ld.gold"];
+opt = ["none"];
+all = [];
+io.print("default: all");
+            io.print();
+arr.each(dc) {
+    dc = $0;
+    arr.each (ld) {
+        ld = $0;
+        arr.each (opt) {
+            opt = $0;
+            how = dc + "-" + ld + "-" + opt;
+            arr.push(all, how);
+            io.print(how, ": clean dummy");
+            io.print("\tmake ", str.join(" ", targets), " DC=", dc, " LD=", ld, " OPT=", opt);
+            io.print();
+        };
+    };
+};
+
+io.print("all: dummy ", str.join(" ", all));
+io.print();
+io.print("clean:");
+io.print("\t$(MAKE) clean");
+io.print();
+io.print("dummy: ");

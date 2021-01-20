@@ -4,6 +4,7 @@ import purr.base;
 import purr.dynamic;
 import std.array;
 import std.string;
+import std.algorithm.iteration;
 import std.algorithm;
 import std.stdio;
 import std.conv;
@@ -12,14 +13,12 @@ import std.uni;
 Pair[] libstr()
 {
     Pair[] ret = [
-        Pair("len", &liblen), Pair("split", &libsplit),
-        Pair("join", &libjoin), Pair("chars", &libchars),
-        Pair("subs", &libsubs), Pair("to_upper",
-                dynamic(&libtoupper)), Pair("to_lower", &libtolower),
-        Pair("to_number", &libtonumber),
-        Pair("slice", &libslice), Pair("strip",
-                dynamic(&libstrip)), Pair("char", &libchar),
-        Pair("ascii", &libascii), Pair("from", &libfrom),
+        Pair("len", &liblen), Pair("split", &libsplit), Pair("join",
+                &libjoin), Pair("chars", &libchars),
+        Pair("to_upper", dynamic(&libtoupper)), Pair("to_lower",
+                &libtolower), Pair("to_number", &libtonumber),
+        Pair("slice", &libslice), Pair("strip", dynamic(&libstrip)),
+        Pair("char", &libchar), Pair("ascii", &libascii), Pair("from", &libfrom),
     ];
     return ret;
 }
@@ -45,17 +44,18 @@ Dynamic libascii(Args args)
 /// reutrns first char of string
 Dynamic libchar(Args args)
 {
-    return dynamic(cast(string) [cast(char) args[0].as!size_t]);
+    return dynamic(cast(string)[cast(char) args[0].as!size_t]);
 }
 
 /// reutrns string split at deliminer
 Dynamic libsplit(Args args)
 {
-    Dynamic[] ret = args[0..1];
-    foreach (at; args[1..$])
+    Dynamic[] ret = args[0 .. 1];
+    foreach (at; args[1 .. $])
     {
         Dynamic[] tmp = [];
-        foreach (str; ret) {
+        foreach (str; ret)
+        {
             tmp ~= str.str.splitter(at.str).map!dynamic.array;
         }
         ret = tmp;
@@ -67,19 +67,22 @@ Dynamic libsplit(Args args)
 /// joins string to deliminer
 Dynamic libjoin(Args args)
 {
-    return dynamic(cast(string) args[1].arr.map!(x => x.str).joiner(args[0].str).array);
+    string ret;
+    foreach (key, value; args[1].arr)
+    {
+        if (key != 0)
+        {
+            ret ~= args[0].str;
+        }
+        ret ~= value.str;
+    }
+    return ret.dynamic;
 }
 
 /// reutrns string split at everey char
 Dynamic libchars(Args args)
 {
     return dynamic(args[0].str.map!(x => dynamic(x.to!string)).array);
-}
-
-/// replaces all occurrences of deliminer within string
-Dynamic libsubs(Args args)
-{
-    return dynamic(cast(string) args[0].str.substitute(args[1].str, args[2].str).array);
 }
 
 /// return uppercase ascii string
