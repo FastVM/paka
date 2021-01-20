@@ -1,11 +1,11 @@
-module dext.parse;
+module paka.parse;
 
 import std.stdio;
 import std.conv;
 import std.array;
 import std.algorithm;
 import purr.ast;
-import dext.tokens;
+import paka.tokens;
 import purr.srcloc;
 
 /// safe array of tokens
@@ -669,7 +669,7 @@ Node readBlockImpl(ref TokenArray tokens)
     return ret;
 }
 
-/// parses code as the dext programming language
+/// parses code as the paka programming language
 Node parse(string code)
 {
     locs.length = 0;

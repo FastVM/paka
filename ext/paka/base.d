@@ -1,12 +1,12 @@
-module dext.base;
+module paka.base;
 
 import purr.base;
-import dext.lib.io;
-import dext.lib.sys;
-import dext.lib.str;
-import dext.lib.arr;
-import dext.lib.tab;
-import dext.lib.fiber;
+import paka.lib.io;
+import paka.lib.sys;
+import paka.lib.str;
+import paka.lib.arr;
+import paka.lib.tab;
+import paka.lib.fiber;
 
 Pair[] dextBaseLibs()
 {

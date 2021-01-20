@@ -686,16 +686,16 @@ class Walker
         case "@using":
             walkUsing(c.args[1 .. $]);
             break;
-        // case "@dext.dotmap-both":
+        // case "@paka.dotmap-both":
         //     walkDotmap!"_both_map"(c.args[1 .. $]);
         //     break;
-        // case "@dext.dotmap-lhs":
+        // case "@paka.dotmap-lhs":
         //     walkDotmap!"_lhs_map"(c.args[1 .. $]);
         //     break;
-        // case "@dext.dotmap-rhs":
+        // case "@paka.dotmap-rhs":
         //     walkDotmap!"_rhs_map"(c.args[1 .. $]);
         //     break;
-        // case "@dext.dotmap-pre":
+        // case "@paka.dotmap-pre":
         //     walkDotmap!"_pre_map"(c.args[1 .. $]);
         //     break;
         case "+":

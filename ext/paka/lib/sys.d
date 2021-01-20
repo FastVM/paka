@@ -1,4 +1,4 @@
-module dext.lib.sys;
+module paka.lib.sys;
 
 import purr.dynamic;
 import purr.base;
@@ -9,7 +9,7 @@ import purr.walk;
 import purr.vm;
 import purr.inter;
 import purr.bytecode;
-import dext.lib.sysenv;
+import paka.lib.sysenv;
 import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;

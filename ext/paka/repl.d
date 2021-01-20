@@ -1,4 +1,4 @@
-module dext.repl;
+module paka.repl;
 import purr.walk;
 import purr.bytecode;
 import purr.base;
@@ -13,7 +13,7 @@ import std.algorithm;
 import std.string;
 import std.functional;
 
-/// runs a repl for dext language
+/// runs a repl for paka language
 void replRun()
 {
     char[][] history;

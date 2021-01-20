@@ -89,7 +89,7 @@ endif
 LD_CMD_OUT_FLAG=-of=
 LD_LINK_IN=$(patsubst %,-L%,$(LFLAGS)) $(LD_LINK_IN_CORRECT_STD) -L-export-dynamic
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
-LD_LINK_IN_paka=$(LD_LINK_IN) -L-ldl
+LD_LINK_IN_purr=$(LD_LINK_IN) -L-ldl
 else
 ifeq ($(DC_TYPE),ldc)
 LD_LINK_IN_STD=-l:libdruntime-ldc-shared.so -l:libphobos2-ldc-shared.so
@@ -97,7 +97,7 @@ else
 LD_LINK_IN_STD=-lphobos2
 endif
 LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) 
-LD_LINK_IN_paka=$(LD_LINK_IN) -ldl
+LD_LINK_IN_purr=$(LD_LINK_IN) -ldl
 LD_CMD_OUT_FLAG=-o
 endif
 
@@ -208,12 +208,12 @@ FULL_DFLAGS=$(DFLAGS)
 DLIB=libphobos2.so
 ifeq ($(DC_TYPE),dmd)
 # DEF_FLAG=-defaultlib=$(DLIB)
-DFL_FLAG_paka=$(DEF_FLAG)
+DFL_FLAG_purr=$(DEF_FLAG)
 DFL_FLAG_LIBS=$(DEF_FLAG)
 else
 DEF_FLAG=
 DEF_FLAG_LIBS=-shared $(DEF_FLAG)
-DEF_FLAG_paka=
+DEF_FLAG_purr=
 endif
 
 RUN=@
@@ -231,45 +231,45 @@ else
 CURL_CMDS_NEEDED=$(RUN) curl https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt > ./bin/lib/UnicodeData.txt
 endif
 
-all: purr dext quest unicode
+all: purr paka quest unicode
 
 purr: bin/purr
 
 bin/purr: dcomp bin/purr.o
 	$(INFO) Linking: bin/purr
-	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)bin/purr bin/purr.o $(LD_LINK_IN_paka) $(DFL_FLAG_paka)
+	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)bin/purr bin/purr.o $(LD_LINK_IN_purr) $(DFL_FLAG_purr)
 
 bin/purr.o: bin
 	$(INFO) Compiling: purr/app.d
 	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c -i purr/app.d -Ipurr -of=bin/purr.o
 
-unicode: libpaka_unicode.so
-	$(RUN) cp bin/lib/libpaka_unicode.so unicode.so
+unicode: libpurr_unicode.so
+	$(RUN) cp bin/lib/libpurr_unicode.so unicode.so
 
-libpaka_unicode.so: dcomp bin/lib
+libpurr_unicode.so: dcomp bin/lib
 	$(CURL_CMDS_NEEDED) 
 	$(INFO) Compiling: ext/unicode/plugin.d
 	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/unicode/plugin.d -Ipurr -Iext -od=bin/unicode -of=bin/unicode/plugin.o -J./bin/lib
-	$(INFO) Linking: bin/lib/libpaka_unicode.so
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpaka_unicode.so bin/unicode/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+	$(INFO) Linking: bin/lib/libpurr_unicode.so
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpurr_unicode.so bin/unicode/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
-quest: dcomp bin/lib/libpaka_quest.so
-	$(RUN) cp bin/lib/libpaka_quest.so quest.so
+quest: dcomp bin/lib/libpurr_quest.so
+	$(RUN) cp bin/lib/libpurr_quest.so quest.so
 
-bin/lib/libpaka_quest.so: bin/lib
+bin/lib/libpurr_quest.so: bin/lib
 	$(INFO) Compiling: ext/quest/plugin.d
 	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/quest/plugin.d -Ipurr -Iext -od=bin/quest -of=bin/quest/plugin.o
 	$(INFO) Linking: bin/quest/plugin.o
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpaka_quest.so bin/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpurr_quest.so bin/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
-dext: dcomp bin/lib/libpaka_dext.so
-	$(RUN) cp bin/lib/libpaka_dext.so dext.so
+paka: dcomp bin/lib/libpurr_dext.so
+	$(RUN) cp bin/lib/libpurr_dext.so paka.so
 
-bin/lib/libpaka_dext.so: bin/lib
-	$(INFO) Compiling: ext/dext/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/dext/plugin.d -Ipurr -Iext -od=bin/dext -of=bin/dext/plugin.o
-	$(INFO) Linking: bin/dext/plugin.o
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpaka_dext.so bin/dext/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+bin/lib/libpurr_dext.so: bin/lib
+	$(INFO) Compiling: ext/paka/plugin.d
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/paka/plugin.d -Ipurr -Iext -od=bin/paka -of=bin/paka/plugin.o
+	$(INFO) Linking: bin/paka/plugin.o
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpurr_dext.so bin/paka/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
 clean: dummy
 	$(RUN) rm -rf bin quest.so unicode.so
@@ -295,7 +295,10 @@ $(OUT_DIR)/install.sh:
 
 dcomp: $(ALL_REQURED)
 
-bin/lib:
+bin:
+	$(RUN) mkdir bin
+
+bin/lib: bin
 	$(RUN) mkdir -p bin/lib
 
 dummy:

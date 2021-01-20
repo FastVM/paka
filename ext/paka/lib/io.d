@@ -1,4 +1,4 @@
-module dext.lib.io;
+module paka.lib.io;
 
 import purr.dynamic;
 import purr.base;

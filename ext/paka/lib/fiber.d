@@ -1,4 +1,4 @@
-module dext.lib.fiber;
+module paka.lib.fiber;
 
 import purr.dynamic;
 import purr.base;

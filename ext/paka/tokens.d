@@ -1,4 +1,4 @@
-module dext.tokens;
+module paka.tokens;
 
 import std.ascii;
 import std.conv;

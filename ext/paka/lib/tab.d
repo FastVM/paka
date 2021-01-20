@@ -1,4 +1,4 @@
-module dext.lib.tab;
+module paka.lib.tab;
 import purr.base;
 import purr.dynamic;
 import purr.data.map;

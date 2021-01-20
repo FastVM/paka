@@ -1,4 +1,4 @@
-module dext.lib.arr;
+module paka.lib.arr;
 import purr.base;
 import purr.dynamic;
 import purr.error;

@@ -46,7 +46,7 @@ Node parse(string code, string langname = langNameDefault)
             exitCtx;
         }
         string line = code.readLine;
-        Node node = line[langLine.length .. $].parse("dext");
+        Node node = line[langLine.length .. $].parse("paka");
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);
         func.captured = loadBase;
