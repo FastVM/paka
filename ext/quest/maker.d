@@ -1,7 +1,7 @@
 module quest.maker;
 
 import std.stdio;
-import lang.dynamic;
+import purr.dynamic;
 import quest.globals;
 import quest.qscope;
 import quest.dynamic;

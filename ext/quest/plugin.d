@@ -4,7 +4,7 @@ import std.stdio;
 import quest.walk;
 import quest.base;
 import quest.parse;
-import lang.plugin.plugin;
+import purr.plugin.plugin;
 
 extern(C) Plugin dext_get_library_plugin()
 {

@@ -26,7 +26,7 @@ ifeq ($(DC_TYPE),ldc)
 DC_TYPE_OK=TRUE
 endif
 ifeq ($(DC_TYPE),gdc)
-$(error The $(DC_TYPE) compiler family cannot compile Dext yet)
+$(error The $(DC_TYPE) compiler family cannot compile purr yet)
 endif
 ifeq ($(DC_TYPE_OK),FALSE)
 $(error Unknown D compiler family $(DC_TYPE), must be in the dmd or ldc family)
@@ -89,7 +89,7 @@ endif
 LD_CMD_OUT_FLAG=-of=
 LD_LINK_IN=$(patsubst %,-L%,$(LFLAGS)) $(LD_LINK_IN_CORRECT_STD) -L-export-dynamic
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
-LD_LINK_IN_DEXT=$(LD_LINK_IN) -L-ldl
+LD_LINK_IN_paka=$(LD_LINK_IN) -L-ldl
 else
 ifeq ($(DC_TYPE),ldc)
 LD_LINK_IN_STD=-l:libdruntime-ldc-shared.so -l:libphobos2-ldc-shared.so
@@ -97,7 +97,7 @@ else
 LD_LINK_IN_STD=-lphobos2
 endif
 LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) 
-LD_LINK_IN_DEXT=$(LD_LINK_IN) -ldl
+LD_LINK_IN_paka=$(LD_LINK_IN) -ldl
 LD_CMD_OUT_FLAG=-o
 endif
 
@@ -161,7 +161,7 @@ ALL_DO_OPT=TRUE
 OPT_LEVEL=3
 OPT_FULL_FOR_DMD=TRUE
 endif
-ifeq ($(OPT),all)
+ifeq ($(OPT),dcomp)
 ALL_DO_OPT=TRUE
 OPT_LEVEL=3
 OPT_FULL_FOR_DMD=TRUE
@@ -208,12 +208,12 @@ FULL_DFLAGS=$(DFLAGS)
 DLIB=libphobos2.so
 ifeq ($(DC_TYPE),dmd)
 # DEF_FLAG=-defaultlib=$(DLIB)
-DFL_FLAG_DEXT=$(DEF_FLAG)
+DFL_FLAG_paka=$(DEF_FLAG)
 DFL_FLAG_LIBS=$(DEF_FLAG)
 else
 DEF_FLAG=
 DEF_FLAG_LIBS=-shared $(DEF_FLAG)
-DEF_FLAG_DEXT=
+DEF_FLAG_paka=
 endif
 
 RUN=@
@@ -225,50 +225,54 @@ else
 REALOCATON_MODE_TO_PIC=-relocation-model=pic
 endif
 
-ifeq ($(shell test -e ./out/lib/UnicodeData.txt && echo -n yes),yes)
+ifeq ($(shell test -e ./bin/lib/UnicodeData.txt && echo -n yes),yes)
 CURL_CMD_FOR=@:
 else
-CURL_CMDS_NEEDED=$(RUN) curl https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt > ./out/lib/UnicodeData.txt
+CURL_CMDS_NEEDED=$(RUN) curl https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt > ./bin/lib/UnicodeData.txt
 endif
 
-dext: all out/dext/dext
-	$(RUN) cp out/dext/dext ./dext
+all: purr dext quest unicode
 
-dext.o: all out/dext/app.o
-	$(RUN) cp out/dext/app.o ./dext.o
+purr: bin/purr
 
-out/dext/dext: out/dext/app.o
-	$(INFO) Linking: out/dext/app.o
-	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)out/dext/dext out/dext/app.o $(LD_LINK_IN_DEXT) $(DFL_FLAG_DEXT)
+bin/purr: dcomp bin/purr.o
+	$(INFO) Linking: bin/purr
+	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)bin/purr bin/purr.o $(LD_LINK_IN_paka) $(DFL_FLAG_paka)
 
-out/dext/app.o: out/dext
-	$(INFO) Compiling: source/app.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c -i source/app.d -Isource -of=out/dext/app.o
+bin/purr.o: bin
+	$(INFO) Compiling: purr/app.d
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c -i purr/app.d -Ipurr -of=bin/purr.o
 
-unicode: libdext_unicode.so
-	$(RUN) cp out/lib/libdext_unicode.so unicode.so
+unicode: libpaka_unicode.so
+	$(RUN) cp bin/lib/libpaka_unicode.so unicode.so
 
-libdext_unicode.so: all out/lib
+libpaka_unicode.so: dcomp bin/lib
 	$(CURL_CMDS_NEEDED) 
 	$(INFO) Compiling: ext/unicode/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/unicode/plugin.d -Isource -Iext -od=out/unicode -of=out/unicode/plugin.o -J./out/lib
-	$(INFO) Linking: out/lib/libdext_unicode.so
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)out/lib/libdext_unicode.so out/unicode/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/unicode/plugin.d -Ipurr -Iext -od=bin/unicode -of=bin/unicode/plugin.o -J./bin/lib
+	$(INFO) Linking: bin/lib/libpaka_unicode.so
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpaka_unicode.so bin/unicode/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
-quest: all out/lib/libdext_quest.so
-	$(RUN) cp out/lib/libdext_quest.so quest.so
+quest: dcomp bin/lib/libpaka_quest.so
+	$(RUN) cp bin/lib/libpaka_quest.so quest.so
 
-out/lib/libdext_quest.so: out/lib
+bin/lib/libpaka_quest.so: bin/lib
 	$(INFO) Compiling: ext/quest/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/quest/plugin.d -Isource -Iext -od=out/quest -of=out/quest/plugin.o
-	$(INFO) Linking: out/quest/plugin.o
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)out/lib/libdext_quest.so out/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/quest/plugin.d -Ipurr -Iext -od=bin/quest -of=bin/quest/plugin.o
+	$(INFO) Linking: bin/quest/plugin.o
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpaka_quest.so bin/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
-clean-dext: dummy
-	$(RUN) rm -rf out/dext/dext dext
+dext: dcomp bin/lib/libpaka_dext.so
+	$(RUN) cp bin/lib/libpaka_dext.so dext.so
+
+bin/lib/libpaka_dext.so: bin/lib
+	$(INFO) Compiling: ext/dext/plugin.d
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c -i ext/dext/plugin.d -Ipurr -Iext -od=bin/dext -of=bin/dext/plugin.o
+	$(INFO) Linking: bin/dext/plugin.o
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)bin/lib/libpaka_dext.so bin/dext/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
 clean: dummy
-	$(RUN) rm -rf out dext quest.so unicode.so
+	$(RUN) rm -rf bin quest.so unicode.so
 
 INSTALLER=bash $(OUT_DIR)/install.sh
 DO_INSTALL=$(DC_CMD)
@@ -289,12 +293,9 @@ $(OUT_DIR)/install.sh:
 	$(INFO) Downloading D Compiler
 	$(RUN) curl https://dlang.org/install.sh > $(OUT_DIR)/install.sh 2>/dev/null
 
-all: $(ALL_REQURED)
+dcomp: $(ALL_REQURED)
 
-out/lib:
-	$(RUN) mkdir -p out/lib
-
-out/dext:
-	$(RUN) mkdir -p out/dext
+bin/lib:
+	$(RUN) mkdir -p bin/lib
 
 dummy:

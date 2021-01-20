@@ -2,7 +2,7 @@ module quest.qscope;
 
 import std.conv;
 import std.stdio;
-import lang.dynamic;
+import purr.dynamic;
 import quest.globals;
 import quest.dynamic;
 

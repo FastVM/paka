@@ -6,7 +6,7 @@ import std.algorithm;
 import std.parallelism;
 import std.range;
 import core.memory;
-import lang.dynamic;
+import purr.dynamic;
 import quest.qscope;
 import quest.maker;
 import quest.dynamic;

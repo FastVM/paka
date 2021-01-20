@@ -3,7 +3,7 @@ module quest.std.function_;
 import std.conv;
 import std.stdio;
 import std.algorithm;
-import lang.dynamic;
+import purr.dynamic;
 import quest.qscope;
 import quest.maker;
 import quest.globals;

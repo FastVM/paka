@@ -2,7 +2,7 @@ module quest.dynamic;
 
 import std.stdio;
 import std.conv;
-import lang.dynamic;
+import purr.dynamic;
 import quest.maker;
 import quest.globals;
 

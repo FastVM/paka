@@ -5,7 +5,7 @@ import std.conv;
 import std.algorithm;
 import std.array;
 import std.stdio;
-import lang.srcloc;
+import purr.srcloc;
 
 // dfmt off
 enum string[][] prec = [

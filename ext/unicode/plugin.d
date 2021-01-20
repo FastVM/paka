@@ -4,9 +4,9 @@ import unicode.getname;
 
 import std.stdio;
 import unicode.getname;
-import lang.base;
-import lang.dynamic;
-import lang.plugin.plugin;
+import purr.base;
+import purr.dynamic;
+import purr.plugin.plugin;
 
 Dynamic unictrl(Args args)
 {

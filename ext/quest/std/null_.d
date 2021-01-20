@@ -1,6 +1,6 @@
 module quest.std.null_;
 
-import lang.dynamic;
+import purr.dynamic;
 
 Dynamic nullStr(Args args)
 {

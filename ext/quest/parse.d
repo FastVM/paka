@@ -4,9 +4,9 @@ import std.stdio;
 import std.conv;
 import std.array;
 import std.algorithm;
-import lang.srcloc;
-import lang.walk;
-import lang.ast;
+import purr.srcloc;
+import purr.walk;
+import purr.ast;
 import quest.tokens;
 
 /// safe array of tokens

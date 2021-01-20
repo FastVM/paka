@@ -2,10 +2,10 @@ module quest.std.comparable;
 
 import std.conv;
 import std.stdio;
-import lang.dynamic;
+import purr.dynamic;
 import quest.maker;
 import quest.qscope;
-import lang.error;
+import purr.error;
 
 Dynamic cmpLt(Args args)
 {

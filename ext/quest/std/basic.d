@@ -1,6 +1,6 @@
 module quest.std.basic;
 
-import lang.dynamic;
+import purr.dynamic;
 import quest.dynamic;
 import quest.globals;
 import quest.maker;

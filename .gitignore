@@ -14,8 +14,7 @@ app
 callgrind*
 default.profdata
 default.profraw
-dext
-dexts
+paka
 dlang
 docs.json
 docs/
@@ -24,10 +23,11 @@ dub_platform_probe*
 UnicodeData.txt
 llvm
 out*
+bin
 perf*
 proj
 remake
-test.dext
+test.*
 trace.*
 vgcore*
 vscode

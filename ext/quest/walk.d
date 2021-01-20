@@ -1,7 +1,7 @@
 module quest.walk;
 
 import std.stdio;
-import lang.ast;
+import purr.ast;
 
 Node delegate(Node[])[string] questTransforms()
 {

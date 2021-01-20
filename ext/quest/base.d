@@ -1,8 +1,8 @@
 module quest.base;
 
 import std.stdio;
-import lang.base;
-import lang.dynamic;
+import purr.base;
+import purr.dynamic;
 import quest.dynamic;
 import quest.qscope;
 import quest.globals;

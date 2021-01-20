@@ -4,7 +4,7 @@ import std.conv;
 import std.stdio;
 import std.array;
 import std.algorithm;
-import lang.dynamic;
+import purr.dynamic;
 import core.memory;
 import quest.dynamic;
 import quest.qscope;
