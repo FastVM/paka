@@ -1,5 +1,0 @@
-planets = [1408, 5832, 24, 25, 10, 11, 17, 16];
-
-days = 365;
-
-io.print(24 /. planets .* days);

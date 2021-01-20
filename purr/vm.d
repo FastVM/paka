@@ -80,7 +80,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         stack = ptr;
     }
     ubyte* instrs = func.instrs.ptr;
-    Dynamic* lstack = stack;
+    // Dynamic* lstack = stack;
     while (true)
     {
         Opcode cur = cast(Opcode) instrs[index++];

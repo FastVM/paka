@@ -38,6 +38,18 @@ ifeq ($(LD),)
 LD=$(DC_CMD)
 endif
 
+ifeq ($(LD),ld)
+LD=ld.gold
+endif
+
+ifeq ($(LD),ld.bfd)
+$(error cannot use LD=ld.bfd yet)
+endif
+
+ifeq ($(LD),gdc)
+$(error cannot use LD=gdc yet)
+endif
+
 LD_TYPE_FOUND=
 ifneq ($(findstring ld,$(LD)),)
 LD_TYPE_FOUND=ld
@@ -97,17 +109,25 @@ endif
 
 ifeq ($(LD_TYPE),d)
 ifeq ($(DC_TYPE),dmd)
-LD_LINK_IN_CORRECT_STD=-defaultlib= -L-l:libphobos2.so -L-l:libdruntime-ldc-shared.so
+LFLAGS_DC_SIMPLE= -l:libphobos2.so -l:libdruntime-ldc-shared.so
 endif
 ifeq ($(DC_TYPE),gdc)
-LD_LINK_IN_CORRECT_STD=-L-l:libgphobos.so.1 -L-l:libgdruntime.so.1
+LFLAGS_DC_SIMPLE= -l:libgphobos.so.1 -l:libgdruntime.so.1
 endif
 ifeq ($(DC_TYPE),ldc)
-LD_LINK_IN_CORRECT_STD=-defaultlib= -L-l:libphobos2-ldc-shared.so -L-l:libdruntime-ldc-shared.so
+LFLAGS_DC_SIMPLE= -l:libphobos2-ldc-shared.so -l:libdruntime-ldc-shared.so
 endif
-LD_LINK_IN=$(patsubst %,-L%,$(LFLAGS)) $(LD_LINK_IN_CORRECT_STD) -L-export-dynamic
+LFLAGS_DC=$(LFLAGS_DC_SIMPLE) $(LFLAGS) -ldl
+ifeq ($(LD_DC_TYPE),gdc)
+LFLAGS_LD=-nophoboslib $(LFLAGS_DC) -lm
+LFLAGS_LD_PURR=-ldl
+else
+LFLAGS_LD=-defaultlib= $(patsubst %,-L%,$(LFLAGS_DC))
+LFLAGS_LD_PURR=-L-ldl
+endif
+LD_LINK_IN= $(LFLAGS_LD) -L-export-dynamic
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
-LD_LINK_IN_purr=$(LD_LINK_IN) -L-ldl
+LD_LINK_IN_PURR=$(LD_LINK_IN) $(LFLAGS_LD_PURR) 
 else
 ifeq ($(DC_TYPE),dmd)
 LD_LINK_IN_CORRECT_STD=-lphobos2
@@ -119,7 +139,8 @@ ifeq ($(DC_TYPE),ldc)
 LD_LINK_IN_CORRECT_STD=-l:libdruntime-ldc-shared.so -l:libphobos2-ldc-shared.so
 endif
 LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_CORRECT_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) 
-LD_LINK_IN_purr=$(LD_LINK_IN) -ldl
+LD_LINK_IN_LIBS=$(LD_LINK_IN)
+LD_LINK_IN_PURR=$(LD_LINK_IN) -ldl
 endif
 
 ifeq ($(LD_TYPE),d)
@@ -245,12 +266,12 @@ FULL_DFLAGS=$(DFLAGS)
 DLIB=libphobos2.so
 ifeq ($(DC_TYPE),dmd)
 # DEF_FLAG=-defaultlib=$(DLIB)
-DFL_FLAG_purr=$(DEF_FLAG)
+DFL_FLAG_PURR=$(DEF_FLAG)
 DFL_FLAG_LIBS=$(DEF_FLAG)
 else
 DEF_FLAG=
 DEF_FLAG_LIBS=-shared $(DEF_FLAG)
-DEF_FLAG_purr=
+DEF_FLAG_PURR=
 endif
 
 RUN=@
@@ -279,11 +300,12 @@ BIN=bin
 
 all: purr paka quest unicode
 
+vm: purr
 purr: $(BIN)/purr
 
 $(BIN)/purr: dcomp $(BIN)/purr.o
 	$(INFO) Linking: $(BIN)/purr
-	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)$(BIN)/purr $(BIN)/purr.o $(LD_LINK_IN_purr) $(DFL_FLAG_purr)
+	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)$(BIN)/purr $(BIN)/purr.o $(LD_LINK_IN_PURR) $(DFL_FLAG_PURR)
 
 $(BIN)/purr.o: $(BIN)
 	$(INFO) Compiling: purr/app.d
@@ -308,6 +330,7 @@ $(BIN)/lib/libpurr_quest.so: $(BIN)/lib $(BIN)/quest
 	$(INFO) Linking: $(BIN)/quest/plugin.o
 	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_quest.so $(BIN)/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
+dext: paka
 paka: dcomp $(BIN)/lib/libpurr_paka.so
 	$(RUN) cp $(BIN)/lib/libpurr_paka.so paka.so
 
