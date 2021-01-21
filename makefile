@@ -321,15 +321,6 @@ libpurr_unicode.so: dcomp $(BIN)/lib
 	$(INFO) Linking: $(BIN)/lib/libpurr_unicode.so
 	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_unicode.so $(BIN)/unicode/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
-quest: dcomp $(BIN)/lib/libpurr_quest.so
-	$(RUN) cp $(BIN)/lib/libpurr_quest.so quest.so
-
-$(BIN)/lib/libpurr_quest.so: $(BIN)/lib $(BIN)/quest
-	$(INFO) Compiling: ext/quest/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/quest,plugin.d) -Ipurr -Iext -od=$(BIN)/quest $(DC_CMD_OUT_FLAG)$(BIN)/quest/plugin.o
-	$(INFO) Linking: $(BIN)/quest/plugin.o
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_quest.so $(BIN)/quest/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
-
 dext: paka
 paka: dcomp $(BIN)/lib/libpurr_paka.so
 	$(RUN) cp $(BIN)/lib/libpurr_paka.so paka.so
@@ -341,7 +332,7 @@ $(BIN)/lib/libpurr_paka.so: $(BIN)/lib $(BIN)/paka
 	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_paka.so $(BIN)/paka/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
 clean: dummy
-	$(RUN) rm -rf $(BIN) quest.so unicode.so
+	$(RUN) rm -rf $(BIN) unicode.so
 
 INSTALLER=bash $(OUT_DIR)/install.sh
 DO_INSTALL=$(DC_CMD)

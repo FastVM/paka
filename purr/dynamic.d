@@ -216,7 +216,7 @@ class Table
         return meta[dynamic(opname!op)]([dynamic(this), other]);
     }
 
-    Dynamic opCall(Dynamic[] args)
+    Dynamic opCall(Args args)
     {
         if (Dynamic* dyn = "self".dynamic in meta)
         {
@@ -291,9 +291,11 @@ pragma(inline, true) Dynamic dynamic(T...)(T a)
     return Dynamic(a);
 }
 
+pragma(msg, Dynamic.sizeof);
+
 struct Dynamic
 {
-    enum Type : byte
+    enum Type : ubyte
     {
         nil,
         log,
@@ -328,40 +330,9 @@ struct Dynamic
         void* obj;
     }
 
-align(8):
+align(4):
     Value value = void;
-    Type typeImpl = Type.nil;
-
-pragma(inline, true):
-    // no boxes at all
-    // alias type = typeImpl;
-
-    // full boxes
-    // Type type(Type val) @property
-    // {
-    //     return typeImpl = val;
-    // }
-
-    // Type type() @property
-    // {
-    //     if (typeImpl == Dynamic.Type.ptr)
-    //     {
-    //         return value.ptr.type;
-    //     }
-    //     return typeImpl;
-    // }
-    
-    // impropper boxes
-    ref Type type() return
-    {
-        if (typeImpl == Dynamic.Type.ptr)
-        {
-            return value.ptr.type;
-        }
-        return typeImpl;
-    }
-
-    // alias getType;
+    Type type = Type.nil;
 
     static Dynamic strToNum(string s)
     {
@@ -452,7 +423,7 @@ pragma(inline, true):
         return this.strFormat;
     }
 
-    Dynamic opCall(Dynamic[] args)
+    Dynamic opCall(Args args)
     {
         switch (type)
         {
@@ -496,7 +467,7 @@ pragma(inline, true):
             return value.log - other.log;
         case Type.sml:
             double a = as!double;
-            double b = other.as!double;
+            double b = other.value.sml;
             if (a < b)
             {
                 return -1;
@@ -518,31 +489,31 @@ pragma(inline, true):
 
     Dynamic opBinary(string op)(Dynamic other)
     {
-        if (typeImpl == Type.sml)
+        if (type == Type.sml)
         {
-            if (other.typeImpl == Type.sml)
+            if (other.type == Type.sml)
             {
                 return dynamic(mixin("value.sml " ~ op ~ " other.value.sml"));
             }
         }
-        else if (typeImpl == Type.tab)
+        else if (type == Type.tab)
         {
             return mixin("tab " ~ op ~ " other");
         }
         static if (op == "~" || op == "+")
         {
-            if (typeImpl == Type.str && other.typeImpl == Type.str)
+            if (type == Type.str && other.type == Type.str)
             {
                 return dynamic(str ~ other.str);
             }
-            if (typeImpl == Type.arr && other.typeImpl == Type.arr)
+            if (type == Type.arr && other.type == Type.arr)
             {
                 return dynamic(arr ~ other.arr);
             }
         }
         static if (op == "*")
         {
-            if (typeImpl == Type.str && other.typeImpl == Type.sml)
+            if (type == Type.str && other.type == Type.sml)
             {
                 string ret;
                 foreach (i; 0 .. other.as!size_t)
@@ -551,7 +522,7 @@ pragma(inline, true):
                 }
                 return dynamic(ret);
             }
-            if (typeImpl == Type.arr && other.typeImpl == Type.sml)
+            if (type == Type.arr && other.type == Type.sml)
             {
                 Dynamic[] ret;
                 foreach (i; 0 .. other.as!size_t)
@@ -561,9 +532,9 @@ pragma(inline, true):
                 return dynamic(ret);
             }
         }
-        if (typeImpl == Type.ptr)
+        if (type == Type.ptr)
         {
-            if (other.typeImpl == Type.ptr)
+            if (other.type == Type.ptr)
             {
                 return dynamic(mixin("(*this.value.ptr)" ~ op ~ "(*other.value.ptr)"));
             }
@@ -574,7 +545,7 @@ pragma(inline, true):
         }
         else
         {
-            if (other.typeImpl == Type.ptr)
+            if (other.type == Type.ptr)
             {
                 return dynamic(mixin("this" ~ op ~ "(*other.value.ptr)"));
             }
@@ -595,16 +566,16 @@ pragma(inline, true):
     {
         version (safe)
         {
-            if (typeImpl != Type.log)
+            if (type != Type.log)
             {
-                if (typeImpl == Dynamic.Type.ptr)
+                if (type == Dynamic.Type.ptr)
                 {
                     return value.ptr.log;
                 }
                 throw new TypeException("expected logical type");
             }
         }
-        else if (typeImpl == Dynamic.Type.ptr)
+        else if (type == Dynamic.Type.ptr)
         {
             return value.ptr.log;
         }
@@ -615,16 +586,16 @@ pragma(inline, true):
     {
         version (safe)
         {
-            if (typeImpl != Type.str)
+            if (type != Type.str)
             {
-                if (typeImpl == Dynamic.Type.ptr)
+                if (type == Dynamic.Type.ptr)
                 {
                     return value.ptr.str;
                 }
                 throw new TypeException("expected string type");
             }
         }
-        else if (typeImpl == Dynamic.Type.ptr)
+        else if (type == Dynamic.Type.ptr)
         {
             return value.ptr.log;
         }
@@ -635,16 +606,16 @@ pragma(inline, true):
     {
         version (safe)
         {
-            if (typeImpl != Type.arr)
+            if (type != Type.arr)
             {
-                if (typeImpl == Dynamic.Type.ptr)
+                if (type == Dynamic.Type.ptr)
                 {
                     return value.ptr.arr;
                 }
                 throw new TypeException("expected array type");
             }
         }
-        else if (typeImpl == Dynamic.Type.ptr)
+        else if (type == Dynamic.Type.ptr)
         {
             return value.ptr.log;
         }
@@ -655,16 +626,16 @@ pragma(inline, true):
     {
         version (safe)
         {
-            if (typeImpl != Type.tab)
+            if (type != Type.tab)
             {
-                if (typeImpl == Dynamic.Type.ptr)
+                if (type == Dynamic.Type.ptr)
                 {
                     return value.ptr.tab;
                 }
                 throw new TypeException("expected table type");
             }
         }
-        else if (typeImpl == Dynamic.Type.ptr)
+        else if (type == Dynamic.Type.ptr)
         {
             return value.ptr.log;
         }
@@ -675,16 +646,16 @@ pragma(inline, true):
     {
         version (safe)
         {
-            if (typeImpl != Type.str)
+            if (type != Type.str)
             {
-                if (typeImpl == Dynamic.Type.ptr)
+                if (type == Dynamic.Type.ptr)
                 {
                     return value.ptr.strPtr;
                 }
                 throw new TypeException("expected string type");
             }
         }
-        else if (typeImpl == Dynamic.Type.ptr)
+        else if (type == Dynamic.Type.ptr)
         {
             return value.ptr.log;
         }
@@ -695,16 +666,16 @@ pragma(inline, true):
     {
         version (safe)
         {
-            if (typeImpl != Type.arr)
+            if (type != Type.arr)
             {
-                if (typeImpl == Dynamic.Type.ptr)
+                if (type == Dynamic.Type.ptr)
                 {
                     return value.ptr.arrPtr;
                 }
                 throw new TypeException("expected array type");
             }
         }
-        else if (typeImpl == Dynamic.Type.ptr)
+        else if (type == Dynamic.Type.ptr)
         {
             return value.ptr.log;
         }
@@ -715,7 +686,7 @@ pragma(inline, true):
     {
         version (safe)
         {
-            if (typeImpl != Type.ptr)
+            if (type != Type.ptr)
             {
                 throw new TypeException("expected pointer type");
             }
@@ -734,7 +705,7 @@ pragma(inline, true):
         {
             if (type != Type.fun && type != Type.pro && type != Type.del)
             {
-                if (typeImpl == Dynamic.Type.ptr)
+                if (type == Dynamic.Type.ptr)
                 {
                     return value.ptr.fun;
                 }
@@ -746,11 +717,11 @@ pragma(inline, true):
 
     T as(T)() if (isIntegral!T)
     {
-        if (typeImpl == Type.sml)
+        if (type == Type.sml)
         {
             return cast(T) value.sml;
         }
-        if (typeImpl == Type.ptr)
+        if (type == Type.ptr)
         {
             return value.ptr.as!T;
         }
@@ -762,11 +733,11 @@ pragma(inline, true):
 
     T as(T)() if (isFloatingPoint!T)
     {
-        if (typeImpl == Type.sml)
+        if (type == Type.sml)
         {
             return cast(T) value.sml;
         }
-        if (typeImpl == Type.ptr)
+        if (type == Type.ptr)
         {
             return value.ptr.as!T;
         }
@@ -800,11 +771,13 @@ private int cmpFunction(const Function a, const Function b)
     return cmp(cast(void*) a, cast(void*) b);
 }
 
-private int cmpDynamic(T...)(T a)
-{
-    int res = cmpDynamicImpl(a);
-    return res;
-}
+alias cmpDynamic = cmpDynamicImpl;
+
+// private int cmpDynamic(T...)(T a)
+// {
+//     int res = cmpDynamicImpl(a);
+//     return res;
+// }
 
 Table[2][] tableAbove;
 int cmpTable(Table at, Table bt)
@@ -824,7 +797,7 @@ int cmpTable(Table at, Table bt)
     bool noMeta = at.metatable is null && bt.metatable is null;
     if (Dynamic* mcmp = "cmp".dynamic in at.meta)
     {
-        return cast(int)(*mcmp)([at.dynamic, bt.dynamic]).as!double;
+        return cast(int)(*mcmp)([at.dynamic, bt.dynamic]).value.sml;
     }
     if (int c = cmp(at.table.length, bt.table.length))
     {
@@ -869,56 +842,32 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
     }
     if (b.type != a.type)
     {
-        if (a.type == Dynamic.Type.tab)
-        {
-            if (Dynamic* aval = "val".dynamic in a.tab.meta)
-            {
-                a = *aval;
-            }
-            if (b.type == Dynamic.Type.tab)
-            {
-                if (Dynamic* bval = "val".dynamic in b.tab.meta)
-                {
-                    b = *bval;
-                }
-            }
-        }
-        else if (b.type == Dynamic.Type.tab)
-        {
-            if (Dynamic* bval = "val".dynamic in b.tab.meta)
-            {
-                b = *bval;
-            }
-        }
-        else
-        {
-            return cmp(a.type, b.type);
-        }
+        return cmp(a.type, b.type);
     }
-    if (a is b)
+    final switch (a.type)
     {
-        return 0;
-    }
-    switch (a.type)
-    {
-    default:
-        assert(0);
+    case Dynamic.Type.end:
+        assert(false);
+    case Dynamic.Type.pac:
+        assert(false);
+    case Dynamic.Type.ptr:
+        assert(false);
     case Dynamic.Type.nil:
         return 0;
     case Dynamic.Type.log:
-        return cmp(a.log, b.log);
+        return cmp(a.value.log, b.value.log);
     case Dynamic.Type.str:
-        return cmp(a.str, b.str);
+        return cmp(*a.value.str, *b.value.str);
     case Dynamic.Type.sml:
-        return cmp(a.as!double, b.as!double);
+        return cmp(a.value.sml, b.value.sml);
     case Dynamic.Type.arr:
         above ~= cur;
         scope (exit)
         {
             above.length--;
         }
-        const Dynamic[] as = a.arr;
-        const Dynamic[] bs = b.arr;
+        const Dynamic[] as = *a.value.arr;
+        const Dynamic[] bs = *b.value.arr;
         if (int c = cmp(as.length, bs.length))
         {
             return c;
@@ -932,34 +881,20 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
         }
         return 0;
     case Dynamic.Type.tab:
-        if (a.type == Dynamic.Type.tab)
-        {
-            if (Dynamic* aval = "val".dynamic in a.tab.meta)
-            {
-                a = *aval;
-            }
-        }
-        if (b.type == Dynamic.Type.tab)
-        {
-            if (Dynamic* bval = "val".dynamic in b.tab.meta)
-            {
-                b = *bval;
-            }
-        }
         above ~= cur;
         scope (exit)
         {
             above.length--;
         }
-        Table at = cast(Table) a.tab;
-        Table bt = cast(Table) b.tab;
+        Table at = cast(Table) a.value.tab;
+        Table bt = cast(Table) b.value.tab;
         return cmpTable(at, bt);
     case Dynamic.Type.fun:
-        return cmp(a.fun.fun, b.fun.fun);
+        return cmp(a.value.fun.fun, b.value.fun.fun);
     case Dynamic.Type.del:
-        return cmp(a.fun.del, b.fun.del);
+        return cmp(a.value.fun.del, b.value.fun.del);
     case Dynamic.Type.pro:
-        return cmpFunction(a.fun.pro, b.fun.pro);
+        return cmpFunction(a.value.fun.pro, b.value.fun.pro);
     }
 }
 
@@ -987,12 +922,12 @@ private string strFormat(Dynamic dyn)
     case Dynamic.Type.log:
         return dyn.log.to!string;
     case Dynamic.Type.sml:
-        if (dyn.as!double % 1 == 0
-                && dyn.as!double > long.min && dyn.as!double < long.max)
+        if (dyn.value.sml % 1 == 0
+                && dyn.value.sml > long.min && dyn.value.sml < long.max)
         {
-            return to!string(cast(long) dyn.as!double);
+            return to!string(cast(long) dyn.value.sml);
         }
-        return dyn.as!double
+        return dyn.value.sml
             .to!string;
     case Dynamic.Type.str:
         if (before.length == 0)

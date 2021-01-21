@@ -54,7 +54,6 @@ T get1(T)(ubyte* bytes, ref ushort index)
 
 Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
 {
-    scope(exit)
     static foreach (I; T)
     {
         static assert(is(I == LocalCallback));
