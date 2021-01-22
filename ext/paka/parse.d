@@ -423,7 +423,7 @@ Node readPreExprImpl(ref TokenArray tokens)
         foreach (i; 0 .. count)
         {
             Call call = cast(Call) ret;
-            ret = new Call(new Ident("@dotmap-pre"), call.args);
+            ret = new Call(new Ident("@paka.dotmap-pre"), call.args);
         }
         return ret;
     }
@@ -571,18 +571,18 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
                 if (lhsc > rhsc)
                 {
                     lhsc--;
-                    ret = new Call(new Ident("@dotmap-lhs"), call.args);
+                    ret = new Call(new Ident("@paka.dotmap-lhs"), call.args);
                 }
                 else if (rhsc > lhsc)
                 {
                     rhsc--;
-                    ret = new Call(new Ident("@dotmap-rhs"), call.args);
+                    ret = new Call(new Ident("@paka.dotmap-rhs"), call.args);
                 }
                 else if (lhsc == rhsc && lhsc != 0)
                 {
                     lhsc--;
                     rhsc--;
-                    ret = new Call(new Ident("@dotmap-both"), call.args);
+                    ret = new Call(new Ident("@paka.dotmap-both"), call.args);
                 }
             }
             break;

@@ -298,7 +298,7 @@ endif
 
 BIN=bin
 
-all: purr paka quest unicode
+all: purr paka unicode
 
 vm: purr
 purr: $(BIN)/purr
@@ -363,8 +363,5 @@ $(BIN)/lib: $(BIN)
 
 $(BIN)/paka: $(BIN)
 	$(RUN) mkdir -p $(BIN)/paka
-
-$(BIN)/quest: $(BIN)
-	$(RUN) mkdir -p $(BIN)/quest
 
 dummy:

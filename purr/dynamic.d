@@ -291,8 +291,6 @@ pragma(inline, true) Dynamic dynamic(T...)(T a)
     return Dynamic(a);
 }
 
-pragma(msg, Dynamic.sizeof);
-
 struct Dynamic
 {
     enum Type : ubyte

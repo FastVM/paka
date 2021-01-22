@@ -4,7 +4,6 @@ import purr.vm;
 import purr.base;
 import purr.walk;
 import purr.ast;
-import purr.bytecode;
 import purr.base;
 import purr.dynamic;
 import purr.parse;

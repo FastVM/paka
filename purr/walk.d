@@ -6,7 +6,6 @@ import purr.bytecode;
 import purr.dynamic;
 import purr.ssize;
 import purr.srcloc;
-import purr.lower;
 import std.algorithm;
 import std.conv;
 import std.string;
@@ -14,11 +13,12 @@ import std.stdio;
 
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
-        "@if", "@fun", "@do", "@using", "-", "+", "*", "/", "@dotmap-both",
-        "@dotmap-lhs", "@dotmap-rhs", "@dotmap-pre", "%", "<", ">", "<=",
-        ">=", "==", "!=", "...", "@index", "=>", "|>", "<|", "@using", "@env",
-        "&&", "||", "@alias",
+        "@if", "@fun", "@do", "@using", "-", "+", "*", "/", "%", "<", ">",
+        "<=", ">=", "==", "!=", "...", "@index", "=>", "|>", "<|", "@using",
+        "@env", "&&", "||", "@alias",
     ];
+
+Node delegate(Node[])[string] transformers;
 
 bool isUnpacking(Node[] args)
 {
@@ -259,7 +259,7 @@ class Walker
             Function newFunc = new Function;
             func.flags |= Function.Flags.isLocal;
             func = newFunc;
-            func.parent = last; 
+            func.parent = last;
             // newFunc.stab.set(argid.repr, cast(uint) 0);
             newFunc.args = [argid.repr];
             walk(args[1]);
@@ -575,25 +575,6 @@ class Walker
         walk(args[0]);
     }
 
-    // void walkDotmap(string s)(Node[] args)
-    // {
-    //     static if (s == "_pre_map")
-    //     {
-    //         Node[] xy = [new Ident("_rhs")];
-    //         Node lambdaBody = new Call([args[0]] ~ xy);
-    //         Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    //         Call domap = new Call(new Ident(s), [cast(Node) lambda] ~ args[1 .. $]);
-    //         walk(domap);
-    //     }
-    //     else
-    //     {
-    //         Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
-    //         Node lambdaBody = new Call(args[0 .. $ - 2] ~ xy);
-    //         Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    //         Call domap = new Call(new Ident(s), [cast(Node) lambda] ~ args[$ - 2 .. $]);
-    //         walk(domap);
-    //     }
-    // }
 
     void walkPipeOp(Node[] args)
     {
@@ -685,18 +666,18 @@ class Walker
         case "@using":
             walkUsing(c.args[1 .. $]);
             break;
-        // case "@paka.dotmap-both":
-        //     walkDotmap!"_both_map"(c.args[1 .. $]);
-        //     break;
-        // case "@paka.dotmap-lhs":
-        //     walkDotmap!"_lhs_map"(c.args[1 .. $]);
-        //     break;
-        // case "@paka.dotmap-rhs":
-        //     walkDotmap!"_rhs_map"(c.args[1 .. $]);
-        //     break;
-        // case "@paka.dotmap-pre":
-        //     walkDotmap!"_pre_map"(c.args[1 .. $]);
-        //     break;
+            // case "@paka.dotmap-both":
+            //     walkDotmap!"_both_map"(c.args[1 .. $]);
+            //     break;
+            // case "@paka.dotmap-lhs":
+            //     walkDotmap!"_lhs_map"(c.args[1 .. $]);
+            //     break;
+            // case "@paka.dotmap-rhs":
+            //     walkDotmap!"_rhs_map"(c.args[1 .. $]);
+            //     break;
+            // case "@paka.dotmap-pre":
+            //     walkDotmap!"_pre_map"(c.args[1 .. $]);
+            //     break;
         case "+":
             walkBinary!"add"(c.args[1 .. $]);
             break;
@@ -836,7 +817,8 @@ class Walker
                 {
                     throw new Exception("invalid string escape: {" ~ num ~ "}");
                 }
-                else if (char.min > asNumber || asNumber >= char.max) {
+                else if (char.min > asNumber || asNumber >= char.max)
+                {
                     throw new Exception("invalid string escape: not ascii: {" ~ num ~ "}");
                 }
                 irepr ~= cast(char) asNumber;

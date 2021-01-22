@@ -96,12 +96,12 @@ unlike `table` in lua, nil is a valid key.
 `callable` is the type of functions, non nested callables are faster than nested ones.
 
 # Building Dext
-there are two ways to build dext. with dub or with ldc itself.
+there are two ways to build paka. with dub or with ldc itself.
 
 clone this repo
 
 ```
-git clone https://github.com/shawsumma/dext.git
+git clone https://github.com/shawsumma/paka.git
 ```
 
 ### dub + ubuntu
