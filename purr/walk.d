@@ -6,12 +6,11 @@ import purr.bytecode;
 import purr.dynamic;
 import purr.ssize;
 import purr.srcloc;
+import purr.lower;
 import std.algorithm;
 import std.conv;
 import std.string;
 import std.stdio;
-
-Node delegate(Node[])[string] transformers;
 
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
@@ -260,7 +259,7 @@ class Walker
             Function newFunc = new Function;
             func.flags |= Function.Flags.isLocal;
             func = newFunc;
-            func.parent = last;
+            func.parent = last; 
             // newFunc.stab.set(argid.repr, cast(uint) 0);
             newFunc.args = [argid.repr];
             walk(args[1]);
