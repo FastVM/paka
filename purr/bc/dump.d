@@ -219,7 +219,7 @@ override:
     void opstore(ushort localIndex, ushort operation)
     {
         string name = to!string(cast(AssignOp) operation);
-        line("store offset=", localIndex, " identifier=",
+        line("opstore offset=", localIndex, " identifier=",
                 func.stab[localIndex], " operation=", name);
     }
 
@@ -232,11 +232,6 @@ override:
     void retval()
     {
         line("retval");
-    }
-
-    void retnone()
-    {
-        line("retnone");
     }
 
     void iftrue(ushort jumpIndex)

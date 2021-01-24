@@ -294,7 +294,7 @@ pragma(inline, true) Dynamic dynamic(T...)(T a)
 
 struct Dynamic
 {
-    enum Type : ubyte
+    enum Type : ulong
     {
         nil,
         log,
@@ -329,7 +329,7 @@ struct Dynamic
         void* obj;
     }
 
-align(4):
+align(1):
     Value value = void;
     Type type = Type.nil;
 
@@ -872,7 +872,7 @@ private string strFormat(Dynamic dyn)
     switch (dyn.type)
     {
     default:
-        return "???";
+        return "<?" ~ dyn.type.to!string ~ ">";
     case Dynamic.Type.nil:
         return "nil";
     case Dynamic.Type.log:

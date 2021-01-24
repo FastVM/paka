@@ -506,13 +506,14 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
         Node ret = sub[$ - 1].readExpr(level + 1);
         foreach_reverse (v; sub[0 .. $ - 1])
         {
+            ret = new Call(new Ident("@return"), [ret]);
             if (v[0].isOpen("("))
             {
-                ret = new Call(new Ident("=>"), [new Call(v.readParens), ret]);
+                ret = new Call(new Ident("@fun"), [new Call(v.readParens), ret]);
             }
             else
             {
-                ret = new Call(new Ident("=>"), [v.readExpr(level + 1), ret]);
+                ret = new Call(new Ident("@fun"), [new Call([v.readExpr(level + 1)]), ret]);
             }
         }
         return ret;
@@ -529,6 +530,10 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
     {
         switch (v.value)
         {
+        case "|>":
+            Node rhs = sub[i + 1].readExpr(level + 1);
+            ret = new Call([rhs, ret]);
+            break;
         case "=":
             Node rhs = sub[i + 1].readExpr(level + 1);
             ret = new Call(new Ident("@set"), [ret, rhs]);

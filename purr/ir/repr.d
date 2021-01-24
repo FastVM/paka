@@ -48,6 +48,7 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     {
         func.stackSize = func.stackSizeCurrent;
     }
+
     assert(func.stackSizeCurrent >= 0);
 }
 
@@ -141,7 +142,7 @@ class BasicBlock
         if (!within(func))
         {
             this.optimize;
-            // writeln(this);
+            writeln(this);
             counts[func] = cast(ushort) func.instrs.length;
             predef(func);
             foreach (instr; instrs)
@@ -370,6 +371,7 @@ class LambdaInstruction : Instruction
 
     override void emit(Function func)
     {
+        func.flags |= Function.flags.isLocal;
         Function newFunc = new Function;
         newFunc.parent = func;
         newFunc.args = argNames;
@@ -427,6 +429,29 @@ class StoreInstruction : AssignmentInstruction
         return ret;
     }
 }
+class OperatorStoreInstruction : AssignmentInstruction
+{
+    string op;
+    this(string o, string v)
+    {
+        op = o;
+        var = v;
+    }
+
+    override void emit(Function func)
+    {
+        uint ius = func.stab[var];
+        func.pushInstr(Opcode.opstore, [cast(ushort) ius, cast(ushort) op.to!AssignOp]);
+        func.pushInstr(Opcode.load, [cast(ushort) ius]);
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "operator-store " ~ op ~ " " ~ var ~ "\n";
+        return ret;
+    }
+}
 
 class StorePopInstruction : AssignmentInstruction
 {
@@ -445,6 +470,29 @@ class StorePopInstruction : AssignmentInstruction
     {
         string ret;
         ret ~= "store-pop " ~ var ~ "\n";
+        return ret;
+    }
+}
+
+class OperatorStorePopInstruction : AssignmentInstruction
+{
+    string op;
+    this(string o, string v)
+    {
+        op = o;
+        var = v;
+    }
+
+    override void emit(Function func)
+    {
+        uint ius = func.stab[var];
+        func.pushInstr(Opcode.opstore, [cast(ushort) ius, cast(ushort) op.to!AssignOp]);
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "operator-store-pop " ~ op ~ " " ~ var ~ "\n";
         return ret;
     }
 }

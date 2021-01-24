@@ -67,14 +67,14 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     }
     if (func.flags & Function.Flags.isLocal)
     {
-        locals = cast(Dynamic*) GC.malloc(func.stab.length * Dynamic.sizeof,
+        locals = cast(Dynamic*) GC.malloc((func.stab.length + 1) * Dynamic.sizeof,
                 0, typeid(Dynamic));
         stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof));
     }
     else
     {
         Dynamic* ptr = cast(Dynamic*) allocateStackAllowed(
-                (func.stackSize + func.stab.length) * Dynamic.sizeof);
+                (func.stackSize + 1 + func.stab.length) * Dynamic.sizeof);
         locals = ptr + func.stackSize;
         stack = ptr;
     }
@@ -82,7 +82,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     Dynamic* lstack = stack;
     while (true)
     {
-        assert(func.stackSize >= stack-lstack, "stack overflow error");
+        // assert(func.stackSize >= stack-lstack, "stack overflow error");
         Opcode cur = cast(Opcode) instrs[index++];
         // writeln(locals[0..func.stab.length]);
         // writeln(lstack[0..stack-lstack]);

@@ -28,7 +28,7 @@ void domain(string[] args)
     bool repl = false;
     bool echo = false;
     auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-            &scripts, "echo", &echo, "load", &langs, "lang", &lnd, "bytecode", &dumpbytecode);
+            &scripts, "echo", &echo, "load", &langs, "lang", &lnd, "bytecode", &dumpbytecode, "newir", &usenewir);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);

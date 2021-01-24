@@ -201,10 +201,18 @@ class Walker
         Ident op = cast(Ident) args[0];
         if (Ident id = cast(Ident) args[1])
         {
-            walk(args[1]);
-            walk(args[2]);
-            emit(new OperatorInstruction(op.repr));
-            emit(new StoreInstruction(id.repr));
+            if (["add", "sub", "mul", "div", "mod", "cat"].canFind(op.repr))
+            {
+                walk(args[2]);
+                emit(new OperatorStoreInstruction(op.repr, id.repr));
+            }
+            else
+            {
+                walk(args[1]);
+                walk(args[2]);
+                emit(new OperatorInstruction(op.repr));
+                emit(new StoreInstruction(id.repr));
+            }
         }
         else
         {
@@ -255,7 +263,10 @@ class Walker
         }
         if (lambda.exit is null)
         {
-            emit(new PushInstruction(Dynamic.nil));
+            if (args.length == 1)
+            {
+                emit(new PushInstruction(Dynamic.nil));
+            }
             emit(new ReturnBranch);
         }
         block = outter;

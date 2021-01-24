@@ -23,9 +23,14 @@ void removePop(ref Instruction[] instrs)
     {
         instrs.length--;
     }
-    if (instrs[$-1].get!StoreInstruction)
+    else if (instrs[$-1].get!StoreInstruction)
     {
         instrs[$-1] = new StorePopInstruction(instrs[$-1].get!StoreInstruction.var);
+    }
+    else if (instrs[$-1].get!OperatorStoreInstruction)
+    {
+        OperatorStoreInstruction osi = instrs[$-1].get!OperatorStoreInstruction;
+        instrs[$-1] = new OperatorStorePopInstruction(osi.op, osi.var);
     }
     else
     {
@@ -56,6 +61,11 @@ bool canRemovePopRef(ref Instruction[] instrs)
         return true;
     }
     if (instrs[$-1].get!StoreInstruction)
+    {
+        instrs.length--;
+        return true;
+    }
+    if (instrs[$-1].get!OperatorStoreInstruction)
     {
         instrs.length--;
         return true;
