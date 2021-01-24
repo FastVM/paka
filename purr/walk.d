@@ -15,7 +15,7 @@ enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
         "@if", "@fun", "@do", "@using", "-", "+", "*", "/", "%", "<", ">",
         "<=", ">=", "==", "!=", "...", "@index", "=>", "|>", "<|", "@using",
-        "@env", "&&", "||", "@alias",
+        "@env", "&&", "||",
     ];
 
 Node delegate(Node[])[string] transformers;
@@ -495,19 +495,6 @@ class Walker
         func.constants ~= Dynamic.nil;
     }
 
-    void walkAlias(Node[] args)
-    {
-        Ident id = cast(Ident) args[0];
-        Call lambda = new Call(new Ident("@fun"), [new Call(null), args[1]]);
-        walk(lambda);
-        Function.Lookup.Flags flags = Function.Lookup.Flags.callImplicit
-            | Function.Lookup.Flags.noAssign;
-        uint us = func.stab.define(id.repr, flags);
-        pushInstr(func, Opcode.store, [cast(ushort) us]);
-        pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
-        func.constants ~= Dynamic.nil;
-    }
-
     void walkReturn(Node[] args)
     {
         if (args.length == 0)
@@ -633,9 +620,6 @@ class Walker
         case "|>":
             walkPipeOp(c.args[1 .. $]);
             break;
-        case "@alias":
-            walkAlias(c.args[1 .. $]);
-            break;
         case "@set":
             walkSet(c.args[1 .. $]);
             break;
@@ -666,18 +650,9 @@ class Walker
         case "@using":
             walkUsing(c.args[1 .. $]);
             break;
-            // case "@paka.dotmap-both":
-            //     walkDotmap!"_both_map"(c.args[1 .. $]);
-            //     break;
-            // case "@paka.dotmap-lhs":
-            //     walkDotmap!"_lhs_map"(c.args[1 .. $]);
-            //     break;
-            // case "@paka.dotmap-rhs":
-            //     walkDotmap!"_rhs_map"(c.args[1 .. $]);
-            //     break;
-            // case "@paka.dotmap-pre":
-            //     walkDotmap!"_pre_map"(c.args[1 .. $]);
-            //     break;
+        case "~":
+            walkBinary!"cat"(c.args[1 .. $]);
+            break;
         case "+":
             walkBinary!"add"(c.args[1 .. $]);
             break;
@@ -858,19 +833,19 @@ class Walker
         {
             pushInstr(func, Opcode.argno, [irepr[1 .. $].to!ushort]);
         }
-        else if (irepr.length != 0 && irepr[0] == '.')
-        {
-            size_t pos = 0;
-            while (pos < irepr.length && irepr[pos] == '.')
-            {
-                pos++;
-            }
-            Node envv = new Ident(envs[$ - pos]);
-            Node node = new Call(new Ident("@index"), [
-                    envv, new String(irepr[pos .. $])
-                    ]);
-            walk(node);
-        }
+        // else if (irepr.length != 0 && irepr[0] == '.')
+        // {
+        //     size_t pos = 0;
+        //     while (pos < irepr.length && irepr[pos] == '.')
+        //     {
+        //         pos++;
+        //     }
+        //     Node envv = new Ident(envs[$ - pos]);
+        //     Node node = new Call(new Ident("@index"), [
+        //             envv, new String(irepr[pos .. $])
+        //             ]);
+        //     walk(node);
+        // }
         else if (irepr.isNumeric)
         {
             pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
@@ -901,11 +876,6 @@ class Walker
                     uint v = func.doCapture(irepr);
                     pushInstr(func, Opcode.loadc, [cast(ushort) v]);
                     flags = func.captab.flags(irepr);
-                }
-                if (flags & Function.Lookup.Flags.callImplicit)
-                {
-                    uint used = stackSize[0];
-                    pushInstr(func, Opcode.call, [0], used);
                 }
             }
         }

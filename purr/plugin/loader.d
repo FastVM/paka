@@ -17,7 +17,7 @@ void linkLang(string name)
         throw new Exception("cannot dlopen: " ~ name);
     }
     dlls[name] = handle;
-    Plugin function() fplugin = cast(Plugin function()) dlsym(handle, "dext_get_library_plugin".toStringz);
+    Plugin function() fplugin = cast(Plugin function()) dlsym(handle, "paka_get_library_plugin".toStringz);
     char* err = dlerror();
     if (err !is null)
     {

@@ -537,6 +537,10 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
             Node rhs = sub[i + 1].readExpr(level + 1);
             ret = new Call(new Ident("@opset"), [new Ident("add"), ret, rhs]);
             break;
+        case "~=":
+            Node rhs = sub[i + 1].readExpr(level + 1);
+            ret = new Call(new Ident("@opset"), [new Ident("cat"), ret, rhs]);
+            break;
         case "-=":
             Node rhs = sub[i + 1].readExpr(level + 1);
             ret = new Call(new Ident("@opset"), [new Ident("sub"), ret, rhs]);
@@ -615,15 +619,6 @@ Node readStmtImpl(ref TokenArray tokens)
     if (stmtTokens.length == 0)
     {
         return null;
-    }
-    if (stmtTokens[0].isKeyword("alias"))
-    {
-        stmtTokens.nextIs(Token.Type.keyword, "alias");
-        Node name = new Ident(stmtTokens[0].value);
-        stmtTokens.nextIs(Token.Type.ident);
-        stmtTokens.nextIs(Token.Type.operator, "=");
-        Node expr = stmtTokens.readExpr(0);
-        return new Call(new Ident("@alias"), [name, expr]);
     }
     if (stmtTokens[0].isKeyword("return"))
     {

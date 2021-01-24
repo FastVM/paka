@@ -1,4 +1,4 @@
-#?lang = "dext";
+#?lang = "paka";
 
 conf = {};
 conf["dlang"] = "ldc2";

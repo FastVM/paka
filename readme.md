@@ -1,5 +1,5 @@
-# Dext Language
-Dext is a fletchling programming language that features a simple dynamic type system, efficient virtual machine and javascript meets python syntax.
+# Paka Language
+Paka is a fletchling programming language that features a simple dynamic type system, efficient virtual machine and javascript meets python syntax.
 
 ## Types
 
@@ -94,43 +94,6 @@ unlike `table` in lua, nil is a valid key.
 
 ### callable
 `callable` is the type of functions, non nested callables are faster than nested ones.
-
-# Building Dext
-there are two ways to build paka. with dub or with ldc itself.
-
-clone this repo
-
-```
-git clone https://github.com/shawsumma/paka.git
-```
-
-### dub + ubuntu
-
-```
-sudo apt install libgmp-dev libmpfr-dev ldc dub -y
-dub build
-```
-
-### make + ubuntu
-```
-sudo apt install libgmp-dev libmpfr-dev ldc make -y
-make -j
-```
-
-## running
-
-as a repl:
-```
-./dext
-```
-with a benchmark file:
-```
-./dext bench/NAME_HERE.dext
-```
-all tests:
-```
-./dext lang/good/*.dext
-```
 
 ### `--math` alpha
 

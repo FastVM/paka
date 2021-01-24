@@ -206,6 +206,7 @@ class Table
             switch (op)
             {
             default : assert(0);
+            case "~" : return "cat";
             case "+" : return "add";
             case "-" : return "sub";
             case "*" : return "mul";
@@ -487,18 +488,7 @@ align(4):
 
     Dynamic opBinary(string op)(Dynamic other)
     {
-        if (type == Type.sml)
-        {
-            if (other.type == Type.sml)
-            {
-                return dynamic(mixin("value.sml " ~ op ~ " other.value.sml"));
-            }
-        }
-        else if (type == Type.tab)
-        {
-            return mixin("tab " ~ op ~ " other");
-        }
-        static if (op == "~" || op == "+")
+        static if (op == "~")
         {
             if (type == Type.str && other.type == Type.str)
             {
@@ -509,50 +499,18 @@ align(4):
                 return dynamic(arr ~ other.arr);
             }
         }
-        static if (op == "*")
-        {
-            if (type == Type.str && other.type == Type.sml)
-            {
-                string ret;
-                foreach (i; 0 .. other.as!size_t)
-                {
-                    ret ~= str;
-                }
-                return dynamic(ret);
-            }
-            if (type == Type.arr && other.type == Type.sml)
-            {
-                Dynamic[] ret;
-                foreach (i; 0 .. other.as!size_t)
-                {
-                    ret ~= arr;
-                }
-                return dynamic(ret);
-            }
-        }
-        if (type == Type.ptr)
-        {
-            if (other.type == Type.ptr)
-            {
-                return dynamic(mixin("(*this.value.ptr)" ~ op ~ "(*other.value.ptr)"));
-            }
-            else
-            {
-                return dynamic(mixin("(*this.value.ptr)" ~ op ~ "other"));
-            }
-        }
         else
         {
-            if (other.type == Type.ptr)
+            if (type == Type.sml && type == Type.sml)
             {
-                return dynamic(mixin("this" ~ op ~ "(*other.value.ptr)"));
+                return dynamic(mixin("value.sml " ~ op ~ " other.value.sml"));
             }
-            else
+            if (type == Type.tab)
             {
-                throw new TypeException(
-                        "invalid types: " ~ type.to!string ~ op ~ other.type.to!string);
+                return mixin("tab " ~ op ~ " other");
             }
         }
+        throw new TypeException("invalid types: " ~ type.to!string ~ op ~ other.type.to!string);
     }
 
     Dynamic opUnary(string op)()
@@ -920,13 +878,11 @@ private string strFormat(Dynamic dyn)
     case Dynamic.Type.log:
         return dyn.log.to!string;
     case Dynamic.Type.sml:
-        if (dyn.value.sml % 1 == 0
-                && dyn.value.sml > long.min && dyn.value.sml < long.max)
+        if (dyn.value.sml % 1 == 0 && dyn.value.sml > long.min && dyn.value.sml < long.max)
         {
             return to!string(cast(long) dyn.value.sml);
         }
-        return dyn.value.sml
-            .to!string;
+        return dyn.value.sml.to!string;
     case Dynamic.Type.str:
         if (before.length == 0)
         {

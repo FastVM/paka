@@ -23,7 +23,7 @@ enum string[2][] cmpMap()
 
 enum string[2][] mutMap()
 {
-    return [["+", "add"], ["-", "sub"], ["*", "mul"], ["/", "div"], ["%", "mod"]];
+    return [["+", "add"], ["-", "sub"], ["*", "mul"], ["/", "div"], ["%", "mod"], ["~", "cat"]];
 }
 
 alias allocateStackAllowed = alloca;
@@ -67,23 +67,26 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     }
     if (func.flags & Function.Flags.isLocal)
     {
-        locals = cast(Dynamic*) GC.malloc((func.stab.length + 1) * Dynamic.sizeof,
+        locals = cast(Dynamic*) GC.malloc(func.stab.length * Dynamic.sizeof,
                 0, typeid(Dynamic));
         stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof));
     }
     else
     {
         Dynamic* ptr = cast(Dynamic*) allocateStackAllowed(
-                (func.stackSize + func.stab.length + 1) * Dynamic.sizeof);
+                (func.stackSize + func.stab.length) * Dynamic.sizeof);
         locals = ptr + func.stackSize;
         stack = ptr;
     }
     ubyte* instrs = func.instrs.ptr;
-    // Dynamic* lstack = stack;
+    Dynamic* lstack = stack;
     while (true)
     {
+        assert(func.stackSize >= stack-lstack, "stack overflow error");
         Opcode cur = cast(Opcode) instrs[index++];
+        // writeln(locals[0..func.stab.length]);
         // writeln(lstack[0..stack-lstack]);
+        // writeln;
         // writeln(cur);
         switch (cur)
         {
@@ -280,6 +283,10 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             break;
         case Opcode.opneg:
             (*(stack - 1)) = -(*(stack - 1));
+            break;
+        case Opcode.opcat:
+            stack--;
+            (*(stack - 1)) = (*(stack - 1)) ~ (*stack);
             break;
         case Opcode.opadd:
             stack--;

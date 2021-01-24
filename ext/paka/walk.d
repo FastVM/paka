@@ -1,3 +1,17 @@
+module paka.walk;
+
+import purr.base;
+import purr.ast;
+
+Node delegate(Node[])[string] pakaTransforms()
+{
+    Node delegate(Node[])[string] ret;
+    ret["@paka.dotmap-pre"] = x => x.walkDotmap!"_pre_map";
+    ret["@paka.dotmap-lhs"] = x => x.walkDotmap!"_lhs_map";
+    ret["@paka.dotmap-rhs"] = x => x.walkDotmap!"_rhs_map";
+    ret["@paka.dotmap-both"] = x => x.walkDotmap!"_both_map";
+    return ret;
+}
 
 Node walkDotmap(string s)(Node[] args)
 {

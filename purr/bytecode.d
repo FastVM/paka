@@ -13,13 +13,14 @@ class Function
         string[] byPlace;
         Flags[] flagsByPlace;
 
-        enum Flags {
+        enum Flags
+        {
             noFlags = 0,
-            callImplicit = 1,
-            noAssign = 2,
+            noAssign = 1,
         }
 
-        size_t length() {
+        size_t length()
+        {
             return byPlace.length;
         }
 
@@ -43,11 +44,13 @@ class Function
             return ret;
         }
 
-        Flags flags(string name) {
+        Flags flags(string name)
+        {
             return flagsByPlace[byName[name]];
         }
 
-        Flags flags(uint name) {
+        Flags flags(uint name)
+        {
             return flagsByPlace[name];
         }
 
@@ -61,7 +64,8 @@ class Function
             return byPlace[name];
         }
 
-        immutable(uint[string]) byNameImmutable() {
+        immutable(uint[string]) byNameImmutable()
+        {
             return cast(immutable(uint[string])) byName;
         }
     }
@@ -90,6 +94,7 @@ class Function
     Dynamic[] self = null;
     string[] args = null;
     Function parent = null;
+    int stackSizeCurrent;
     Lookup stab;
     Lookup captab;
     Flags flags = cast(Flags) 0;
@@ -113,6 +118,7 @@ class Function
         stab = other.stab;
         captab = other.captab;
         flags = other.flags;
+        stackSizeCurrent = other.stackSizeCurrent;
     }
 
     uint doCapture(string name)
@@ -122,8 +128,10 @@ class Function
         {
             return *got;
         }
-        foreach (argno, argname; parent.args) {
-            if (argname == name) {
+        foreach (argno, argname; parent.args)
+        {
+            if (argname == name)
+            {
                 uint ret = captab.define(name);
                 capture ~= Capture(cast(uint) argno, false, true);
                 return ret;
@@ -151,7 +159,7 @@ class Function
             flags = parent.captab.flags(name);
         }
         uint ret = captab.define(name, flags);
-        capture[$-1].offset = ret;
+        capture[$ - 1].offset = ret;
         return ret;
     }
 
@@ -163,6 +171,7 @@ class Function
 
 enum AssignOp : ubyte
 {
+    cat,
     add,
     sub,
     mul,
@@ -202,6 +211,7 @@ enum Opcode : ubyte
     index,
     // math ops (arithmatic)
     opneg,
+    opcat,
     opadd,
     opsub,
     opmul,
@@ -238,10 +248,11 @@ enum int[Opcode] opSizes = [
         Opcode.nop : 0, Opcode.push : 1, Opcode.pop : -1, Opcode.sub : 1,
         Opcode.bind : -1, Opcode.oplt : -1, Opcode.opgt : -1, Opcode.oplte
         : -1, Opcode.opgte : -1, Opcode.opeq : -1, Opcode.opneq : -1,
-        Opcode.unpack : 1, Opcode.index : -1, Opcode.opneg : 0, Opcode.opadd
-        : -1, Opcode.opsub : -1, Opcode.opmul : -1, Opcode.opdiv : -1,
-        Opcode.opmod : -1, Opcode.load : 1, Opcode.loadc : 1, Opcode.store : -1,
-        Opcode.istore : -3, Opcode.opistore : -3, Opcode.opstore : -1,
-        Opcode.retval : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
-        Opcode.iffalse : -1, Opcode.jump : 0, Opcode.argno : 1, Opcode.args : 1,
+        Opcode.unpack : 1, Opcode.index : -1, Opcode.opneg : 0, Opcode.opcat
+        : -1, Opcode.opadd : -1, Opcode.opsub : -1, Opcode.opmul : -1,
+        Opcode.opdiv : -1, Opcode.opmod : -1, Opcode.load : 1, Opcode.loadc : 1,
+        Opcode.store : -1, Opcode.istore : -3, Opcode.opistore : -3,
+        Opcode.opstore : -1, Opcode.retval : 0, Opcode.retnone : 0,
+        Opcode.iftrue : -1, Opcode.iffalse : -1, Opcode.jump : 0,
+        Opcode.argno : 1, Opcode.args : 1,
     ];

@@ -28,7 +28,7 @@ void domain(string[] args)
     bool repl = false;
     bool echo = false;
     auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-            &scripts, "echo", &echo, "load", &langs, "lang", &lnd);
+            &scripts, "echo", &echo, "load", &langs, "lang", &lnd, "bytecode", &dumpbytecode);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
@@ -66,6 +66,10 @@ void domain(string[] args)
         {
             writeln(retval);
         }
+    }
+    if (repl || (scripts.length == 0 && stmts.length == 0))
+    {
+        parse("", langNameDefault ~ ".repl");
     }
 }
 

@@ -22,7 +22,7 @@ Dynamic unictrl(Args args)
     throw new Exception("not enough arguments to internal unicode function");
 }
 
-extern(C) Plugin dext_get_library_plugin()
+extern(C) Plugin paka_get_library_plugin()
 {
     Plugin plugin = new Plugin;
     plugin.libs ~= Pair("_unicode_ctrl", &unictrl);

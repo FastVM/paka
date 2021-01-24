@@ -264,7 +264,7 @@ Token readToken(ref string code, ref Location location)
                     ret ~= '"';
                     break;
                 case 'r':
-                    ret ~= '\r';
+                    ret ~= '\n';
                     break;
                 case 't':
                     ret ~= '\t';

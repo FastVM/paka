@@ -13,16 +13,31 @@ import std.algorithm;
 import std.string;
 import std.functional;
 
-/// runs a repl for paka language
-void replRun()
+Node replParse(string arg)
 {
-    char[][] history;
-    Reader reader = new Reader(history);
     size_t ctx = enterCtx;
     scope (exit)
     {
         exitCtx;
     }
+    Node node = arg.parse;
+    Walker walker = new Walker;
+    Function func = walker.walkProgram(node, ctx);
+    func.captured = loadBase;
+    Dynamic res = run(func, null, func.exportLocalsToBaseCallback);
+    if (res.type != Dynamic.Type.nil)
+    {
+        writeln(res);
+    }
+    ctx.replRun;
+    return null;
+}
+
+/// runs a repl for paka language
+void replRun(size_t ctx)
+{
+    char[][] history;
+    Reader reader = new Reader(history);
     while (true)
     {
         string code;
@@ -45,7 +60,7 @@ void replRun()
         func.captured = loadBase;
         Dynamic res = run(func, null, func.exportLocalsToBaseCallback);
         if (res.type != Dynamic.Type.nil) {
-            writeln(res, '\r');
+            writeln(res);
         }
     }
 }

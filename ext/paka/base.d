@@ -7,7 +7,7 @@ import paka.lib.str;
 import paka.lib.arr;
 import paka.lib.tab;
 
-Pair[] dextBaseLibs()
+Pair[] pakaBaseLibs()
 {
     Pair[] ret;
     ret ~= Pair("_both_map", &syslibubothmap);

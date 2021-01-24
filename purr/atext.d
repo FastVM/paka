@@ -297,7 +297,7 @@ class Reader
 		output.write(prompt);
 		if (smart) {
 			string ret = read;
-			output.write("\n\r");
+			output.write("\n\n");
 			return ret;
 		}
 		else {
