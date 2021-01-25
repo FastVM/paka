@@ -1,5 +1,4 @@
 x = 0;
-while (x < 10 * 100) {
+while (x < 30) {
     x += 1;
 };
-io.print(x);

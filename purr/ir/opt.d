@@ -7,27 +7,27 @@ import purr.ir.repr;
 void removePop(ref Instruction[] instrs)
 {
     instrs.length--;
-    if (instrs[$-1].get!PushInstruction)
+    if (instrs[$-1].canGet!PushInstruction)
     {
         instrs.length--;
     }
-    else if (instrs[$-1].get!LoadInstruction)
+    else if (instrs[$-1].canGet!LoadInstruction)
     {
         instrs.length--;
     }
-    else if (instrs[$-1].get!ArgsInstruction)
+    else if (instrs[$-1].canGet!ArgsInstruction)
     {
         instrs.length--;
     }
-    else if (instrs[$-1].get!LambdaInstruction)
+    else if (instrs[$-1].canGet!LambdaInstruction)
     {
         instrs.length--;
     }
-    else if (instrs[$-1].get!StoreInstruction)
+    else if (instrs[$-1].canGet!StoreInstruction)
     {
         instrs[$-1] = new StorePopInstruction(instrs[$-1].get!StoreInstruction.var);
     }
-    else if (instrs[$-1].get!OperatorStoreInstruction)
+    else if (instrs[$-1].canGet!OperatorStoreInstruction)
     {
         OperatorStoreInstruction osi = instrs[$-1].get!OperatorStoreInstruction;
         instrs[$-1] = new OperatorStorePopInstruction(osi.op, osi.var);
@@ -40,32 +40,32 @@ void removePop(ref Instruction[] instrs)
 
 bool canRemovePopRef(ref Instruction[] instrs)
 {
-    if (instrs[$-1].get!PushInstruction)
+    if (instrs[$-1].canGet!PushInstruction)
     {
         instrs.length--;
         return true;
     }
-    if (instrs[$-1].get!LoadInstruction)
+    if (instrs[$-1].canGet!LoadInstruction)
     {
         instrs.length--;
         return true;
     }
-    if (instrs[$-1].get!ArgsInstruction)
+    if (instrs[$-1].canGet!ArgsInstruction)
     {
         instrs.length--;
         return true;
     }
-    if (instrs[$-1].get!LambdaInstruction)
+    if (instrs[$-1].canGet!LambdaInstruction)
     {
         instrs.length--;
         return true;
     }
-    if (instrs[$-1].get!StoreInstruction)
+    if (instrs[$-1].canGet!StoreInstruction)
     {
         instrs.length--;
         return true;
     }
-    if (instrs[$-1].get!OperatorStoreInstruction)
+    if (instrs[$-1].canGet!OperatorStoreInstruction)
     {
         instrs.length--;
         return true;
@@ -86,7 +86,7 @@ void optimize(BasicBlock bb)
     {
         Instruction cur = bb.instrs[index];
         ret ~= cur;
-        if (cur.get!PopInstruction)
+        if (cur.canGet!PopInstruction)
         {
             if (ret[0..$-1].canRemovePop)
             {

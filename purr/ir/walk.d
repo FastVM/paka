@@ -31,7 +31,7 @@ class Walker
         block = entry;
         funcblk = block;
         walk(node);
-        emit(new ReturnBranch);
+        emitDefault(new ReturnBranch);
         Function func = new Function;
         func.parent = ctx.baseFunction;
         foreach (i; ctx.rootBase)
@@ -307,6 +307,15 @@ class Walker
         emit(new OperatorInstruction("index"));
     }
 
+    void walkArray(Node[] args)
+    {
+        foreach (i; args)
+        {
+            walk(i);
+        }
+        emit(new BuildArrayInstruction(args.length));
+    }
+
     void walkSpecialCall(string special, Node[] args)
     {
         switch (special)
@@ -324,6 +333,9 @@ class Walker
             break;
         case "@set":
             walkStore(args);
+            break;
+        case "@array":
+            walkArray(args);
             break;
         case "@opset":
             walkOpStore(args);

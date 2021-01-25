@@ -8,6 +8,7 @@ import purr.srcloc;
 import purr.bytecode;
 import purr.dynamic;
 import purr.ir.opt;
+import purr.inter;
 
 size_t nameCount;
 
@@ -81,7 +82,7 @@ class FunctionBlock
     BasicBlock entry;
 }
 
-BasicBlock[] checked;
+BasicBlock[] bbchecked;
 
 class BasicBlock
 {
@@ -95,35 +96,36 @@ class BasicBlock
         name = n;
     }
 
-    void predef(Function func)
+    string[] predef(string[] checked=null)
     {
-        foreach (i; checked)
+        foreach (i; bbchecked)
         {
             if (i is this)
             {
-                return;
+                return checked;
             }
         }
-        checked ~= this;
+        bbchecked ~= this;
         scope (exit)
         {
-            checked.length--;
+            bbchecked.length--;
         }
         foreach (instr; instrs)
         {
             if (AssignmentInstruction si = cast(AssignmentInstruction) instr)
             {
-                if (si.var !in func.stab.byName)
+                if (!checked.canFind(si.var))
                 {
-                    func.stab.define(si.var);
+                    checked ~= si.var;
                 }
             }
         }
         assert(exit !is null);
         foreach (blk; exit.target)
         {
-            blk.predef(func);
+            checked = blk.predef(checked);
         }
+        return checked;
     }
 
     bool within(Function func)
@@ -142,9 +144,18 @@ class BasicBlock
         if (!within(func))
         {
             this.optimize;
-            writeln(this);
+            if (dumpbytecode)
+            {
+                writeln(this);
+            }
             counts[func] = cast(ushort) func.instrs.length;
-            predef(func);
+            foreach (sym; predef)
+            {
+                if (sym !in func.stab.byName)
+                {
+                    func.stab.define(sym);
+                }
+            }
             foreach (instr; instrs)
             {
                 instr.emit(func);
@@ -176,9 +187,37 @@ class Instruction
         assert(false);
     }
 
+    bool canGet(T)()
+    {
+        return cast(T) this !is null;
+    }
+
     T get(T)()
     {
+        assert(canGet!T, typeid(this).to!string ~ " is not a " ~ typeid(T).to!string);
         return cast(T) this;
+    }
+}
+
+class BuildArrayInstruction : Instruction
+{
+    size_t argc;
+
+    this(size_t a)
+    {
+        argc = a;
+    }
+
+    override void emit(Function func)
+    {
+        func.pushInstr(Opcode.array, null, cast(int)(func.stackSize - argc + 1));
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "return\n";
+        return ret;
     }
 }
 

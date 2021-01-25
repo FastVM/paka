@@ -44,6 +44,7 @@ void domain(string[] args)
     {
         exitCtx;
     }
+    scripts ~= args[1 .. $];
     foreach (i; stmts)
     {
         Dynamic retval = ctx.eval(i ~ ";");
@@ -52,7 +53,7 @@ void domain(string[] args)
             writeln(retval);
         }
     }
-    foreach (i; scripts ~ args[1 .. $])
+    foreach (i; scripts)
     {
         string cdir = getcwd;
         scope (exit)
