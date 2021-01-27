@@ -61,7 +61,6 @@ Dynamic libsplit(Args args)
         ret = tmp;
     }
     return dynamic(ret);
-    // return dynamic(args[0].str.splitter(args[1].str).map!(x => dynamic(x)).array);
 }
 
 /// joins string to deliminer

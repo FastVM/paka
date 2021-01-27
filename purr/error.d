@@ -2,7 +2,7 @@ module purr.error;
 
 class LangException : Exception
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) pure nothrow @nogc @safe
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null)
     {
         super(msg, file, line, nextInChain);
     }
@@ -10,7 +10,7 @@ class LangException : Exception
 
 class RuntimeException : LangException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) pure nothrow @nogc @safe
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) 
     {
         super(msg, file, line, nextInChain);
     }
@@ -18,7 +18,7 @@ class RuntimeException : LangException
 
 class TypeException : RuntimeException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) pure nothrow @nogc @safe
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) 
     {
         super(msg, file, line, nextInChain);
     }
@@ -26,7 +26,7 @@ class TypeException : RuntimeException
 
 class AssertException : RuntimeException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) pure nothrow @nogc @safe
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) 
     {
         super(msg, file, line, nextInChain);
     }
@@ -34,7 +34,7 @@ class AssertException : RuntimeException
 
 class BoundsException : RuntimeException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) pure nothrow @nogc @safe
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) 
     {
         super(msg, file, line, nextInChain);
     }
@@ -42,7 +42,7 @@ class BoundsException : RuntimeException
 
 class CompileException : LangException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) pure nothrow @nogc @safe
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) 
     {
         super(msg, file, line, nextInChain);
     }
@@ -50,7 +50,7 @@ class CompileException : LangException
 
 class ParseException : CompileException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) pure nothrow @nogc @safe
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) 
     {
         super(msg, file, line, nextInChain);
     }
@@ -58,8 +58,10 @@ class ParseException : CompileException
 
 class UndefinedException : CompileException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) pure nothrow @nogc @safe
+    string undef;
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) 
     {
-        super(msg, file, line, nextInChain);
+        undef = msg;
+        super("not defined: " ~ msg, file, line, nextInChain);
     }
 }

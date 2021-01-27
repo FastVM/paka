@@ -62,8 +62,6 @@ Dynamic libtypeof(Args args)
             return dynamic("array");
         case Dynamic.Type.tab:
             return dynamic("table");
-        case Dynamic.Type.ptr:
-            return dynamic("pointer");
         case Dynamic.Type.fun:
             return dynamic("callable");
         case Dynamic.Type.del:

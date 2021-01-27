@@ -558,7 +558,7 @@ class LoadInstruction : Instruction
         }
         if (unfound)
         {
-            immutable(uint)* us = var in func.stab.byNameImmutable;
+            uint* us = var in func.stab.byName;
             Function.Lookup.Flags flags = void;
             if (us !is null)
             {

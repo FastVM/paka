@@ -7,7 +7,6 @@ import purr.dynamic;
 import purr.parse;
 import purr.vm;
 import purr.inter;
-import purr.atext;
 import std.stdio;
 import std.algorithm;
 import std.string;
@@ -23,7 +22,6 @@ Node replParse(string arg)
     Node node = arg.parse;
     Walker walker = new Walker;
     Function func = walker.walkProgram(node, ctx);
-    func.captured = loadBase;
     Dynamic res = run(func, null, func.exportLocalsToBaseCallback);
     if (res.type != Dynamic.Type.nil)
     {
@@ -36,28 +34,15 @@ Node replParse(string arg)
 /// runs a repl for paka language
 void replRun(size_t ctx)
 {
-    char[][] history;
-    Reader reader = new Reader(history);
     while (true)
     {
         string code;
-        try
-        {
-            code = reader.readln(">>> ");
-        }
-        catch (ExitException ee)
-        {
-            if (ee.letter == 'c') {
-                continue;
-            }
-            writeln;
-            break;
-        }
+        write(">>> ");
+        code = readln;
         code ~= ";";
         Node node = code.parse;
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);
-        func.captured = loadBase;
         Dynamic res = run(func, null, func.exportLocalsToBaseCallback);
         if (res.type != Dynamic.Type.nil) {
             writeln(res);

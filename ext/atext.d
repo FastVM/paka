@@ -1,4 +1,4 @@
-module purr.atext;
+module ext.atext;
 
 import std.algorithm;
 import std.process;
@@ -21,6 +21,11 @@ class ExitException : Exception
 	{
 		letter = l;
 		super("Got Ctrl-" ~ [l]);
+	}
+
+	unittest
+	{
+		
 	}
 }
 

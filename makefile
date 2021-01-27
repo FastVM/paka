@@ -39,7 +39,7 @@ LD=$(DC_CMD)
 endif
 
 ifeq ($(LD),ld)
-LD=ld.gold
+LD=$(DC_CMD)
 endif
 
 ifeq ($(LD),ld.bfd)
@@ -107,6 +107,9 @@ ifeq ($(LD_TYPE),ld)
 LFLAGS_EXTRA=-export-dynamic -l:libgcc_s.so.1 -l:crt1.o -lc -l:crti.o -l:crtn.o -dynamic-linker /lib64/ld-linux-x86-64.so.2
 endif
 
+# LFLAGS+=-l:libtcc.o -Ltinycc
+LFLAGS+=
+
 ifeq ($(LD_TYPE),d)
 ifeq ($(DC_TYPE),dmd)
 LFLAGS_DC_SIMPLE= -l:libphobos2.so -l:libdruntime-ldc-shared.so
@@ -117,7 +120,7 @@ endif
 ifeq ($(DC_TYPE),ldc)
 LFLAGS_DC_SIMPLE= -l:libphobos2-ldc-shared.so -l:libdruntime-ldc-shared.so
 endif
-LFLAGS_DC=$(LFLAGS_DC_SIMPLE) $(LFLAGS) -ldl
+LFLAGS_DC=$(LFLAGS_DC_SIMPLE) $(LFLAGS) -ldl 
 ifeq ($(LD_DC_TYPE),gdc)
 LFLAGS_LD=-nophoboslib $(LFLAGS_DC) -lm
 LFLAGS_LD_PURR=-ldl
@@ -140,7 +143,7 @@ LD_LINK_IN_CORRECT_STD=-l:libdruntime-ldc-shared.so -l:libphobos2-ldc-shared.so
 endif
 LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_CORRECT_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) 
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
-LD_LINK_IN_PURR=$(LD_LINK_IN) -ldl
+LD_LINK_IN_PURR=$(LD_LINK_IN) -ldl -ltcc
 endif
 
 ifeq ($(LD_TYPE),d)

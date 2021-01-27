@@ -39,7 +39,6 @@ Dynamic evalImpl(Walker)(size_t ctx, string code)
     Node node = code.parse;
     Walker walker = new Walker;
     Function func = walker.walkProgram(node, ctx);
-    func.captured = ctx.loadBase;
     if (dumpbytecode)
     {
         OpcodePrinter oppr = new OpcodePrinter;
@@ -72,7 +71,6 @@ Dynamic evalFileImpl(Walker)(string code)
     Node node = code.parse;
     Walker walker = new Walker;
     Function func = walker.walkProgram(node, ctx);
-    func.captured = loadBase;
     if (dumpbytecode)
     {
         OpcodePrinter oppr = new OpcodePrinter;

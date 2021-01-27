@@ -57,6 +57,7 @@ class Walker
         envc = 0;
         func = new Function;
         func.parent = ctx.baseFunction;
+        func.captured = func.parent.captured;
         foreach (i; ctx.rootBase)
         {
             func.captab.define(i.name);
@@ -260,7 +261,6 @@ class Walker
             func.flags |= Function.Flags.isLocal;
             func = newFunc;
             func.parent = last;
-            // newFunc.stab.set(argid.repr, cast(uint) 0);
             newFunc.args = [argid.repr];
             walk(args[1]);
             pushInstr(func, Opcode.retval);
@@ -419,7 +419,7 @@ class Walker
             }
             else
             {
-                immutable(uint)* us = ident.repr in func.stab.byNameImmutable;
+                uint* us = ident.repr in func.stab.byName;
                 if (us is null)
                 {
                     us = new uint(func.stab.define(ident.repr));
@@ -461,7 +461,7 @@ class Walker
             }
             else
             {
-                immutable(uint)* us = ident.repr in func.stab.byNameImmutable;
+                uint* us = ident.repr in func.stab.byName;
                 if (us is null)
                 {
                     us = new uint(func.stab.define(ident.repr));
@@ -833,19 +833,6 @@ class Walker
         {
             pushInstr(func, Opcode.argno, [irepr[1 .. $].to!ushort]);
         }
-        // else if (irepr.length != 0 && irepr[0] == '.')
-        // {
-        //     size_t pos = 0;
-        //     while (pos < irepr.length && irepr[pos] == '.')
-        //     {
-        //         pos++;
-        //     }
-        //     Node envv = new Ident(envs[$ - pos]);
-        //     Node node = new Call(new Ident("@index"), [
-        //             envv, new String(irepr[pos .. $])
-        //             ]);
-        //     walk(node);
-        // }
         else if (irepr.isNumeric)
         {
             pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
@@ -864,7 +851,7 @@ class Walker
             }
             if (unfound)
             {
-                immutable(uint)* us = irepr in func.stab.byNameImmutable;
+                uint* us = irepr in func.stab.byName;
                 Function.Lookup.Flags flags = void;
                 if (us !is null)
                 {

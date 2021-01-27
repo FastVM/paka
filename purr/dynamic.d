@@ -294,13 +294,12 @@ pragma(inline, true) Dynamic dynamic(T...)(T a)
 
 struct Dynamic
 {
-    enum Type : ulong
+    enum Type : uint
     {
         nil,
         log,
         sml,
         str,
-        ptr,
         arr,
         tab,
         fun,
@@ -316,7 +315,6 @@ struct Dynamic
         double sml;
         string* str;
         Array* arr;
-        Dynamic* ptr;
         Table tab;
         union Callable
         {
@@ -329,7 +327,6 @@ struct Dynamic
         void* obj;
     }
 
-align(1):
     Value value = void;
     Type type = Type.nil;
 
@@ -395,12 +392,6 @@ align(1):
     {
         value.fun.pro = pro;
         type = Type.pro;
-    }
-
-    this(Dynamic* ptr)
-    {
-        value.ptr = ptr;
-        type = Type.ptr;
     }
 
     this(Dynamic other)
@@ -524,16 +515,8 @@ align(1):
         {
             if (type != Type.log)
             {
-                if (type == Dynamic.Type.ptr)
-                {
-                    return value.ptr.log;
-                }
                 throw new TypeException("expected logical type");
             }
-        }
-        else if (type == Dynamic.Type.ptr)
-        {
-            return value.ptr.log;
         }
         return value.log;
     }
@@ -544,16 +527,8 @@ align(1):
         {
             if (type != Type.str)
             {
-                if (type == Dynamic.Type.ptr)
-                {
-                    return value.ptr.str;
-                }
                 throw new TypeException("expected string type");
             }
-        }
-        else if (type == Dynamic.Type.ptr)
-        {
-            return value.ptr.log;
         }
         return *value.str;
     }
@@ -564,16 +539,8 @@ align(1):
         {
             if (type != Type.arr)
             {
-                if (type == Dynamic.Type.ptr)
-                {
-                    return value.ptr.arr;
-                }
                 throw new TypeException("expected array type");
             }
-        }
-        else if (type == Dynamic.Type.ptr)
-        {
-            return value.ptr.log;
         }
         return *value.arr;
     }
@@ -584,16 +551,8 @@ align(1):
         {
             if (type != Type.tab)
             {
-                if (type == Dynamic.Type.ptr)
-                {
-                    return value.ptr.tab;
-                }
                 throw new TypeException("expected table type");
             }
-        }
-        else if (type == Dynamic.Type.ptr)
-        {
-            return value.ptr.log;
         }
         return value.tab;
     }
@@ -604,16 +563,8 @@ align(1):
         {
             if (type != Type.str)
             {
-                if (type == Dynamic.Type.ptr)
-                {
-                    return value.ptr.strPtr;
-                }
                 throw new TypeException("expected string type");
             }
-        }
-        else if (type == Dynamic.Type.ptr)
-        {
-            return value.ptr.log;
         }
         return value.str;
     }
@@ -624,35 +575,10 @@ align(1):
         {
             if (type != Type.arr)
             {
-                if (type == Dynamic.Type.ptr)
-                {
-                    return value.ptr.arrPtr;
-                }
                 throw new TypeException("expected array type");
             }
         }
-        else if (type == Dynamic.Type.ptr)
-        {
-            return value.ptr.log;
-        }
         return value.arr;
-    }
-
-    Dynamic* ptr()
-    {
-        version (safe)
-        {
-            if (type != Type.ptr)
-            {
-                throw new TypeException("expected pointer type");
-            }
-        }
-        return value.ptr;
-    }
-
-    ref Dynamic deref()
-    {
-        return *ptr;
     }
 
     Value.Callable fun()
@@ -661,10 +587,6 @@ align(1):
         {
             if (type != Type.fun && type != Type.pro && type != Type.del)
             {
-                if (type == Dynamic.Type.ptr)
-                {
-                    return value.ptr.fun;
-                }
                 throw new TypeException("expected callable type not " ~ type.to!string);
             }
         }
@@ -677,10 +599,6 @@ align(1):
         {
             return cast(T) value.sml;
         }
-        if (type == Type.ptr)
-        {
-            return value.ptr.as!T;
-        }
         else
         {
             throw new TypeException("expected numeric type");
@@ -692,10 +610,6 @@ align(1):
         if (type == Type.sml)
         {
             return cast(T) value.sml;
-        }
-        if (type == Type.ptr)
-        {
-            return value.ptr.as!T;
         }
         else
         {
@@ -805,8 +719,6 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
     case Dynamic.Type.end:
         assert(false);
     case Dynamic.Type.pac:
-        assert(false);
-    case Dynamic.Type.ptr:
         assert(false);
     case Dynamic.Type.nil:
         return 0;

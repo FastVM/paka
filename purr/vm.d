@@ -79,20 +79,13 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         stack = ptr;
     }
     ubyte* instrs = func.instrs.ptr;
-    Dynamic* lstack = stack;
     while (true)
     {
-        // assert(func.stackSize >= stack-lstack, "stack overflow error");
         Opcode cur = cast(Opcode) instrs[index++];
-        // writeln(locals[0..func.stab.length]);
-        // writeln(lstack[0..stack-lstack]);
-        // writeln;
-        // writeln(cur);
         switch (cur)
         {
         default:
             assert(false);
-            // throw new RuntimeException("opcode not found: " ~ cur.to!string);
         case Opcode.nop:
             break;
         case Opcode.push:
@@ -103,7 +96,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             break;
         case Opcode.sub:
             Function built = new Function(func.funcs[instrs.eat!ushort(index)]);
-            built.captured = null;
             built.parent = func;
             built.captured = new Dynamic*[built.capture.length];
             foreach (i, v; built.capture)

@@ -63,7 +63,7 @@ struct PushArray(T)
         return tokens[i];
     }
 
-    // utils that only happens if the token is a token array
+    /// utils that only happens if the token is a token array
     static if (is(T == Token))
     {
         /// consumes token if it is of type, returns weather it was consumed
@@ -219,7 +219,6 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
         args ~= tokens.readExpr(0);
         tokens.stripNewlines;
         items++;
-        // if ((items % 2 == 0 && tokens[0].isComma) || (items % 2 == 1 && tokens[0].isOperator(":")))
         if (tokens[0].isComma)
         {
             tokens.nextIs(Token.Type.comma);

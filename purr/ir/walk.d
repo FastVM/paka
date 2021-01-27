@@ -34,15 +34,12 @@ class Walker
         emitDefault(new ReturnBranch);
         Function func = new Function;
         func.parent = ctx.baseFunction;
+        func.captured = func.parent.captured;
         foreach (i; ctx.rootBase)
         {
             func.captab.define(i.name);
         }
         entry.emit(func);
-        import purr.bc.dump;
-        OpcodePrinter oppr = new OpcodePrinter;
-        oppr.walk(func);
-        // writeln(oppr.ret);
         return func;
     }
 
@@ -85,7 +82,6 @@ class Walker
         if (block.exit is null)
         {
             block.exit = branch;
-            // writeln(block);
         }
     }
 
@@ -93,7 +89,6 @@ class Walker
     {
         assert(block.exit is null);
         block.exit = branch;
-        // writeln(block);
     }
 
     void walkExact(Ident id)

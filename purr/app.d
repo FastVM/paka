@@ -24,8 +24,8 @@ void domain(string[] args)
     string[] scripts;
     string[] stmts;
     string[] langs;
-    string lnd;
-    bool repl = false;
+    string lnd = "ir";
+    bool repl = true;
     bool echo = false;
     auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
             &scripts, "echo", &echo, "load", &langs, "lang", &lnd, "bytecode", &dumpbytecode, "newir", &usenewir);
@@ -68,7 +68,7 @@ void domain(string[] args)
             writeln(retval);
         }
     }
-    if (repl || (scripts.length == 0 && stmts.length == 0))
+    if (repl && (scripts.length == 0 && stmts.length == 0))
     {
         parse("", langNameDefault ~ ".repl");
     }
@@ -122,7 +122,8 @@ void trymain(string[] args)
             ret ~= "\n";
         }
         spans.length = 0;
-        e.msg = "\n" ~ ret ~ e.msg;
+        writeln(e.msg);
+        e.msg = "exception fell to main thread, exiting.";
         throw e;
     }
 }
