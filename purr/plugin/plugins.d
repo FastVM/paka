@@ -1,11 +1,13 @@
 module purr.plugin.plugins;
 
+import std.stdio;
 import purr.plugin.plugin;
 import purr.base;
-import purr.walk;
+import purr.ir.walk;
 import purr.parse;
 import purr.ast;
 
+Node delegate(Node[])[string] transformers;
 Plugin[] plugins;
 
 Pair[] pluginLib()

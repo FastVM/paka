@@ -35,7 +35,13 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     {
         func.instrs ~= *cast(ubyte[2]*)&i;
     }
-    func.spans ~= Span.init;
+    if (func.spans.length != 0)
+    {
+        while (func.spans.length < func.instrs.length)
+        {
+            func.spans ~= func.spans[$-1];
+        }
+    }
     int* psize = op in opSizes;
     if (psize !is null)
     {
@@ -43,13 +49,12 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     }
     else
     {
-        func.stackSizeCurrent = size;
+        func.stackSizeCurrent += size;
     }
     if (func.stackSizeCurrent > func.stackSize)
     {
         func.stackSize = func.stackSizeCurrent;
     }
-
     assert(func.stackSizeCurrent >= 0);
 }
 
@@ -86,6 +91,7 @@ BasicBlock[] bbchecked;
 
 class BasicBlock
 {
+    Span span;
     string name;
     Instruction[] instrs;
     Branch exit;
@@ -158,7 +164,9 @@ class BasicBlock
             }
             foreach (instr; instrs)
             {
+                instr.enter(func);
                 instr.emit(func);
+                instr.exit(func);
             }
             exit.emit(func);
         }
@@ -180,13 +188,27 @@ class BasicBlock
     }
 }
 
-class Instruction
+class Emitter
 {
+    Span span;
+
+    final void enter(Function func)
+    {
+        func.spans ~= span;
+    }
+
     void emit(Function func)
     {
         assert(false);
     }
 
+    final void exit(Function func)
+    {
+    }
+}
+
+class Instruction : Emitter
+{
     bool canGet(T)()
     {
         return cast(T) this !is null;
@@ -198,37 +220,9 @@ class Instruction
         return cast(T) this;
     }
 }
-
-class BuildArrayInstruction : Instruction
-{
-    size_t argc;
-
-    this(size_t a)
-    {
-        argc = a;
-    }
-
-    override void emit(Function func)
-    {
-        func.pushInstr(Opcode.array, null, cast(int)(func.stackSize - argc + 1));
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "return\n";
-        return ret;
-    }
-}
-
-class Branch
+class Branch : Emitter
 {
     BasicBlock[] target;
-
-    void emit(Function func)
-    {
-        assert(false);
-    }
 }
 
 class BooleanBranch : Branch
@@ -312,6 +306,50 @@ class ReturnBranch : Branch
     }
 }
 
+class BuildArrayInstruction : Instruction
+{
+    size_t argc;
+
+    this(size_t a)
+    {
+        argc = a;
+    }
+
+    override void emit(Function func)
+    {
+        func.pushInstr(Opcode.array, [cast(ubyte) argc], cast(int) (1-argc));
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "return\n";
+        return ret;
+    }
+}
+
+class BuildTableInstruction : Instruction
+{
+    size_t argc;
+
+    this(size_t a)
+    {
+        argc = a;
+    }
+
+    override void emit(Function func)
+    {
+        func.pushInstr(Opcode.table, [cast(ubyte) argc], cast(int) (1-argc));
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "return\n";
+        return ret;
+    }
+}
+
 class CallInstruction : Instruction
 {
     size_t argc;
@@ -323,7 +361,7 @@ class CallInstruction : Instruction
 
     override void emit(Function func)
     {
-        func.pushInstr(Opcode.call, [cast(ushort) argc], cast(int) argc);
+        func.pushInstr(Opcode.call, [cast(ushort) argc], cast(int) -argc);
     }
 
     override string toString()
@@ -442,6 +480,23 @@ class PopInstruction : Instruction
     }
 }
 
+class IndexStoreInstruction : Instruction
+{
+    override void emit(Function func)
+    {
+        func.pushInstr(Opcode.istore);
+        func.pushInstr(Opcode.push, [cast(ushort) func.constants.length]);
+        func.constants ~= Dynamic.nil;
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "index-store\n";
+        return ret;
+    }
+}
+
 class AssignmentInstruction : Instruction
 {
     string var;
@@ -468,6 +523,7 @@ class StoreInstruction : AssignmentInstruction
         return ret;
     }
 }
+
 class OperatorStoreInstruction : AssignmentInstruction
 {
     string op;
@@ -586,7 +642,7 @@ class ArgsInstruction : Instruction
 {
     override void emit(Function func)
     {
-        assert(false);
+        func.pushInstr(Opcode.args, null);
     }
 
     override string toString()

@@ -4,7 +4,6 @@ import purr.ast;
 import purr.base;
 import purr.bytecode;
 import purr.dynamic;
-import purr.ssize;
 import purr.srcloc;
 import std.algorithm;
 import std.conv;
@@ -42,7 +41,7 @@ bool isUnpacking(Node[] args)
     return false;
 }
 
-class Walker
+class OldWalker
 {
     Function func;
     int[2] stackSize;
@@ -65,7 +64,6 @@ class Walker
         walk(node);
         pushInstr(func, Opcode.retval);
         func.stackSize = stackSize[1];
-        func.resizeStack;
         return func;
     }
 
@@ -270,7 +268,6 @@ class Walker
             pushInstr(func, Opcode.sub, [cast(ushort) func.funcs.length]);
 
             last.funcs ~= newFunc;
-            newFunc.resizeStack;
         }
     }
 
@@ -299,7 +296,6 @@ class Walker
         }
         pushInstr(func, Opcode.retval);
         func.stackSize = stackSize[1];
-        func.resizeStack;
         stackSize = stackOld;
         func = lastFunc;
         pushInstr(func, Opcode.sub, [cast(ushort) func.funcs.length]);

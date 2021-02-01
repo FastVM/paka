@@ -1,5 +1,5 @@
 module paka.repl;
-import purr.walk;
+import purr.ir.walk;
 import purr.bytecode;
 import purr.base;
 import purr.ast;

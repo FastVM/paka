@@ -11,7 +11,16 @@ string[] paths;
 
 void linkLang(string name)
 {
-    void* handle = dlopen(name.toStringz, RTLD_LAZY);
+    immutable(char)* cname = void;
+    if (name == "this")
+    {
+        cname = null;
+    }
+    else
+    {
+        cname = name.toStringz;
+    }
+    void* handle = dlopen(cname, RTLD_LAZY);
     if (handle is null)
     {
         throw new Exception("cannot dlopen: " ~ name);

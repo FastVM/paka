@@ -11,15 +11,19 @@ import purr.dynamic;
 import purr.srcloc;
 import purr.bytecode;
 import purr.ir.repr;
+import purr.walk;
 
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
         "@if", "@fun", "@do", "@using", "-", "+", "*", "/", "%", "<", ">",
         "<=", ">=", "==", "!=", "...", "@index", "=>", "|>", "<|", "@using",
-        "@env", "&&", "||",
+        "@env", "&&", "||", "~",
     ];
+
+alias Walker = NewWalker;
+// alias Walker = OldWalker;
     
-class Walker
+class NewWalker
 {
     Span[] nodes = [Span.init];
     BasicBlock block;
@@ -74,6 +78,7 @@ class Walker
 
     void emit(Instruction instr)
     {
+        instr.span = nodes[$-1];
         block.instrs ~= instr;
     }
 
@@ -81,6 +86,7 @@ class Walker
     {
         if (block.exit is null)
         {
+            branch.span = nodes[$-1];
             block.exit = branch;
         }
     }
@@ -88,6 +94,7 @@ class Walker
     void emit(Branch branch)
     {
         assert(block.exit is null);
+        branch.span = nodes[$-1];
         block.exit = branch;
     }
 
@@ -114,6 +121,7 @@ class Walker
         {
             emit(new ArgsInstruction);
             emit(new PushInstruction(ident[1 .. $].to!size_t.dynamic));
+            emit(new OperatorInstruction("index"));
         }
         else if (ident.isNumeric)
         {
@@ -184,6 +192,21 @@ class Walker
         {
             walk(args[1]);
             emit(new StoreInstruction(id.repr));
+        }
+        else if (Call call = cast(Call) args[0])
+        {
+            if(Ident id = cast(Ident) call.args[0])
+            {
+                assert(id.repr == "@index");
+                walk(call.args[1]);
+                walk(call.args[2]);
+                walk(args[1]);
+                emit(new IndexStoreInstruction);
+            }
+            else
+            {
+                assert(false);
+            }
         }
         else
         {
@@ -311,6 +334,15 @@ class Walker
         emit(new BuildArrayInstruction(args.length));
     }
 
+    void walkTable(Node[] args)
+    {
+        foreach (i; args)
+        {
+            walk(i);
+        }
+        emit(new BuildTableInstruction(args.length / 2));
+    }
+
     void walkSpecialCall(string special, Node[] args)
     {
         switch (special)
@@ -331,6 +363,9 @@ class Walker
             break;
         case "@array":
             walkArray(args);
+            break;
+        case "@table":
+            walkTable(args);
             break;
         case "@opset":
             walkOpStore(args);

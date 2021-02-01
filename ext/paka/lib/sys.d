@@ -5,7 +5,7 @@ import purr.base;
 import purr.error;
 import purr.ast;
 import purr.parse;
-import purr.walk;
+import purr.ir.walk;
 import purr.vm;
 import purr.inter;
 import purr.bytecode;

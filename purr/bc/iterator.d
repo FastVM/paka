@@ -95,13 +95,13 @@ class OpcodeIterator
                 opneq;
                 break;
             case Opcode.array:
-                array;
+                array(get);
                 break;
             case Opcode.unpack:
                 unpack;
                 break;
             case Opcode.table:
-                table;
+                table(get);
                 break;
             case Opcode.index:
                 index;
@@ -230,7 +230,7 @@ class OpcodeIterator
     {
     }
 
-    void array()
+    void array(ushort argCount)
     {
     }
 
@@ -238,7 +238,7 @@ class OpcodeIterator
     {
     }
 
-    void table()
+    void table(ushort argCount)
     {
     }
 

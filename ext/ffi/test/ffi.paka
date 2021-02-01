@@ -1,0 +1,7 @@
+math_h = sys.import("../include/math.h").types;
+libm_so = ffi.open("libm.so.6");
+math = tab.map(math_h) {
+    libm_so.sym($0, $1);
+};
+io.print(math.atan2(10, 0) * 2);
+io.print(math.sin(10));

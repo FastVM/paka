@@ -141,9 +141,9 @@ override:
         line("opneq");
     }
 
-    void array()
+    void array(ushort argCount)
     {
-        line("array");
+        line("array length=", argCount);
     }
 
     void unpack()
@@ -151,9 +151,9 @@ override:
         line("unpack");
     }
 
-    void table()
+    void table(ushort argCount)
     {
-        line("table");
+        line("table length=", argCount);
     }
 
     void index()

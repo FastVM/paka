@@ -30,8 +30,7 @@ alias allocateStackAllowed = alloca;
 
 Span[] spans;
 
-pragma(inline, true)
-T eat(T)(ubyte* bytes, ref ushort index)
+pragma(inline, true) T eat(T)(ubyte* bytes, ref ushort index)
 {
     scope (exit)
     {
@@ -40,14 +39,12 @@ T eat(T)(ubyte* bytes, ref ushort index)
     return *cast(T*)(bytes + index);
 }
 
-pragma(inline, true)
-T get(T)(ubyte* bytes, ref ushort index)
+pragma(inline, true) T get(T)(ubyte* bytes, ref ushort index)
 {
     return *cast(T*)(bytes + index);
 }
 
-pragma(inline, true)
-T get1(T)(ubyte* bytes, ref ushort index)
+pragma(inline, true) T get1(T)(ubyte* bytes, ref ushort index)
 {
     return *cast(T*)(bytes + index - T.sizeof);
 }
@@ -63,12 +60,11 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     Dynamic* locals = void;
     scope (failure)
     {
-        spans ~= func.spans[index >= func.spans.length ? $-1 : index];
+        spans ~= func.spans[index];
     }
     if (func.flags & Function.Flags.isLocal)
     {
-        locals = cast(Dynamic*) GC.malloc((func.stab.length + 1) * Dynamic.sizeof,
-                0, typeid(Dynamic));
+        locals = cast(Dynamic*) GC.malloc((func.stab.length + 1) * Dynamic.sizeof);
         stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof));
     }
     else
@@ -79,13 +75,21 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         stack = ptr;
     }
     ubyte* instrs = func.instrs.ptr;
+    // Dynamic* lstack = stack;
+    // writeln(cast(void*) func, func.captured);
     while (true)
     {
+        // assert(func.stackSize >= stack-lstack, "stack overflow error");
         Opcode cur = cast(Opcode) instrs[index++];
+        // writeln(locals[0..func.stab.length]);
+        // writeln(lstack[0 .. stack - lstack]);
+        // writeln;
+        // writeln(cur);
         switch (cur)
         {
         default:
             assert(false);
+            // throw new RuntimeException("opcode not found: " ~ cur.to!string);
         case Opcode.nop:
             break;
         case Opcode.push:
@@ -107,7 +111,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 }
                 else if (cap.isArg)
                 {
-                    built.captured[i] = new Dynamic(args[cap.from]);   
+                    built.captured[i] = new Dynamic(args[cap.from]);
                 }
                 else
                 {
@@ -210,53 +214,42 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             (*(stack - 1)) = dynamic((*(stack - 1)) != (*stack));
             break;
         case Opcode.array:
-            Dynamic* end = stack;
-            stack--;
-            while ((*stack).type != Dynamic.Type.end)
-            {
-                stack--;
-            }
-            Dynamic[] arr;
-            for (Dynamic* i = stack + 1; i < end; i++)
-            {
-                if ((*i).type == Dynamic.Type.pac)
-                {
-                    i++;
-                    arr ~= (*i).arr;
-                }
-                else
-                {
-                    arr ~= (*i);
-                }
-            }
-            (*stack) = dynamic(arr);
+            // Dynamic* end = stack;
+            // stack--;
+            // while ((*stack).type != Dynamic.Type.end)
+            // {
+            //     stack--;
+            // }
+            // Dynamic[] arr;
+            // for (Dynamic* i = stack + 1; i < end; i++)
+            // {
+            //     if ((*i).type == Dynamic.Type.pac)
+            //     {
+            //         i++;
+            //         arr ~= (*i).arr;
+            //     }
+            //     else
+            //     {
+            //         arr ~= (*i);
+            //     }
+            // }``
+            ushort got = instrs.eat!ushort(index);
+            stack = stack - got;
+            (*stack) = stack[0 .. got].dup.dynamic;
             stack++;
             break;
         case Opcode.unpack:
             (*(stack++)) = dynamic(Dynamic.Type.pac);
             break;
         case Opcode.table:
-            Dynamic* end = stack;
-            while ((*(stack - 1)).type != Dynamic.Type.end)
-            {
-                stack--;
-            }
+            ushort count = instrs.eat!ushort(index);
             Mapping table = emptyMapping;
-            for (Dynamic* i = stack; i < end; i += 2)
+            foreach (i; 0..count)
             {
-                if ((*i).type == Dynamic.Type.pac)
-                {
-                    foreach (key, value; (*(i + 1)).tab)
-                    {
-                        table[key] = value;
-                    }
-                }
-                else
-                {
-                    table[*i] = (*(i + 1));
-                }
+                stack -= 2;
+                table[*stack] = (*(stack + 1));
             }
-            (*(stack - 1)) = dynamic(table);
+            (*(stack++)) = dynamic(table);
             break;
         case Opcode.index:
             stack--;

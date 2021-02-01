@@ -111,24 +111,31 @@ endif
 LFLAGS+=
 
 ifeq ($(LD_TYPE),d)
+LD_CMD_PRE=-L
+else
+LD_CMD_PRE=
+endif
+
+ifeq ($(LD_TYPE),d)
 ifeq ($(DC_TYPE),dmd)
-LFLAGS_DC_SIMPLE= -l:libphobos2.so -l:libdruntime-ldc-shared.so
+LFLAGS_DC_SIMPLE=-l:libphobos2.so -l:libdruntime-ldc-shared.so
 endif
 ifeq ($(DC_TYPE),gdc)
-LFLAGS_DC_SIMPLE= -l:libgphobos.so.1 -l:libgdruntime.so.1
+LFLAGS_DC_SIMPLE=-l:libgphobos.so.1 -l:libgdruntime.so.1
 endif
 ifeq ($(DC_TYPE),ldc)
-LFLAGS_DC_SIMPLE= -l:libphobos2-ldc-shared.so -l:libdruntime-ldc-shared.so
+LFLAGS_DC_SIMPLE=-l:libphobos2-ldc-shared.so -l:libdruntime-ldc-shared.so
+# LFLAGS_DEFAULTLIB=/home/shaws/code/dext/beta/libphobos2-ldc-shared.so,/home/shaws/code/dext/beta/libdruntime-ldc-shared.so
 endif
 LFLAGS_DC=$(LFLAGS_DC_SIMPLE) $(LFLAGS) -ldl 
 ifeq ($(LD_DC_TYPE),gdc)
 LFLAGS_LD=-nophoboslib $(LFLAGS_DC) -lm
 LFLAGS_LD_PURR=-ldl
 else
-LFLAGS_LD=-defaultlib= $(patsubst %,-L%,$(LFLAGS_DC))
+LFLAGS_LD=-defaultlib=$(LFLAGS_DEFAULTLIB) $(patsubst %,-L%,$(LFLAGS_DC))
 LFLAGS_LD_PURR=-L-ldl
 endif
-LD_LINK_IN= $(LFLAGS_LD) -L-export-dynamic
+LD_LINK_IN=$(LFLAGS_LD) -L-export-dynamic $(M32_M64_FLAG)
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
 LD_LINK_IN_PURR=$(LD_LINK_IN) $(LFLAGS_LD_PURR) 
 else
@@ -136,14 +143,20 @@ ifeq ($(DC_TYPE),dmd)
 LD_LINK_IN_CORRECT_STD=-lphobos2
 endif
 ifeq ($(DC_TYPE),gdc)
-LD_LINK_IN_CORRECT_STD=-l:libgphobos.so.1 -l:libgdruntime.so.1
+LD_LINK_IN_CORRECT_STD=-l:libgphobos.so.1 -l:libgdruntime.so.1 
 endif
 ifeq ($(DC_TYPE),ldc)
 LD_LINK_IN_CORRECT_STD=-l:libdruntime-ldc-shared.so -l:libphobos2-ldc-shared.so
 endif
-LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_CORRECT_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) 
+LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_CORRECT_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) $(M32_M64_FLAG)
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
-LD_LINK_IN_PURR=$(LD_LINK_IN) -ldl -ltcc
+LD_LINK_IN_PURR=$(LD_LINK_IN) -ldl
+endif
+
+ifeq ($(BITS),32)
+M32_M64_FLAG=-m32
+else
+M32_M64_FLAG=-m64
 endif
 
 ifeq ($(LD_TYPE),d)
@@ -264,7 +277,7 @@ OPT_FLAGS=
 endif
 
 DFLAGS=
-FULL_DFLAGS=$(DFLAGS)
+FULL_DFLAGS=$(M32_M64_FLAG) $(DFLAGS)
 
 DLIB=libphobos2.so
 ifeq ($(DC_TYPE),dmd)
@@ -278,7 +291,7 @@ DEF_FLAG_PURR=
 endif
 
 RUN=@
-INFO=@echo
+INFO=echo
 
 ifeq ($(DC_TYPE),ldc)
 REALOCATON_MODE_TO_PIC=-relocation-model=pic
@@ -307,11 +320,11 @@ vm: purr
 purr: $(BIN)/purr
 
 $(BIN)/purr: dcomp $(BIN)/purr.o
-	$(INFO) Linking: $(BIN)/purr
+	@$(INFO) Linking: $(BIN)/purr
 	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)$(BIN)/purr $(BIN)/purr.o $(LD_LINK_IN_PURR) $(DFL_FLAG_PURR)
 
 $(BIN)/purr.o: $(BIN)
-	$(INFO) Compiling: purr/app.d
+	@$(INFO) Compiling: purr/app.d
 	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c $(call dlangsrc,purr,app.d) -Ipurr $(DC_CMD_OUT_FLAG)$(BIN)/purr.o
 
 unicode: libpurr_unicode.so
@@ -319,19 +332,28 @@ unicode: libpurr_unicode.so
 
 libpurr_unicode.so: dcomp $(BIN)/lib
 	$(CURL_CMDS_NEEDED) 
-	$(INFO) Compiling: ext/unicode/plugin.d
+	@$(INFO) Compiling: ext/unicode/plugin.d
 	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/unicode,plugin.d) -Ipurr -Iext -od=$(BIN)/unicode $(DC_CMD_OUT_FLAG)$(BIN)/unicode/plugin.o -J./$(BIN)/lib
-	$(INFO) Linking: $(BIN)/lib/libpurr_unicode.so
+	@$(INFO) Linking: $(BIN)/lib/libpurr_unicode.so
 	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_unicode.so $(BIN)/unicode/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+
+ffi: libpurr_ffi.so
+	$(RUN) cp $(BIN)/lib/libpurr_ffi.so ffi.so
+
+libpurr_ffi.so: dcomp $(BIN)/lib
+	@$(INFO) Compiling: ext/ffi/plugin.d
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/ffi,plugin.d) -Ipurr -Iext -od=$(BIN)/ffi $(DC_CMD_OUT_FLAG)$(BIN)/ffi/plugin.o -J./$(BIN)/lib
+	@$(INFO) Linking: $(BIN)/lib/libpurr_ffi.so
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_ffi.so $(BIN)/ffi/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS) $(LD_CMD_PRE)-lffi
 
 dext: paka
 paka: dcomp $(BIN)/lib/libpurr_paka.so
 	$(RUN) cp $(BIN)/lib/libpurr_paka.so paka.so
 
 $(BIN)/lib/libpurr_paka.so: $(BIN)/lib $(BIN)/paka
-	$(INFO) Compiling: ext/paka/plugin.d
+	@$(INFO) Compiling: ext/paka/plugin.d
 	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/paka,plugin.d) -Ipurr -Iext -od=$(BIN)/paka $(DC_CMD_OUT_FLAG)$(BIN)/paka/plugin.o
-	$(INFO) Linking: $(BIN)/paka/plugin.o
+	@$(INFO) Linking: $(BIN)/paka/plugin.o
 	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_paka.so $(BIN)/paka/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
 clean: dummy
@@ -342,7 +364,7 @@ DO_INSTALL=$(DC_CMD)
 ENV=\$$
 
 $(DC_CMD): $(OUT_DIR)/install.sh
-	$(INFO) Installing D Compiler
+	@$(INFO) Installing D Compiler
 	$(RUN) $(INSTALLER) install --path $(OUT_DIR) $(COMPILER) > $(OUT_DIR)/info.sh
 	$(RUN) rm -f $(DC_CMD)
 	$(RUN) echo "#!/usr/bin/env bash" > $(DC_CMD)
@@ -353,7 +375,7 @@ getcomp: $(DO_INSTALL)
 
 $(OUT_DIR)/install.sh:
 	$(RUN) mkdir -p $(OUT_DIR)
-	$(INFO) Downloading D Compiler
+	@$(INFO) Downloading D Compiler
 	$(RUN) curl https://dlang.org/install.sh > $(OUT_DIR)/install.sh 2>/dev/null
 
 dcomp: $(ALL_REQURED)

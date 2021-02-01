@@ -1,12 +1,10 @@
 module unicode.plugin;
 
-import unicode.getname;
-
 import std.stdio;
-import unicode.getname;
 import purr.base;
 import purr.dynamic;
 import purr.plugin.plugin;
+import unicode.getname;
 
 Dynamic unictrl(Args args)
 {

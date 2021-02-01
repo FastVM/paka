@@ -103,13 +103,3 @@ string getUnicode(immutable string arg)
         throw new UnicodeException(msg);
     }
 }
-
-void main(string[] args)
-{
-    foreach (arg; args[1..$])
-    {
-        string got = getUnicode(arg);
-        write(got);
-    }
-    writeln;
-}

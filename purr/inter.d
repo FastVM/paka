@@ -8,7 +8,6 @@ import std.conv;
 import std.algorithm;
 import std.meta;
 import purr.vm;
-import purr.walk;
 import purr.ir.walk;
 import purr.bc.dump;
 import purr.bytecode;
@@ -32,7 +31,6 @@ LocalCallback exportLocalsToBaseCallback(Function func)
 }
 
 bool dumpbytecode = false;
-bool usenewir = false;
 
 Dynamic evalImpl(Walker)(size_t ctx, string code)
 {
@@ -51,14 +49,7 @@ Dynamic evalImpl(Walker)(size_t ctx, string code)
 
 Dynamic eval(size_t ctx, string code)
 {
-    if (usenewir)
-    {
-        return evalImpl!(purr.ir.walk.Walker)(ctx, code);
-    }
-    else
-    {
-        return evalImpl!(purr.walk.Walker)(ctx, code);
-    }
+    return evalImpl!(purr.ir.walk.Walker)(ctx, code);
 }
 
 Dynamic evalFileImpl(Walker)(string code)
@@ -83,14 +74,7 @@ Dynamic evalFileImpl(Walker)(string code)
 
 Dynamic evalFile(string code)
 {
-    if (usenewir)
-    {
-        return evalFileImpl!(purr.ir.walk.Walker)(code);
-    }
-    else
-    {
-        return evalFileImpl!(purr.walk.Walker)(code);
-    }
+    return evalFileImpl!(purr.ir.walk.Walker)(code);
 }
 
 

@@ -2,7 +2,6 @@ module purr.app;
 
 import purr.vm;
 import purr.base;
-import purr.walk;
 import purr.ast;
 import purr.base;
 import purr.dynamic;
@@ -24,15 +23,16 @@ void domain(string[] args)
     string[] scripts;
     string[] stmts;
     string[] langs;
-    string lnd = "ir";
+    string lnd = "paka";
     bool repl = true;
     bool echo = false;
     auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-            &scripts, "echo", &echo, "load", &langs, "lang", &lnd, "bytecode", &dumpbytecode, "newir", &usenewir);
+            &scripts, "echo", &echo, "load", &langs, "lang", &lnd,
+            "bytecode", &dumpbytecode);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
-        return;  
+        return;
     }
     langNameDefault = lnd;
     foreach (i; langs)
@@ -122,9 +122,8 @@ void trymain(string[] args)
             ret ~= "\n";
         }
         spans.length = 0;
+        writeln(ret);
         writeln(e.msg);
-        e.msg = "exception fell to main thread, exiting.";
-        throw e;
     }
 }
 

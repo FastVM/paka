@@ -256,7 +256,11 @@ class Table
         Dynamic* str = "str".dynamic in meta;
         if (str !is null)
         {
-            Dynamic res = (*str)([dynamic(this)]);
+            Dynamic res = *str;
+            if (res.type != Dynamic.Type.str)
+            {
+                res = res([dynamic(this)]);
+            }
             if (res.type != Dynamic.Type.str)
             {
                 throw new TypeException("str must return a string");

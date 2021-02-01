@@ -3,7 +3,7 @@ module purr.parse;
 import std.conv;
 import std.stdio;
 import purr.ast;
-import purr.walk;
+import purr.ir.walk;
 import purr.bytecode;
 import purr.base;
 import purr.dynamic;
@@ -34,16 +34,13 @@ string readLine(ref string code)
 
 Node parse(string code, string langname = langNameDefault)
 {
-    if (code.length > bashLine.length && code[0 .. bashLine.length] == bashLine)
-    {
-        code.readLine;
-    }
     if (auto i = langname in parsers)
     {
         return (*i)(code);
     }
     else
     {
+        writeln(langname);
         throw new CompileException("language not found: " ~ langname);
     }
 }
