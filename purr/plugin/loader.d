@@ -11,6 +11,11 @@ string[] paths;
 
 void linkLang(string name)
 {
+    name.loadLang.addPlugin;
+}
+
+Plugin loadLang(string name)
+{
     immutable(char)* cname = void;
     if (name == "this")
     {
@@ -23,7 +28,7 @@ void linkLang(string name)
     void* handle = dlopen(cname, RTLD_LAZY);
     if (handle is null)
     {
-        throw new Exception("cannot dlopen: " ~ name);
+        throw new Exception(cast(string) ("cannot dlopen: " ~ name ~ " error: " ~ dlerror.fromStringz));
     }
     dlls[name] = handle;
     Plugin function() fplugin = cast(Plugin function()) dlsym(handle, "paka_get_library_plugin".toStringz);
@@ -32,6 +37,5 @@ void linkLang(string name)
     {
         throw new Exception(cast(string) ("dlsym error: " ~ err.fromStringz));
     }
-    Plugin plugin = fplugin();
-    addPlugin(plugin);
+    return fplugin();
 }

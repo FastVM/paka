@@ -14,6 +14,8 @@ import purr.dynamic;
 import purr.bytecode;
 import purr.data.map;
 
+version = vm;
+
 alias LocalCallback = void delegate(uint index, Dynamic* stack, Dynamic[] locals);
 
 enum string[2][] cmpMap()

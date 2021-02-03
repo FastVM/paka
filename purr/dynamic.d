@@ -9,7 +9,6 @@ import core.memory;
 import purr.bytecode;
 import purr.vm;
 import purr.error;
-import purr.data.rope;
 import purr.data.map;
 
 version = safe;
@@ -17,6 +16,7 @@ version = safe;
 alias Args = Dynamic[];
 alias Array = Dynamic[];
 
+alias Delegate = Dynamic function(Dynamic[]);
 alias Mapping = Map!(Dynamic, Dynamic);
 Mapping emptyMapping()
 {
@@ -298,7 +298,7 @@ pragma(inline, true) Dynamic dynamic(T...)(T a)
 
 struct Dynamic
 {
-    enum Type : uint
+    enum Type : size_t
     {
         nil,
         log,
@@ -331,8 +331,9 @@ struct Dynamic
         void* obj;
     }
 
+align(1):
+    Type type = void;
     Value value = void;
-    Type type = Type.nil;
 
     static Dynamic strToNum(string s)
     {
@@ -704,16 +705,8 @@ int cmpTable(Table at, Table bt)
 }
 
 Dynamic[2][] above;
-private int cmpDynamicImpl(Dynamic a, Dynamic b)
+pragma(inline, true) private int cmpDynamicImpl(Dynamic a, Dynamic b)
 {
-    Dynamic[2] cur = [a, b];
-    foreach (i, p; above)
-    {
-        if (cur[0] is p[0] && cur[1] is p[1])
-        {
-            return 0;
-        }
-    }
     if (b.type != a.type)
     {
         return cmp(a.type, b.type);
@@ -733,6 +726,14 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
     case Dynamic.Type.sml:
         return cmp(a.value.sml, b.value.sml);
     case Dynamic.Type.arr:
+        Dynamic[2] cur = [a, b];
+        foreach (i, p; above)
+        {
+            if (cur[0] is p[0] && cur[1] is p[1])
+            {
+                return 0;
+            }
+        }
         above ~= cur;
         scope (exit)
         {
@@ -753,6 +754,14 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
         }
         return 0;
     case Dynamic.Type.tab:
+        Dynamic[2] cur = [a, b];
+        foreach (i, p; above)
+        {
+            if (cur[0] is p[0] && cur[1] is p[1])
+            {
+                return 0;
+            }
+        }
         above ~= cur;
         scope (exit)
         {

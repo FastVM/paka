@@ -50,6 +50,45 @@ ifeq ($(LD),gdc)
 $(error cannot use LD=gdc yet)
 endif
 
+ifeq ($(LIB1),)
+BOOL_UNIFY_PURR=FALSE
+endif
+
+ifeq ($(LIB1),true)
+BOOL_UNIFY_PURR=TRUE
+endif
+
+ifeq ($(LIB1),false)
+BOOL_UNIFY_PURR=FALSE
+endif
+
+ifeq ($(LIB1),yes)
+BOOL_UNIFY_PURR=TRUE
+endif
+
+ifeq ($(LIB1),no)
+BOOL_UNIFY_PURR=FALSE
+endif
+
+ifeq ($(LIB1),1)
+BOOL_UNIFY_PURR=TRUE
+endif
+
+ifeq ($(LIB1),9)
+BOOL_UNIFY_PURR=FALSE
+endif
+
+ifneq ($(BOOL_UNIFY_PURR),TRUE)
+ifneq ($(BOOL_UNIFY_PURR),FALSE)
+$(error not a valid flag: LIB1=$(LIB1))
+endif
+endif
+
+PURR_EXTRA_REQUIREMENTS=
+ifneq ($(BOOL_UNIFY_PURR),TRUE)
+PURR_EXTRA_REQUIREMENTS+=$(BIN)/paka/plugin.o
+endif
+
 LD_TYPE_FOUND=
 ifneq ($(findstring ld,$(LD)),)
 LD_TYPE_FOUND=ld
@@ -104,7 +143,7 @@ LFLAGS_EXTRA=-Wl,--export-dynamic
 endif
 
 ifeq ($(LD_TYPE),ld)
-LFLAGS_EXTRA=-export-dynamic -l:libgcc_s.so.1 -l:crt1.o -lc -l:crti.o -l:crtn.o -dynamic-linker /lib64/ld-linux-x86-64.so.2
+LFLAGS_EXTRA=-export-dynamic -l:libgcc_s.so.1 -l:crt1.o -l:crti.o -l:crtn.o -dynamic-linker -lc /lib64/ld-linux-x86-64.so.2
 endif
 
 # LFLAGS+=-l:libtcc.o -Ltinycc
@@ -131,9 +170,19 @@ LFLAGS_DC=$(LFLAGS_DC_SIMPLE) $(LFLAGS) -ldl
 ifeq ($(LD_DC_TYPE),gdc)
 LFLAGS_LD=-nophoboslib $(LFLAGS_DC) -lm
 LFLAGS_LD_PURR=-ldl
+ifeq ($(BOOL_UNIFY_PURR),TRUE)
+LD_LINK_PURR_LIBS=$(LIB)/libpurr_paka.so
+else
+LD_LINK_PURR_LIBS=
+endif
 else
 LFLAGS_LD=-defaultlib=$(LFLAGS_DEFAULTLIB) $(patsubst %,-L%,$(LFLAGS_DC))
 LFLAGS_LD_PURR=-L-ldl
+ifeq ($(BOOL_UNIFY_PURR),TRUE)
+LD_LINK_PURR_LIBS=$(LIB)/libpurr_paka.so
+else
+LD_LINK_PURR_LIBS=
+endif
 endif
 LD_LINK_IN=$(LFLAGS_LD) -L-export-dynamic $(M32_M64_FLAG)
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
@@ -151,6 +200,11 @@ endif
 LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_CORRECT_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) $(M32_M64_FLAG)
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
 LD_LINK_IN_PURR=$(LD_LINK_IN) -ldl
+ifeq ($(BOOL_UNIFY_PURR),TRUE)
+LD_LINK_PURR_LIBS=$(LIB)/libpurr_paka.so
+else
+LD_LINK_PURR_LIBS=
+endif
 endif
 
 ifeq ($(BITS),32)
@@ -290,7 +344,7 @@ DEF_FLAG_LIBS=-shared $(DEF_FLAG)
 DEF_FLAG_PURR=
 endif
 
-RUN=@
+RUN=
 INFO=echo
 
 ifeq ($(DC_TYPE),ldc)
@@ -299,72 +353,46 @@ else
 REALOCATON_MODE_TO_PIC=-fPIC
 endif
 
-ifeq ($(shell test -e ./$(BIN)/lib/UnicodeData.txt && echo -n yes),yes)
+ifeq ($(shell test -e ./$(LIB)/UnicodeData.txt && echo -n yes),yes)
 CURL_CMD_FOR=@:
 else
-CURL_CMDS_NEEDED=$(RUN) curl https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt > ./$(BIN)/lib/UnicodeData.txt
+CURL_CMDS_NEEDED=$(RUN) curl https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt > ./$(LIB)/UnicodeData.txt
 endif
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
-ifeq ($(DC_TYPE),gdc)
 dlangsrc=$(call rwildcard,$1,*.d)
-else
-dlangsrc=-i $1/$2
-endif
 
-BIN=bin
+BIN=./bin
+LIB=./lib
 
-all: purr paka unicode
+LIBS_NOEXT:=$(patsubst %.so,%,$(patsubst %.o,%,$(LIBS)))
+LIBS_SO:=$(patsubst %,$(LIB)/libpurr_%.so,$(LIBS_NOEXT))
+LIBS_OBJ:=$(patsubst %,$(LIB)/libpurr_%.o,$(LIBS_NOEXT))
 
-vm: purr
+all: $(BIN)/purr $(LIBS_SO)
+
 purr: $(BIN)/purr
 
-$(BIN)/purr: dcomp $(BIN)/purr.o
-	@$(INFO) Linking: $(BIN)/purr
-	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)$(BIN)/purr $(BIN)/purr.o $(LD_LINK_IN_PURR) $(DFL_FLAG_PURR)
+$(BIN)/purr: $(BIN)/purr.o $(LIBS_OBJ)
+	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)$(BIN)/purr $(LD_LINK_IN_PURR) $(DFL_FLAG_PURR) $(LD_LINK_PURR_LIBS) $^
 
-$(BIN)/purr.o: $(BIN)
-	@$(INFO) Compiling: purr/app.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c $(call dlangsrc,purr,app.d) -Ipurr $(DC_CMD_OUT_FLAG)$(BIN)/purr.o
+$(BIN)/purr.o: dcomp $(BIN)
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c $(call dlangsrc,purr,app.d) $(DC_CMD_OUT_FLAG)$(BIN)/purr.o -Ipurr -Illvm/source
 
-unicode: libpurr_unicode.so
-	$(RUN) cp $(BIN)/lib/libpurr_unicode.so unicode.so
+$(LIBS_SO): $(patsubst %.so,%.o,$@)
+	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$@ $^ $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS) $(patsubst %.so,%.o,$@)
 
-libpurr_unicode.so: dcomp $(BIN)/lib
-	$(CURL_CMDS_NEEDED) 
-	@$(INFO) Compiling: ext/unicode/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/unicode,plugin.d) -Ipurr -Iext -od=$(BIN)/unicode $(DC_CMD_OUT_FLAG)$(BIN)/unicode/plugin.o -J./$(BIN)/lib
-	@$(INFO) Linking: $(BIN)/lib/libpurr_unicode.so
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_unicode.so $(BIN)/unicode/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
-
-ffi: libpurr_ffi.so
-	$(RUN) cp $(BIN)/lib/libpurr_ffi.so ffi.so
-
-libpurr_ffi.so: dcomp $(BIN)/lib
-	@$(INFO) Compiling: ext/ffi/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/ffi,plugin.d) -Ipurr -Iext -od=$(BIN)/ffi $(DC_CMD_OUT_FLAG)$(BIN)/ffi/plugin.o -J./$(BIN)/lib
-	@$(INFO) Linking: $(BIN)/lib/libpurr_ffi.so
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_ffi.so $(BIN)/ffi/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS) $(LD_CMD_PRE)-lffi
-
-dext: paka
-paka: dcomp $(BIN)/lib/libpurr_paka.so
-	$(RUN) cp $(BIN)/lib/libpurr_paka.so paka.so
-
-$(BIN)/lib/libpurr_paka.so: $(BIN)/lib $(BIN)/paka
-	@$(INFO) Compiling: ext/paka/plugin.d
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/paka,plugin.d) -Ipurr -Iext -od=$(BIN)/paka $(DC_CMD_OUT_FLAG)$(BIN)/paka/plugin.o
-	@$(INFO) Linking: $(BIN)/paka/plugin.o
-	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$(BIN)/lib/libpurr_paka.so $(BIN)/paka/plugin.o $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
+$(LIBS_OBJ): dcomp $(LIB)
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,$(patsubst $(LIB)/libpurr_%.o,ext/%,$(LIBS_OBJ)),plugin.d) -Ipurr -Iext $(DC_CMD_OUT_FLAG)$@
 
 clean: dummy
-	$(RUN) rm -rf $(BIN) unicode.so
+	$(RUN) rm -rf $(BIN) $(LIB) *.so *.o
 
 INSTALLER=bash $(OUT_DIR)/install.sh
 DO_INSTALL=$(DC_CMD)
 ENV=\$$
 
 $(DC_CMD): $(OUT_DIR)/install.sh
-	@$(INFO) Installing D Compiler
 	$(RUN) $(INSTALLER) install --path $(OUT_DIR) $(COMPILER) > $(OUT_DIR)/info.sh
 	$(RUN) rm -f $(DC_CMD)
 	$(RUN) echo "#!/usr/bin/env bash" > $(DC_CMD)
@@ -375,18 +403,14 @@ getcomp: $(DO_INSTALL)
 
 $(OUT_DIR)/install.sh:
 	$(RUN) mkdir -p $(OUT_DIR)
-	@$(INFO) Downloading D Compiler
 	$(RUN) curl https://dlang.org/install.sh > $(OUT_DIR)/install.sh 2>/dev/null
 
 dcomp: $(ALL_REQURED)
 
 $(BIN):
-	$(RUN) mkdir -p $(BIN)
+	$(RUN) mkdir -p $@
 
-$(BIN)/lib: $(BIN)
-	$(RUN) mkdir -p $(BIN)/lib
-
-$(BIN)/paka: $(BIN)
-	$(RUN) mkdir -p $(BIN)/paka
+$(LIB):
+	$(RUN) mkdir -p $@
 
 dummy:

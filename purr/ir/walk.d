@@ -29,6 +29,16 @@ class NewWalker
     BasicBlock block;
     BasicBlock funcblk;
 
+    BasicBlock bbwalk(Node node)
+    {
+        BasicBlock entry = new BasicBlock;
+        block = entry;
+        funcblk = block;
+        walk(node);
+        emitDefault(new ReturnBranch);
+        return entry;
+    }
+
     Function walkProgram(Node node, size_t ctx)
     {
         BasicBlock entry = new BasicBlock;

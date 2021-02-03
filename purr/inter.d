@@ -8,7 +8,6 @@ import std.conv;
 import std.algorithm;
 import std.meta;
 import purr.vm;
-import purr.ir.walk;
 import purr.bc.dump;
 import purr.bytecode;
 import purr.base;
@@ -17,6 +16,12 @@ import purr.dynamic;
 import purr.parse;
 import purr.vm;
 import purr.inter;
+import purr.ir.repr;
+import purr.ir.walk;
+import purr.ir.emit;
+import purr.ir.native;
+
+bool dumpbytecode = false;
 
 /// vm callback that sets the locals defined into the root base 
 LocalCallback exportLocalsToBaseCallback(Function func)
@@ -30,12 +35,11 @@ LocalCallback exportLocalsToBaseCallback(Function func)
     return ret;
 }
 
-bool dumpbytecode = false;
-
 Dynamic evalImpl(Walker)(size_t ctx, string code)
 {
     Node node = code.parse;
     Walker walker = new Walker;
+    BasicBlock bb = walker.bbwalk(node);
     Function func = walker.walkProgram(node, ctx);
     if (dumpbytecode)
     {

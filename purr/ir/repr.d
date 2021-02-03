@@ -4,11 +4,22 @@ import std.stdio;
 import std.conv;
 import std.array;
 import std.algorithm;
+import std.typecons;
+import std.meta;
 import purr.srcloc;
 import purr.bytecode;
 import purr.dynamic;
-import purr.ir.opt;
 import purr.inter;
+import purr.ir.emit;
+import purr.ir.opt;
+
+alias InstrTypes = AliasSeq!(BooleanBranch, GotoBranch, ReturnBranch,
+        BuildArrayInstruction, BuildTableInstruction,
+        CallInstruction, PushInstruction, OperatorInstruction, LambdaInstruction,
+        PopInstruction,
+        IndexStoreInstruction,
+        StoreInstruction, OperatorStoreInstruction, StorePopInstruction,
+        OperatorStorePopInstruction, LoadInstruction, ArgsInstruction,);
 
 size_t nameCount;
 
@@ -39,7 +50,7 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     {
         while (func.spans.length < func.instrs.length)
         {
-            func.spans ~= func.spans[$-1];
+            func.spans ~= func.spans[$ - 1];
         }
     }
     int* psize = op in opSizes;
@@ -82,11 +93,6 @@ string genName(string prefix)()
     return prefix ~ nameCount.to!string;
 }
 
-class FunctionBlock
-{
-    BasicBlock entry;
-}
-
 BasicBlock[] bbchecked;
 
 class BasicBlock
@@ -97,12 +103,12 @@ class BasicBlock
     Branch exit;
     ushort[Function] counts;
 
-    this(string n = genName!"bb.")
+    this(string n = genName!"bb_")
     {
         name = n;
     }
 
-    string[] predef(string[] checked=null)
+    string[] predef(string[] checked = null)
     {
         foreach (i; bbchecked)
         {
@@ -220,6 +226,7 @@ class Instruction : Emitter
         return cast(T) this;
     }
 }
+
 class Branch : Emitter
 {
     BasicBlock[] target;
@@ -234,7 +241,7 @@ class BooleanBranch : Branch
 
     override void emit(Function func)
     {
-        if(!target[0].within(func))
+        if (!target[0].within(func))
         {
             func.pushInstr(Opcode.iffalse, [cast(ushort) ushort.max]);
             size_t iff = func.instrs.length;
@@ -317,7 +324,7 @@ class BuildArrayInstruction : Instruction
 
     override void emit(Function func)
     {
-        func.pushInstr(Opcode.array, [cast(ubyte) argc], cast(int) (1-argc));
+        func.pushInstr(Opcode.array, [cast(ubyte) argc], cast(int)(1 - argc));
     }
 
     override string toString()
@@ -339,7 +346,7 @@ class BuildTableInstruction : Instruction
 
     override void emit(Function func)
     {
-        func.pushInstr(Opcode.table, [cast(ubyte) argc], cast(int) (1-argc));
+        func.pushInstr(Opcode.table, [cast(ubyte) argc], cast(int)(1 - argc));
     }
 
     override string toString()
@@ -361,7 +368,7 @@ class CallInstruction : Instruction
 
     override void emit(Function func)
     {
-        func.pushInstr(Opcode.call, [cast(ushort) argc], cast(int) -argc);
+        func.pushInstr(Opcode.call, [cast(ushort) argc], cast(int)-argc);
     }
 
     override string toString()
@@ -536,7 +543,9 @@ class OperatorStoreInstruction : AssignmentInstruction
     override void emit(Function func)
     {
         uint ius = func.stab[var];
-        func.pushInstr(Opcode.opstore, [cast(ushort) ius, cast(ushort) op.to!AssignOp]);
+        func.pushInstr(Opcode.opstore, [
+                cast(ushort) ius, cast(ushort) op.to!AssignOp
+                ]);
         func.pushInstr(Opcode.load, [cast(ushort) ius]);
     }
 
@@ -581,7 +590,9 @@ class OperatorStorePopInstruction : AssignmentInstruction
     override void emit(Function func)
     {
         uint ius = func.stab[var];
-        func.pushInstr(Opcode.opstore, [cast(ushort) ius, cast(ushort) op.to!AssignOp]);
+        func.pushInstr(Opcode.opstore, [
+                cast(ushort) ius, cast(ushort) op.to!AssignOp
+                ]);
     }
 
     override string toString()

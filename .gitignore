@@ -6,6 +6,7 @@
 *.so
 .dub
 .history
+.purr
 .vscode
 .vscode
 __dummy.html
@@ -20,9 +21,9 @@ docs/
 dub.selections.json
 dub_platform_probe*
 UnicodeData.txt
-llvm
 out*
 bin
+/lib
 perf*
 proj
 remake
