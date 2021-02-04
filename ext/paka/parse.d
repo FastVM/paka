@@ -676,6 +676,7 @@ Node parse(string code)
     try
     {
         Node node = tokens.readBlockBody;
+        writeln(node);
         return node;
     }
     catch (Exception e)

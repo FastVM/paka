@@ -9,14 +9,14 @@ import purr.srcloc;
 
 /// operator precidence
 enum string[][] prec = [
-        ["+=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"], ["=>"], ["||",
+        ["+=", "~=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"], ["=>"], ["||",
             "&&"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-", "~"], [
             "*", "/", "%"
         ]
     ];
 
 /// operators that dont work like binary operators sometimes
-enum string[] nops = [".", "*", "!", ",", ":"];
+enum string[] nops = [".", "!", ",", ":"];
 
 /// language keywords
 enum string[] keywords = [

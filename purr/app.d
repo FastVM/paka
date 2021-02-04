@@ -130,7 +130,9 @@ void domain(string[] args)
                     purrSrcPaths ~= entry.name;
                 }
             }
-            auto comp = execute(compiler ~ [dfile, o ~ exefile] ~ purrSrcPaths ~ opt ~ dFlags);
+            string[] cmd = compiler ~ [dfile, o ~ exefile] ~ purrSrcPaths ~ opt ~ dFlags;
+            // writeln(cast(string) cmd.joiner(" ").array);
+            auto comp = execute(cmd);
             if (comp.status != 0)
             {
                 writeln(comp.output);
