@@ -31,3 +31,4 @@ test.*
 trace.*
 vgcore*
 vscode
+*.map
