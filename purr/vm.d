@@ -130,6 +130,8 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             (*(stack - 1)) = (*(stack - 1)).tab[(*stack)];
             break;
         case Opcode.call:
+            // stack -= instrs.eat!ushort(index);
+            // (*(stack - 1)) =  (*(stack - 1))(stack[0 .. 0 + instrs.get1!ushort(index)]);
             stack -= instrs.eat!ushort(index);
             Dynamic f = (*(stack - 1));
             switch (f.type)

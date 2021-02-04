@@ -11,7 +11,14 @@ import purr.vm;
 import purr.error;
 import purr.data.map;
 
-version = safe;
+// version(unsafe)
+// {
+
+// }
+// else
+// {
+//     version = safe;
+// }
 
 alias Args = Dynamic[];
 alias Array = Dynamic[];
@@ -298,7 +305,7 @@ pragma(inline, true) Dynamic dynamic(T...)(T a)
 
 struct Dynamic
 {
-    enum Type : size_t
+    enum Type : int
     {
         nil,
         log,
@@ -333,6 +340,7 @@ struct Dynamic
 
 align(1):
     Type type = void;
+    uint argc;
     Value value = void;
 
     static Dynamic strToNum(string s)
@@ -418,7 +426,7 @@ align(1):
         return this.strFormat;
     }
 
-    Dynamic opCall(Args args)
+    pragma(inline, true) Dynamic opCall(Args args)
     {
         switch (type)
         {
