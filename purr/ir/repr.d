@@ -110,6 +110,7 @@ class BasicBlock
 
     string[] predef(string[] checked = null)
     {
+        assert(exit !is null, this.to!string);
         foreach (i; bbchecked)
         {
             if (i is this)
@@ -132,7 +133,6 @@ class BasicBlock
                 }
             }
         }
-        assert(exit !is null);
         foreach (blk; exit.target)
         {
             checked = blk.predef(checked);

@@ -1,4 +1,4 @@
-module ext.ffi.base;
+module ffi.base;
 
 import core.sys.posix.dlfcn;
 import std.conv;

@@ -9,11 +9,11 @@ import purr.ir.walk;
 import purr.vm;
 import purr.inter;
 import purr.bytecode;
+import purr.fs.files;
 import paka.lib.sysenv;
 import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;
-import std.file;
 import std.array;
 import std.conv;
 import std.stdio;
@@ -41,7 +41,7 @@ Dynamic libassert(Args args) {
 
 /// imports value returning what it returned
 Dynamic libimport(Args args) {
-    string code = cast(string) args[0].str.read;
+    string code = cast(string) args[0].str.readFile;
     Dynamic retval = evalFile(code);
     return retval;
 };

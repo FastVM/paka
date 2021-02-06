@@ -54,6 +54,8 @@ struct Token
         close,
         /// string literal
         string,
+        /// string template literal
+        format,
     }
 
     Type type;
@@ -245,20 +247,17 @@ Token readToken(ref string code, ref Location location)
     }
     if (peek == '"')
     {
-        consume;
+        char got = read;
         char[] ret;
         while (peek != '"')
         {
-            char got = read;
+            got = read;
             if (got == '\\')
             {
-                switch (code[0])
+                switch (got = read)
                 {
                 case 'n':
                     ret ~= '\n';
-                    break;
-                case '\\':
-                    ret ~= '\\';
                     break;
                 case '"':
                     ret ~= '"';
@@ -272,10 +271,19 @@ Token readToken(ref string code, ref Location location)
                 case 's':
                     ret ~= ' ';
                     break;
+                case 'c':
+                    ret ~= '\\';
+                    read;
+                    while (got != '}')
+                    {
+                        ret ~= got;
+                        got = read;
+                    }
+                    ret ~= '\\';
+                    break;
                 default:
-                    throw new Exception("parse error: unknown escape '" ~ code[0] ~ "'");
+                    throw new Exception("parse error: unknown escape '" ~ got ~ "'");
                 }
-                code = code[1 .. $];
             }
             else
             {
@@ -289,14 +297,13 @@ Token readToken(ref string code, ref Location location)
         consume;
         return consToken(Token.Type.string, ret);
     }
-    throw new Exception("bad char " ~ peek);
+    throw new Exception("parse error: bad char " ~ peek);
 }
 
 /// repeatedly calls a readToken until its empty
-Token[] tokenize(string code)
+Token[] tokenize(string code, Location location = Location(1, 1))
 {
     Token[] tokens;
-    Location location = Location(1, 1);
     while (code.length > 0)
     {
         Token token = code.readToken(location);

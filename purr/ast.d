@@ -13,7 +13,6 @@ enum string[] names = [
         "1", "hello", "@do", "+", "'x", "Hello, World", "blood moon", "6", ""
     ];
 
-
 /// any node, not valid in the ast
 class Node
 {

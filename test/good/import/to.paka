@@ -1,0 +1,3 @@
+from = sys.import("from.paka");
+
+io.print(from.thing1);

@@ -65,12 +65,12 @@ Dynamic librange(Args args)
 Dynamic libmap(Args args)
 {
     Dynamic[] res;
-    foreach (i; args[0].arr)
+    foreach (k, i; args[0].arr)
     {
         Dynamic cur = i;
         foreach (f; args[1 .. $])
         {
-            cur = f([cur]);
+            cur = f([cur, k.dynamic]);
         }
         res ~= cur;
     }
@@ -80,12 +80,12 @@ Dynamic libmap(Args args)
 /// calls $1+ on each and returns nil
 Dynamic libeach(Args args)
 {
-    foreach (i; args[0].arr)
+    foreach (k, i; args[0].arr)
     {
         Dynamic cur = i;
         foreach (f; args[1 .. $])
         {
-            cur = f([cur]);
+            cur = f([cur, k.dynamic]);
         }
     }
     return Dynamic.nil;
@@ -95,12 +95,12 @@ Dynamic libeach(Args args)
 Dynamic libfilter(Args args)
 {
     Dynamic[] res;
-    foreach (i; args[0].arr)
+    foreach (k, i; args[0].arr)
     {
         Dynamic cur = i;
         foreach (f; args[1 .. $])
         {
-            cur = f([cur]);
+            cur = f([cur, k.dynamic]);
         }
         if (cur.type != Dynamic.Type.nil && (cur.type != Dynamic.Type.log || cur.log))
         {

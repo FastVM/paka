@@ -5,8 +5,14 @@ import paka.base;
 import paka.parse;
 import paka.repl;
 import purr.plugin.plugin;
+import purr.plugin.plugins;
 
-export extern(C) Plugin paka_get_library_plugin()
+static this()
+{
+    thisPlugin.addPlugin;
+}
+
+Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
     plugin.transformers = pakaTransforms;
@@ -15,3 +21,9 @@ export extern(C) Plugin paka_get_library_plugin()
     plugin.parsers["paka.repl"] = code => replParse(code);
     return plugin;
 }
+
+extern(C) Plugin purr_get_library_plugin()
+{
+    return thisPlugin;
+}
+

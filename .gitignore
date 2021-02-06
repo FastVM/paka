@@ -28,6 +28,7 @@ perf*
 proj
 remake
 test.*
+tmp
 trace.*
 vgcore*
 vscode

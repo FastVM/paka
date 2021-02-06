@@ -19,7 +19,7 @@ import purr.inter;
 import purr.ir.repr;
 import purr.ir.walk;
 import purr.ir.emit;
-import purr.ir.native;
+// import purr.ir.native;
 
 bool dumpbytecode = false;
 

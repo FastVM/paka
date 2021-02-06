@@ -3,9 +3,9 @@ module paka.lib.io;
 import purr.dynamic;
 import purr.base;
 import purr.vm;
+import purr.fs.files;
 import std.stdio;
 import std.conv;
-import std.file;
 import core.stdc.stdio;
 
 Pair[] libio()
@@ -70,5 +70,5 @@ Dynamic libget(Args args)
 /// reads an entire file
 Dynamic libslurp(Args args)
 {
-    return dynamic(cast(string) args[0].str.read);
+    return dynamic(cast(string) args[0].str.readFile);
 }

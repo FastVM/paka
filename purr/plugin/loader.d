@@ -17,14 +17,14 @@ version (linux)
 
     Plugin loadLang(string name)
     {
-        string cname = void;
+        const(char)* cname = void;
         if (name == "this")
         {
             cname = null;
         }
         else
         {
-            cname = name;
+            cname = name.toStringz;
         }
         void* handle = dlopen(cname, RTLD_LAZY);
         if (handle is null)
@@ -34,7 +34,7 @@ version (linux)
         }
         dlls[name] = handle;
         Plugin function() fplugin = cast(Plugin function()) dlsym(handle,
-                "paka_get_library_plugin".toStringz);
+                "purr_get_library_plugin".toStringz);
         char* err = dlerror();
         if (err !is null)
         {
@@ -50,7 +50,7 @@ else version(Windows)
     import purr.plugin.plugins;
     import purr.plugin.plugin;
 
-    extern(C) Plugin paka_get_library_plugin();
+    extern(C) Plugin purr_get_library_plugin();
 
     void linkLang(string name)
     {
@@ -63,6 +63,6 @@ else version(Windows)
         {
             throw new Exception("i dont know how to get dlls working on windows");
         }
-        return paka_get_library_plugin;
+        return purr_get_library_plugin;
     }
 }

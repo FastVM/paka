@@ -1,4 +1,4 @@
-module ext.unicode.getname;
+module unicode.getname;
 
 import std.algorithm;
 import std.array;
@@ -8,7 +8,7 @@ import std.file;
 import std.stdio;
 import std.utf;
 
-uint[string] db;
+int[string] db;
 
 class UnicodeException : Exception
 {
@@ -34,7 +34,7 @@ string getUnicode(immutable string arg)
                 continue;
             }
             size_t begin = line.indexOf(';');
-            uint hex = line[0 .. begin].to!uint(16);
+            int hex = line[0 .. begin].to!int(16);
             begin++;
             size_t end = begin;
             while (line[end] != ';')
@@ -56,9 +56,9 @@ string getUnicode(immutable string arg)
         }
     }
     string find = arg.toUpper;
-    if (uint* unicode = find in db)
+    if (int* unicode = find in db)
     {
-        return [cast(wchar)*unicode].toUTF8;
+        return [cast(dchar)*unicode].toUTF8;
     }
     string[] bests;
     size_t bestdist = find.length + 1;

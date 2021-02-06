@@ -11,7 +11,6 @@ import purr.dynamic;
 import purr.srcloc;
 import purr.bytecode;
 import purr.ir.repr;
-import purr.walk;
 
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
@@ -20,10 +19,7 @@ enum string[] specialForms = [
         "@env", "&&", "||", "~",
     ];
 
-alias Walker = NewWalker;
-// alias Walker = OldWalker;
-    
-class NewWalker
+class Walker
 {
     Span[] nodes = [Span.init];
     BasicBlock block;
@@ -289,7 +285,7 @@ class NewWalker
             }
             walk(v);
         }
-        if (lambda.exit is null)
+        if (block.exit is null)
         {
             if (args.length == 1)
             {

@@ -1,4 +1,4 @@
-module purr.native.lib;
+module purrc.libs.native;
 
 public import purr.dynamic;
 public import purr.plugin.loader;

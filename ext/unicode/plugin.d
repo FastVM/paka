@@ -4,7 +4,13 @@ import std.stdio;
 import purr.base;
 import purr.dynamic;
 import purr.plugin.plugin;
+import purr.plugin.plugins;
 import unicode.getname;
+
+static this()
+{
+    thisPlugin.addPlugin;
+}
 
 Dynamic unictrl(Args args)
 {
@@ -20,9 +26,14 @@ Dynamic unictrl(Args args)
     throw new Exception("not enough arguments to internal unicode function");
 }
 
-extern(C) Plugin paka_get_library_plugin()
+Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
     plugin.libs ~= Pair("_unicode_ctrl", &unictrl);
     return plugin; 
+}
+
+export extern(C) Plugin purr_get_library_plugin()
+{
+    return thisPlugin;
 }

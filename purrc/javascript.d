@@ -1,4 +1,4 @@
-module purr.ir.native;
+module purrc.javascript;
 
 import purr.ir.repr;
 import purr.ir.emit;
@@ -12,7 +12,7 @@ string comment(string str)
     return "/+" ~ str ~ "+/";
 }
 
-class NativeBackend : Generator
+class JavascriptBackend : Generator
 {
     string[] sval = [""];
     size_t depth = 0;
@@ -94,17 +94,17 @@ class NativeBackend : Generator
     void exitProgram()
     {
         string mainb = exitStr;
-        println("module purr.exe.main;");
-        println("import purr.native.lib;");
+        println("lib = require('./purrc/libs/javascript.js');");
         println;
-        println("Dynamic purrMain = ", mainb);
-        println("void main(string[] args){");
-        depth++;
-        println("args.argParse;");
-        println("purrMain(null).maybeEcho;");
-        println("exitNow;");
+        println("var main = ", mainb);
+        println("main();");
+    }
+
+    override void enter(BasicBlock bb)
+    {
         depth--;
-        println("}");
+        println("case \"", bb.name, "\":");
+        depth++;
     }
 
     override void enterAsFunc(BasicBlock bb)
@@ -113,19 +113,27 @@ class NativeBackend : Generator
         {
             enterProgram;
         }
-        println("((Dynamic[] args) {");
-        foreach (index, argname; args)
-        {
-            println("    Dynamic ", argname, "_ = args[", index, "];");
-        }
+        println("(function(){");
+        depth++;
         string[] predef = bb.predef;
         foreach (index, local; predef)
         {
             if (!args.canFind(local))
             {
-                println("Dynamic ", local, "_ = void;");
+                println("var ", local, "_;");
             }
         }
+        writeln(args);
+        foreach (index, arg; args)
+        {
+            println("var ", arg, "_ = arguments[", index, "];");
+        }
+        println("var place;");
+        println("while (true) {");
+        depth++;
+        println("switch(place) {");
+        depth++;
+        println("default:");
         depth++;
         ssize ~= 0;
         maxssize ~= 0;
@@ -134,22 +142,21 @@ class NativeBackend : Generator
         enterStr;
     }
 
-    override void enter(BasicBlock bb)
-    {
-        println(bb.name, ":");
-    }
-
     override void exitAsFunc(BasicBlock bb)
     {
         string res = exitStr;
-        println("Dynamic[", maxssize[$ - 1], "] stack = void;");
         print(res);
-        depth--;
         ssize.length--;
         alllocals.length -= locals[$-1].length;
         locals.length--;
         maxssize.length--;
-        println("}).dynamic;");
+        depth--;
+        depth--;
+        println("}");
+        depth--;
+        println("}");
+        depth--;
+        println("})");
         if (depth == 0)
         {
             exitProgram;
@@ -159,10 +166,14 @@ class NativeBackend : Generator
     override void emit(LambdaInstruction lambdaInstr)
     {
         allargs ~= lambdaInstr.argNames;
+        string[] oargs = args;
         args = lambdaInstr.argNames;
-        println("stack[", ssize[$ - 1], "] = ");
+        println("var stack", ssize[$ - 1], " = ");
+        depth++;
         emitAsFunc(lambdaInstr.entry);
+        depth--;
         push(1);
+        args = oargs;
         allargs.length -= lambdaInstr.argNames.length;
     }
 
@@ -170,11 +181,11 @@ class NativeBackend : Generator
     {
         if (alllocals.canFind(loadInstr.var) || allargs.canFind(loadInstr.var))
         {
-            println("stack[", ssize[$ - 1], "] = ", loadInstr.var, "_;");
+            println("var stack", ssize[$ - 1], " = ", loadInstr.var, "_;");
         }
         else
         {
-            println("stack[", ssize[$ - 1], "] = lib.getVar(\"", loadInstr.var, "\");");
+            println("var stack", ssize[$ - 1], " = lib(\"", loadInstr.var, "\");");
         }
         push(1);
     }
@@ -182,33 +193,35 @@ class NativeBackend : Generator
     override void emit(CallInstruction callInstr)
     {
         pop(callInstr.argc);
-        println("stack[", ssize[$ - 1] - 1, "] = stack[", ssize[$ - 1] - 1,
-                "](stack[", ssize[$ - 1], "..", ssize[$ - 1] + callInstr.argc, "]);");
+        string names;
+        foreach (index; ssize[$ - 1] .. ssize[$ - 1] + callInstr.argc)
+        {
+            if (index != ssize[$ - 1])
+            {
+                names ~= ", ";
+            }
+            names ~= "stack" ~ index.to!string;
+        }
+        println("var stack", ssize[$ - 1] - 1, " = stack", ssize[$ - 1] - 1,
+                "(" ~ names ~ ");");
     }
 
     override void emit(StoreInstruction storeInstr)
     {
-        println(storeInstr.var, "_ = stack[", ssize[$ - 1] - 1, "];");
+        println(storeInstr.var, "_ = stack", ssize[$ - 1] - 1, ";");
     }
 
-    override void emit(StorePopInstruction storeInstr)
-    {
-        println(storeInstr.var, "_ = stack[", ssize[$ - 1] - 1, "];");
-        pop(1);
-    }
+    // override void emit(StorePopInstruction storeInstr)
+    // {
+    // }
 
-    override void emit(OperatorStoreInstruction opStoreInstr)
-    {
-        println(opStoreInstr.var, "_ = ", opStoreInstr.op, "Op(",
-                opStoreInstr.var, "_, stack[", ssize[$ - 1] - 1, "]);");
-    }
+    // override void emit(OperatorStoreInstruction opStoreInstr)
+    // {
+    // }
 
-    override void emit(OperatorStorePopInstruction opStoreInstr)
-    {
-        println(opStoreInstr.var, "_ = ", opStoreInstr.op, "Op(",
-                opStoreInstr.var, "_, stack[", ssize[$ - 1] - 1, "]);");
-        pop(1);
-    }
+    // override void emit(OperatorStorePopInstruction opStoreInstr)
+    // {
+    // }
 
     override void emit(PushInstruction pushInstr)
     {
@@ -216,10 +229,10 @@ class NativeBackend : Generator
         switch (pushInstr.value.type)
         {
         case Dynamic.Type.nil:
-            sval = "Dynamic.nil";
+            sval = "undefined";
             break;
         case Dynamic.Type.log:
-            sval = pushInstr.value.log.to!string ~ ".dynamic";
+            sval = pushInstr.value.log ? "true" : "false";
             break;
         case Dynamic.Type.str:
             sval = "";
@@ -229,47 +242,45 @@ class NativeBackend : Generator
                 sval ~= "\\x" ~ chr.to!ubyte.to!string(16);
             }
             sval ~= "\"";
-            sval ~= ".dynamic";
             break;
         case Dynamic.Type.sml:
-            sval = pushInstr.value.as!double.to!string ~ ".dynamic";
+            sval = pushInstr.value.as!double.to!string;
             break;
         default:
             throw new Exception("cannot emit instruction " ~ pushInstr.to!string);
         }
-        println("stack[", ssize[$ - 1], "] = ", sval, ";");
+        println("var stack", ssize[$ - 1], " = ", sval, ";");
         push(1);
     }
 
-    override void emit(ArgsInstruction argsInstr)
-    {
-        println("stack[", ssize[$ - 1], "] = dynamic(args);");
-        push(1);
-    }
+    // override void emit(ArgsInstruction argsInstr)
+    // {
+    // }
 
     override void emit(OperatorInstruction opInstr)
     {
         pop(1);
-        println("stack[", ssize[$ - 1] - 1, "] = ", opInstr.op, "Op(stack[",
-                ssize[$ - 1] - 1, "], stack[", ssize[$ - 1], "]);");
+        println("var stack", ssize[$ - 1] - 1, " = lib.", opInstr.op, "Op(stack",
+                ssize[$ - 1] - 1, ", stack", ssize[$ - 1], ");");
     }
 
     override void emit(ReturnBranch retBranch)
     {
         pop(1);
-        println("return stack[", ssize[$ - 1], "];");
+        println("return stack", ssize[$ - 1], ";");
     }
 
     override void emit(BooleanBranch boolBranch)
     {
-        println("if (stack[", ssize[$ - 1] - 1, "].type != Dynamic.Type.nil && stack[",
-                ssize[$ - 1] - 1, "].log == true) {");
+        println("if (stack", ssize[$ - 1] - 1, ") {");
         depth++;
-        println("goto " ~ boolBranch.target[0].name ~ ";");
+        println("loc = \"" ~ boolBranch.target[0].name ~ "\";");
+        println("continue;");
         depth--;
         println("} else {");
         depth++;
-        println("goto " ~ boolBranch.target[1].name ~ ";");
+        println("loc = \"" ~ boolBranch.target[1].name ~ "\";");
+        println("continue;");
         depth--;
         println("}");
         pop(1);
@@ -279,7 +290,8 @@ class NativeBackend : Generator
 
     override void emit(GotoBranch gotoBranch)
     {
-        println("goto " ~ gotoBranch.target[0].name ~ ";");
+        println("loc = " ~ gotoBranch.target[0].name ~ ";");
+        println("continue;");
         emitBase(gotoBranch.target[0]);
     }
 

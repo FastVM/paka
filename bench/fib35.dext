@@ -7,5 +7,5 @@ def fib(x) {
     };
 };
 
-io.print(fib(40));
+io.print(fib(35));
 

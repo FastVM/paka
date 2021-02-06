@@ -1,4 +1,4 @@
-module purr.ir.subnative;
+module purrc.native;
 
 import purr.ir.repr;
 import purr.ir.emit;
@@ -94,8 +94,8 @@ class NativeBackend : Generator
     void exitProgram()
     {
         string mainb = exitStr;
-        println("module purr.exe.main;");
-        println("import purr.native.lib;");
+        println("module purrc.exe.main;");
+        println("import purrc.libs.native;");
         println;
         println("Dynamic purrMain = ", mainb);
         println("void main(string[] args){");
@@ -159,10 +159,12 @@ class NativeBackend : Generator
     override void emit(LambdaInstruction lambdaInstr)
     {
         allargs ~= lambdaInstr.argNames;
+        string[] oargs = args;
         args = lambdaInstr.argNames;
         println("stack[", ssize[$ - 1], "] = ");
         emitAsFunc(lambdaInstr.entry);
         push(1);
+        args = oargs;
         allargs.length -= lambdaInstr.argNames.length;
     }
 
@@ -262,7 +264,7 @@ class NativeBackend : Generator
 
     override void emit(BooleanBranch boolBranch)
     {
-        println("if (stack[", ssize[$ - 1] - 1, "].type != Dynamic.Type.nil || stack[",
+        println("if (stack[", ssize[$ - 1] - 1, "].type != Dynamic.Type.nil && stack[",
                 ssize[$ - 1] - 1, "].log == true) {");
         depth++;
         println("goto " ~ boolBranch.target[0].name ~ ";");

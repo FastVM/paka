@@ -7,6 +7,9 @@ import std.algorithm;
 import purr.ast;
 import paka.tokens;
 import purr.srcloc;
+import purr.fs.har;
+import purr.fs.memory;
+import purr.fs.files;
 
 /// safe array of tokens
 alias TokenArray = PushArray!Token;
@@ -322,6 +325,55 @@ Node readIfImpl(ref TokenArray tokens)
     return new Call(new Ident("@if"), [cond[0], iftrue, iffalse]);
 }
 
+void skip1(ref string str, ref Span span)
+{
+    if (str[0] == '\n')
+    {
+        span.first.line += 1;
+        span.first.column = 1;
+    }
+    else
+    {
+        span.first.column += 1;
+    }
+    str = str[1..$];
+}
+
+Node readStringPart(ref string str, ref Span span)
+{
+    Span spanInput = span;
+    char first = str[0];
+    if (first == '\\')
+    {
+        str.skip1(span);
+    }
+    string ret;
+    while (str.length != 0 && str[0] != '\\')
+    {
+        ret ~= str[0];
+        str.skip1(span);
+    }
+    Node node = void;
+    if (first != '\\')
+    {
+        node = new String(ret);
+    }
+    else
+    {
+        str.skip1(span);
+        if (ret[0] == 'c')
+        {
+            node = new Call(new Ident("_unicode_ctrl"), [new String(ret[1..$])]);
+        }
+        else
+        {
+            assert(false);
+        }
+    }
+    node.span = spanInput;
+    return node;
+}
+
 /// reads first element of postfix expression
 alias readPostExpr = Spanning!readPostExprImpl;
 Node readPostExprImpl(ref TokenArray tokens)
@@ -392,7 +444,21 @@ Node readPostExprImpl(ref TokenArray tokens)
     }
     else if (tokens[0].isString)
     {
-        last = new String(tokens[0].value);
+        if (!tokens[0].value.canFind('\\'))
+        {
+            last = new String(tokens[0].value);
+        }
+        else
+        {
+            Node[] args;
+            string value = tokens[0].value;
+            Span span = tokens[0].span;
+            while (value.length != 0)
+            {
+                args ~= value.readStringPart(span);
+            }
+            last = new Call(new Ident("_str_concat"), args);
+        }
         tokens.nextIs(Token.Type.string);
     }
     return tokens.readPostExtend(last);
@@ -422,7 +488,11 @@ Node readPreExprImpl(ref TokenArray tokens)
         foreach (i; 0 .. count)
         {
             Call call = cast(Call) ret;
-            ret = new Call(new Ident("@paka.dotmap-pre"), call.args);
+            Node[] xy = [new Ident("_rhs")];
+            Node lambdaBody = new Call([call.args[0]] ~ xy);
+            Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
+            Call dotmap = new Call(new Ident("_pre_map"), [cast(Node) lambda] ~ call.args[1 .. $]);
+            ret = dotmap;
         }
         return ret;
     }
@@ -446,6 +516,15 @@ size_t[2] countDots(ref TokenArray tokens)
         tokens.tokens = tokens.tokens[0 .. $ - 1];
     }
     return [pre, post];
+}
+
+Node binaryDotmap(string s)(Node[] args)
+{
+    Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
+    Node lambdaBody = new Call(args[0 .. $ - 2] ~ xy);
+    Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
+    Call domap = new Call(new Ident(s), [cast(Node) lambda] ~ args[$ - 2 .. $]);
+    return domap;
 }
 
 /// reads any expresssion, level should start at zero
@@ -512,7 +591,9 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
             }
             else
             {
-                ret = new Call(new Ident("@fun"), [new Call([v.readExpr(level + 1)]), ret]);
+                ret = new Call(new Ident("@fun"), [
+                        new Call([v.readExpr(level + 1)]), ret
+                        ]);
             }
         }
         return ret;
@@ -579,18 +660,18 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
                 if (lhsc > rhsc)
                 {
                     lhsc--;
-                    ret = new Call(new Ident("@paka.dotmap-lhs"), call.args);
+                    ret = call.args.binaryDotmap!"_lhs_map";
                 }
                 else if (rhsc > lhsc)
                 {
                     rhsc--;
-                    ret = new Call(new Ident("@paka.dotmap-rhs"), call.args);
+                    ret = call.args.binaryDotmap!"_rhs_map";
                 }
                 else if (lhsc == rhsc && lhsc != 0)
                 {
                     lhsc--;
                     rhsc--;
-                    ret = new Call(new Ident("@paka.dotmap-both"), call.args);
+                    ret = call.args.binaryDotmap!"_both_map";
                 }
             }
             break;
@@ -669,14 +750,13 @@ Node readBlockImpl(ref TokenArray tokens)
 }
 
 /// parses code as the paka programming language
-Node parse(string code)
+Node parsePaka(string code)
 {
     locs.length = 0;
     TokenArray tokens = newTokenArray(code.tokenize);
     try
     {
         Node node = tokens.readBlockBody;
-        writeln(node);
         return node;
     }
     catch (Exception e)
@@ -708,4 +788,17 @@ Node parse(string code)
         e.msg = ret ~ e.msg;
         throw e;
     }
+}
+
+/// parses code as archive of the paka programming language
+Node parse(string code)
+{
+    MemoryDirectory dir = parseHar(code);
+    fileSystem ~= dir;
+    MemoryTextFile main = cast(MemoryTextFile) dir["main.paka"];
+    if (main is null)
+    {
+        throw new Exception("missing main.paka? internal error");
+    }
+    return main.data.parsePaka;
 }
