@@ -16,10 +16,10 @@ import purr.dynamic;
 import purr.parse;
 import purr.vm;
 import purr.inter;
+import purr.srcloc;
 import purr.ir.repr;
 import purr.ir.walk;
 import purr.ir.emit;
-// import purr.ir.native;
 
 bool dumpbytecode = false;
 
@@ -35,7 +35,7 @@ LocalCallback exportLocalsToBaseCallback(Function func)
     return ret;
 }
 
-Dynamic evalImpl(Walker)(size_t ctx, string code)
+Dynamic evalImpl(Walker)(size_t ctx, Location code)
 {
     Node node = code.parse;
     Walker walker = new Walker;
@@ -51,12 +51,12 @@ Dynamic evalImpl(Walker)(size_t ctx, string code)
     return retval;
 }
 
-Dynamic eval(size_t ctx, string code)
+Dynamic eval(size_t ctx, Location code)
 {
     return evalImpl!(purr.ir.walk.Walker)(ctx, code);
 }
 
-Dynamic evalFileImpl(Walker)(string code)
+Dynamic evalFileImpl(Walker)(Location code)
 {
     size_t ctx = enterCtx;
     scope (exit)
@@ -76,7 +76,7 @@ Dynamic evalFileImpl(Walker)(string code)
     return retval;
 }
 
-Dynamic evalFile(string code)
+Dynamic evalFile(Location code)
 {
     return evalFileImpl!(purr.ir.walk.Walker)(code);
 }

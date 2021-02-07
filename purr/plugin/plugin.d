@@ -3,11 +3,12 @@ module purr.plugin.plugin;
 import purr.ast;
 import purr.base;
 import std.conv;
+import purr.srcloc;
 
 class Plugin
 {
     Pair[] libs;
-    Node delegate(string code)[string] parsers;
+    Node delegate(Location code)[string] parsers;
     Node delegate(Node[])[string] transformers;
 
     override string toString()

@@ -232,10 +232,6 @@ class Function
             {
                 cur.doCapture("v"~j.to!string~"v"~i.to!string);
             }
-            foreach (j; cur.captab.byPlace)
-            {
-                writeln(j);
-            }
             assert(!ok!UndefinedException(cur.doCapture("v"~i.to!string~"v"~i.to!string)), "should not be able to capture from own symbol table");
             last = cur;
         }

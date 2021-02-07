@@ -1,41 +1,62 @@
 module purr.fs.har;
 
+import std.stdio;
 import std.string;
 import std.algorithm;
 import purr.fs.memory;
+import purr.fs.files;
+import purr.srcloc;
 
-MemoryDirectory parseHar(string files)
+MemoryDirectory parseHar(Location loc, MemoryDirectory dir)
 {
-    MemoryDirectory dir = new MemoryDirectory;
-    string[] names = ["main.paka"];
+    string[] names = [];
     string file;
     bool lastWasData = false;
+    size_t lno = loc.line;
+    size_t ilno = loc.line;
+
     void insert()
     {
         foreach (name; names)
         {
-            dir[name] = new MemoryTextFile(file);
+            if (name == "__main__")
+            {
+                dir[name] = new MemoryTextFile(Location(ilno, 1, loc.file, file));
+            }
+            else
+            {
+                dir[name] = new MemoryTextFile(Location(ilno, 1, name, file));
+            }
         }
         names = null;
         file = null;
     }
-    foreach (line; files.splitter("\n"))
+
+    void process(string line)
     {
         if (line.startsWith("---"))
         {
-            if (lastWasData)
-            {
-                insert;
-            }
-            names ~= line[3..$].strip;
+            insert;
+            names ~= line[3 .. $].strip;
             lastWasData = false;
         }
         else
         {
+            if (!lastWasData)
+            {
+                ilno = lno;
+            }
             file ~= line;
             file ~= '\n';
             lastWasData = true;
         }
+    }
+    
+    process("--- __main__");
+    foreach (line; loc.src.splitter("\n"))
+    {
+        process(line);
+        lno++;
     }
     insert;
     return dir;

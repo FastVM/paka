@@ -8,9 +8,13 @@ import purr.parse;
 import purr.ir.walk;
 import purr.vm;
 import purr.inter;
+import purr.srcloc;
 import purr.bytecode;
+import purr.fs.memory;
+import purr.fs.har;
 import purr.fs.files;
 import paka.lib.sysenv;
+import paka.parse;
 import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;
@@ -41,10 +45,10 @@ Dynamic libassert(Args args) {
 
 /// imports value returning what it returned
 Dynamic libimport(Args args) {
-    string code = cast(string) args[0].str.readFile;
-    Dynamic retval = evalFile(code);
-    return retval;
-};
+    Location data = args[0].str.readFile;
+    Dynamic val = evalFile(data);
+    return val;
+}
 
 /// returns type of value as a string
 Dynamic libtypeof(Args args)
@@ -90,55 +94,6 @@ Dynamic syslibmap(Args args)
     }
     return dynamic(ret);
 }
-
-/// internal map function
-Dynamic syslibubothmap(Args args)
-{
-    Array ret;
-    if (args[1].arr.length != args[2].arr.length)
-    {
-        throw new BoundsException("bad lengths in dotmap");
-    }
-    foreach (i; 0 .. args[1].arr.length)
-    {
-        ret ~= args[0]([args[1].arr[i], args[2].arr[i]]);
-    }
-    return dynamic(ret);
-}
-
-/// internal map function
-Dynamic syslibulhsmap(Args args)
-{
-    Array ret;
-    foreach (i; args[1].arr)
-    {
-        ret ~= args[0]([i, args[2]]);
-    }
-    return dynamic(ret);
-}
-
-/// internal map function
-Dynamic sysliburhsmap(Args args)
-{
-    Array ret;
-    foreach (i; args[2].arr)
-    {
-        ret ~= args[0]([args[1], i]);
-    }
-    return dynamic(ret);
-}
-
-/// internal map function
-Dynamic syslibupremap(Args args)
-{
-    Array ret;
-    foreach (i; args[1].arr)
-    {
-        ret ~= args[0]([i]);
-    }
-    return dynamic(ret);
-}
-
 /// exit function
 Dynamic libleave(Args args)
 {

@@ -4,11 +4,6 @@ import std.conv;
 import std.stdio;
 import purr.bytecode;
 
-Function parse(string code)
-{
-    assert(0);
-}
-
 class OpcodeIterator
 {
     Function func;

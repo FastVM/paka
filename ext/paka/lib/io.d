@@ -70,5 +70,5 @@ Dynamic libget(Args args)
 /// reads an entire file
 Dynamic libslurp(Args args)
 {
-    return dynamic(cast(string) args[0].str.readFile);
+    return dynamic(cast(string) args[0].str.readFile.src);
 }

@@ -9,13 +9,14 @@ import purr.base;
 import purr.dynamic;
 import purr.vm;
 import purr.error;
+import purr.srcloc;
 
 enum string bashLine = "#!";
 enum string langLine = "#?";
 
 string langNameDefault = "ir";
 
-Node delegate(string code)[string] parsers;
+Node delegate(Location code)[string] parsers;
 
 string readLine(ref string code)
 {
@@ -32,7 +33,7 @@ string readLine(ref string code)
     return ret;
 }
 
-Node parse(string code, string langname = langNameDefault)
+Node parse(Location code, string langname = langNameDefault)
 {
     if (auto i = langname in parsers)
     {
@@ -40,7 +41,6 @@ Node parse(string code, string langname = langNameDefault)
     }
     else
     {
-        writeln(langname);
         throw new CompileException("language not found: " ~ langname);
     }
 }

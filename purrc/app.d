@@ -10,6 +10,8 @@ import purr.base;
 import purr.dynamic;
 import purr.parse;
 import purr.inter;
+import purr.srcloc;
+import purr.fs.files;
 import purr.plugin.loader;
 import std.file;
 import std.uuid;
@@ -74,7 +76,7 @@ void domain(string[] args)
     }
     foreach (i; scripts)
     {
-        string code = cast(string) i.read;
+        Location code = i.readFile;
         if (compiler == null)
         {
             throw new Exception ("must specify a compiler");

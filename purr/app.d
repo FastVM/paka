@@ -4,6 +4,7 @@ import purr.ir.repr;
 import purr.ir.walk;
 import purr.ir.emit;
 import purr.vm;
+import purr.srcloc;
 import purr.base;
 import purr.ast;
 import purr.base;
@@ -34,8 +35,7 @@ void domain(string[] args)
     bool repl = true;
     bool echo = false;
     auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-            &scripts, "echo", &echo, "load", &langs, "lang", &lnd, "bytecode",
-            &dumpbytecode);
+            &scripts, "echo", &echo, "load", &langs, "lang", &lnd, "bytecode", &dumpbytecode);
     if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
@@ -54,7 +54,7 @@ void domain(string[] args)
     scripts ~= args[1 .. $];
     foreach (i; stmts)
     {
-        Dynamic retval = ctx.eval(i ~ ";");
+        Dynamic retval = ctx.eval(Location(1, 1, "__main__", i ~ ";"));
         if (echo && retval.type != Dynamic.Type.nil)
         {
             writeln(retval);
@@ -62,7 +62,7 @@ void domain(string[] args)
     }
     foreach (i; scripts)
     {
-        string code = cast(string) i.readFile;
+        Location code = i.readFile;
         string cdir = getcwd;
         scope (exit)
         {
@@ -77,7 +77,7 @@ void domain(string[] args)
     }
     if (repl && (scripts.length == 0 && stmts.length == 0))
     {
-        parse("", langNameDefault ~ ".repl");
+        parse(Location(1, 1, "__main__"), langNameDefault ~ ".repl");
     }
 }
 
@@ -92,6 +92,7 @@ void trymain(string[] args)
     {
         size_t[] nums;
         size_t[] times;
+        string[] files;
         size_t ml = 0;
         foreach (i; spans)
         {
@@ -102,35 +103,43 @@ void trymain(string[] args)
             else
             {
                 nums ~= i.first.line;
+                files ~= i.first.file;
                 times ~= 1;
                 ml = max(ml, i.first.line.to!string.length);
             }
         }
-        string ret = "error on \n";
+        string trace;
+        string last = "__main__";
         foreach (i, v; nums)
         {
             if (i == 0)
             {
-                ret ~= "line";
+                trace ~= "  on line ";
             }
             else
             {
-                ret ~= "from";
+                trace ~= "from line ";
             }
-            foreach (j; 0 .. ml.to!string.length - v.to!string.length + 2)
+            foreach (j; 0 .. ml - v.to!string.length)
             {
-                ret ~= " ";
+                trace ~= " ";
             }
-            ret ~= v.to!string;
+            trace ~= v.to!string;
+            if (files[i] != last)
+            {
+                last = files[i];
+                trace ~= " (file: " ~ last ~ ")";
+            }
             if (times[i] > 2)
             {
-                ret ~= " (repeated: " ~ times[i].to!string ~ " times)";
+                trace ~= " (repeated: " ~ times[i].to!string ~ " times)";
             }
-            ret ~= "\n";
+            trace ~= "\n";
         }
         spans.length = 0;
-        writeln(ret);
+        writeln(trace);
         writeln(e.msg);
+        writeln;
     }
 }
 

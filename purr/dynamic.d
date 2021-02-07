@@ -17,7 +17,7 @@ import purr.data.map;
 // }
 // else
 // {
-//     version = safe;
+version = safe;
 // }
 
 alias Args = Dynamic[];
@@ -505,7 +505,7 @@ align(1):
         }
         else
         {
-            if (type == Type.sml && type == Type.sml)
+            if (type == Type.sml && other.type == Type.sml)
             {
                 return dynamic(mixin("value.sml " ~ op ~ " other.value.sml"));
             }

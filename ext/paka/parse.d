@@ -4,8 +4,9 @@ import std.stdio;
 import std.conv;
 import std.array;
 import std.algorithm;
-import purr.ast;
 import paka.tokens;
+import paka.subparser;
+import purr.ast;
 import purr.srcloc;
 import purr.fs.har;
 import purr.fs.memory;
@@ -710,6 +711,11 @@ Node readStmtImpl(ref TokenArray tokens)
         stmtTokens.nextIs(Token.Type.keyword, "return");
         return new Call(new Ident("@return"), [stmtTokens.readExpr(0)]);
     }
+    if (stmtTokens[0].isKeyword("assert"))
+    {
+        stmtTokens.nextIs(Token.Type.keyword, "assert");
+        return parseAssert(stmtTokens.readExpr(0));
+    }
     if (stmtTokens[0].isKeyword("def"))
     {
         stmtTokens.nextIs(Token.Type.keyword, "def");
@@ -750,10 +756,10 @@ Node readBlockImpl(ref TokenArray tokens)
 }
 
 /// parses code as the paka programming language
-Node parsePaka(string code)
+Node parsePaka(Location loc)
 {
     locs.length = 0;
-    TokenArray tokens = newTokenArray(code.tokenize);
+    TokenArray tokens = newTokenArray(loc.tokenize);
     try
     {
         Node node = tokens.readBlockBody;
@@ -761,7 +767,7 @@ Node parsePaka(string code)
     }
     catch (Exception e)
     {
-        string[] lines = code.split("\n");
+        string[] lines = loc.src.split("\n");
         size_t[] nums;
         size_t ml = 0;
         foreach (i; locs)
@@ -791,14 +797,26 @@ Node parsePaka(string code)
 }
 
 /// parses code as archive of the paka programming language
-Node parse(string code)
+Node parse(Location loc)
 {
-    MemoryDirectory dir = parseHar(code);
-    fileSystem ~= dir;
-    MemoryTextFile main = cast(MemoryTextFile) dir["main.paka"];
-    if (main is null)
+    if (MemoryTextFile file = loc.file.readMemFile)
     {
-        throw new Exception("missing main.paka? internal error");
+        Location location = file.location;
+        return location.parsePaka;
     }
-    return main.data.parsePaka;
+    else
+    {
+        fileSystem ~= parseHar(loc, fileSystem);
+        MemoryTextFile main = "main.paka".readMemFile;
+        if (main is null)
+        {
+            main = "__main__".readMemFile;
+        }
+        if (main is null)
+        {
+            throw new Exception("internal error: missing __main__");
+        }
+        Location location = main.location;
+        return location.parsePaka;
+    }
 }

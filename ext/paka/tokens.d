@@ -21,7 +21,7 @@ enum string[] nops = [".", "!", ",", ":"];
 /// language keywords
 enum string[] keywords = [
         "if", "else", "while", "return", "def", "lambda", "using", "table",
-        "scope", "alias",
+        "scope", "alias", "assert",
     ];
 
 /// gets the operators by length not precidence
@@ -160,10 +160,7 @@ Token readToken(ref string code, ref Location location)
         {
             location.column += 1;
         }
-        if (code.length != 0)
-        {
-            code = code[1 .. $];
-        }
+        code = code[1 .. $];
     }
 
     char read()
@@ -301,8 +298,9 @@ Token readToken(ref string code, ref Location location)
 }
 
 /// repeatedly calls a readToken until its empty
-Token[] tokenize(string code, Location location = Location(1, 1))
+Token[] tokenize(Location location)
 {
+    string code = location.src;
     Token[] tokens;
     while (code.length > 0)
     {

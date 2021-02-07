@@ -1,0 +1,28 @@
+--- main.paka
+fib = sys.import("impl.paka");
+
+def main() {
+    io.print(fib(20));
+};
+
+main();
+
+--- impl.paka
+
+def slow_add(a, b) {
+    if (a == 0) {
+        return b;
+    } else {
+        return slow_add(a-1, b+1);
+    };
+};
+
+def fib(n) {
+    if (n < 2) {
+        return "";
+    } else {
+        return slow_add(fib(n-1), fib(n-2));
+    };
+};
+
+return fib;

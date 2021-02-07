@@ -1,0 +1,11 @@
+--- main.paka
+add = sys.import("other.paka");
+io.print(add(1, "2"));
+
+--- other.paka
+
+def add(l, r) {
+    return l + r;
+};
+
+return add;

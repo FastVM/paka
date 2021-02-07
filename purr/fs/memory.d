@@ -1,5 +1,6 @@
 module purr.fs.memory;
 
+import purr.srcloc;
 import std.stdio;
 
 class MemoryFile
@@ -34,7 +35,7 @@ class MemoryDirectory : MemoryFile
         return copy;
     }
 
-    MemoryDirectory opOpAssign(string op: "~")(MemoryDirectory other)
+    MemoryDirectory opOpAssign(string op : "~")(MemoryDirectory other)
     {
         foreach (name, file; other.entries)
         {
@@ -43,21 +44,21 @@ class MemoryDirectory : MemoryFile
         return this;
     }
 
-    MemoryDirectory opBinary(string op: "~")(MemoryDirectory other)
+    MemoryDirectory opBinary(string op : "~")(MemoryDirectory other)
     {
         MemoryDirectory ret = copy;
         ret ~= other;
         return ret;
     }
-    
-    MemoryFile* opBinaryRight(string op: "in")(string name)
+
+    MemoryFile* opBinaryRight(string op : "in")(string name)
     {
         return name in entries;
     }
 
     MemoryFile opIndex(string name)
     {
-        if (MemoryFile *pfile = name in entries)
+        if (MemoryFile* pfile = name in entries)
         {
             return *pfile;
         }
@@ -65,17 +66,36 @@ class MemoryDirectory : MemoryFile
     }
 }
 
-class MemoryTextFile : MemoryFile
+class MemorySymbolicLink : MemoryFile
 {
-    string data;
+    MemoryFile symlink;
+
+    this(MemoryFile sl)
+    {
+        symlink = sl;
+    }
 
     override MemoryFile copy()
     {
-        return cast(MemoryFile) new MemoryTextFile(data);
+        return cast(MemoryFile) new MemorySymbolicLink(symlink.copy);
+    }
+}
+
+class MemoryTextFile : MemoryFile
+{
+    immutable Location location;
+
+    this(Location loc)
+    {
+        location = loc;
     }
 
-    this(string d)
+    override MemoryFile copy()
     {
-        data = d;
+        return cast(MemoryFile) new MemoryTextFile(location);
+    }
+    void evalFile()
+    {
+
     }
 }

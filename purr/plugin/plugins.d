@@ -5,7 +5,9 @@ import purr.plugin.plugin;
 import purr.base;
 import purr.ir.walk;
 import purr.parse;
+import purr.srcloc;
 import purr.ast;
+import purr.srcloc;
 
 Node delegate(Node[])[string] transformers;
 Plugin[] plugins;
@@ -20,7 +22,7 @@ Pair[] pluginLib()
     return ret;
 }
 
-void pushPlugin(ref Node delegate(string code)[string] par, Node delegate(string code)[string] vals)
+void pushPlugin(ref Node delegate(Location code)[string] par, Node delegate(Location code)[string] vals)
 {
     foreach (key, value; vals)
     {

@@ -6,13 +6,14 @@ import purr.ast;
 import purr.dynamic;
 import purr.parse;
 import purr.vm;
+import purr.srcloc;
 import purr.inter;
 import std.stdio;
 import std.algorithm;
 import std.string;
 import std.functional;
 
-Node replParse(string arg)
+Node replParse(Location arg)
 {
     size_t ctx = enterCtx;
     scope (exit)
@@ -36,10 +37,10 @@ void replRun(size_t ctx)
 {
     while (true)
     {
-        string code;
+        Location code;
         write(">>> ");
-        code = readln;
-        code ~= ";";
+        code.src = readln;
+        code.src ~= ";";
         Node node = code.parse;
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);
