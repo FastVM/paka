@@ -280,7 +280,7 @@ class Table
     string rawToString()
     {
         char[] ret;
-        ret ~= "table {";
+        ret ~= "{";
         size_t i = 0;
         foreach (key, value; table)
         {

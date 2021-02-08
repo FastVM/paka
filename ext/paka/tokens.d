@@ -151,6 +151,10 @@ Token readToken(ref string code, ref Location location)
 
     void consume()
     {
+        if (code.length == 0)
+        {
+            return;
+        }
         if (code[0] == '\n')
         {
             location.line += 1;
@@ -268,13 +272,19 @@ Token readToken(ref string code, ref Location location)
                 case 's':
                     ret ~= ' ';
                     break;
-                case 'c':
+                case 'f':
+                    goto case;
+                case 'u':
                     ret ~= '\\';
-                    read;
+                    ret ~= got;
                     while (got != '}')
                     {
-                        ret ~= got;
                         got = read;
+                        if (got == '\0')
+                        {
+                            throw new Exception("parse error: end of file with unclosed string");
+                        }
+                        ret ~= got;
                     }
                     ret ~= '\\';
                     break;

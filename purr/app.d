@@ -55,7 +55,7 @@ void domain(string[] args)
     foreach (i; stmts)
     {
         Dynamic retval = ctx.eval(Location(1, 1, "__main__", i ~ ";"));
-        if (echo && retval.type != Dynamic.Type.nil)
+        if (echo)
         {
             writeln(retval);
         }
@@ -70,7 +70,7 @@ void domain(string[] args)
         }
         i.dirName.chdir;
         Dynamic retval = ctx.eval(code);
-        if (echo && retval.type != Dynamic.Type.nil)
+        if (echo)
         {
             writeln(retval);
         }

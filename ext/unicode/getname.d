@@ -9,6 +9,7 @@ import std.stdio;
 import std.utf;
 
 int[string] db;
+string[int] revdb;
 
 class UnicodeException : Exception
 {
@@ -18,11 +19,11 @@ class UnicodeException : Exception
     }
 }
 
-string getUnicode(immutable string arg)
+void build()
 {
-    size_t count;
     if (db is null)
     {
+        size_t count;
         foreach (line; import("UnicodeData.txt").splitter("\n"))
         {
             scope (exit)
@@ -41,7 +42,7 @@ string getUnicode(immutable string arg)
             {
                 end++;
             }
-            string name = line[begin .. end].idup;
+            string name = line[begin .. end].toUpper;
             if (name == "<control>")
             {
                 begin = line.length-5;
@@ -52,9 +53,15 @@ string getUnicode(immutable string arg)
                 }
                 name = line[begin+1 .. end+1].idup;
             }
-            db[name.toUpper] = hex;
+            db[name] = hex;
+            revdb[hex] = name;
         }
     }
+}
+
+string getUnicode(string arg)
+{
+    build;
     string find = arg.toUpper;
     if (int* unicode = find in db)
     {
@@ -81,14 +88,13 @@ string getUnicode(immutable string arg)
         string msg = "unicode character not found: " ~ find ~ " did you mean: " ~ bests[0];
         throw new UnicodeException(msg);
     }
-    else if (bests.length <= 3)
+    else if (bests.length <= 5)
     {
         string msg = "unicode character not found: " ~ find ~ " did you mean one of:";
         foreach (best; bests)
         {
             msg ~= " ";
             msg ~= best;
-            msg ~= "}";
         }
         throw new UnicodeException(msg);
     }

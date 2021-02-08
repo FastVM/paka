@@ -30,10 +30,10 @@ Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
     plugin.libs ~= Pair("_unicode_ctrl", &unictrl);
-    return plugin; 
+    return plugin;
 }
 
-export extern(C) Plugin purr_get_library_plugin()
+export extern (C) Plugin purr_get_library_plugin()
 {
     return thisPlugin;
 }

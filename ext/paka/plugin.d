@@ -22,8 +22,7 @@ Plugin thisPlugin()
     return plugin;
 }
 
-extern(C) Plugin purr_get_library_plugin()
+extern (C) Plugin purr_get_library_plugin()
 {
     return thisPlugin;
 }
-

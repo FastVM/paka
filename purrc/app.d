@@ -13,6 +13,7 @@ import purr.inter;
 import purr.srcloc;
 import purr.fs.files;
 import purr.plugin.loader;
+import purr.plugin.plugin;
 import std.file;
 import std.uuid;
 import std.path;
@@ -26,6 +27,38 @@ import std.string;
 import std.getopt;
 import core.stdc.stdlib;
 
+enum string[string] objs()
+{
+    string[string] ret;
+    string name;
+    static foreach (libname; import("this.txt").strip.splitter(" "))
+    {
+        ret["libpurr_" ~ libname ~ ".o"] ~= import("libpurr_" ~ libname ~ ".o");
+    }
+    return ret;
+}
+
+string[] writeObjects()
+{
+    File file;
+    string[] names;
+    static foreach (name, data; objs)
+    {
+        names ~= name;
+        file = File(name, "wb");
+        file.write(data);
+    }
+    return names;
+}
+
+void delObjects()
+{
+    static foreach (name, data; objs)
+    {
+        std.file.remove(name);
+    }
+}
+
 /// the actual main function, it does not handle errors
 void domain(string[] args)
 {
@@ -35,8 +68,8 @@ void domain(string[] args)
     string compilerArg = null;
     string dFlagsArg;
     string doOptArg = "0";
-    auto info = getopt(args, "file", &scripts, "load", &langs, 
-            "lang", &lnd, "compiler", &compilerArg, "flags", &dFlagsArg, "opt", &doOptArg);
+    auto info = getopt(args, "file", &scripts, "load", &langs, "lang", &lnd,
+            "compiler", &compilerArg, "flags", &dFlagsArg, "opt", &doOptArg);
     string[] dFlags = dFlagsArg.splitter(" ").array;
     string[] compiler = compilerArg.splitter(" ").array;
     if (info.helpWanted)
@@ -57,11 +90,11 @@ void domain(string[] args)
     scripts ~= args[1 .. $];
     if (scripts.length == 0)
     {
-        throw new Exception ("must specify an input file");
+        throw new Exception("must specify an input file");
     }
     if (scripts.length > 1)
     {
-        throw new Exception ("must specify only one input file");
+        throw new Exception("must specify only one input file");
     }
     if (".purr".exists)
     {
@@ -76,89 +109,78 @@ void domain(string[] args)
     }
     foreach (i; scripts)
     {
+        compiler ~= writeObjects.map!(x => x).array;
+        scope (exit)
+        {
+            delObjects;
+        }
         Location code = i.readFile;
         if (compiler == null)
         {
-            throw new Exception ("must specify a compiler");
+            throw new Exception("must specify a compiler");
         }
         Node node = code.parse;
         Walker walker = new Walker;
         BasicBlock bb = walker.bbwalk(node);
-        if (compiler[0] == "javascript")
+        import purrc.native : NativeBackend;
+
+        Generator gen = new NativeBackend;
+        gen.emitAsFunc(bb);
+        UUID id = randomUUID;
+        string dfile = ".purr/" ~ id.to!string ~ ".d";
+        // string exefile = ".purr/" ~ id.to!string ~ ".exe";
+        string exefile = "out.exe";
+        File file = File(dfile, "w");
+        file.writeln(gen.repr);
+        file.close;
+        string[] opt;
+        string o;
+        if (compiler[0].canFind("dmd"))
         {
-            import purrc.javascript : JavascriptBackend;
-            Generator gen = new JavascriptBackend;
-            gen.emitAsFunc(bb);
-            // UUID id = randomUUID;
-            // string jsfile = ".purr/" ~ id.to!string ~ ".js";
-            string jsfile = "out.js";
-            File file = File(jsfile, "w");
-            file.writeln(gen.repr);
-            file.close;
-            writeln("source: " ~ i);
-            writeln("javascript: " ~ jsfile);
+            opt = null;
+            o = "-of";
+            compiler ~= "-L-export-dynamic";
+        }
+        else if (compiler[0].canFind("ldc"))
+        {
+            opt = ["-O" ~ doOptArg, "-release"];
+            o = "-of";
+            compiler ~= "-L-export-dynamic";
+        }
+        else if (compiler[0].canFind("gdc"))
+        {
+            opt = ["-O" ~ doOptArg, "-frelease"];
+            o = "-o";
+            compiler ~= "-export-dynamic";
         }
         else
         {
-            import purrc.native : NativeBackend;
-            Generator gen = new NativeBackend;
-            gen.emitAsFunc(bb);
-            UUID id = randomUUID;
-            string dfile = ".purr/" ~ id.to!string ~ ".d";
-            // string exefile = ".purr/" ~ id.to!string ~ ".exe";
-            string exefile = "out.exe";
-            File file = File(dfile, "w");
-            file.writeln(gen.repr);
-            file.close;
-            string[] opt;
-            string o;
-            if (compiler[0].canFind("dmd"))
+            throw new Exception("cannot compile with --compiler=" ~ compilerArg);
+        }
+        writeln("spawning compiler");
+        DirEntry[] purrDirEntries = "purr/".dirEntries(SpanMode.breadth).array;
+        string[] purrSrcPaths = ["purrc/libs/native.d"];
+        string[] programs = ["purr/app.d"];
+        foreach (entry; purrDirEntries)
+        {
+            if (!entry.isDir && entry.name.length > 2
+                    && entry.name[$ - 2 .. $] == ".d" && !programs.canFind(entry.name))
             {
-                opt = null;
-                o = "-of";
-                compiler ~= "-L-export-dynamic";
+                purrSrcPaths ~= entry.name;
             }
-            else if (compiler[0].canFind("ldc"))
-            {
-                opt = ["-O" ~ doOptArg, "-release"];
-                o = "-of";
-                compiler ~= "-L-export-dynamic";
-            }
-            else if (compiler[0].canFind("gdc"))
-            {
-                opt = ["-O" ~ doOptArg, "-frelease"];
-                o = "-o";
-                compiler ~= "-export-dynamic";
-            }
-            else
-            {
-                throw new Exception("cannot compile with --compiler=" ~ compilerArg);
-            }
-            writeln("spawning compiler");
-            DirEntry[] purrDirEntries = "purr/".dirEntries(SpanMode.breadth).array;
-            string[] purrSrcPaths = ["purrc/libs/native.d"];
-            string[] programs = ["purr/app.d"];
-            foreach (entry; purrDirEntries)
-            {
-                if (!entry.isDir && entry.name.length > 2
-                        && entry.name[$ - 2 .. $] == ".d" && !programs.canFind(entry.name))
-                {
-                    purrSrcPaths ~= entry.name;
-                }
-            }
-            string[] cmd = compiler ~ [dfile, o ~ exefile] ~ purrSrcPaths ~ opt ~ dFlags;
-            // writeln(cast(string) cmd.joiner(" ").array);
-            auto comp = execute(cmd);
-            if (comp.status != 0)
-            {
-                writeln(comp.output);
-            }
-            else
-            {
-                writeln("source: " ~ i);
-                writeln("inter: " ~ dfile);
-                writeln("exe: " ~ exefile);
-            }
+        }
+        string[] cmd = compiler ~ [dfile, o ~ exefile] ~ purrSrcPaths ~ opt ~ dFlags;
+        // writeln(cast(string) cmd.joiner(" ").array);
+        auto comp = execute(cmd);
+        if (comp.status != 0)
+        {
+            writeln(comp.output);
+        }
+        else
+        {
+            writeln("source: " ~ i);
+            writeln("inter: " ~ dfile);
+            writeln("exe: " ~ exefile);
         }
     }
 }

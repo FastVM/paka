@@ -1,5 +1,6 @@
 module paka.base;
 
+import std.conv;
 import purr.base;
 import purr.dynamic;
 import purr.error;
@@ -16,7 +17,14 @@ Dynamic strconcat(Args args)
     string ret;
     foreach (arg; args)
     {
-        ret ~= arg.str;
+        if (arg.type == Dynamic.Type.str)
+        {
+            ret ~= arg.str;
+        }
+        else
+        {
+            ret ~= arg.to!string;
+        }
     }
     return ret.dynamic;
 }
@@ -76,7 +84,7 @@ Pair[] pakaBaseLibs()
     ret ~= Pair("_lhs_map", &syslibulhsmap);
     ret ~= Pair("_rhs_map", &sysliburhsmap);
     ret ~= Pair("_pre_map", &syslibupremap);
-    ret ~= Pair("_str_concat", &strconcat);
+    ret ~= Pair("_paka_str_concat", &strconcat);
     ret ~= Pair("_paka_enforce", &pakaenforce);
     ret ~= Pair("_paka_enforce_call", &enforcecall);
     ret ~= Pair("_paka_enforce_special_call", &enforcespeicalcall);

@@ -50,45 +50,6 @@ ifeq ($(LD),gdc)
 $(error cannot use LD=gdc yet)
 endif
 
-ifeq ($(LIB1),)
-BOOL_UNIFY_PURR=FALSE
-endif
-
-ifeq ($(LIB1),true)
-BOOL_UNIFY_PURR=TRUE
-endif
-
-ifeq ($(LIB1),false)
-BOOL_UNIFY_PURR=FALSE
-endif
-
-ifeq ($(LIB1),yes)
-BOOL_UNIFY_PURR=TRUE
-endif
-
-ifeq ($(LIB1),no)
-BOOL_UNIFY_PURR=FALSE
-endif
-
-ifeq ($(LIB1),1)
-BOOL_UNIFY_PURR=TRUE
-endif
-
-ifeq ($(LIB1),9)
-BOOL_UNIFY_PURR=FALSE
-endif
-
-ifneq ($(BOOL_UNIFY_PURR),TRUE)
-ifneq ($(BOOL_UNIFY_PURR),FALSE)
-$(error not a valid flag: LIB1=$(LIB1))
-endif
-endif
-
-PURR_EXTRA_REQUIREMENTS=
-ifneq ($(BOOL_UNIFY_PURR),TRUE)
-PURR_EXTRA_REQUIREMENTS+=$(BIN)/paka/plugin.o
-endif
-
 LD_TYPE_FOUND=
 ifneq ($(findstring ld,$(LD)),)
 LD_TYPE_FOUND=ld
@@ -169,19 +130,9 @@ LFLAGS_DC=$(LFLAGS_DC_SIMPLE) $(LFLAGS) -ldl
 ifeq ($(LD_DC_TYPE),gdc)
 LFLAGS_LD=-nophoboslib $(LFLAGS_DC) -lm
 LFLAGS_LD_PURR=-ldl
-ifeq ($(BOOL_UNIFY_PURR),TRUE)
-LD_LINK_PURR_LIBS=$(LIB)/libpurr_paka.so
-else
-LD_LINK_PURR_LIBS=
-endif
 else
 LFLAGS_LD=-defaultlib=$(LFLAGS_DEFAULTLIB) $(patsubst %,-L%,$(LFLAGS_DC))
 LFLAGS_LD_PURR=-L-ldl
-ifeq ($(BOOL_UNIFY_PURR),TRUE)
-LD_LINK_PURR_LIBS=$(LIB)/libpurr_paka.so
-else
-LD_LINK_PURR_LIBS=
-endif
 endif
 LD_LINK_IN=$(LFLAGS_LD) -L-export-dynamic $(M32_M64_FLAG)
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
@@ -199,11 +150,6 @@ endif
 LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_CORRECT_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) $(M32_M64_FLAG)
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
 LD_LINK_IN_PURR=$(LD_LINK_IN) -ldl
-ifeq ($(BOOL_UNIFY_PURR),TRUE)
-LD_LINK_PURR_LIBS=$(LIB)/libpurr_paka.so
-else
-LD_LINK_PURR_LIBS=
-endif
 endif
 
 ifeq ($(BITS),32)
@@ -360,13 +306,19 @@ BIN=./bin
 LIB=./lib
 TMP=./tmp
 
-$(BIN):
+$(BIN): dummy
+ifeq ($(wildcard $(BIN)),)
 	$(RUN) mkdir -p $@
+endif
 
-$(LIB):
+$(LIB): dummy
+ifeq ($(wildcard $(LIB)),)
 	$(RUN) mkdir -p $@
+endif
 
-$(TMP):
+$(TMP): dummy
+ifeq ($(wildcard $(TMP)),)
 	$(RUN) mkdir -p $@
+endif
 
 dummy:

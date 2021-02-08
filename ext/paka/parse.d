@@ -3,6 +3,9 @@ module paka.parse;
 import std.stdio;
 import std.conv;
 import std.array;
+import std.utf;
+import std.ascii;
+import std.string;
 import std.algorithm;
 import paka.tokens;
 import paka.subparser;
@@ -28,13 +31,14 @@ template Spanning(alias F, T...)
     Node spanning(ref TokenArray tokens, T a)
     {
         TokenArray orig = tokens;
-        if (orig.length != 0)
+        bool doLocs = orig.length != 0;
+        if (doLocs)
         {
             locs ~= orig[0].span.last;
         }
         scope (success)
         {
-            if (orig.length != 0)
+            if (doLocs)
             {
                 locs.length--;
             }
@@ -199,7 +203,7 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
     tokens.stripNewlines;
     while (!tokens[0].isClose([v[1]]))
     {
-        args ~= tokens.readExpr(0);
+        args ~= tokens.readExprBase;
         tokens.stripNewlines;
         if (tokens[0].isComma)
         {
@@ -220,7 +224,7 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
     tokens.stripNewlines;
     while (!tokens[0].isClose([v[1]]))
     {
-        args ~= tokens.readExpr(0);
+        args ~= tokens.readExprBase;
         tokens.stripNewlines;
         items++;
         if (tokens[0].isComma)
@@ -337,7 +341,93 @@ void skip1(ref string str, ref Span span)
     {
         span.first.column += 1;
     }
-    str = str[1..$];
+    str = str[1 .. $];
+}
+
+bool isDigitInBase(char c, long base)
+{
+    if (base > 0 && base < 10)
+    {
+        return c - '0' < base;
+    }
+    if (base == 10)
+    {
+        return c.isDigit;
+    }
+    if (base > 10)
+    {
+        long val = c;
+        if (val >= 'A' && val <= 'A')
+        {
+            val = val - 'A' + 'a';
+        }
+        bool isLetterDigit = val >= 10 && val < base;
+        return isLetterDigit || c.isDigitInBase(10);
+    }
+    throw new Exception("base not valud: " ~ base.to!string);
+}
+
+long parseNumberOnly(ref string input, size_t base)
+{
+    string str;
+    while (input.length != 0 && input[0].isDigitInBase(base))
+    {
+        str ~= input[0];
+        input = input[1 .. $];
+    }
+    if (str.length == 0)
+    {
+        throw new Exception("found no digits when parse escape in base " ~ base.to!string);
+    }
+    return str.to!size_t(cast(uint) base);
+}
+
+size_t escapeNumber(ref string input)
+{
+    if (input[0] == '0')
+    {
+        char ctrlchr = input[1];
+        input = input[2 .. $];
+        switch (ctrlchr)
+        {
+        case 'b':
+            return input.parseNumberOnly(2);
+        case 'o':
+            return input.parseNumberOnly(8);
+        case 'n':
+            size_t base = input.escapeNumber;
+            if (input.length < 1 || input[0] != ':')
+            {
+                string why = "0n" ~ base.to!string ~ " must be followd by a colon (:)";
+                throw new Exception("cannot have escape: " ~ why);
+            }
+            input = input[1 .. $];
+            if (base == 1)
+            {
+                size_t num;
+                while (input.length != 0 && input[0] == '0')
+                {
+                    num++;
+                }
+                return num;
+            }
+            if (base > 36)
+            {
+                string why = "0n must be followed by a number 1 to 36 inclusive";
+                throw new Exception("cannot have escape: " ~ why);
+            }
+            return input.parseNumberOnly(base);
+        case 'x':
+            return input.parseNumberOnly(16);
+        default:
+            string why = "0 must be followed by one of: nbox";
+            throw new Exception("cannot have escape: " ~ why);
+        }
+    }
+    else
+    {
+        return input.parseNumberOnly(10);
+    }
 }
 
 Node readStringPart(ref string str, ref Span span)
@@ -362,9 +452,23 @@ Node readStringPart(ref string str, ref Span span)
     else
     {
         str.skip1(span);
-        if (ret[0] == 'c')
+        if ((ret[0] == 'u' && ret[1] == 'f') || (ret[0] == 'f' && ret[1] == 'u'))
         {
-            node = new Call(new Ident("_unicode_ctrl"), [new String(ret[1..$])]);
+            string input = ret[3 .. $ - 1].strip;
+            node = Location(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
+                .parsePakaAs!readExprBase;
+            node = new Call(new Ident("_unicode_ctrl"), [node]);
+        }
+        else if (ret[0] == 'f')
+        {
+            string input = ret[2 .. $ - 1].strip;
+            node = Location(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
+                .parsePakaAs!readExprBase;
+        }
+        else if (ret[0] == 'u')
+        {
+            string input = ret[2 .. $ - 1].strip;
+            node = new Call(new Ident("_unicode_ctrl"), [new String(input)]);
         }
         else
         {
@@ -458,7 +562,7 @@ Node readPostExprImpl(ref TokenArray tokens)
             {
                 args ~= value.readStringPart(span);
             }
-            last = new Call(new Ident("_str_concat"), args);
+            last = new Call(new Ident("_paka_str_concat"), args);
         }
         tokens.nextIs(Token.Type.string);
     }
@@ -528,7 +632,13 @@ Node binaryDotmap(string s)(Node[] args)
     return domap;
 }
 
-/// reads any expresssion, level should start at zero
+/// reads any expresssion with precedence of zero
+Node readExprBase(ref TokenArray tokens)
+{
+    return tokens.readExpr(0);
+}
+
+/// reads any expresssion
 alias readExpr = Spanning!(readExprImpl, size_t);
 Node readExprImpl(ref TokenArray tokens, size_t level)
 {
@@ -709,12 +819,12 @@ Node readStmtImpl(ref TokenArray tokens)
     if (stmtTokens[0].isKeyword("return"))
     {
         stmtTokens.nextIs(Token.Type.keyword, "return");
-        return new Call(new Ident("@return"), [stmtTokens.readExpr(0)]);
+        return new Call(new Ident("@return"), [stmtTokens.readExprBase]);
     }
     if (stmtTokens[0].isKeyword("assert"))
     {
         stmtTokens.nextIs(Token.Type.keyword, "assert");
-        return parseAssert(stmtTokens.readExpr(0));
+        return parseAssert(stmtTokens.readExprBase);
     }
     if (stmtTokens[0].isKeyword("def"))
     {
@@ -725,7 +835,7 @@ Node readStmtImpl(ref TokenArray tokens)
         Node dobody = stmtTokens.readBlock;
         return new Call(new Ident("@def"), [new Call(name, args), dobody]);
     }
-    return stmtTokens.readExpr(0);
+    return stmtTokens.readExprBase;
 }
 
 /// reads many staments statement, each ending in a semicolon
@@ -755,14 +865,14 @@ Node readBlockImpl(ref TokenArray tokens)
     return ret;
 }
 
+alias parsePaka = parsePakaAs!readBlockBodyImpl;
 /// parses code as the paka programming language
-Node parsePaka(Location loc)
+Node parsePakaAs(alias parser)(Location loc)
 {
-    locs.length = 0;
     TokenArray tokens = newTokenArray(loc.tokenize);
     try
     {
-        Node node = tokens.readBlockBody;
+        Node node = parser(tokens);
         return node;
     }
     catch (Exception e)
@@ -799,6 +909,7 @@ Node parsePaka(Location loc)
 /// parses code as archive of the paka programming language
 Node parse(Location loc)
 {
+    locs.length = 0;
     if (MemoryTextFile file = loc.file.readMemFile)
     {
         Location location = file.location;
@@ -814,7 +925,7 @@ Node parse(Location loc)
         }
         if (main is null)
         {
-            throw new Exception("internal error: missing __main__");
+            throw new Exception("input error: missing __main__");
         }
         Location location = main.location;
         return location.parsePaka;

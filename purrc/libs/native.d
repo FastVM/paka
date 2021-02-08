@@ -1,6 +1,7 @@
 module purrc.libs.native;
 
 public import purr.dynamic;
+public import purr.base;
 public import purr.plugin.loader;
 public import purr.plugin.plugin;
 public import std.stdio;
@@ -18,13 +19,17 @@ class Lib
     Dynamic[string] vars;
     Dynamic getVar()(string name)
     {
-        return vars[name];
+        if (Dynamic* d = name in vars)
+        {
+            return *d;
+        }
+        throw new Exception("cannot find variable: " ~ name);
     }
 }
 
 void maybeEcho(Dynamic dyn)
 {
-    if (echo && dyn.type != Dynamic.type.nil)
+    if (echo)
     {
         writeln(dyn);
     }
@@ -32,8 +37,10 @@ void maybeEcho(Dynamic dyn)
 
 void argParse(string[] args)
 {
+    size_t ctx = enterCtx;
     string[] loads;
-    auto info = getopt(args, "echo", &echo, "load", &loads);    if (info.helpWanted)
+    auto info = getopt(args, "echo", &echo, "load", &loads);
+    if (info.helpWanted)
     {
         defaultGetoptPrinter("Help for 9c language.", info.options);
         exit(1);
@@ -41,15 +48,15 @@ void argParse(string[] args)
     lib = new Lib;
     foreach (i; loads)
     {
-        Plugin plugin = loadLang(i);
-        foreach (pair; plugin.libs)
-        {
-            lib.vars[pair.name] = pair.val;
-        }
+        linkLang(i);
+    }
+    foreach (pair; ctx.rootBase)
+    {
+        lib.vars[pair.name] = pair.val;
     }
 }
 
-extern(C) void quick_exit( int exit_code );
+extern (C) void quick_exit(int exit_code);
 
 void exitNow()
 {
