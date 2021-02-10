@@ -4,9 +4,9 @@ import purr.dynamic;
 import purr.base;
 import purr.vm;
 import purr.fs.files;
+import purr.fs.disk;
 import std.stdio;
 import std.conv;
-import core.stdc.stdio;
 
 Pair[] libio()
 {
@@ -16,6 +16,8 @@ Pair[] libio()
         Pair("readln", &libreadln),
         Pair("get", &libget),
         Pair("slurp", &libslurp),
+        Pair("dump", &libdump),
+        Pair("sync", &libsync),
     ];
     return ret;
 }
@@ -35,6 +37,7 @@ Dynamic libprint(Args args)
         }
     }
     writeln;
+    stdout.flush;
     return Dynamic.nil;
 }
 
@@ -67,6 +70,18 @@ Dynamic libget(Args args)
     return dynamic(cast(string) [cast(char) getchar]);
 }
 
+/// writes a string to a file
+Dynamic libdump(Args args)
+{
+    args[0].str.dumpToFile(args[1].str);
+    return Dynamic.nil;
+}
+
+/// sync file from filesystem
+Dynamic libsync(Args args)
+{
+    return args[0].str.syncFile.dynamic;
+} 
 /// reads an entire file
 Dynamic libslurp(Args args)
 {

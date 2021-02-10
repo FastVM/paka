@@ -13,6 +13,7 @@ import purr.parse;
 import purr.inter;
 import purr.plugin.loader;
 import purr.fs.files;
+import purr.fs.disk;
 import std.uuid;
 import std.path;
 import std.stdio;
@@ -62,7 +63,7 @@ void domain(string[] args)
     }
     foreach (i; scripts)
     {
-        Location code = i.readFile;
+        Location code = Location(1, 1, i, i.readText);
         string cdir = getcwd;
         scope (exit)
         {

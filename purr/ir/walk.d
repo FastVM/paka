@@ -14,9 +14,9 @@ import purr.ir.repr;
 
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
-        "@if", "@fun", "@do", "@using", "-", "+", "*", "/", "%", "<", ">",
-        "<=", ">=", "==", "!=", "...", "@index", "=>", "|>", "<|", "@using",
-        "@env", "&&", "||", "~",
+        "@if", "@fun", "@do", "-", "+", "*", "/", "%", "<", ">", "<=", ">=",
+        "==", "!=", "...", "@index", "=>", "|>", "<|", "@env", "&&", "||", "~",
+        "@inspect",
     ];
 
 class Walker
@@ -55,13 +55,13 @@ class Walker
 
     void walk(Node node)
     {
-        if (node.span.last.line != 0)
+        if (node.span != Span.init)
         {
             nodes ~= node.span;
         }
         scope (exit)
         {
-            if (node.span.last.line != 0)
+            if (node.span != Span.init)
             {
                 nodes.length--;
             }
@@ -82,17 +82,31 @@ class Walker
         }
     }
 
+    bool inspecting = false;
+
     void emit(Instruction instr)
     {
-        instr.span = nodes[$-1];
+        if (inspecting)
+        {
+            Instruction ainstr = new InspectInstruction;
+            ainstr.span = nodes[$ - 1];
+            block.instrs ~= ainstr;
+        }
+        instr.span = nodes[$ - 1];
         block.instrs ~= instr;
+        if (inspecting)
+        {
+            Instruction ainstr = new InspectInstruction;
+            ainstr.span = nodes[$ - 1];
+            block.instrs ~= ainstr;
+        }
     }
 
     void emitDefault(Branch branch)
     {
         if (block.exit is null)
         {
-            branch.span = nodes[$-1];
+            branch.span = nodes[$ - 1];
             block.exit = branch;
         }
     }
@@ -100,7 +114,7 @@ class Walker
     void emit(Branch branch)
     {
         assert(block.exit is null);
-        branch.span = nodes[$-1];
+        branch.span = nodes[$ - 1];
         block.exit = branch;
     }
 
@@ -182,13 +196,13 @@ class Walker
         {
             if (args.length != 1)
             {
-                foreach (arg; args[0..$-1])
+                foreach (arg; args[0 .. $ - 1])
                 {
                     walk(arg);
                     emit(new PopInstruction);
                 }
             }
-            walk(args[$-1]);
+            walk(args[$ - 1]);
         }
     }
 
@@ -201,7 +215,7 @@ class Walker
         }
         else if (Call call = cast(Call) args[0])
         {
-            if(Ident id = cast(Ident) call.args[0])
+            if (Ident id = cast(Ident) call.args[0])
             {
                 assert(id.repr == "@index");
                 walk(call.args[1]);
@@ -349,6 +363,16 @@ class Walker
         emit(new BuildTableInstruction(args.length / 2));
     }
 
+    void walkAssert(Node[] args)
+    {
+        inspecting = true;
+        scope (exit)
+        {
+            inspecting = false;
+        }
+        walk(args[0]);
+    }
+
     void walkSpecialCall(string special, Node[] args)
     {
         switch (special)
@@ -378,6 +402,9 @@ class Walker
             break;
         case "@fun":
             walkFun(args);
+            break;
+        case "@inspect":
+            walkAssert(args);
             break;
         case "@def":
             walkDef(args);

@@ -258,4 +258,9 @@ override:
     {
         line("args");
     }
+
+    void inspect()
+    {
+        line("inspect");
+    }
 }

@@ -2,12 +2,26 @@ module purr.fs.memory;
 
 import purr.srcloc;
 import std.stdio;
+import std.file;
+import std.datetime.systime;
+
+MemoryFile flagsFrom(MemoryFile to, MemoryFile from)
+{
+    to.copyFuncs = from.copyFuncs;
+    return to;
+}
 
 class MemoryFile
 {
     MemoryFile parent;
+    void delegate(MemoryFile* oldFile, MemoryFile newFile)[] copyFuncs;
 
-    MemoryFile copy()
+    final MemoryFile copy()
+    {
+        return copySelf.flagsFrom(this);
+    }
+
+    MemoryFile copySelf()
     {
         assert(false);
     }
@@ -17,7 +31,7 @@ class MemoryDirectory : MemoryFile
 {
     private MemoryFile[string] entries = null;
 
-    override MemoryFile copy()
+    override MemoryFile copySelf()
     {
         MemoryDirectory ret = new MemoryDirectory;
         foreach (name, file; entries)
@@ -31,15 +45,26 @@ class MemoryDirectory : MemoryFile
     {
         MemoryFile copy = file.copy;
         copy.parent = this;
+        MemoryFile *oldFile = name in this;
+        foreach (copyFunc; file.copyFuncs)
+        {
+            copyFunc(oldFile, copy);   
+        }
         entries[name] = copy;
         return copy;
+    }
+
+    void remove(string name)
+    {
+        entries[name].parent = null;
+        entries.remove(name);
     }
 
     MemoryDirectory opOpAssign(string op : "~")(MemoryDirectory other)
     {
         foreach (name, file; other.entries)
         {
-            this[name] = other[name];
+            this[name] = other[name].copy;
         }
         return this;
     }
@@ -64,6 +89,18 @@ class MemoryDirectory : MemoryFile
         }
         throw new Exception("cannot open: " ~ name);
     }
+
+    int opApply(scope int delegate(string, MemoryFile) dg) {
+    
+        foreach (key, val; entries) {
+            if (int result = dg(key, val))
+            {
+                return result;
+            }
+        }
+    
+        return 0;
+    }
 }
 
 class MemorySymbolicLink : MemoryFile
@@ -75,7 +112,7 @@ class MemorySymbolicLink : MemoryFile
         symlink = sl;
     }
 
-    override MemoryFile copy()
+    override MemoryFile copySelf()
     {
         return cast(MemoryFile) new MemorySymbolicLink(symlink.copy);
     }
@@ -84,18 +121,18 @@ class MemorySymbolicLink : MemoryFile
 class MemoryTextFile : MemoryFile
 {
     immutable Location location;
+    bool isSync;
+    SysTime syncTime;
 
-    this(Location loc)
+    this(Location loc, bool sync=false, SysTime st=SysTime.min)
     {
         location = loc;
+        isSync = sync;
+        syncTime = st;
     }
 
-    override MemoryFile copy()
+    override MemoryFile copySelf()
     {
-        return cast(MemoryFile) new MemoryTextFile(location);
-    }
-    void evalFile()
-    {
-
+        return cast(MemoryFile) new MemoryTextFile(location, isSync, syncTime);
     }
 }

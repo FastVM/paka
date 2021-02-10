@@ -39,7 +39,10 @@ class NativeBackend : Generator
 
     void pop(size_t n = 0)
     {
-        assert(ssize[$ - 1] >= n);
+        if(ssize[$ - 1] < n)
+        {
+            throw new Exception("internal");
+        }
         ssize[$ - 1] -= n;
     }
 
@@ -105,6 +108,15 @@ class NativeBackend : Generator
         println("exitNow;");
         depth--;
         println("}");
+    }
+
+    override void emitEach(BasicBlock bb)
+    {
+        foreach (instr; bb.instrs)
+        {
+            emit(instr);
+        }
+        emit(bb.exit);
     }
 
     override void enterAsFunc(BasicBlock bb)
@@ -188,6 +200,12 @@ class NativeBackend : Generator
                 "](stack[", ssize[$ - 1], "..", ssize[$ - 1] + callInstr.argc, "]);");
     }
 
+    override void emit(BuildArrayInstruction arrInstr)
+    {
+        pop(arrInstr.argc - 1);
+        println("stack[", ssize[$ - 1]-1, "] = stack[", ssize[$ - 1]-1, "..", ssize[$ - 1] + arrInstr.argc-1, "].dup.dynamic;");
+    }
+
     override void emit(StoreInstruction storeInstr)
     {
         println(storeInstr.var, "_ = stack[", ssize[$ - 1] - 1, "];");
@@ -251,9 +269,17 @@ class NativeBackend : Generator
 
     override void emit(OperatorInstruction opInstr)
     {
-        pop(1);
+        if (opInstr.op == "neg")
+        {
+            println("stack[", ssize[$ - 1] - 1, "] = ", opInstr.op, "Op(stack[",
+                ssize[$ - 1] - 1, "]);");
+        }
+        else
+        {
+            pop(1);
         println("stack[", ssize[$ - 1] - 1, "] = ", opInstr.op, "Op(stack[",
                 ssize[$ - 1] - 1, "], stack[", ssize[$ - 1], "]);");
+        }
     }
 
     override void emit(ReturnBranch retBranch)

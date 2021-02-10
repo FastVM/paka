@@ -14,7 +14,18 @@ import purr.dynamic;
 import purr.bytecode;
 import purr.data.map;
 
-version = vm;
+Span[] spans;
+
+void delegate(VMInfo info)[] inspects;
+
+struct VMInfo
+{
+    Function func;
+    Dynamic[] args;
+    ushort index;
+    Dynamic[] stack;
+    Dynamic* locals;
+}
 
 alias LocalCallback = void delegate(uint index, Dynamic* stack, Dynamic[] locals);
 
@@ -29,8 +40,6 @@ enum string[2][] mutMap()
 }
 
 alias allocateStackAllowed = alloca;
-
-Span[] spans;
 
 pragma(inline, true) T eat(T)(ubyte* bytes, ref ushort index)
 {
@@ -77,7 +86,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         stack = ptr;
     }
     ubyte* instrs = func.instrs.ptr;
-    // Dynamic* lstack = stack;
+    Dynamic* lstack = stack;
     // writeln(cast(void*) func, func.captured);
     while (true)
     {
@@ -86,7 +95,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         // writeln(locals[0..func.stab.length]);
         // writeln(lstack[0 .. stack - lstack]);
         // writeln;
-        // writeln(cur);
+        // writeln(index, ": ", cur);
         switch (cur)
         {
         default:
@@ -428,6 +437,13 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.args:
             (*stack) = dynamic(args);
             stack++;
+            break;
+        case Opcode.inspect:
+            VMInfo info = VMInfo(func, args, index, lstack[0 .. stack - lstack], locals);
+            foreach (ins; inspects)
+            {
+                ins(info);
+            }
             break;
         }
     }

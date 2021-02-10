@@ -46,13 +46,13 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     {
         func.instrs ~= *cast(ubyte[2]*)&i;
     }
-    if (func.spans.length != 0)
-    {
+    // if (func.spans.length != 0)
+    // {
         while (func.spans.length < func.instrs.length)
         {
             func.spans ~= func.spans[$ - 1];
         }
-    }
+    // }
     int* psize = op in opSizes;
     if (psize !is null)
     {
@@ -108,7 +108,7 @@ class BasicBlock
         name = n;
     }
 
-    string[] predef(string[] checked = null)
+    string[] predef(string[] checked                                                                                                                                                                                     = null)
     {
         assert(exit !is null, this.to!string);
         foreach (i; bbchecked)
@@ -241,24 +241,24 @@ class BooleanBranch : Branch
 
     override void emit(Function func)
     {
-        if (!target[0].within(func))
-        {
-            func.pushInstr(Opcode.iffalse, [cast(ushort) ushort.max]);
-            size_t iff = func.instrs.length;
-            target[0].emit(func);
-            ushort t1 = target[1].entry(func);
-            func.modifyInstr(iff, t1);
-        }
-        else if (!target[1].within(func))
-        {
-            func.pushInstr(Opcode.iftrue, [cast(ushort) ushort.max]);
-            size_t ift = func.instrs.length;
-            target[1].emit(func);
-            ushort t0 = target[0].entry(func);
-            func.modifyInstr(ift, t0);
-        }
-        else
-        {
+    //     if (!target[0].within(func))
+    //     {
+    //         func.pushInstr(Opcode.iffalse, [cast(ushort) ushort.max]);
+    //         size_t iff = func.instrs.length;
+    //         target[0].emit(func);
+    //         ushort t1 = target[1].entry(func);
+    //         func.modifyInstr(iff, t1);
+    //     }
+    //     else if (!target[1].within(func))
+    //     {
+    //         func.pushInstr(Opcode.iftrue, [cast(ushort) ushort.max]);
+    //         size_t ift = func.instrs.length;
+    //         target[1].emit(func);
+    //         ushort t0 = target[0].entry(func);
+    //         func.modifyInstr(ift, t0);
+    //     }
+    //     else
+    //     {
             func.pushInstr(Opcode.iftrue, [cast(ushort) ushort.max]);
             size_t j0 = func.instrs.length;
             func.pushInstr(Opcode.jump, [cast(ushort) ushort.max]);
@@ -267,7 +267,7 @@ class BooleanBranch : Branch
             ushort t1 = target[1].entry(func);
             func.modifyInstr(j0, t0);
             func.modifyInstr(j1, t1);
-        }
+        // }
     }
 
     override string toString()
@@ -330,7 +330,7 @@ class BuildArrayInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "return\n";
+        ret ~= "array " ~ argc.to!string ~ "\n";
         return ret;
     }
 }
@@ -352,7 +352,7 @@ class BuildTableInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "return\n";
+        ret ~= "table " ~ argc.to!string ~ "\n";
         return ret;
     }
 }
@@ -398,6 +398,25 @@ class PushInstruction : Instruction
     {
         string ret;
         ret ~= "push " ~ value.to!string ~ "\n";
+        return ret;
+    }
+}
+
+class InspectInstruction : Instruction
+{
+    this()
+    {
+    }
+
+    override void emit(Function func)
+    {
+        func.pushInstr(Opcode.inspect, null);
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "inspect\n";
         return ret;
     }
 }

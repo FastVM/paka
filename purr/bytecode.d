@@ -370,6 +370,8 @@ enum Opcode : ubyte
     argno,
     /// all args as list
     args,
+    /// run inspect functions
+    inspect,
 }
 
 /// may change: call, array, targeta, table, upcall
@@ -383,5 +385,5 @@ enum int[Opcode] opSizes = [
         Opcode.store : -1, Opcode.istore : -3, Opcode.opistore : -3,
         Opcode.opstore : -1, Opcode.retval : 0, Opcode.retnone : 0,
         Opcode.iftrue : -1, Opcode.iffalse : -1, Opcode.jump : 0,
-        Opcode.argno : 1, Opcode.args : 1,
+        Opcode.argno : 1, Opcode.args : 1, Opcode.inspect: 0,
     ];

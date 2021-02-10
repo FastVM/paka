@@ -12,14 +12,34 @@ struct Location
     string pretty() {
         return line.to!string ~ ":" ~ column.to!string;
     }
+
+    Location dup()
+    {
+        Location loc;
+        loc.line = line;
+        loc.column = column;
+        loc.file = file;
+        loc.src = src;
+        return loc;
+    }
 }
 
 struct Span
 {
     Location first;
     Location last;
+    string value;
 
     string pretty() {
         return "from " ~ first.pretty ~ " to " ~ last.pretty;
+    }
+
+    Span dup()
+    {
+        Span ret;
+        ret.first = first.dup;
+        ret.last = last.dup;
+        ret.value = value;
+        return ret;
     }
 }

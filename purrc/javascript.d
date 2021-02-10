@@ -123,7 +123,6 @@ class JavascriptBackend : Generator
                 println("var ", local, "_;");
             }
         }
-        writeln(args);
         foreach (index, arg; args)
         {
             println("var ", arg, "_ = arguments[", index, "];");

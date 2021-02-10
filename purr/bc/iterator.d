@@ -161,6 +161,9 @@ class OpcodeIterator
             case Opcode.args:
                 args;
                 break;
+            case Opcode.inspect:
+                inspect;
+                break;
             }
         }
     }
@@ -318,6 +321,10 @@ class OpcodeIterator
     }
 
     void args()
+    {
+    }
+
+    void inspect()
     {
     }
 }

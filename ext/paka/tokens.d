@@ -20,7 +20,7 @@ enum string[] nops = [".", "!", ",", ":"];
 
 /// language keywords
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "lambda", "using", "table",
+        "if", "else", "while", "return", "def", "lambda",
         "scope", "alias", "assert",
     ];
 
@@ -176,9 +176,11 @@ Token readToken(ref string code, ref Location location)
 
     Location begin = location;
 
-    Token consToken(T...)(T a)
+    Token consToken(T)(Token.Type t, T v)
     {
-        return Token(Span(begin, location), a);
+        Location end = location.dup;
+        Span span = Span(begin, end);
+        return Token(span, t, v);
     }
 
     if (peek == '#')
@@ -192,7 +194,7 @@ Token readToken(ref string code, ref Location location)
     if (peek.isWhite)
     {
         consume;
-        return consToken(Token.Type.none);
+        return consToken(Token.Type.none, " ");
     }
     if (peek == ';')
     {
@@ -206,7 +208,10 @@ Token readToken(ref string code, ref Location location)
     {
         if (code.startsWith(i))
         {
-            code = code[i.length .. $];
+            foreach (_; 0..i.length)
+            {
+                consume;
+            }
             return consToken(Token.Type.operator, i);
         }
     }

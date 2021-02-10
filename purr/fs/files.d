@@ -11,18 +11,6 @@ static this()
     fileSystem = new MemoryDirectory;
 }
 
-Location readFile(string path)
-{
-    if (MemoryFile* file = path in fileSystem)
-    {
-        if (MemoryTextFile textfile = cast(MemoryTextFile) *file)
-        {
-            return path.readMemFile.location;
-        }
-    }
-    return Location(1, 1, path, path.readText);
-}
-
 MemoryTextFile readMemFile(string path)
 {
     if (MemoryFile *pfile = path in fileSystem)

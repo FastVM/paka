@@ -2,6 +2,7 @@ module purr.ir.emit;
 
 import purr.ir.repr;
 import std.conv;
+import std.stdio;
 import std.algorithm;
 
 class Generator

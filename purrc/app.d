@@ -12,6 +12,7 @@ import purr.parse;
 import purr.inter;
 import purr.srcloc;
 import purr.fs.files;
+import purr.fs.disk;
 import purr.plugin.loader;
 import purr.plugin.plugin;
 import std.file;
@@ -114,7 +115,7 @@ void domain(string[] args)
         {
             delObjects;
         }
-        Location code = i.readFile;
+        Location code = Location(1, 1, i, i.readText);
         if (compiler == null)
         {
             throw new Exception("must specify a compiler");
@@ -186,59 +187,59 @@ void domain(string[] args)
 }
 
 /// the main function that handles runtime errors
-void trymain(string[] args)
-{
-    try
-    {
-        domain(args);
-    }
-    catch (Exception e)
-    {
-        size_t[] nums;
-        size_t[] times;
-        size_t ml = 0;
-        foreach (i; spans)
-        {
-            if (nums.length != 0 && nums[$ - 1] == i.first.line)
-            {
-                times[$ - 1]++;
-            }
-            else
-            {
-                nums ~= i.first.line;
-                times ~= 1;
-                ml = max(ml, i.first.line.to!string.length);
-            }
-        }
-        string ret = "error on \n";
-        foreach (i, v; nums)
-        {
-            if (i == 0)
-            {
-                ret ~= "line";
-            }
-            else
-            {
-                ret ~= "from";
-            }
-            foreach (j; 0 .. ml.to!string.length - v.to!string.length + 2)
-            {
-                ret ~= " ";
-            }
-            ret ~= v.to!string;
-            if (times[i] > 2)
-            {
-                ret ~= " (repeated: " ~ times[i].to!string ~ " times)";
-            }
-            ret ~= "\n";
-        }
-        spans.length = 0;
-        writeln(ret);
-        writeln(e.msg);
-    }
-}
+// void trymain(string[] args)
+// {
+//     try
+//     {
+//         domain(args);
+//     }
+//     catch (Exception e)
+//     {
+//         size_t[] nums;
+//         size_t[] times;
+//         size_t ml = 0;
+//         foreach (i; spans)
+//         {
+//             if (nums.length != 0 && nums[$ - 1] == i.first.line)
+//             {
+//                 times[$ - 1]++;
+//             }
+//             else
+//             {
+//                 nums ~= i.first.line;
+//                 times ~= 1;
+//                 ml = max(ml, i.first.line.to!string.length);
+//             }
+//         }
+//         string ret = "error on \n";
+//         foreach (i, v; nums)
+//         {
+//             if (i == 0)
+//             {
+//                 ret ~= "line";
+//             }
+//             else
+//             {
+//                 ret ~= "from";
+//             }
+//             foreach (j; 0 .. ml.to!string.length - v.to!string.length + 2)
+//             {
+//                 ret ~= " ";
+//             }
+//             ret ~= v.to!string;
+//             if (times[i] > 2)
+//             {
+//                 ret ~= " (repeated: " ~ times[i].to!string ~ " times)";
+//             }
+//             ret ~= "\n";
+//         }
+//         spans.length = 0;
+//         writeln(ret);
+//         writeln(e.msg);
+//     }
+// }
 
 void main(string[] args)
 {
-    trymain(args);
+    domain(args);
 }

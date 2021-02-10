@@ -46,7 +46,8 @@ template Spanning(alias F, T...)
         Node ret = F(tokens, a);
         if (orig.length > 0 && ret !is null)
         {
-            ret.span = Span(orig[0].span.first, orig[orig.length - tokens.length - 1].span.last);
+            ret.span = Span(orig[0].span.first.dup, orig[orig.length - tokens.length - 1].span.last.dup);
+            // writeln("[", ret.span.first.column, " .. ", ret.span.last.column, "]: ", ret);
         }
         return ret;
     }
@@ -521,20 +522,6 @@ Node readPostExprImpl(ref TokenArray tokens)
         Node node = tokens.readPostExpr;
         last = new Call(new Call(new Ident("@fun"), [new Call(null), node]), null);
     }
-    else if (tokens[0].isKeyword("using"))
-    {
-        tokens.nextIs(Token.Type.keyword, "using");
-        Node tab = tokens.readParens[0];
-        Node then = tokens.readBlock;
-        last = new Call(new Ident("@using"), [tab, then]);
-    }
-    else if (tokens[0].isKeyword("table"))
-    {
-        tokens.nextIs(Token.Type.keyword, "table");
-        Node tab = new Call(new Ident("@table"), null);
-        Node then = tokens.readBlock;
-        last = new Call(new Ident("@using"), [tab, then]);
-    }
     else if (tokens[0].isKeyword("while"))
     {
         tokens.nextIs(Token.Type.keyword, "while");
@@ -585,11 +572,17 @@ Node readPreExprImpl(ref TokenArray tokens)
             tokens.nextIs(Token.Type.operator, ".");
         }
         string val = op.value;
+        Node[] eargs;
         if (val == "*")
         {
             val = "...";
         }
-        Node ret = new Call(new Ident(val), [tokens.readPreExpr]);
+        if (val == "=>")
+        {
+            val = "@fun";
+            eargs ~= new Call(null);
+        }
+        Node ret = new Call(new Ident(val), eargs ~ [tokens.readPreExpr]);
         foreach (i; 0 .. count)
         {
             Call call = cast(Call) ret;
@@ -632,15 +625,15 @@ Node binaryDotmap(string s)(Node[] args)
     return domap;
 }
 
+alias readExprBase = Spanning!(readExprBaseImpl);
 /// reads any expresssion with precedence of zero
-Node readExprBase(ref TokenArray tokens)
+Node readExprBaseImpl(ref TokenArray tokens)
 {
     return tokens.readExpr(0);
 }
 
 /// reads any expresssion
-alias readExpr = Spanning!(readExprImpl, size_t);
-Node readExprImpl(ref TokenArray tokens, size_t level)
+Node readExpr(ref TokenArray tokens, size_t level)
 {
     if (level == prec.length)
     {
@@ -824,7 +817,15 @@ Node readStmtImpl(ref TokenArray tokens)
     if (stmtTokens[0].isKeyword("assert"))
     {
         stmtTokens.nextIs(Token.Type.keyword, "assert");
-        return parseAssert(stmtTokens.readExprBase);
+        return new Call(new Ident("@do"), [
+                cast(Node) new Call(new Ident("_paka_begin_assert"), null),
+                cast(Node) new Call(new Ident("_paka_assert"),
+                    [
+                        cast(Node) new Call(new Ident("@inspect"), [
+                            stmtTokens.readExprBase
+                        ])
+                    ])
+                ]);
     }
     if (stmtTokens[0].isKeyword("def"))
     {

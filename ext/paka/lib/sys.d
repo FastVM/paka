@@ -13,6 +13,7 @@ import purr.bytecode;
 import purr.fs.memory;
 import purr.fs.har;
 import purr.fs.files;
+import purr.fs.disk;
 import paka.lib.sysenv;
 import paka.parse;
 import core.stdc.stdlib;
@@ -28,7 +29,7 @@ Pair[] libsys()
     Pair[] ret = [
         Pair("leave", &libleave), Pair("args", &libargs),
         Pair("typeof", &libtypeof), Pair("import", &libimport),
-        Pair("assert", &libassert),
+        Pair("enforce", &libassert),
     ];
     ret.addLib("env", libsysenv);
     return ret;

@@ -168,7 +168,7 @@ class Table
     {
         foreach (i; lookingFor)
         {
-            if (i == cast(void*) this)
+            if (i is cast(void*) this)
             {
                 return null;
             }
@@ -677,7 +677,6 @@ int cmpTable(Table at, Table bt)
     {
         tableAbove.length--;
     }
-    bool noMeta = at.metatable is null && bt.metatable is null;
     if (Dynamic* mcmp = "cmp".dynamic in at.meta)
     {
         return cast(int)(*mcmp)([at.dynamic, bt.dynamic]).value.sml;
@@ -705,7 +704,7 @@ int cmpTable(Table at, Table bt)
             return res;
         }
     }
-    if (noMeta)
+    if (at.meta.length == 0 && at.meta.length == 0)
     {
         return 0;
     }
