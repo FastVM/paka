@@ -19,28 +19,6 @@ enum string[] specialForms = [
 
 Node delegate(Node[])[string] transformers;
 
-bool isUnpacking(Node[] args)
-{
-    foreach (i; args)
-    {
-        Call call = cast(Call) i;
-        if (call is null)
-        {
-            continue;
-        }
-        Ident id = cast(Ident) call.args[0];
-        if (id is null)
-        {
-            continue;
-        }
-        if (id.repr == "...")
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 class OldWalker
 {
     Function func;
@@ -552,13 +530,6 @@ class OldWalker
         pushInstr(func, Opcode.index);
     }
 
-    void walkUnpack(Node[] args)
-    {
-        pushInstr(func, Opcode.unpack);
-        walk(args[0]);
-    }
-
-
     void walkPipeOp(Node[] args)
     {
         walk(new Call(args[1], [args[0]]));
@@ -695,9 +666,6 @@ class OldWalker
         case "||":
             walkLogicalOr(c.args[1 .. $]);
             break;
-        case "...":
-            walkUnpack(c.args[1 .. $]);
-            break;
         }
     }
 
@@ -722,30 +690,13 @@ class OldWalker
         }
         else
         {
-            if (isUnpacking(c.args[1 .. $]))
+            walk(c.args[0]);
+            uint used = stackSize[0];
+            foreach (i; c.args[1 .. $])
             {
-                walk(c.args[0]);
-                uint used = stackSize[0];
-                pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);
-                func.constants ~= dynamic(Dynamic.Type.end);
-                foreach (i; c.args[1 .. $])
-                {
-                    walk(i);
-                }
-                pushInstr(func, Opcode.upcall, [], used);
-
+                walk(i);
             }
-            else
-            {
-                walk(c.args[0]);
-                uint used = stackSize[0];
-                foreach (i; c.args[1 .. $])
-                {
-                    walk(i);
-                }
-                pushInstr(func, Opcode.call, [cast(ushort)(c.args.length - 1)], used);
-
-            }
+            pushInstr(func, Opcode.call, [cast(ushort)(c.args.length - 1)], used);
         }
     }
 

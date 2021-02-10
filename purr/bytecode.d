@@ -3,6 +3,8 @@ module purr.bytecode;
 import purr.dynamic;
 import purr.srcloc;
 import purr.error;
+import std.algorithm;
+import std.array;
 import std.stdio;
 import std.conv;
 
@@ -112,6 +114,7 @@ class Function
     Lookup stab;
     Lookup captab;
     Flags flags = cast(Flags) 0;
+    string[] names;
 
     this()
     {
@@ -134,6 +137,7 @@ class Function
         flags = other.flags;
         stackSizeCurrent = other.stackSizeCurrent;
         stackAt = other.stackAt;
+        names = other.names;
     }
 
     uint doCapture(string name)
@@ -180,7 +184,21 @@ class Function
 
     override string toString()
     {
-        return "<function>";
+        string argsRepr;
+        if (args.length == 0)
+        {
+            argsRepr = "(" ~ args.to!string[1 .. $ - 1] ~ ") ";
+        }
+        string namesRepr;
+        if (names.length == 1)
+        {
+            namesRepr = names[0].to!string ~ " ";
+        }
+        else
+        {
+            namesRepr = cast(string) names.map!(to!string).joiner(",").array ~ " ";
+        }
+        return "@" ~ namesRepr ~ argsRepr ~ "{...}";
     }
 
     version (unittest)
@@ -317,12 +335,8 @@ enum Opcode : ubyte
     pop,
     /// subroutine
     sub,
-    /// bind not implmented yet
-    bind,
     /// call without spread
     call,
-    /// call with atleast 1 spread
-    upcall,
     /// cmp
     oplt,
     opgt,
@@ -332,8 +346,6 @@ enum Opcode : ubyte
     opneq,
     /// build array
     array,
-    /// unpack into array
-    unpack,
     /// built table
     table,
     /// index table or array
@@ -374,12 +386,12 @@ enum Opcode : ubyte
     inspect,
 }
 
-/// may change: call, array, targeta, table, upcall
+/// may change: call, array, targeta, table
 enum int[Opcode] opSizes = [
         Opcode.nop : 0, Opcode.push : 1, Opcode.pop : -1, Opcode.sub : 1,
-        Opcode.bind : -1, Opcode.oplt : -1, Opcode.opgt : -1, Opcode.oplte
+        Opcode.oplt : -1, Opcode.opgt : -1, Opcode.oplte
         : -1, Opcode.opgte : -1, Opcode.opeq : -1, Opcode.opneq : -1,
-        Opcode.unpack : 1, Opcode.index : -1, Opcode.opneg : 0, Opcode.opcat
+        Opcode.index : -1, Opcode.opneg : 0, Opcode.opcat
         : -1, Opcode.opadd : -1, Opcode.opsub : -1, Opcode.opmul : -1,
         Opcode.opdiv : -1, Opcode.opmod : -1, Opcode.load : 1, Opcode.loadc : 1,
         Opcode.store : -1, Opcode.istore : -3, Opcode.opistore : -3,

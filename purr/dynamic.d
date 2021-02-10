@@ -303,6 +303,46 @@ pragma(inline, true) Dynamic dynamic(T...)(T a)
     return Dynamic(a);
 }
 
+struct Fun
+{
+    Dynamic function(Args) value;
+    alias value this;
+    string[] names;
+    string toString()
+    {
+        string namesRepr;
+        if (names.length == 1)
+        {
+            namesRepr = names[0].to!string ~ " ";
+        }
+        else
+        {
+            namesRepr = cast(string) names.map!(to!string).joiner(",").array ~ " ";
+        }
+        return "@" ~ namesRepr ~ "{...}>";
+    }
+}
+
+struct Del
+{
+    Dynamic delegate(Args) value;
+    alias value this;
+    string[] names;
+    string toString()
+    {
+        string namesRepr;
+        if (names.length == 1)
+        {
+            namesRepr = names[0].to!string ~ " ";
+        }
+        else
+        {
+            namesRepr = cast(string) names.map!(to!string).joiner(",").array ~ " ";
+        }
+        return "@" ~ namesRepr ~ "{...}>";
+    }
+}
+
 struct Dynamic
 {
     enum Type : int
@@ -329,8 +369,8 @@ struct Dynamic
         Table tab;
         union Callable
         {
-            Dynamic function(Args) fun;
-            Dynamic delegate(Args)* del;
+            Fun* fun;
+            Del* del;
             Function pro;
         }
 
@@ -391,13 +431,13 @@ align(1):
 
     this(Dynamic function(Args) fun)
     {
-        value.fun.fun = fun;
+        value.fun.fun = new Fun(fun);
         type = Type.fun;
     }
 
     this(Dynamic delegate(Args) del)
     {
-        value.fun.del = [del].ptr;
+        value.fun.del = new Del(del);
         type = Type.del;
     }
 
@@ -431,9 +471,9 @@ align(1):
         switch (type)
         {
         case Dynamic.Type.fun:
-            return fun.fun(args);
+            return fun.fun.value(args);
         case Dynamic.Type.del:
-            return (*fun.del)(args);
+            return fun.del.value(args);
         case Dynamic.Type.pro:
             if (fun.pro.self.length == 0)
             {
@@ -840,9 +880,9 @@ private string strFormat(Dynamic dyn)
     case Dynamic.Type.tab:
         return dyn.tab.to!string;
     case Dynamic.Type.fun:
-        return "<function>";
+        return (*dyn.value.fun.fun).to!string;
     case Dynamic.Type.del:
-        return "<function>";
+        return (*dyn.value.fun.del).to!string;
     case Dynamic.Type.pro:
         return dyn.fun.pro.to!string;
     }

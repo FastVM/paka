@@ -106,11 +106,6 @@ override:
         line("call argc=", argCount);
     }
 
-    void upcall()
-    {
-        line("upcall");
-    }
-
     void opgt()
     {
         line("opgt");
@@ -146,10 +141,6 @@ override:
         line("array length=", argCount);
     }
 
-    void unpack()
-    {
-        line("unpack");
-    }
 
     void table(ushort argCount)
     {

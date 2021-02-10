@@ -14,7 +14,15 @@ struct Pair
     this(T...)(string n, T v)
     {
         name = n;
-        val = dynamic(v);
+        val = v.dynamic;
+        if (val.type == Dynamic.Type.fun)
+        {
+            val.value.fun.fun.names ~= name;
+        }
+        if (val.type == Dynamic.Type.del)
+        {
+            val.value.fun.del.names ~= name;
+        }
     }
 
     unittest

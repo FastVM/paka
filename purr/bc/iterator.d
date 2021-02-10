@@ -63,13 +63,8 @@ class OpcodeIterator
             case Opcode.sub:
                 sub(get);
                 break;
-            case Opcode.bind:
-                assert(0);
             case Opcode.call:
                 call(get);
-                break;
-            case Opcode.upcall:
-                upcall;
                 break;
             case Opcode.oplt:
                 oplt;
@@ -91,9 +86,6 @@ class OpcodeIterator
                 break;
             case Opcode.array:
                 array(get);
-                break;
-            case Opcode.unpack:
-                unpack;
                 break;
             case Opcode.table:
                 table(get);
@@ -200,10 +192,6 @@ class OpcodeIterator
     {
     }
 
-    void upcall()
-    {
-    }
-
     void opgt()
     {
     }
@@ -229,10 +217,6 @@ class OpcodeIterator
     }
 
     void array(ushort argCount)
-    {
-    }
-
-    void unpack()
     {
     }
 

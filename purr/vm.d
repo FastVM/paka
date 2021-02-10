@@ -112,6 +112,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.sub:
             Function built = new Function(func.funcs[instrs.eat!ushort(index)]);
             built.parent = func;
+            built.names = null;
             built.captured = new Dynamic*[built.capture.length];
             foreach (i, v; built.capture)
             {
@@ -131,25 +132,16 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             }
             (*(stack++)) = dynamic(built);
             break;
-        case Opcode.bind:
-            stack--;
-            (*(stack - 1)).tab[(*stack)].fun.pro = new Function((*(stack - 1))
-                    .tab[(*stack)].fun.pro);
-            (*(stack - 1)).tab[(*stack)].fun.pro.self = [(*(stack - 1))];
-            (*(stack - 1)) = (*(stack - 1)).tab[(*stack)];
-            break;
         case Opcode.call:
-            // stack -= instrs.eat!ushort(index);
-            // (*(stack - 1)) =  (*(stack - 1))(stack[0 .. 0 + instrs.get1!ushort(index)]);
             stack -= instrs.eat!ushort(index);
             Dynamic f = (*(stack - 1));
             switch (f.type)
             {
             case Dynamic.Type.fun:
-                (*(stack - 1)) = f.fun.fun(stack[0 .. 0 + instrs.get1!ushort(index)]);
+                (*(stack - 1)) = f.fun.fun.value(stack[0 .. 0 + instrs.get1!ushort(index)]);
                 break;
             case Dynamic.Type.del:
-                (*(stack - 1)) = (*f.fun.del)(stack[0 .. 0 + instrs.get1!ushort(index)]);
+                (*(stack - 1)) = f.fun.del.value(stack[0 .. 0 + instrs.get1!ushort(index)]);
                 break;
             case Dynamic.Type.pro:
                 (*(stack - 1)) = run(f.fun.pro, stack[0 .. 0 + instrs.get1!ushort(index)]);
@@ -160,47 +152,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             default:
                 throw new TypeException("error: not a function: " ~ f.to!string);
             }
-            break;
-        case Opcode.upcall:
-            Dynamic* end = stack;
-            stack--;
-            while ((*stack).type != Dynamic.Type.end)
-            {
-                stack--;
-            }
-            Dynamic[] cargs;
-            for (Dynamic* i = stack + 1; i < end; i++)
-            {
-                if ((*i).type == Dynamic.Type.pac)
-                {
-                    i++;
-                    cargs ~= (*i).arr;
-                }
-                else
-                {
-                    cargs ~= (*i);
-                }
-            }
-            Dynamic f = (*(stack - 1));
-            Dynamic result = void;
-            switch (f.type)
-            {
-            case Dynamic.Type.fun:
-                result = f.fun.fun(cargs);
-                break;
-            case Dynamic.Type.del:
-                result = (*f.fun.del)(cargs);
-                break;
-            case Dynamic.Type.pro:
-                result = run(f.fun.pro, cargs);
-                break;
-            case Dynamic.Type.tab:
-                result = f.tab()(cargs);
-                break;
-            default:
-                throw new TypeException("error: not a function: " ~ f.to!string);
-            }
-            (*(stack - 1)) = result;
             break;
         case Opcode.oplt:
             stack -= 1;
@@ -227,32 +178,10 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             (*(stack - 1)) = dynamic((*(stack - 1)) != (*stack));
             break;
         case Opcode.array:
-            // Dynamic* end = stack;
-            // stack--;
-            // while ((*stack).type != Dynamic.Type.end)
-            // {
-            //     stack--;
-            // }
-            // Dynamic[] arr;
-            // for (Dynamic* i = stack + 1; i < end; i++)
-            // {
-            //     if ((*i).type == Dynamic.Type.pac)
-            //     {
-            //         i++;
-            //         arr ~= (*i).arr;
-            //     }
-            //     else
-            //     {
-            //         arr ~= (*i);
-            //     }
-            // }``
             ushort got = instrs.eat!ushort(index);
             stack = stack - got;
             (*stack) = stack[0 .. got].dup.dynamic;
             stack++;
-            break;
-        case Opcode.unpack:
-            (*(stack++)) = dynamic(Dynamic.Type.pac);
             break;
         case Opcode.table:
             ushort count = instrs.eat!ushort(index);
@@ -313,7 +242,13 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             (*(stack++)) = *func.captured[instrs.eat!ushort(index)];
             break;
         case Opcode.store:
-            locals[instrs.eat!ushort(index)] = (*(stack - 1));
+            Dynamic rhs = (*(stack - 1));
+            ushort local = instrs.eat!ushort(index);
+            if (rhs.type == Dynamic.Type.pro)
+            {
+                rhs.value.fun.pro.names ~= func.stab[local];
+            }
+            locals[local] = rhs;
             stack--;
             break;
         case Opcode.istore:
