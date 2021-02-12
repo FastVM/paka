@@ -2,10 +2,50 @@ module purr.base;
 
 import std.algorithm;
 import std.stdio;
+import std.conv;
+import std.traits;
 import purr.dynamic;
 import purr.bytecode;
 import purr.data.map;
 import purr.plugin.plugins;
+
+struct Arg
+{
+    string name;
+    this(string n)
+    {
+        name = n;
+    }
+
+    string toString()
+    {
+        return name;
+    }
+}
+
+Pair FunctionPair(alias Func)(string name)
+{
+    Dynamic[] args;
+    static if (hasUDA!(Func, Arg))
+    {
+        static foreach (argname; getUDAs!(Func, Arg))
+        {
+            args ~= argname.to!string.dynamic;
+        }
+    }
+    Dynamic dynamicFunc = dynamic(&Func);
+    if (dynamicFunc.type == Dynamic.Type.fun)
+    {
+        dynamicFunc.value.fun.fun.args = args;
+        dynamicFunc.value.fun.fun.names ~= name.dynamic;
+    }
+    // if (dynamicFunc.type == Dynamic.Type.del)
+    // {
+    //     dynamicFunc.value.fun.fun.args = args;
+    //     dynamicFunc.value.fun.del.names ~= name.dynamic;
+    // }
+    return Pair(name, dynamicFunc);
+}
 
 struct Pair
 {
@@ -15,14 +55,6 @@ struct Pair
     {
         name = n;
         val = v.dynamic;
-        if (val.type == Dynamic.Type.fun)
-        {
-            val.value.fun.fun.names ~= name;
-        }
-        if (val.type == Dynamic.Type.del)
-        {
-            val.value.fun.del.names ~= name;
-        }
     }
 
     unittest
@@ -53,6 +85,20 @@ void exitCtx()
     rootBases.length--;
 }
 
+version(VSCodeGenerate)
+{
+    static ~this()
+    {
+        import std.array;
+        foreach (i; defined)
+        {
+            write(i.replace(".", "\\\\."), "|");
+        }
+    }
+}
+
+string[] definedLibs;
+string[] defined;
 void addLib(ref Pair[] pairs, string name, Pair[] lib)
 {
     Mapping dyn = emptyMapping;
@@ -60,9 +106,16 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
     {
         if (!entry.name.canFind('.'))
         {
+            string newName = name ~ "." ~ entry.name;
+            defined ~= newName;
+            if (entry.val.type == Dynamic.Type.fun)
+            {
+                entry.val.fun.fun.names ~= newName.dynamic;
+            }
             dyn[dynamic(entry.name)] = entry.val;
         }
     }
+    definedLibs ~= name;
     pairs ~= Pair(name, dyn);
 }
 
@@ -109,7 +162,7 @@ version(unittest)
     Pair[] libunit()
     {
         return [
-            Pair("void", &libunitvoid),
+            FunctionPair!libunitvoid("void"),
             Pair("value", 10),
         ];
     }

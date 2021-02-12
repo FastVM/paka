@@ -129,6 +129,14 @@ class String : Atom
     }
 }
 
+size_t usedSyms;
+
+Ident genSym()
+{
+    usedSyms++;
+    return new Ident("_purr_" ~ to!string(usedSyms -  1));
+}
+
 /// ident or number, detects at runtime
 class Ident : Atom
 {

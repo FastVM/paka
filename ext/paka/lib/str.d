@@ -13,12 +13,12 @@ import std.uni;
 Pair[] libstr()
 {
     Pair[] ret = [
-        Pair("len", &liblen), Pair("split", &libsplit), Pair("join",
-                &libjoin), Pair("chars", &libchars),
+        FunctionPair!liblen("len"), FunctionPair!libsplit("split"), Pair("join",
+                &libjoin), FunctionPair!libchars("chars"),
         Pair("to_upper", dynamic(&libtoupper)), Pair("to_lower",
-                &libtolower), Pair("to_number", &libtonumber),
-        Pair("slice", &libslice), Pair("strip", dynamic(&libstrip)),
-        Pair("char", &libchar), Pair("ascii", &libascii), Pair("from", &libfrom),
+                &libtolower), FunctionPair!libtonumber("to_number"),
+        FunctionPair!libslice("slice"), Pair("strip", dynamic(&libstrip)),
+        FunctionPair!libchar("char"), FunctionPair!libascii("ascii"), FunctionPair!libfrom("from"),
     ];
     return ret;
 }

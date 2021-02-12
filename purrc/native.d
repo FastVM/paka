@@ -18,8 +18,8 @@ class NativeBackend : Generator
     size_t depth = 0;
     size_t[] ssize = [0];
     size_t[] maxssize = [0];
-    string[] args;
-    string[] allargs;
+    Dynamic[] args;
+    Dynamic[] allargs;
     string[][] locals;
     string[] alllocals;
 
@@ -133,7 +133,7 @@ class NativeBackend : Generator
         string[] predef = bb.predef;
         foreach (index, local; predef)
         {
-            if (!args.canFind(local))
+            if (!args.canFind(local.dynamic))
             {
                 println("Dynamic ", local, "_ = void;");
             }
@@ -171,7 +171,7 @@ class NativeBackend : Generator
     override void emit(LambdaInstruction lambdaInstr)
     {
         allargs ~= lambdaInstr.argNames;
-        string[] oargs = args;
+        Dynamic[] oargs = args;
         args = lambdaInstr.argNames;
         println("stack[", ssize[$ - 1], "] = ");
         emitAsFunc(lambdaInstr.entry);
@@ -182,7 +182,7 @@ class NativeBackend : Generator
 
     override void emit(LoadInstruction loadInstr)
     {
-        if (alllocals.canFind(loadInstr.var) || allargs.canFind(loadInstr.var))
+        if (alllocals.canFind(loadInstr.var) || allargs.canFind(loadInstr.var.dynamic))
         {
             println("stack[", ssize[$ - 1], "] = ", loadInstr.var, "_;");
         }

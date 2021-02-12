@@ -11,13 +11,13 @@ import std.conv;
 Pair[] libio()
 {
     Pair[] ret = [
-        Pair("print", &libprint),
-        Pair("put", &libput),
-        Pair("readln", &libreadln),
-        Pair("get", &libget),
-        Pair("slurp", &libslurp),
-        Pair("dump", &libdump),
-        Pair("sync", &libsync),
+        FunctionPair!libprint("print"),
+        FunctionPair!libput("put"),
+        FunctionPair!libreadln("readln"),
+        FunctionPair!libget("get"),
+        FunctionPair!libslurp("slurp"),
+        FunctionPair!libdump("dump"),
+        FunctionPair!libsync("sync"),
     ];
     return ret;
 }

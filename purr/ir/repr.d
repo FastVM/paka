@@ -241,24 +241,24 @@ class BooleanBranch : Branch
 
     override void emit(Function func)
     {
-    //     if (!target[0].within(func))
-    //     {
-    //         func.pushInstr(Opcode.iffalse, [cast(ushort) ushort.max]);
-    //         size_t iff = func.instrs.length;
-    //         target[0].emit(func);
-    //         ushort t1 = target[1].entry(func);
-    //         func.modifyInstr(iff, t1);
-    //     }
-    //     else if (!target[1].within(func))
-    //     {
-    //         func.pushInstr(Opcode.iftrue, [cast(ushort) ushort.max]);
-    //         size_t ift = func.instrs.length;
-    //         target[1].emit(func);
-    //         ushort t0 = target[0].entry(func);
-    //         func.modifyInstr(ift, t0);
-    //     }
-    //     else
-    //     {
+        // if (!target[0].within(func))
+        // {
+        //     func.pushInstr(Opcode.iffalse, [cast(ushort) ushort.max]);
+        //     size_t iff = func.instrs.length;
+        //     target[0].emit(func);
+        //     ushort t1 = target[1].entry(func);
+        //     func.modifyInstr(iff, t1);
+        // }
+        // else if (!target[1].within(func))
+        // {
+        //     func.pushInstr(Opcode.iftrue, [cast(ushort) ushort.max]);
+        //     size_t ift = func.instrs.length;
+        //     target[1].emit(func);
+        //     ushort t0 = target[0].entry(func);
+        //     func.modifyInstr(ift, t0);
+        // }
+        // else
+        // {
             func.pushInstr(Opcode.iftrue, [cast(ushort) ushort.max]);
             size_t j0 = func.instrs.length;
             func.pushInstr(Opcode.jump, [cast(ushort) ushort.max]);
@@ -464,9 +464,9 @@ class OperatorInstruction : Instruction
 class LambdaInstruction : Instruction
 {
     BasicBlock entry;
-    string[] argNames;
+    Dynamic[] argNames;
 
-    this(BasicBlock bb, string[] args)
+    this(BasicBlock bb, Dynamic[] args)
     {
         entry = bb;
         argNames = args;
@@ -636,7 +636,7 @@ class LoadInstruction : Instruction
         bool unfound = true;
         foreach (argno, argname; func.args)
         {
-            if (argname == var)
+            if (argname.str == var)
             {
                 func.pushInstr(Opcode.argno, [cast(ushort) argno]);
                 unfound = false;

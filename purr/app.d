@@ -26,59 +26,92 @@ import std.string;
 import std.getopt;
 import core.stdc.stdlib;
 
-/// the actual main function, it does not handle errors
 void domain(string[] args)
 {
-    string[] scripts;
-    string[] stmts;
-    string[] langs;
-    string lnd = "paka";
-    bool repl = true;
+    args = args[1 .. $];
+    string[] extargs;
     bool echo = false;
-    auto info = getopt(args, "repl", &repl, "eval", &stmts, "file",
-            &scripts, "echo", &echo, "load", &langs, "lang", &lnd, "bytecode", &dumpbytecode);
-    if (info.helpWanted)
-    {
-        defaultGetoptPrinter("Help for 9c language.", info.options);
-        return;
-    }
-    langNameDefault = lnd;
-    foreach (i; langs)
-    {
-        linkLang(i);
-    }
+    void delegate()[] todo;
     size_t ctx = enterCtx;
+    langNameDefault = "paka";
     scope (exit)
     {
         exitCtx;
     }
-    scripts ~= args[1 .. $];
-    foreach (i; stmts)
+    foreach_reverse (arg; args)
     {
-        Dynamic retval = ctx.eval(Location(1, 1, "__main__", i ~ ";"));
-        if (echo)
+        switch (arg)
         {
-            writeln(retval);
+        default:
+            extargs ~= arg;
+            break;
+        case "--repl":
+            todo ~= {
+                parse(Location(1, 1, "__main__"), langNameDefault ~ ".repl");
+            };
+            break;
+        case "--file":
+            string filename = extargs[$ - 1];
+            extargs.length--;
+            todo ~= {
+                Location code = Location(1, 1, filename, filename.readText);
+                string cdir = getcwd;
+                scope (exit)
+                {
+                    cdir.chdir;
+                }
+                filename.dirName.chdir;
+                Dynamic retval = ctx.eval(code);
+                if (echo)
+                {
+                    writeln(retval);
+                }
+            };
+            break;
+        case "--eval":
+            string code = extargs[$ - 1];
+            extargs.length--;
+            todo ~= {
+                Dynamic retval = ctx.eval(Location(1, 1, "__main__", code));
+                if (echo)
+                {
+                    writeln(retval);
+                }
+            };
+            break;
+        case "--load":
+            string load = extargs[$ - 1];
+            extargs.length--;
+            todo ~= (){
+                linkLang(load);
+            };
+            break;
+        case "--lang":
+            string langname = extargs[$ - 1];
+            extargs.length--;
+            todo ~= (){
+                langNameDefault = langname;
+            };
+            break;
+        case "--bytecode":
+            todo ~= (){
+                dumpbytecode = !dumpbytecode;
+            };
+            break;
+        case "--echo":
+            todo ~= (){
+                echo = !echo;
+            };
+            break;
         }
     }
-    foreach (i; scripts)
+    if (extargs.length != 0)
     {
-        Location code = Location(1, 1, i, i.readText);
-        string cdir = getcwd;
-        scope (exit)
-        {
-            cdir.chdir;
-        }
-        i.dirName.chdir;
-        Dynamic retval = ctx.eval(code);
-        if (echo)
-        {
-            writeln(retval);
-        }
+        throw new Exception("unknown args: consider adding --file");
     }
-    if (repl && (scripts.length == 0 && stmts.length == 0))
+    foreach_reverse (fun; todo)
     {
-        parse(Location(1, 1, "__main__"), langNameDefault ~ ".repl");
+        fun();
     }
 }
 
@@ -141,6 +174,7 @@ void trymain(string[] args)
         writeln(trace);
         writeln(e.msg);
         writeln;
+        throw e;
     }
 }
 

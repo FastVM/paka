@@ -10,22 +10,20 @@ import std.conv;
 Pair[] libarr()
 {
     Pair[] ret = [
-        Pair("len", &liblen), Pair("split", &libsplit),
-        Pair("push", &libpush), Pair("extend",
-                dynamic(&libextend)), Pair("pop", &libpop),
-        Pair("slice", &libslice), Pair("map", &libmap),
-        Pair("filter", &libfilter), Pair("zip", &libzip),
-        Pair("range", &librange), Pair("each", &libeach),
-        Pair("sorted", &libsorted),
+        FunctionPair!liblen("len"), FunctionPair!libsplit("split"),
+        FunctionPair!libpush("push"), Pair("extend",
+                dynamic(&libextend)), FunctionPair!libpop("pop"),
+        FunctionPair!libslice("slice"), FunctionPair!libmap("map"),
+        FunctionPair!libfilter("filter"), FunctionPair!libzip("zip"),
+        FunctionPair!librange("range"), FunctionPair!libeach("each"),
+        FunctionPair!libsorted("sorted"),
     ];
     return ret;
-}
-
-/// returns a list
+}/// returns a list
 /// with one arg it returns 0..$0
 /// with two args it returns $1..$1
 /// with three args it counts from $0 to $1 with interval $2
-Dynamic librange(Args args)
+Dynamic librange(Args args) @Arg("min")
 {
     if (args.length == 1)
     {

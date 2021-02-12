@@ -30,7 +30,7 @@ Pair[] libffi()
 {
     Pair[] ret;
     ret.addLib("type", libtypes);
-    ret ~= Pair("open", &open);
+    ret ~= FunctionPair!open("open");;
     return ret;
 }
 
@@ -52,8 +52,8 @@ Dynamic realtype;
 Pair[] libtypes()
 {
     Pair[] ret;
-    ret ~= Pair("function", &functiontype);
-    ret ~= Pair("pointer", &pointertype);
+    ret ~= FunctionPair!functiontype("function");;
+    ret ~= FunctionPair!pointertype("pointer");;
     ret ~= Pair("byte", bytetype);
     ret ~= Pair("short", shorttype);
     ret ~= Pair("int", inttype);

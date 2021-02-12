@@ -96,6 +96,7 @@ class Function
 
     enum Flags : ubyte
     {
+        none = 0,
         isLocal = 1,
     }
 
@@ -106,7 +107,7 @@ class Function
     Function[] funcs = null;
     Dynamic*[] captured = null;
     Dynamic[] self = null;
-    string[] args = null;
+    Dynamic[] args = null;
     int[size_t] stackAt = null;
     size_t stackSize = 0;
     Function parent = null;
@@ -114,7 +115,7 @@ class Function
     Lookup stab;
     Lookup captab;
     Flags flags = cast(Flags) 0;
-    string[] names;
+    Dynamic[] names;
 
     this()
     {
@@ -149,7 +150,7 @@ class Function
         }
         foreach (argno, argname; parent.args)
         {
-            if (argname == name)
+            if (argname == name.dynamic)
             {
                 uint ret = captab.define(name);
                 capture ~= Capture(cast(uint) argno, false, true);
@@ -184,21 +185,7 @@ class Function
 
     override string toString()
     {
-        string argsRepr;
-        if (args.length == 0)
-        {
-            argsRepr = "(" ~ args.to!string[1 .. $ - 1] ~ ") ";
-        }
-        string namesRepr;
-        if (names.length == 1)
-        {
-            namesRepr = names[0].to!string ~ " ";
-        }
-        else
-        {
-            namesRepr = cast(string) names.map!(to!string).joiner(",").array ~ " ";
-        }
-        return "@" ~ namesRepr ~ argsRepr ~ "{...}";
+        return callableFormat(names, args);
     }
 
     version (unittest)

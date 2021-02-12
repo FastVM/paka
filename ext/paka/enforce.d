@@ -53,7 +53,6 @@ void assertInspects(VMInfo info)
             break;
         case Opcode.call:
             ushort got = eat!ushort;
-            writeln(stack);
             Value call = new Call(values[$-got-1], values[$-got..$], stack[$ - 1]);
             values.length -= got;
             values[$-1] = call;

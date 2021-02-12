@@ -140,9 +140,9 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             case Dynamic.Type.fun:
                 (*(stack - 1)) = f.fun.fun.value(stack[0 .. 0 + instrs.get1!ushort(index)]);
                 break;
-            case Dynamic.Type.del:
-                (*(stack - 1)) = f.fun.del.value(stack[0 .. 0 + instrs.get1!ushort(index)]);
-                break;
+            // case Dynamic.Type.del:
+            //     (*(stack - 1)) = f.fun.del.value(stack[0 .. 0 + instrs.get1!ushort(index)]);
+            //     break;
             case Dynamic.Type.pro:
                 (*(stack - 1)) = run(f.fun.pro, stack[0 .. 0 + instrs.get1!ushort(index)]);
                 break;
@@ -246,7 +246,11 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             ushort local = instrs.eat!ushort(index);
             if (rhs.type == Dynamic.Type.pro)
             {
-                rhs.value.fun.pro.names ~= func.stab[local];
+                Dynamic name = func.stab[local].dynamic;
+                if (!rhs.value.fun.pro.names.canFind(name))
+                {
+                    rhs.value.fun.pro.names ~= name;
+                }
             }
             locals[local] = rhs;
             stack--;
@@ -258,6 +262,13 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 (*(*(stack - 3)).arrPtr)[(*(stack - 2)).as!size_t] = (*(stack - 1));
                 break;
             case Dynamic.Type.tab:
+                if ((*(stack - 1)).type == Dynamic.Type.pro && (*(stack - 2)).type == Dynamic.Type.str)
+                {
+                    if (!(*(stack - 1)).value.fun.pro.names.canFind(*(stack - 2)))
+                    {
+                        (*(stack - 1)).value.fun.pro.names ~= (*(stack - 2)).str.dynamic;
+                    }
+                }
                 (*(stack - 3)).tab.set((*(stack - 2)), (*(stack - 1)));
                 break;
             default:

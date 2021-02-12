@@ -27,9 +27,9 @@ import std.parallelism: parallel;
 Pair[] libsys()
 {
     Pair[] ret = [
-        Pair("leave", &libleave), Pair("args", &libargs),
-        Pair("typeof", &libtypeof), Pair("import", &libimport),
-        Pair("enforce", &libassert),
+        FunctionPair!libleave("leave"), FunctionPair!libargs("args"),
+        FunctionPair!libtypeof("typeof"), FunctionPair!libimport("import"),
+        FunctionPair!libassert("enforce"),
     ];
     ret.addLib("env", libsysenv);
     return ret;
@@ -69,14 +69,10 @@ Dynamic libtypeof(Args args)
             return dynamic("table");
         case Dynamic.Type.fun:
             return dynamic("callable");
-        case Dynamic.Type.del:
-            return dynamic("callable");
+        // case Dynamic.Type.del:
+        //     return dynamic("callable");
         case Dynamic.Type.pro:
             return dynamic("callable");
-        case Dynamic.Type.end:
-            assert(0);
-        case Dynamic.Type.pac:
-            assert(0);
     } 
 }
 

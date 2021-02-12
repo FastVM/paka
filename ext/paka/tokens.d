@@ -20,8 +20,7 @@ enum string[] nops = [".", "!", ",", ":"];
 
 /// language keywords
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "lambda",
-        "scope", "alias", "assert",
+        "if", "else", "while", "return", "def", "lambda","assert",
     ];
 
 /// gets the operators by length not precidence

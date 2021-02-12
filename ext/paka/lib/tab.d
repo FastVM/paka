@@ -7,11 +7,11 @@ import std.stdio;
 Pair[] libtab()
 {
     Pair[] ret = [
-        Pair("map_arr", &libmaparr), Pair("map", &libmap),
-        Pair("each", &libeach), Pair("filter", &libfilter),
-        Pair("filter_keys", &libfilterkeys),
-        Pair("filter_values", &libfiltervalues),
-        Pair("len", &liblen),
+        FunctionPair!libmaparr("map_arr"), FunctionPair!libmap("map"),
+        FunctionPair!libeach("each"), FunctionPair!libfilter("filter"),
+        FunctionPair!libfilterkeys("filter_keys"),
+        FunctionPair!libfiltervalues("filter_values"),
+        FunctionPair!liblen("len"),
     ];
     ret.addLib("meta", libmeta);
     ret.addLib("raw", libraw);
@@ -20,13 +20,13 @@ Pair[] libtab()
 
 Pair[] libmeta()
 {
-    Pair[] ret = [Pair("get", &libmetaget), Pair("set", &libmetaset),];
+    Pair[] ret = [FunctionPair!libmetaget("get"), FunctionPair!libmetaset("set"),];
     return ret;
 }
 
 Pair[] libraw()
 {
-    Pair[] ret = [Pair("get", &librawset), Pair("set", &librawget),];
+    Pair[] ret = [FunctionPair!librawset("get"), FunctionPair!librawget("set"),];
     return ret;
 }
 

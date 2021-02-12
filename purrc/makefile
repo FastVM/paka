@@ -7,5 +7,5 @@ $(BIN)/purrc: $(BIN)/purrc.o $(LIBS_THIS)
 $(BIN)/purrc.o: dcomp $(BIN) $(TMP)/this.txt $(LIBS_THIS)
 	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c $(call dlangsrc,purrc,app.d) $(filter-out purr/app.d,$(call dlangsrc,purr,app.d)) $(DC_CMD_OUT_FLAG)$(BIN)/purrc.o -Ipurr -Illvm/source -J$(TMP) -J$(LIB)
 
-$(TMP)/this.txt: dummy
+$(TMP)/this.txt:
 	$(shell echo $(THIS) > $@)

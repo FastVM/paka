@@ -8,7 +8,6 @@ import std.ascii;
 import std.string;
 import std.algorithm;
 import paka.tokens;
-import paka.subparser;
 import purr.ast;
 import purr.srcloc;
 import purr.fs.har;
@@ -46,7 +45,8 @@ template Spanning(alias F, T...)
         Node ret = F(tokens, a);
         if (orig.length > 0 && ret !is null)
         {
-            ret.span = Span(orig[0].span.first.dup, orig[orig.length - tokens.length - 1].span.last.dup);
+            ret.span = Span(orig[0].span.first.dup,
+                    orig[orig.length - tokens.length - 1].span.last.dup);
             // writeln("[", ret.span.first.column, " .. ", ret.span.last.column, "]: ", ret);
         }
         return ret;
@@ -195,17 +195,49 @@ TokenArray newTokenArray(Token[] a)
     return TokenArray(a);
 }
 
-/// reads open parens or square brackets
-/// ignores commas, soon to handle them correctly
-Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
+/// reads open parens
+Node[][] readOpen(string v)(ref TokenArray tokens) if (v == "()")
 {
+    Node[][] ret;
     Node[] args;
     tokens.match(Token.Type.open, [v[0]]);
-    tokens.stripNewlines;
     while (!tokens[0].isClose([v[1]]))
     {
         args ~= tokens.readExprBase;
-        tokens.stripNewlines;
+        if (tokens[0].isComma)
+        {
+            tokens.nextIs(Token.Type.comma);
+        }
+        if (tokens[0].isSemicolon)
+        {
+            tokens.nextIs(Token.Type.semicolon);
+            ret ~= args;
+            args = null;
+        }
+    }
+    tokens.match(Token.Type.close, [v[1]]);
+    ret ~= args;
+    return ret;
+}
+
+Node[] readOpen1(string v)(ref TokenArray tokens) if (v == "()")
+{
+    Node[][] ret = tokens.readOpen!"()";
+    if (ret.length > 1)
+    {
+        throw new Exception("unexpected semicolon in (...)");
+    }
+    return ret[0];
+}
+
+/// reads square brackets
+Node[] readOpen(string v)(ref TokenArray tokens) if (v == "[]")
+{
+    Node[] args;
+    tokens.match(Token.Type.open, [v[0]]);
+    while (!tokens[0].isClose([v[1]]))
+    {
+        args ~= tokens.readExprBase;
         if (tokens[0].isComma)
         {
             tokens.nextIs(Token.Type.comma);
@@ -215,18 +247,15 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v != "{}")
     return args;
 }
 
-// TODO: make commas and colons alternate
 /// reads open curly brackets
 Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
 {
     Node[] args;
     tokens.match(Token.Type.open, [v[0]]);
     size_t items = 0;
-    tokens.stripNewlines;
     while (!tokens[0].isClose([v[1]]))
     {
         args ~= tokens.readExprBase;
-        tokens.stripNewlines;
         items++;
         if (tokens[0].isComma)
         {
@@ -241,7 +270,7 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
     return args;
 }
 
-/// strips newlines and changes the input
+// /// strips newlines and changes the input
 void stripNewlines(ref TokenArray tokens)
 {
     while (tokens[0].isSemicolon)
@@ -250,15 +279,22 @@ void stripNewlines(ref TokenArray tokens)
     }
 }
 
-/// read open paren until close paren.
-/// used for arguments and flow control
-alias readParens = readOpen!"()";
-/// read open square bracket until close square bracket.
-/// used for arrays and indexing 
-alias readSquare = readOpen!"[]";
-/// read open curly bracket until close curly bracket.
-/// used for tables 
-alias readBrace = readOpen!"{}";
+alias readPostCallExtend = Spanning!(readPostExtendImpl, Node);
+Node readPostCallExtendImpl(ref TokenArray tokens, Node last)
+{
+    Node[][] args = tokens.readOpen!"()";
+    while (tokens.length != 0 && tokens[0].isOpen("{"))
+    {
+        args[$ - 1] ~= cast(Node) new Call(new Ident("@fun"), [
+                new Call([]), tokens.readBlock
+                ]);
+    }
+    foreach (argList; args)
+    {
+        last = new Call(last, argList);
+    }
+    return last;
+}
 
 /// after reading a small expression, read a postfix expression
 alias readPostExtend = Spanning!(readPostExtendImpl, Node);
@@ -271,14 +307,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     Node ret = void;
     if (tokens[0].isOpen("("))
     {
-        Node[] args = tokens.readParens;
-        while (tokens.length != 0 && tokens[0].isOpen("{"))
-        {
-            args ~= cast(Node) new Call(new Ident("@fun"), [
-                    new Call([]), tokens.readBlock
-                    ]);
-        }
-        ret = new Call(last, args);
+        ret = tokens.readPostCallExtendImpl(last);
     }
     else if (tokens[0].isOpen("{"))
     {
@@ -293,7 +322,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     }
     else if (tokens[0].isOpen("["))
     {
-        ret = new Call(new Ident("@index"), last ~ tokens.readSquare);
+        ret = new Call(new Ident("@index"), last ~ tokens.readOpen!"[]");
     }
     else if (tokens[0].isOperator("."))
     {
@@ -303,7 +332,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     }
     else
     {
-        throw new Exception("parse error");
+        throw new Exception("parse error " ~ tokens.to!string);
     }
     return tokens.readPostExtend(ret);
 }
@@ -312,7 +341,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
 alias readIf = Spanning!readIfImpl;
 Node readIfImpl(ref TokenArray tokens)
 {
-    Node[] cond = tokens.readParens;
+    Node[] cond = tokens.readOpen1!"()";
     if (tokens.length < 1)
     {
         throw new Exception("if cannot have empty parens");
@@ -491,7 +520,7 @@ Node readPostExprImpl(ref TokenArray tokens)
         if (tokens[0].isOpen("("))
         {
             last = new Call(new Ident("@fun"), [
-                    new Call(tokens.readParens), tokens.readBlock
+                    new Call(tokens.readOpen1!"()"), tokens.readBlock
                     ]);
         }
         else if (tokens[0].isOpen("{"))
@@ -501,31 +530,25 @@ Node readPostExprImpl(ref TokenArray tokens)
     }
     else if (tokens[0].isOpen("("))
     {
-        last = new Call(new Ident("@do"), tokens.readParens);
+        last = new Call(new Ident("@do"), tokens.readOpen1!"()");
     }
     else if (tokens[0].isOpen("["))
     {
-        last = new Call(new Ident("@array"), tokens.readSquare);
+        last = new Call(new Ident("@array"), tokens.readOpen!"[]");
     }
     else if (tokens[0].isOpen("{"))
     {
-        last = new Call(new Ident("@table"), tokens.readBrace);
+        last = new Call(new Ident("@table"), tokens.readOpen!"{}");
     }
     else if (tokens[0].isKeyword("if"))
     {
         tokens.nextIs(Token.Type.keyword, "if");
         last = tokens.readIf;
     }
-    else if (tokens[0].isKeyword("scope"))
-    {
-        tokens.nextIs(Token.Type.keyword, "scope");
-        Node node = tokens.readPostExpr;
-        last = new Call(new Call(new Ident("@fun"), [new Call(null), node]), null);
-    }
     else if (tokens[0].isKeyword("while"))
     {
         tokens.nextIs(Token.Type.keyword, "while");
-        Node cond = tokens.readParens[$ - 1];
+        Node cond = tokens.readOpen1!"()"[$ - 1];
         Node loop = tokens.readBlock;
         last = new Call(new Ident("@while"), [cond, loop]);
     }
@@ -691,7 +714,9 @@ Node readExpr(ref TokenArray tokens, size_t level)
             ret = new Call(new Ident("@return"), [ret]);
             if (v[0].isOpen("("))
             {
-                ret = new Call(new Ident("@fun"), [new Call(v.readParens), ret]);
+                ret = new Call(new Ident("@fun"), [
+                        new Call(v.readOpen1!"()"), ret
+                        ]);
             }
             else
             {
@@ -710,6 +735,7 @@ Node readExpr(ref TokenArray tokens, size_t level)
         dotcount ~= [dc[1], 0];
     }
     Node ret = sub[0].readExpr(level + 1);
+    Ident last;
     foreach (i, v; opers)
     {
         switch (v.value)
@@ -750,13 +776,30 @@ Node readExpr(ref TokenArray tokens, size_t level)
             size_t lhsc = dotcount[i + 1][0];
             size_t rhsc = dotcount[i + 1][1];
             Node rhs = sub[i + 1].readExpr(level + 1);
-            ret = new Call(new Ident(v.value), [ret, rhs]);
-            if (cmpOps.canFind(v.value))
+            if (cmpOps.canFind(v.value) && opers.length != 1)
             {
-                if (opers.length != 1)
+                Ident next = genSym;
+                if (i != opers.length)
                 {
-                    throw new Exception("cannot chain operator");
+                    rhs = new Call(new Ident("@set"), [next, rhs]);
                 }
+                if (i == 0)
+                {
+                    ret = new Call(new Ident(v.value), [ret, rhs]);
+                }
+                else
+                {
+                    Ident lastCmp = genSym;
+                    ret = new Call(new Ident("@if"), [
+                            new Call(new Ident("@set"), [lastCmp, ret]),
+                            new Call(new Ident(v.value), [last, rhs]), lastCmp
+                            ]);
+                }
+                last = next;
+            }
+            else
+            {
+                ret = new Call(new Ident(v.value), [ret, rhs]);
             }
             while (rhsc != 0 || lhsc != 0)
             {
@@ -788,6 +831,18 @@ Node readExpr(ref TokenArray tokens, size_t level)
 alias readStmt = Spanning!readStmtImpl;
 Node readStmtImpl(ref TokenArray tokens)
 {
+    if (tokens.length == 0)
+    {
+        return null;
+    }
+    while (tokens.length > 0 && tokens[0].isSemicolon)
+    {
+        tokens.nextIs(Token.Type.semicolon);
+        if (tokens.length == 0)
+        {
+            return null;
+        }
+    }
     Token[] stmtTokens0;
     size_t depth;
     while (depth != 0 || !tokens[0].isSemicolon)
@@ -798,12 +853,28 @@ Node readStmtImpl(ref TokenArray tokens)
         }
         if (tokens[0].isClose)
         {
+            if (depth == 0)
+            {
+                break;
+            }
             depth--;
         }
         stmtTokens0 ~= tokens[0];
         tokens.nextIsAny;
+        if (tokens.length == 0)
+        {
+            if (depth != 0)
+            {
+                throw new Exception("parse error: unbalanced");
+            }
+            break;
+        }
+        if (depth == 0 && tokens[0].isSemicolon)
+        {
+            tokens.nextIs(Token.Type.semicolon);
+            break;
+        }
     }
-    tokens.nextIs(Token.Type.semicolon);
     TokenArray stmtTokens = newTokenArray(stmtTokens0);
     if (stmtTokens.length == 0)
     {
@@ -817,24 +888,33 @@ Node readStmtImpl(ref TokenArray tokens)
     if (stmtTokens[0].isKeyword("assert"))
     {
         stmtTokens.nextIs(Token.Type.keyword, "assert");
-        return new Call(new Ident("@do"), [
-                cast(Node) new Call(new Ident("_paka_begin_assert"), null),
-                cast(Node) new Call(new Ident("_paka_assert"),
-                    [
-                        cast(Node) new Call(new Ident("@inspect"), [
-                            stmtTokens.readExprBase
+        return new Call(new Ident("@do"),
+                [
+                    cast(Node) new Call(new Ident("_paka_begin_assert"), null),
+                    cast(Node) new Call(new Ident("_paka_assert"),
+                        [
+                            cast(Node) new Call(new Ident("@inspect"), [
+                                stmtTokens.readExprBase
+                            ])
                         ])
-                    ])
                 ]);
     }
     if (stmtTokens[0].isKeyword("def"))
     {
         stmtTokens.nextIs(Token.Type.keyword, "def");
-        Node name = new Ident(stmtTokens[0].value);
-        stmtTokens.nextIs(Token.Type.ident);
-        Node[] args = stmtTokens.readParens;
-        Node dobody = stmtTokens.readBlock;
-        return new Call(new Ident("@def"), [new Call(name, args), dobody]);
+        Node name = stmtTokens.readExprBase;
+        Call call = cast(Call) name;
+        if (call is null)
+        {
+            throw new Exception("parse error: body of def");
+        }
+        Call dobody = cast(Call) call.args[$ - 1];
+        if (dobody is null)
+        {
+            throw new Exception("parse error: body of def");
+        }
+        return new Call(new Ident("@set"),
+                [cast(Node) new Call(call.args[0 .. $ - 1])] ~ dobody.args[2 .. $]);
     }
     return stmtTokens.readExprBase;
 }

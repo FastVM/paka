@@ -206,6 +206,13 @@ class Walker
         }
     }
 
+    void walkStoreDef(Call lhs, Node rhs)
+    {
+        Node funCall = new Call(new Ident("@fun"), [new Call(lhs.args[1..$]), rhs]);
+        Node setCall = new Call(new Ident("@set"), [lhs.args[0], funCall]);
+        walk(setCall);
+    }
+
     void walkStore(Node[] args)
     {
         if (Ident id = cast(Ident) args[0])
@@ -217,15 +224,22 @@ class Walker
         {
             if (Ident id = cast(Ident) call.args[0])
             {
-                assert(id.repr == "@index");
-                walk(call.args[1]);
-                walk(call.args[2]);
-                walk(args[1]);
-                emit(new IndexStoreInstruction);
+                if (specialForms.canFind(id.repr))
+                {
+                    assert(id.repr == "@index");
+                    walk(call.args[1]);
+                    walk(call.args[2]);
+                    walk(args[1]);
+                    emit(new IndexStoreInstruction);
+                }
+                else
+                {
+                    walkStoreDef(call, args[1]);
+                }
             }
             else
             {
-                assert(false);
+                walkStoreDef(call, args[1]);
             }
         }
         else
@@ -280,11 +294,11 @@ class Walker
     void walkFun(Node[] args)
     {
         Call argl = cast(Call) args[0];
-        string[] argNames;
+        Dynamic[] argNames;
         foreach (i, v; argl.args)
         {
             Ident id = cast(Ident) v;
-            argNames ~= id.repr;
+            argNames ~= id.repr.dynamic;
         }
         BasicBlock lambda = new BasicBlock;
         emit(new LambdaInstruction(lambda, argNames));
