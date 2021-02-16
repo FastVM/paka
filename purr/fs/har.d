@@ -1,6 +1,6 @@
 module purr.fs.har;
 
-import std.stdio;
+import purr.io;
 import std.string;
 import std.algorithm;
 import purr.fs.memory;

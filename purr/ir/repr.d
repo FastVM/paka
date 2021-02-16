@@ -1,11 +1,12 @@
 module purr.ir.repr;
 
-import std.stdio;
+import core.memory;
 import std.conv;
 import std.array;
 import std.algorithm;
 import std.typecons;
 import std.meta;
+import purr.io;
 import purr.srcloc;
 import purr.bytecode;
 import purr.dynamic;
@@ -13,13 +14,10 @@ import purr.inter;
 import purr.ir.emit;
 import purr.ir.opt;
 
-alias InstrTypes = AliasSeq!(BooleanBranch, GotoBranch, ReturnBranch,
-        BuildArrayInstruction, BuildTableInstruction,
-        CallInstruction, PushInstruction, OperatorInstruction, LambdaInstruction,
-        PopInstruction,
-        IndexStoreInstruction,
-        StoreInstruction, OperatorStoreInstruction, StorePopInstruction,
-        OperatorStorePopInstruction, LoadInstruction, ArgsInstruction,);
+alias InstrTypes = AliasSeq!(BooleanBranch, GotoBranch, ReturnBranch, BuildArrayInstruction,
+        BuildTableInstruction, CallInstruction, PushInstruction, OperatorInstruction,
+        LambdaInstruction, PopInstruction, StoreIndexInstruction, StoreInstruction,
+        OperatorStoreInstruction, LoadInstruction, ArgsInstruction,);
 
 size_t nameCount;
 
@@ -48,23 +46,25 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     }
     // if (func.spans.length != 0)
     // {
-        while (func.spans.length < func.instrs.length)
-        {
-            func.spans ~= func.spans[$ - 1];
-        }
+    while (func.spans.length < func.instrs.length)
+    {
+        func.spans ~= func.spans[$ - 1];
+    }
     // }
     int* psize = op in opSizes;
     if (psize !is null)
     {
+        // writeln("auto: ", op, shorts, *psize);
         func.stackSizeCurrent += *psize;
     }
     else
     {
+        // writeln("find: ", op, shorts, size);
         func.stackSizeCurrent += size;
     }
-    if (func.stackSizeCurrent > func.stackSize)
+    if (func.stackSizeCurrent >= func.stackSize)
     {
-        func.stackSize = func.stackSizeCurrent;
+        func.stackSize = func.stackSizeCurrent + 1;
     }
     assert(func.stackSizeCurrent >= 0);
 }
@@ -108,7 +108,7 @@ class BasicBlock
         name = n;
     }
 
-    string[] predef(string[] checked                                                                                                                                                                                     = null)
+    string[] predef(string[] checked = null)
     {
         assert(exit !is null, this.to!string);
         foreach (i; bbchecked)
@@ -259,14 +259,14 @@ class BooleanBranch : Branch
         // }
         // else
         // {
-            func.pushInstr(Opcode.iftrue, [cast(ushort) ushort.max]);
-            size_t j0 = func.instrs.length;
-            func.pushInstr(Opcode.jump, [cast(ushort) ushort.max]);
-            size_t j1 = func.instrs.length;
-            ushort t0 = target[0].entry(func);
-            ushort t1 = target[1].entry(func);
-            func.modifyInstr(j0, t0);
-            func.modifyInstr(j1, t1);
+        func.pushInstr(Opcode.iftrue, [cast(ushort) ushort.max]);
+        size_t j0 = func.instrs.length;
+        func.pushInstr(Opcode.jump, [cast(ushort) ushort.max]);
+        size_t j1 = func.instrs.length;
+        ushort t0 = target[0].entry(func);
+        ushort t1 = target[1].entry(func);
+        func.modifyInstr(j0, t0);
+        func.modifyInstr(j1, t1);
         // }
     }
 
@@ -486,7 +486,7 @@ class LambdaInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "lambda " ~ entry.name ~ "\n";
+        ret ~= "lambda " ~ entry.name ~ " (" ~ cast(string) argNames.map!(x => x.str).joiner(", ").array ~ ")" ~ "\n";
         return ret;
     }
 }
@@ -506,40 +506,26 @@ class PopInstruction : Instruction
     }
 }
 
-class IndexStoreInstruction : Instruction
-{
-    override void emit(Function func)
-    {
-        func.pushInstr(Opcode.istore);
-        func.pushInstr(Opcode.push, [cast(ushort) func.constants.length]);
-        func.constants ~= Dynamic.nil;
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "index-store\n";
-        return ret;
-    }
-}
-
 class AssignmentInstruction : Instruction
 {
     string var;
+    this(string v)
+    {
+        var = v;
+    }
 }
 
 class StoreInstruction : AssignmentInstruction
 {
     this(string v)
     {
-        var = v;
+        super(v);
     }
 
     override void emit(Function func)
     {
         uint ius = func.stab[var];
         func.pushInstr(Opcode.store, [cast(ushort) ius]);
-        func.pushInstr(Opcode.load, [cast(ushort) ius]);
     }
 
     override string toString()
@@ -550,13 +536,32 @@ class StoreInstruction : AssignmentInstruction
     }
 }
 
+class StoreIndexInstruction : Instruction
+{
+    this()
+    {
+    }
+
+    override void emit(Function func)
+    {
+        func.pushInstr(Opcode.istore);
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "index-store\n";
+        return ret;
+    }
+}
+
 class OperatorStoreInstruction : AssignmentInstruction
 {
     string op;
     this(string o, string v)
     {
+        super(v);
         op = o;
-        var = v;
     }
 
     override void emit(Function func)
@@ -565,7 +570,6 @@ class OperatorStoreInstruction : AssignmentInstruction
         func.pushInstr(Opcode.opstore, [
                 cast(ushort) ius, cast(ushort) op.to!AssignOp
                 ]);
-        func.pushInstr(Opcode.load, [cast(ushort) ius]);
     }
 
     override string toString()
@@ -576,51 +580,72 @@ class OperatorStoreInstruction : AssignmentInstruction
     }
 }
 
-class StorePopInstruction : AssignmentInstruction
-{
-    this(string v)
-    {
-        var = v;
-    }
-
-    override void emit(Function func)
-    {
-        uint ius = func.stab[var];
-        func.pushInstr(Opcode.store, [cast(ushort) ius]);
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "store-pop " ~ var ~ "\n";
-        return ret;
-    }
-}
-
-class OperatorStorePopInstruction : AssignmentInstruction
+class OperatorStoreIndexInstruction : Instruction
 {
     string op;
-    this(string o, string v)
+    this(string o)
     {
         op = o;
-        var = v;
     }
 
     override void emit(Function func)
     {
-        uint ius = func.stab[var];
-        func.pushInstr(Opcode.opstore, [
-                cast(ushort) ius, cast(ushort) op.to!AssignOp
-                ]);
+        func.pushInstr(Opcode.opistore, [cast(ushort) op.to!AssignOp]);
     }
 
     override string toString()
     {
         string ret;
-        ret ~= "operator-store-pop " ~ op ~ " " ~ var ~ "\n";
+        ret ~= "operator-store-index " ~ op ~ "\n";
         return ret;
     }
 }
+
+// class StorePopInstruction : AssignmentInstruction
+// {
+//     this(string v)
+//     {
+//         var = v;
+//     }
+
+//     override void emit(Function func)
+//     {
+//         uint ius = func.stab[var];
+//         func.pushInstr(Opcode.store, [cast(ushort) ius]);
+//     }
+
+//     override string toString()
+//     {
+//         string ret;
+//         ret ~= "store-pop " ~ var ~ "\n";
+//         return ret;
+//     }
+// }
+
+// class OperatorStorePopInstruction : AssignmentInstruction
+// {
+//     string op;
+//     this(string o, string v)
+//     {
+//         op = o;
+//         var = v;
+//     }
+
+//     override void emit(Function func)
+//     {
+//         uint ius = func.stab[var];
+//         func.pushInstr(Opcode.opstore, [
+//                 cast(ushort) ius, cast(ushort) op.to!AssignOp
+//                 ]);
+//     }
+
+//     override string toString()
+//     {
+//         string ret;
+//         ret ~= "operator-store-pop " ~ op ~ " " ~ var ~ "\n";
+//         return ret;
+//     }
+// }
 
 class LoadInstruction : Instruction
 {
@@ -636,6 +661,7 @@ class LoadInstruction : Instruction
         bool unfound = true;
         foreach (argno, argname; func.args)
         {
+            import core.memory : GC;
             if (argname.str == var)
             {
                 func.pushInstr(Opcode.argno, [cast(ushort) argno]);
@@ -645,7 +671,7 @@ class LoadInstruction : Instruction
         if (unfound)
         {
             uint* us = var in func.stab.byName;
-            Function.Lookup.Flags flags = void;
+            Function.Lookup.Flags flags;
             if (us !is null)
             {
                 func.pushInstr(Opcode.load, [cast(ushort)*us]);

@@ -5,7 +5,7 @@ import std.array;
 import std.conv;
 import std.string;
 import std.file;
-import std.stdio;
+import purr.io;
 import std.utf;
 
 int[string] db;

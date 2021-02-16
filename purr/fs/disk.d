@@ -1,6 +1,6 @@
 module purr.fs.disk;
 
-import std.stdio;
+import purr.io;
 import std.file;
 import purr.fs.files;
 import purr.fs.memory;

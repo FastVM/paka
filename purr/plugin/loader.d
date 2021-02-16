@@ -2,7 +2,7 @@ module purr.plugin.loader;
 
 version (linux)
 {
-    import std.stdio;
+    import purr.io;
     import std.string;
     import purr.plugin.plugins;
     import purr.plugin.plugin;
@@ -17,7 +17,7 @@ version (linux)
 
     Plugin loadLang(string name)
     {
-        const(char)* cname = void;
+        const(char)* cname;
         if (name == "this")
         {
             cname = null;
@@ -45,7 +45,7 @@ version (linux)
 }
 else version(Windows)
 {
-    import std.stdio;
+    import purr.io;
     import std.string;
     import purr.plugin.plugins;
     import purr.plugin.plugin;

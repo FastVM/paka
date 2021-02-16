@@ -1,6 +1,6 @@
 module serial.tojson;
 
-import std.stdio;
+import purr.io;
 import std.conv;
 import std.format;
 import std.algorithm;
@@ -201,13 +201,12 @@ string serialize(Dynamic value)
             .to!string ~ `}`;
     case Dynamic.Type.str:
         return `{"type": "string", "string": ` ~ value.str.serialize ~ `}`;
-        assert(false);
     case Dynamic.Type.arr:
         return `{"type": "array", "array": ` ~ value.arr.serialize ~ `}`;
     case Dynamic.Type.tab:
         return `{"type": "table", "table": ` ~ value.tab.serialize ~ `}`;
     case Dynamic.Type.fun:
-        return `{"type": "function", "function": ` ~ value.fun.fun.names.serialize ~ `}`;
+        return `{"type": "function", "function": ` ~ value.fun.fun.mangled.serialize ~ `}`;
     case Dynamic.Type.pro:
         return `{"type": "program", "program": ` ~ value.fun.pro.serialize ~ `}`;
     }

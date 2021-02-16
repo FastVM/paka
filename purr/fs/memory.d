@@ -1,7 +1,7 @@
 module purr.fs.memory;
 
 import purr.srcloc;
-import std.stdio;
+import purr.io;
 import std.file;
 import std.datetime.systime;
 

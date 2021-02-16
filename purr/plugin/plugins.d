@@ -1,6 +1,6 @@
 module purr.plugin.plugins;
 
-import std.stdio;
+import purr.io;
 import purr.plugin.plugin;
 import purr.base;
 import purr.ir.walk;

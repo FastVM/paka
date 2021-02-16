@@ -1,6 +1,6 @@
 module serial.fromjson;
 
-import std.stdio;
+import purr.io;
 import std.conv;
 import std.format;
 import std.algorithm;
@@ -11,6 +11,7 @@ import purr.base;
 import purr.srcloc;
 import purr.dynamic;
 import purr.bytecode;
+import purr.plugin.syms;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
 import std.json;
@@ -98,7 +99,7 @@ AssocArray deserialize(AssocArray)(Json json) if (isAssociativeArray!AssocArray)
     return ret;
 }
 
-Pointer deserialize(Pointer)(Json json) if (isPointer!Pointer && !is(Pointer == void*))
+Pointer deserialize(Pointer)(Json json) if (isPointer!Pointer && !is(Pointer == void*) && !std.traits.isFunctionPointer!Pointer)
 {
     if (json.type == JSONType.null_)
     {
@@ -153,6 +154,11 @@ T elems(string names, T)(Json json) if (is(T == class))
     return ret;
 }
 
+T deserialize(T)(Json json) if (is(T == Dynamic function(Args)))
+{
+    return json.str.getNative;
+}
+
 Location deserialize(T : Location)(Json json)
 {
     return json.elems!("line column file", T);
@@ -190,6 +196,16 @@ Function deserialize(T : Function)(Json json)
             T);
 }
 
+ReturnType!func cache(alias func)(ParameterTypeTuple!func args)
+{
+    alias Args = ParameterTypeTuple!func;
+    alias Ret = ReturnType!func;
+    Ret result = func(args);
+    return result;
+}
+
+alias deserializeCached = cache!(deserialize!(Dynamic));
+
 Dynamic deserialize(T : Dynamic)(Json json)
 {
     final switch (json.dtype)
@@ -207,7 +223,7 @@ Dynamic deserialize(T : Dynamic)(Json json)
     case Dynamic.Type.tab:
         return json["table"].deserialize!(Table).dynamic;
     case Dynamic.Type.fun:
-        assert(false);
+        return json["function"].deserialize!(Dynamic function(Args)).dynamic;
     case Dynamic.Type.pro:
         return json["program"].deserialize!(Function).dynamic;
     }

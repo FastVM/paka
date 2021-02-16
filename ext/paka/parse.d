@@ -1,6 +1,6 @@
 module paka.parse;
 
-import std.stdio;
+import purr.io;
 import std.conv;
 import std.array;
 import std.utf;
@@ -776,6 +776,7 @@ Node readExpr(ref TokenArray tokens, size_t level)
             size_t lhsc = dotcount[i + 1][0];
             size_t rhsc = dotcount[i + 1][1];
             Node rhs = sub[i + 1].readExpr(level + 1);
+            stdout.flush;
             if (cmpOps.canFind(v.value) && opers.length != 1)
             {
                 Ident next = genSym;
@@ -991,24 +992,16 @@ Node parsePakaAs(alias parser)(Location loc)
 Node parse(Location loc)
 {
     locs.length = 0;
-    if (MemoryTextFile file = loc.file.readMemFile)
+    fileSystem ~= parseHar(loc, fileSystem);
+    MemoryTextFile main = "main.paka".readMemFile;
+    if (main is null)
     {
-        Location location = file.location;
-        return location.parsePaka;
+        main = "__main__".readMemFile;
     }
-    else
+    if (main is null)
     {
-        fileSystem ~= parseHar(loc, fileSystem);
-        MemoryTextFile main = "main.paka".readMemFile;
-        if (main is null)
-        {
-            main = "__main__".readMemFile;
-        }
-        if (main is null)
-        {
-            throw new Exception("input error: missing __main__");
-        }
-        Location location = main.location;
-        return location.parsePaka;
+        throw new Exception("input error: missing __main__");
     }
+    Location location = main.location;
+    return location.parsePaka;
 }

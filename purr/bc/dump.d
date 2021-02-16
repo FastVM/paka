@@ -1,7 +1,7 @@
 module purr.bc.dump;
 
 import std.conv;
-import std.stdio;
+import purr.io;
 import purr.bytecode;
 import purr.bc.iterator;
 

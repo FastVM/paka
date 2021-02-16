@@ -5,7 +5,7 @@ import purr.base;
 import purr.vm;
 import purr.fs.files;
 import purr.fs.disk;
-import std.stdio;
+import purr.io;
 import std.conv;
 
 Pair[] libio()
@@ -14,6 +14,7 @@ Pair[] libio()
         FunctionPair!libprint("print"),
         FunctionPair!libput("put"),
         FunctionPair!libreadln("readln"),
+        FunctionPair!libread("read"),
         FunctionPair!libget("get"),
         FunctionPair!libslurp("slurp"),
         FunctionPair!libdump("dump"),
@@ -55,19 +56,49 @@ Dynamic libput(Args args)
             write(i);
         }
     }
+    stdout.flush;
     return Dynamic.nil;
 }
 
 /// reads until newline
 Dynamic libreadln(Args args)
 {
-    return dynamic(readln[0 .. $ - 1]);
+    string prompt;
+    if (args.length > 0)
+    {
+        prompt = args[0].str;
+    }
+    return dynamic(prompt.readln[0 .. $ - 1]);
 }
 
-/// gets a 1 length string
 Dynamic libget(Args args)
 {
-    return dynamic(cast(string) [cast(char) getchar]);
+    size_t count = 1;
+    if (args.length > 0)
+    {
+        count = args[0].as!size_t;
+    }
+    string ret;
+    foreach (i; 0..count)
+    {
+        ret ~= getchar;
+    }
+    return ret.dynamic;
+}
+
+Dynamic libread(Args args)
+{
+    size_t count = 1;
+    if (args.length > 0)
+    {
+        count = args[0].as!size_t;
+    }
+    string ret;
+    foreach (i; 0..count)
+    {
+        ret ~= readchar;
+    }
+    return ret.dynamic;
 }
 
 /// writes a string to a file
@@ -85,5 +116,5 @@ Dynamic libsync(Args args)
 /// reads an entire file
 Dynamic libslurp(Args args)
 {
-    return dynamic(cast(string) args[0].str.readFile.src);
+    return args[0].str.readFile.src.dynamic;
 }

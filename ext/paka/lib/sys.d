@@ -21,7 +21,7 @@ import core.runtime;
 import std.algorithm;
 import std.array;
 import std.conv;
-import std.stdio;
+import purr.io;
 import std.parallelism: parallel;
 
 Pair[] libsys()
@@ -46,8 +46,13 @@ Dynamic libassert(Args args) {
 
 /// imports value returning what it returned
 Dynamic libimport(Args args) {
+    size_t ctx = enterCtx;
+    scope (exit)
+    {
+        exitCtx;
+    }
     Location data = args[0].str.readFile;
-    Dynamic val = evalFile(data);
+    Dynamic val = ctx.eval(data);
     return val;
 }
 

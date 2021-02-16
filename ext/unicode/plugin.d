@@ -1,6 +1,6 @@
 module unicode.plugin;
 
-import std.stdio;
+import purr.io;
 import purr.base;
 import purr.dynamic;
 import purr.plugin.plugin;
@@ -29,7 +29,7 @@ Dynamic unictrl(Args args)
 Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
-    plugin.libs ~= Pair("_unicode_ctrl", &unictrl);
+    plugin.libs ~= FunctionPair!unictrl("_unicode_ctrl");
     return plugin;
 }
 

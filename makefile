@@ -6,25 +6,30 @@ include $1
 endif
 endef
 
+BIN=./bin
+LIB=./lib
+TMP=./tmp
+
 import=$(eval $(MAKEFILE_IMPORT_IMPL_BODY))
 runto=$(shell $2)$(shell echo $2 > $1)
-delsym=$(eval DELSYM_TEMPORARY_SHELL:=$(shell mktemp --tmpdir=$(TMP) --suffix= --directory XXXXXXXX))$(call runto,$(DELSYM_TEMPORARY_SHELL)/command.txt,objcopy --strip-symbol=$1 $2 $(DELSYM_TEMPORARY_SHELL)/object.o)$(DELSYM_TEMPORARY_SHELL)/object.o
-delsym_many=$(foreach filename,$2,$(call delsym,$1,$(filename)))
+mkdir=$(shell mkdir -p $1)$1
+tmpdir=$(eval $1:=$(shell mktemp --tmpdir=$(call mkdir,$(TMP)) --suffix= --directory XXXXXXXX))
+tmpfile=$(call tmpdir,DIR_$1)$(eval DIR_$1:=$1/tmpfile$)
+delsym=$(call tmpfile,TMPFILE)$(shell objcopy --strip-symbol=$1 $2 $(TMPFILE))$(TMPFILE)
 
 $(call import,settings.mak)
 $(call import,conv.mak)
 $(call import,ext/makefile)
-$(call import,purrc/makefile)
 $(call import,purr/makefile)
 
 .DEFAULT_GOAL := all
-all: $(BIN)/purr $(BIN)/purrc $(BIN)/purrc $(LIBS_SO)
+all: $(BIN)/purr $(LIBS_SO)
 
 clean: dummy
 	$(RUN) rm -rf $(BIN) $(LIB) *.so *.o
 
 cleans: dummy
-	$(RUN) rm -rf $(BIN) $(LIB) $(TMP) .purr
+	$(RUN) rm -rf $(BIN) $(LIB) $(TMP) 
 
 cleanuni: dummy
-	$(RUN) rm -rf $(BIN) $(LIB) $(TMP) .purr
+	$(RUN) rm -rf $(BIN) $(LIB) $(TMP) 

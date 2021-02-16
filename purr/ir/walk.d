@@ -1,5 +1,6 @@
 module purr.ir.walk;
 
+import core.memory;
 import std.conv;
 import std.stdio;
 import std.string;
@@ -133,7 +134,7 @@ class Walker
         {
             emit(new PushInstruction(false.dynamic));
         }
-        else if (ident == "$args")
+        else if (ident == "args")
         {
             emit(new ArgsInstruction);
         }
@@ -208,7 +209,9 @@ class Walker
 
     void walkStoreDef(Call lhs, Node rhs)
     {
-        Node funCall = new Call(new Ident("@fun"), [new Call(lhs.args[1..$]), rhs]);
+        Node funCall = new Call(new Ident("@fun"), [
+                new Call(lhs.args[1 .. $]), rhs
+                ]);
         Node setCall = new Call(new Ident("@set"), [lhs.args[0], funCall]);
         walk(setCall);
     }
@@ -230,7 +233,7 @@ class Walker
                     walk(call.args[1]);
                     walk(call.args[2]);
                     walk(args[1]);
-                    emit(new IndexStoreInstruction);
+                    emit(new StoreIndexInstruction);
                 }
                 else
                 {
@@ -250,26 +253,89 @@ class Walker
 
     void walkOpStore(Node[] args)
     {
-        Ident op = cast(Ident) args[0];
+        string opname;
+        if (Ident id = cast(Ident) args[0])
+        {
+            opname = id.repr;
+            assert(["add", "sub", "mul", "div", "mod", "cat"].canFind(opname));
+        }
+        else
+        {
+            assert(false);
+        }
         if (Ident id = cast(Ident) args[1])
         {
-            if (["add", "sub", "mul", "div", "mod", "cat"].canFind(op.repr))
+            walk(args[2]);
+            emit(new OperatorStoreInstruction(opname, id.repr));
+        }
+        else if (Call call = cast(Call) args[1])
+        {
+            if (Ident id = cast(Ident) call.args[0])
             {
-                walk(args[2]);
-                emit(new OperatorStoreInstruction(op.repr, id.repr));
+                if (specialForms.canFind(id.repr))
+                {
+                    assert(id.repr == "@index");
+                    walk(call.args[1]);
+                    walk(call.args[2]);
+                    walk(args[2]);
+                    emit(new OperatorStoreIndexInstruction(opname));
+                }
+                else
+                {
+                    assert(false);
+                }
             }
             else
             {
-                walk(args[1]);
-                walk(args[2]);
-                emit(new OperatorInstruction(op.repr));
-                emit(new StoreInstruction(id.repr));
+                assert(false);
             }
         }
         else
         {
             assert(false);
         }
+        //     Ident op = cast(Ident) args[0];
+        //     if (Ident id = cast(Ident) args[1])
+        //     {
+        //         if (["add", "sub", "mul", "div", "mod", "cat"].canFind(op.repr))
+        //         {
+        //             walk(args[2]);
+        //             emit(new OperatorStoreInstruction(op.repr, id.repr));
+        //         }
+        //         else
+        //         {
+        //             walk(args[1]);
+        //             walk(args[2]);
+        //             emit(new OperatorInstruction(op.repr));
+        //             emit(new OperatorStoreInstruction(id.repr));
+        //         }
+        //     }
+        //     else if (Call call = cast(Call) args[0])
+        //     {
+        //         if (Ident id = cast(Ident) call.args[0])
+        //         {
+        //             if (specialForms.canFind(id.repr))
+        //             {
+        //                 assert(id.repr == "@index");
+        //                 walk(call.args[1]);
+        //                 walk(call.args[2]);
+        //                 walk(args[1]);
+        //                 emit(new OperatroStoreIndexInstruction());
+        //             }
+        //             else
+        //             {
+        //                 assert(false);
+        //             }
+        //         }
+        //         else
+        //         {
+        //             assert(false);
+        //         }
+        //     }
+        //     else
+        //     {
+        //         assert(false);
+        //     }
     }
 
     void walkDef(Node[] args)

@@ -1,12 +1,13 @@
 module purr.base;
 
 import std.algorithm;
-import std.stdio;
+import purr.io;
 import std.conv;
 import std.traits;
 import purr.dynamic;
 import purr.bytecode;
 import purr.data.map;
+import purr.plugin.syms;
 import purr.plugin.plugins;
 
 struct Arg
@@ -23,28 +24,27 @@ struct Arg
     }
 }
 
-Pair FunctionPair(alias Func)(string name)
+Pair FunctionPair(alias func)(string name)
 {
     Dynamic[] args;
-    static if (hasUDA!(Func, Arg))
+    static if (hasUDA!(func, Arg))
     {
-        static foreach (argname; getUDAs!(Func, Arg))
+        static foreach (argname; getUDAs!(func, Arg))
         {
             args ~= argname.to!string.dynamic;
         }
     }
-    Dynamic dynamicFunc = dynamic(&Func);
-    if (dynamicFunc.type == Dynamic.Type.fun)
-    {
-        dynamicFunc.value.fun.fun.args = args;
-        dynamicFunc.value.fun.fun.names ~= name.dynamic;
-    }
+    Fun fun = Fun(&func);
+    fun.args = args;
+    fun.names ~= name.dynamic;
+    fun.mangled = func.mangleof;
+    // syms[func.mangleof] = &func;
     // if (dynamicFunc.type == Dynamic.Type.del)
     // {
     //     dynamicFunc.value.fun.fun.args = args;
     //     dynamicFunc.value.fun.del.names ~= name.dynamic;
     // }
-    return Pair(name, dynamicFunc);
+    return Pair(name, fun);
 }
 
 struct Pair
@@ -71,6 +71,7 @@ Pair[][] rootBases;
 
 ref Pair[] rootBase(size_t index = rootBases.length - 1)
 {
+    assert(index < rootBases.length);
     return rootBases[index];
 }
 
@@ -135,7 +136,7 @@ Dynamic*[] loadBase(size_t ctx)
     Dynamic*[] ret;
     foreach (i; ctx.rootBase)
     {
-        ret ~= [i.val].ptr;
+        ret ~= new Dynamic(i.val);
     }
     return ret;
 }
@@ -151,10 +152,10 @@ Function baseFunction(size_t ctx = rootBases.length-1)
 version(unittest)
 {
     enum string[] libnames = ["varunit", "unttest", "_unit_test", "_purr.unittest.lib", "", "123", "\x04\x09\x08\x04", "\"\""];
-    enum string[] varnames = ["i have spaces", "\0", "()", "nil", ".", "$args", "@if"];
+    enum string[] varnames = ["i have spaces", "\0", "()", "nil", ".", "args", "@if"];
     enum string voidname = "void";
 
-    Dynamic libunitvoid(Dynamic[] args)
+    Dynamic libunitvoid(Args args)
     {
         return args.dynamic;
     }

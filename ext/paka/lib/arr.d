@@ -4,22 +4,21 @@ import purr.dynamic;
 import purr.error;
 import std.array;
 import std.algorithm;
-import std.stdio;
+import purr.io;
 import std.conv;
 
 Pair[] libarr()
 {
     Pair[] ret = [
         FunctionPair!liblen("len"), FunctionPair!libsplit("split"),
-        FunctionPair!libpush("push"), Pair("extend",
-                dynamic(&libextend)), FunctionPair!libpop("pop"),
-        FunctionPair!libslice("slice"), FunctionPair!libmap("map"),
-        FunctionPair!libfilter("filter"), FunctionPair!libzip("zip"),
-        FunctionPair!librange("range"), FunctionPair!libeach("each"),
-        FunctionPair!libsorted("sorted"),
+        FunctionPair!libpush("push"), FunctionPair!libextend("extend"),
+        FunctionPair!libpop("pop"), FunctionPair!libslice("slice"),
+        FunctionPair!libmap("map"), FunctionPair!libfilter("filter"),
+        FunctionPair!libzip("zip"), FunctionPair!librange("range"),
+        FunctionPair!libeach("each"), FunctionPair!libsorted("sorted"),
     ];
     return ret;
-}/// returns a list
+} /// returns a list
 /// with one arg it returns 0..$0
 /// with two args it returns $1..$1
 /// with three args it counts from $0 to $1 with interval $2
@@ -176,11 +175,12 @@ Dynamic libslice(Args args)
 
 Dynamic libsorted(Args args)
 {
-    if (args.length == 1) 
+    if (args.length == 1)
     {
         return args[0].arr.sort.array.dynamic;
     }
-    else {
+    else
+    {
         throw new Exception("bad number of arguments to sort");
     }
 }

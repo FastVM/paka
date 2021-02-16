@@ -1,9 +1,8 @@
-module ext.atext;
+module purr.io;
 
 import std.algorithm;
 import std.process;
 import std.string;
-import std.stdio;
 import std.array;
 import std.range;
 import std.conv;
@@ -14,18 +13,94 @@ import core.sys.posix.stdlib;
 import core.sys.posix.unistd;
 import core.sys.posix.fcntl;
 
+static import std.stdio;
+
+alias File = std.stdio.File;
+alias stdin = std.stdio.stdin;
+alias stdout = std.stdio.stdout;
+alias stderr = std.stdio.stderr;
+
+// enum string newline = "\x1B[1E";
+Reader reader;
+termios init;
+
+static this()
+{
+	reader = new Reader(null);
+	reader.smart = false;
+	if (reader.smart)
+	{
+		tcgetattr(stdin.fileno, &init);
+		termios raw;
+		tcgetattr(stdin.fileno, &raw);
+		raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+		raw.c_oflag &= ~(OPOST);
+		raw.c_cflag |= (CS8);
+		raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+		tcsetattr(stdin.fileno, TCSAFLUSH, &raw);
+	}
+}
+
+static ~this()
+{
+	if (reader.smart)
+	{
+		tcsetattr(stdin.fileno, TCSAFLUSH, &init);
+	}
+}
+
+char readchar()
+{
+	char ret = stdin.readKeyAbs;
+	write(ret);
+	return ret;
+}
+
+char getchar()
+{
+	return stdin.readKeyAbs;
+}
+
+string readln(string prompt)
+{
+	return cast(string) reader.readln(prompt) ~ "\n";
+}
+
+void write1s(string str)
+{
+	foreach (chr; str)
+	{
+		if (chr == '\n')
+		{
+			std.stdio.write("\x1B[1E\n");
+		}
+		else
+		{
+			std.stdio.write(chr);
+		}
+	}
+}
+
+void write(Args...)(Args args)
+{
+	static foreach (arg; args)
+	{
+		write1s(arg.to!string);
+	}
+}
+
+void writeln(Args...)(Args args)
+{
+	write(args, '\n');
+}
+
 class ExitException : Exception
 {
 	char letter;
 	this(char l)
 	{
 		letter = l;
-		super("Got Ctrl-" ~ [l]);
-	}
-
-	unittest
-	{
-		
+		super("Got Ctrl-" ~ [getCtrl(l)]);
 	}
 }
 
@@ -34,11 +109,10 @@ class Reader
 	char[][] history;
 	File input;
 	File output;
-	termios term;
 	long index = 0;
-	long lastRender = 0;
 	size_t histIndex = 0;
 	bool smart = false;
+	string prefix;
 	this(char[][] h, File i = stdin, File o = stdout)
 	{
 		history = h ~ [[]];
@@ -53,38 +127,23 @@ class Reader
 
 	private void renderLine(T)(T newLine)
 	{
-		foreach (i; 0 .. lastRender)
-		{
-			output.moveLeft;
-		}
-		foreach (i; 0 .. newLine.length + 1)
-		{
-			output.moveRight;
-			output.printStill!false(' ');
-		}
-		foreach (i; 0 .. newLine.length + 1)
-		{
-			output.moveLeft;
-		}
-		output.printStill!false(newLine);
-		lastRender = index;
-		foreach (i; 0 .. lastRender)
-		{
-			output.moveRight;
-		}
+		output.write("\x1B[K\x1B[1F\x1B[1B");
+		output.write(prefix, newLine);
+		output.flush;
 	}
 
 	private void deleteOne()
 	{
 		if (index > 0)
 		{
-			history[histIndex] = line[0 .. index - 1] ~ line[index .. $];
+			line = line[0 .. index - 1] ~ line[index .. $];
 			index--;
 		}
 		else
 		{
-			history[histIndex] = null;
+			line = null;
 		}
+		renderLine(line);
 	}
 
 	private bool delegate() getWordFunc()
@@ -143,15 +202,13 @@ class Reader
 	private void reset()
 	{
 		index = 0;
-		lastRender = 0;
 		histIndex = 0;
 	}
 
-	string read()
+	char[] read(size_t maxlen = size_t.max)
 	{
 		reset;
 		char[][] oldHistory;
-		term = input.rawMode;
 		foreach (historyLine; history)
 		{
 			oldHistory ~= historyLine.dup;
@@ -161,16 +218,6 @@ class Reader
 		histIndex = history.length;
 		history ~= new char[0];
 		char got = input.readKeyAbs;
-		scope (exit)
-		{
-			foreach (i; 0 .. index)
-			{
-				output.moveLeft;
-			}
-			input.noRawMode(term);
-			output.flush;
-			history = oldHistory;
-		}
 		renderLine(line);
 		while (true)
 		{
@@ -262,13 +309,7 @@ class Reader
 				}
 				else if (getCtrl(got) == 'j')
 				{
-					output.clearScreen;
-					return read;
-				}
-				else if (getCtrl(got) == 'd')
-				{
-					input.noRawMode(term);
-					exit(0);
+					return line;
 				}
 				else
 				{
@@ -279,6 +320,10 @@ class Reader
 			{
 				if (index >= line.length)
 				{
+					if (line.length >= maxlen)
+					{
+						return line;
+					}
 					line ~= got;
 				}
 				else
@@ -294,19 +339,22 @@ class Reader
 		{
 			oldHistory ~= line;
 		}
-		return cast(string) history[$ - 1];
+		return line;
 	}
 
-	string readln(string prompt = null)
+	char[] readln(string prompt = null)
 	{
+		prefix = prompt;
 		output.write(prompt);
-		if (smart) {
-			string ret = read;
-			output.write("\n\n");
-			return ret;
+		if (smart)
+		{
+			char[] read = read;
+			output.write("\x1B[1E\n");
+			return read;
 		}
-		else {
-			return input.readln[0 .. $ - 1];
+		else
+		{
+			return input.readln[0 .. $ - 1].dup;
 		}
 	}
 }
@@ -316,63 +364,9 @@ char getCtrl(char c)
 	return cast(char)(c - 1 + 'a');
 }
 
-void noRawMode(File inf, termios initTermios)
-{
-	tcsetattr(inf.fileno, TCSAFLUSH, &initTermios);
-}
-
-termios rawMode(File inf)
-{
-	termios initTermios;
-	tcgetattr(inf.fileno, &initTermios);
-	termios raw = initTermios;
-	raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-	raw.c_oflag &= ~(OPOST);
-	raw.c_cflag |= (CS8);
-	raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-	tcsetattr(inf.fileno, TCSAFLUSH, &raw);
-	return initTermios;
-}
-
 char readKeyAbs(File f)
 {
 	char c;
 	read(f.fileno, &c, 1);
 	return c;
-}
-
-void moveLeft(File f)
-{
-	f.write("\x1b[1D");
-	f.flush;
-}
-
-void moveRight(File f)
-{
-	f.write("\x1b[1C");
-	f.flush;
-}
-
-void clearScreen(File f)
-{
-	f.printStill("\x1b[2J");
-}
-
-void printStill(bool fl = true, T...)(File output, T as)
-{
-	size_t count;
-	foreach (a; as)
-	{
-		string got = a.to!string;
-		output.write(got);
-		count += got.length;
-	}
-	foreach (i; 0 .. count)
-	{
-		output.moveLeft;
-	}
-	static if (fl)
-	{
-		output.flush;
-	}
 }

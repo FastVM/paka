@@ -1,7 +1,7 @@
 module purr.bc.iterator;
 
 import std.conv;
-import std.stdio;
+import purr.io;
 import purr.bytecode;
 
 class OpcodeIterator

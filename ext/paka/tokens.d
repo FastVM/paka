@@ -4,7 +4,7 @@ import std.ascii;
 import std.conv;
 import std.algorithm;
 import std.array;
-import std.stdio;
+import purr.io;
 import purr.srcloc;
 
 /// operator precidence

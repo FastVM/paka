@@ -6,19 +6,19 @@ import std.array;
 import std.string;
 import std.algorithm.iteration;
 import std.algorithm;
-import std.stdio;
+import purr.io;
 import std.conv;
 import std.uni;
 
 Pair[] libstr()
 {
     Pair[] ret = [
-        FunctionPair!liblen("len"), FunctionPair!libsplit("split"), Pair("join",
-                &libjoin), FunctionPair!libchars("chars"),
-        Pair("to_upper", dynamic(&libtoupper)), Pair("to_lower",
-                &libtolower), FunctionPair!libtonumber("to_number"),
-        FunctionPair!libslice("slice"), Pair("strip", dynamic(&libstrip)),
-        FunctionPair!libchar("char"), FunctionPair!libascii("ascii"), FunctionPair!libfrom("from"),
+        FunctionPair!liblen("len"), FunctionPair!libsplit("split"),
+        FunctionPair!libjoin("join"), FunctionPair!libchars("chars"),
+        FunctionPair!libtoupper("to_upper"), FunctionPair!libtolower("to_lower"),
+        FunctionPair!libtonumber("to_number"), FunctionPair!libslice("slice"),
+        FunctionPair!libstrip("strip"), FunctionPair!libchar("char"),
+        FunctionPair!libascii("ascii"), FunctionPair!libfrom("from"),
     ];
     return ret;
 }

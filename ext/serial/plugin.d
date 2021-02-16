@@ -1,6 +1,6 @@
 module serial.plugin;
 
-import std.stdio;
+import purr.io;
 import purr.base;
 import purr.dynamic;
 import purr.plugin.plugin;

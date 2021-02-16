@@ -3,7 +3,7 @@ module purr.data.map;
 import core.memory;
 import purr.error;
 import std.algorithm;
-import std.stdio;
+import purr.io;
 import std.conv;
 
 int compare(T1, T2)(T1 a, T2 b)

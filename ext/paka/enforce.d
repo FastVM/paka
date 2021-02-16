@@ -8,7 +8,7 @@ import purr.dynamic;
 import purr.bytecode;
 import std.algorithm;
 import std.functional;
-import std.stdio;
+import purr.io;
 import std.array;
 import std.conv;
 

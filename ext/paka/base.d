@@ -1,7 +1,7 @@
 module paka.base;
 
 import std.conv;
-import std.stdio;
+import purr.io;
 import purr.dynamic;
 import purr.base;
 import purr.error;
@@ -86,13 +86,13 @@ string assertTrace()
 Pair[] pakaBaseLibs()
 {
     Pair[] ret;
-    ret ~= Pair("_both_map", &syslibubothmap);
-    ret ~= Pair("_lhs_map", &syslibulhsmap);
-    ret ~= Pair("_rhs_map", &sysliburhsmap);
-    ret ~= Pair("_pre_map", &syslibupremap);
-    ret ~= Pair("_paka_begin_assert", &pakabeginassert);
-    ret ~= Pair("_paka_assert", &pakaassert);
-    ret ~= Pair("_paka_str_concat", &strconcat);
+    ret ~= FunctionPair!syslibubothmap("_both_map");
+    ret ~= FunctionPair!syslibulhsmap("_lhs_map");
+    ret ~= FunctionPair!sysliburhsmap("_rhs_map");
+    ret ~= FunctionPair!syslibupremap("_pre_map");
+    ret ~= FunctionPair!pakabeginassert("_paka_begin_assert");
+    ret ~= FunctionPair!pakaassert("_paka_assert");
+    ret ~= FunctionPair!strconcat("_paka_str_concat");
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);
     ret.addLib("tab", libtab);

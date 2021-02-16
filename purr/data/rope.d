@@ -1,7 +1,7 @@
 module purr.data.rope;
 
 import std.algorithm;
-import std.stdio;
+import purr.io;
 
 /// the maximum difference for a rope to rebalance
 double maxdiff = 64;

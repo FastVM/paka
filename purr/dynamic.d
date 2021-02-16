@@ -4,7 +4,7 @@ import std.algorithm;
 import std.conv;
 import std.array;
 import std.traits;
-import std.stdio;
+import purr.io;
 import core.memory;
 import purr.bytecode;
 import purr.vm;
@@ -23,7 +23,7 @@ version = safe;
 alias Args = Dynamic[];
 alias Array = Dynamic[];
 
-alias Delegate = Dynamic function(Dynamic[]);
+alias Delegate = Dynamic function(Args);
 alias Mapping = Map!(Dynamic, Dynamic);
 Mapping emptyMapping()
 {
@@ -37,7 +37,6 @@ class Table
 {
     Mapping table = emptyMapping;
     Table metatable;
-    void* native;
     alias table this;
 
     Table init()
@@ -67,21 +66,6 @@ class Table
         assert(t !is null);
         table = t;
         metatable = m;
-    }
-
-    this(typeof(table) t, void* n)
-    {
-        assert(t !is null);
-        table = t;
-        metatable = null;
-        native = n;
-    }
-
-    this(typeof(table) t, Table m, void* n)
-    {
-        table = t;
-        metatable = m;
-        native = n;
     }
 
     Table withGet(Table newget)
@@ -298,7 +282,7 @@ class Table
     }
 }
 
-pragma(inline, true) Dynamic dynamic(T...)(T a)
+Dynamic dynamic(T...)(T a)
 {
     return Dynamic(a);
 }
@@ -307,6 +291,7 @@ struct Fun
 {
     Dynamic function(Args) value;
     alias value this;
+    string mangled;
     Dynamic[] names;
     Dynamic[] args;
     string toString()
@@ -356,12 +341,10 @@ struct Dynamic
         }
 
         Callable fun;
-        void* obj;
     }
 
-align(1):
+align(8): // the gc really likes this
     Type type = void;
-    uint argc;
     Value value = void;
 
     static Dynamic strToNum(string s)
@@ -388,6 +371,8 @@ align(1):
 
     this(string str)
     {
+        // value.str = cast(string*) GC.malloc(string.sizeof);
+        // *value.str = str;
         value.str = [str].ptr;
         type = Type.str;
     }
@@ -395,6 +380,8 @@ align(1):
     this(Array arr)
     {
         value.arr = [arr].ptr;
+        // value.arr = cast(Array*) GC.malloc(Array.sizeof);
+        // *value.arr = arr;
         type = Type.arr;
     }
 
@@ -410,7 +397,13 @@ align(1):
         type = Type.tab;
     }
 
-    this(Dynamic function(Args) fun)
+    // this(Dynamic function(Args) fun)
+    // {
+    //     value.fun.fun = new Fun(fun);
+    //     type = Type.fun;
+    // }
+
+    this(Fun fun)
     {
         value.fun.fun = new Fun(fun);
         type = Type.fun;
@@ -447,7 +440,7 @@ align(1):
         return this.strFormat;
     }
 
-    pragma(inline, true) Dynamic opCall(Args args)
+    Dynamic opCall(Args args)
     {
         switch (type)
         {
@@ -734,8 +727,21 @@ int cmpTable(Table at, Table bt)
 }
 
 Dynamic[2][] above;
-pragma(inline, true) private int cmpDynamicImpl(Dynamic a, Dynamic b)
+private int cmpDynamicImpl(Dynamic a, Dynamic b)
 {
+    Dynamic[2] cur = [a, b];
+    foreach (i, p; above)
+    {
+        if (cur[0] is p[0] && cur[1] is p[1])
+        {
+            return 0;
+        }
+    }
+    above ~= cur;
+    scope (exit)
+    {
+        above.length--;
+    }
     if (b.type != a.type)
     {
         return cmp(a.type, b.type);
@@ -751,19 +757,6 @@ pragma(inline, true) private int cmpDynamicImpl(Dynamic a, Dynamic b)
     case Dynamic.Type.sml:
         return cmp(a.value.sml, b.value.sml);
     case Dynamic.Type.arr:
-        Dynamic[2] cur = [a, b];
-        foreach (i, p; above)
-        {
-            if (cur[0] is p[0] && cur[1] is p[1])
-            {
-                return 0;
-            }
-        }
-        above ~= cur;
-        scope (exit)
-        {
-            above.length--;
-        }
         const Dynamic[] as = *a.value.arr;
         const Dynamic[] bs = *b.value.arr;
         if (int c = cmp(as.length, bs.length))
@@ -779,22 +772,7 @@ pragma(inline, true) private int cmpDynamicImpl(Dynamic a, Dynamic b)
         }
         return 0;
     case Dynamic.Type.tab:
-        Dynamic[2] cur = [a, b];
-        foreach (i, p; above)
-        {
-            if (cur[0] is p[0] && cur[1] is p[1])
-            {
-                return 0;
-            }
-        }
-        above ~= cur;
-        scope (exit)
-        {
-            above.length--;
-        }
-        Table at = cast(Table) a.value.tab;
-        Table bt = cast(Table) b.value.tab;
-        return cmpTable(at, bt);
+        return cmpTable(a.value.tab, b.value.tab);
     case Dynamic.Type.fun:
         return cmp(a.value.fun.fun, b.value.fun.fun);
     // case Dynamic.Type.del:
@@ -809,16 +787,12 @@ string callableFormat(Dynamic[] names, Dynamic[] args)
     string argsRepr;
     if (args.length != 0)
     {
-        argsRepr = "(" ~ cast(string) args.map!(to!string).joiner(",").array ~ ") ";
+        argsRepr = "(" ~ cast(string) args.map!(x => x.str).joiner(",").array ~ ") ";
     }
     string namesRepr;
-    if (names.length == 1)
+    if (names.length >= 1)
     {
-        namesRepr = names[0].to!string;
-    }
-    else if (names.length > 1)
-    {
-        namesRepr = cast(string) names[$-1].to!string;
+        namesRepr = names[0].str;
     }
     return "fun " ~ namesRepr ~ argsRepr ~ "{...}";
 }

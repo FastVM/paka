@@ -11,12 +11,13 @@ import purr.base;
 import purr.dynamic;
 import purr.parse;
 import purr.inter;
+import purr.io;
 import purr.plugin.loader;
 import purr.fs.files;
 import purr.fs.disk;
 import std.uuid;
 import std.path;
-import std.stdio;
+import purr.io;
 import std.array;
 import std.file;
 import std.algorithm;
@@ -26,14 +27,112 @@ import std.string;
 import std.getopt;
 import core.stdc.stdlib;
 
+alias Thunk = void delegate();
+
+size_t ctx = size_t.max;
+Dynamic[] dynamics;
+Dynamic[] fileArgs;
+Thunk cliFileHandler(immutable string filename)
+{
+    return {
+        Location code = Location(1, 1, filename, filename.readText);
+        string cdir = getcwd;
+        Dynamic retval;
+        scope (exit)
+        {
+            cdir.chdir;
+            fileArgs = null;
+        }
+        filename.dirName.chdir;
+        retval = ctx.eval(code, fileArgs);
+        dynamics ~= retval;
+    };
+}
+
+Thunk cliChainHandler(immutable string code)
+{
+    return {
+        Dynamic got = ctx.eval(Location(1, 1, "__main__", code))([
+                dynamics[$ - 1]
+                ]);
+        dynamics.length--;
+        dynamics ~= got;
+    };
+}
+
+Thunk cliCallHandler(immutable string code)
+{
+    return {
+        Dynamic got = dynamics[$ - 1]([
+                ctx.eval(Location(1, 1, "__main__", code))
+                ]);
+        dynamics.length--;
+        dynamics ~= got;
+    };
+}
+
+Thunk cliEvalHandler(immutable string code)
+{
+    return {
+        scope (exit)
+        {
+            fileArgs = null;
+        }
+        Dynamic got = ctx.eval(Location(1, 1, "__main__", code), fileArgs);
+        dynamics ~= got;
+    };
+}
+
+Thunk cliLoadHandler(immutable string load)
+{
+    return { linkLang(load); };
+}
+
+Thunk cliLangHandler(immutable string langname)
+{
+    return { langNameDefault = langname; };
+}
+
+Thunk cliBytecodeHandler()
+{
+    return { dumpbytecode = !dumpbytecode; };
+}
+
+Thunk cliEchoHandler()
+{
+    return { writeln(dynamics[$ - 1]); dynamics.length--; };
+}
+
+size_t replLine = 0;
+
+Thunk cliReplHandler()
+{
+    return {
+        while (true)
+        {
+            replLine++;
+            string line = readln("(" ~ replLine.to!string ~ ")> ");
+            Location code = Location(1, replLine, "__main__", line);
+            if (code.src.length == 0)
+            {
+                break;
+            }
+            Dynamic res = ctx.eval(code);
+            if (res.type != Dynamic.Type.nil)
+            {
+                writeln(res);
+            }
+        }
+    };
+}
+
 void domain(string[] args)
 {
     args = args[1 .. $];
     string[] extargs;
-    bool echo = false;
-    void delegate()[] todo;
-    size_t ctx = enterCtx;
+    Thunk[] todo;
     langNameDefault = "paka";
+    ctx = enterCtx;
     scope (exit)
     {
         exitCtx;
@@ -46,68 +145,49 @@ void domain(string[] args)
             extargs ~= arg;
             break;
         case "--repl":
-            todo ~= {
-                parse(Location(1, 1, "__main__"), langNameDefault ~ ".repl");
-            };
+            todo ~= cliReplHandler;
             break;
         case "--file":
             string filename = extargs[$ - 1];
             extargs.length--;
-            todo ~= {
-                Location code = Location(1, 1, filename, filename.readText);
-                string cdir = getcwd;
-                scope (exit)
-                {
-                    cdir.chdir;
-                }
-                filename.dirName.chdir;
-                Dynamic retval = ctx.eval(code);
-                if (echo)
-                {
-                    writeln(retval);
-                }
-            };
+            todo ~= filename.cliFileHandler;
+            break;
+        case "--chain":
+            string code = extargs[$ - 1];
+            extargs.length--;
+            todo ~= code.cliChainHandler;
+            break;
+        case "--call":
+            string code = extargs[$ - 1];
+            extargs.length--;
+            todo ~= code.cliCallHandler;
             break;
         case "--eval":
             string code = extargs[$ - 1];
             extargs.length--;
-            todo ~= {
-                Dynamic retval = ctx.eval(Location(1, 1, "__main__", code));
-                if (echo)
-                {
-                    writeln(retval);
-                }
-            };
+            todo ~= code.cliEvalHandler;
             break;
         case "--load":
             string load = extargs[$ - 1];
             extargs.length--;
-            todo ~= (){
-                linkLang(load);
-            };
+            todo ~= load.cliLoadHandler;
             break;
         case "--lang":
             string langname = extargs[$ - 1];
             extargs.length--;
-            todo ~= (){
-                langNameDefault = langname;
-            };
+            todo ~= langname.cliLangHandler;
             break;
         case "--bytecode":
-            todo ~= (){
-                dumpbytecode = !dumpbytecode;
-            };
+            todo ~= cliBytecodeHandler;
             break;
         case "--echo":
-            todo ~= (){
-                echo = !echo;
-            };
+            todo ~= cliEchoHandler;
             break;
         }
     }
     if (extargs.length != 0)
     {
-        throw new Exception("unknown args: consider adding --file");
+        throw new Exception("unknown args: " ~ extargs.to!string);
     }
     foreach_reverse (fun; todo)
     {
