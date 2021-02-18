@@ -38,12 +38,6 @@ Pair FunctionPair(alias func)(string name)
     fun.args = args;
     fun.names ~= name.dynamic;
     fun.mangled = func.mangleof;
-    // syms[func.mangleof] = &func;
-    // if (dynamicFunc.type == Dynamic.Type.del)
-    // {
-    //     dynamicFunc.value.fun.fun.args = args;
-    //     dynamicFunc.value.fun.del.names ~= name.dynamic;
-    // }
     return Pair(name, fun);
 }
 

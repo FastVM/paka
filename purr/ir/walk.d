@@ -12,6 +12,7 @@ import purr.dynamic;
 import purr.srcloc;
 import purr.bytecode;
 import purr.ir.repr;
+import purr.ir.bytecode;
 
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
@@ -50,7 +51,8 @@ class Walker
         {
             func.captab.define(i.name);
         }
-        entry.emit(func);
+        BytecodeEmitter emitter = new BytecodeEmitter;
+        emitter.entry(entry, func);
         return func;
     }
 

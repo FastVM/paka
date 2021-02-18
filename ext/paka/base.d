@@ -78,9 +78,32 @@ Dynamic syslibupremap(Args args)
     return dynamic(ret);
 }
 
-string assertTrace()
+Dynamic domatch(Dynamic lhs, Dynamic rhs)
 {
-    assert(false);
+    final switch(rhs.type)
+    {
+    case Dynamic.Type.nil:
+        return dynamic(lhs == rhs);
+    case Dynamic.Type.log:
+        return dynamic(lhs == rhs);
+    case Dynamic.Type.sml:
+        return dynamic(lhs == rhs);
+    case Dynamic.Type.str:
+        return dynamic(lhs == rhs);
+    case Dynamic.Type.arr:
+        return dynamic(lhs == rhs);
+    case Dynamic.Type.tab:
+        return rhs.tab["match".dynamic]([lhs]);
+    case Dynamic.Type.fun:
+        return rhs([lhs]);
+    case Dynamic.Type.pro:
+        return rhs([lhs]);
+    }
+}
+
+Dynamic pakamatch(Args args)
+{
+    return domatch(args[0], args[1]);
 }
 
 Pair[] pakaBaseLibs()
@@ -93,6 +116,7 @@ Pair[] pakaBaseLibs()
     ret ~= FunctionPair!pakabeginassert("_paka_begin_assert");
     ret ~= FunctionPair!pakaassert("_paka_assert");
     ret ~= FunctionPair!strconcat("_paka_str_concat");
+    ret ~= FunctionPair!pakamatch("_paka_match");
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);
     ret.addLib("tab", libtab);

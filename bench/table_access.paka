@@ -1,0 +1,13 @@
+things = {};
+i = 0;
+while (i <= 15) {
+    things[i] = i;
+    i += 1;
+};
+sum = 0;
+x = 0;
+while (x < 10000000) {
+    sum += things[x % 16];
+    x += 1;
+};
+io.print(sum);

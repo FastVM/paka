@@ -18,7 +18,7 @@ import purr.fs.files;
 alias TokenArray = PushArray!Token;
 
 /// operators for comparrason
-enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
+enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!=", "::"];
 
 /// locations for error handling
 Location[] locs;
@@ -47,7 +47,6 @@ template Spanning(alias F, T...)
         {
             ret.span = Span(orig[0].span.first.dup,
                     orig[orig.length - tokens.length - 1].span.last.dup);
-            // writeln("[", ret.span.first.column, " .. ", ret.span.last.column, "]: ", ret);
         }
         return ret;
     }
@@ -784,23 +783,37 @@ Node readExpr(ref TokenArray tokens, size_t level)
                 {
                     rhs = new Call(new Ident("@set"), [next, rhs]);
                 }
+                Node opFunc = void;
+                if (v.value == "::") {
+                    opFunc = new Ident("_paka_match");
+                }
+                else {
+                    opFunc = new Ident(v.value);
+                }
                 if (i == 0)
                 {
-                    ret = new Call(new Ident(v.value), [ret, rhs]);
+                    ret = new Call(opFunc, [ret, rhs]);
                 }
                 else
                 {
                     Ident lastCmp = genSym;
                     ret = new Call(new Ident("@if"), [
                             new Call(new Ident("@set"), [lastCmp, ret]),
-                            new Call(new Ident(v.value), [last, rhs]), lastCmp
+                            new Call(opFunc, [last, rhs]), lastCmp
                             ]);
                 }
                 last = next;
             }
             else
             {
-                ret = new Call(new Ident(v.value), [ret, rhs]);
+                Node opFunc = void;
+                if (v.value == "::") {
+                    opFunc = new Ident("_paka_match");
+                }
+                else {
+                    opFunc = new Ident(v.value);
+                }
+                ret = new Call(opFunc, [ret, rhs]);
             }
             while (rhsc != 0 || lhsc != 0)
             {

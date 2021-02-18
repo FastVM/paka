@@ -178,18 +178,6 @@ string serialize(Table tab)
 
 string serialize(Dynamic value)
 {
-    // foreach (depth, val; above)
-    // {
-    //     if (val == value)
-    //     {
-    //         return `{"type": "rec", "deep": "` ~ depth.to!string ~ `"}`;
-    //     }
-    // }
-    // above ~= value;
-    // scope (exit)
-    // {
-    //     above.length--;
-    // }
     final switch (value.type)
     {
     case Dynamic.Type.nil:

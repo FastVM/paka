@@ -57,25 +57,25 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     ushort index = 0;
     Dynamic* stack = void;
     Dynamic* locals = void;
-    scope (failure)
+    version(PurrErrors)
     {
-        spans ~= func.spans[index];
+        scope (failure)
+        {
+            spans ~= func.spans[index];
+        }
     }
-    // if (func.flags & Function.Flags.isLocal)
-    // {
-    //     locals = cast(Dynamic*) GC.malloc(func.stab.length * Dynamic.sizeof);
-    //     stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof));
-    // }
-    // else
-    // {
-    //     Dynamic* ptr = cast(Dynamic*) allocateStackAllowed(
-    //             (func.stackSize + func.stab.length) * Dynamic.sizeof);
-    //     locals = ptr + func.stackSize;
-    //     stack = ptr;
-    // }
+    if (func.flags & Function.Flags.isLocal)
+    {
+        locals = cast(Dynamic*) GC.malloc(func.stab.length * Dynamic.sizeof);
+        stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof));
+    }
+    else
+    {
+        stack = cast(Dynamic*) allocateStackAllowed(
+                (func.stackSize + func.stab.length) * Dynamic.sizeof);
+        locals = stack + func.stackSize;
+    }
     
-    locals = cast(Dynamic*) GC.malloc(func.stab.length * Dynamic.sizeof);
-    stack = (cast(Dynamic*) GC.malloc(func.stackSize * Dynamic.sizeof));
     ubyte* instrs = func.instrs.ptr;
     Dynamic* lstack = stack;
     // writeln("max: ", func.stackSize);
@@ -333,7 +333,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 static if (is(typeof(callback) == LocalCallback))
                 {
                     {
-                        Dynamic[] lo = locals[0 .. func.stab.length + 1].array;
+                        Dynamic[] lo = lstack[0 .. func.stab.length + 1].array;
                         callback(index, stack, lo);
                     }
                 }

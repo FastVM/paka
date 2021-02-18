@@ -9,7 +9,7 @@ class Generator
 {
     BasicBlock[] emitted;
 
-    void emit(Emitter obj)
+    void emit(Emittable obj)
     {
         static foreach (InstrType; InstrTypes)
         {

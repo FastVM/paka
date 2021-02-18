@@ -74,8 +74,6 @@ Dynamic libtypeof(Args args)
             return dynamic("table");
         case Dynamic.Type.fun:
             return dynamic("callable");
-        // case Dynamic.Type.del:
-        //     return dynamic("callable");
         case Dynamic.Type.pro:
             return dynamic("callable");
     } 

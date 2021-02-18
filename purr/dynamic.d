@@ -19,6 +19,7 @@ import purr.data.map;
 // {
 version = safe;
 // }
+pragma(inline, true):
 
 alias Args = Dynamic[];
 alias Array = Dynamic[];
@@ -300,18 +301,6 @@ struct Fun
     }
 }
 
-// struct Del
-// {
-//     Dynamic delegate(Args) value;
-//     alias value this;
-//     string[] names;
-//     string[] args;
-//     string toString()
-//     {
-//         return callableFormat(names, args);
-//     }
-// }
-
 struct Dynamic
 {
     enum Type : int
@@ -336,14 +325,14 @@ struct Dynamic
         union Callable
         {
             Fun* fun;
-            // Del* del;
             Function pro;
         }
 
         Callable fun;
     }
 
-align(8): // the gc really likes this
+pragma(inline, true):
+align(8): // do not change alignment!
     Type type = void;
     Value value = void;
 
@@ -446,8 +435,8 @@ align(8): // the gc really likes this
         {
         case Dynamic.Type.fun:
             return fun.fun.value(args);
-        // case Dynamic.Type.del:
-        //     return fun.del.value(args);
+            // case Dynamic.Type.del:
+            //     return fun.del.value(args);
         case Dynamic.Type.pro:
             if (fun.pro.self.length == 0)
             {
@@ -729,19 +718,6 @@ int cmpTable(Table at, Table bt)
 Dynamic[2][] above;
 private int cmpDynamicImpl(Dynamic a, Dynamic b)
 {
-    Dynamic[2] cur = [a, b];
-    foreach (i, p; above)
-    {
-        if (cur[0] is p[0] && cur[1] is p[1])
-        {
-            return 0;
-        }
-    }
-    above ~= cur;
-    scope (exit)
-    {
-        above.length--;
-    }
     if (b.type != a.type)
     {
         return cmp(a.type, b.type);
@@ -757,6 +733,19 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
     case Dynamic.Type.sml:
         return cmp(a.value.sml, b.value.sml);
     case Dynamic.Type.arr:
+        Dynamic[2] cur = [a, b];
+        foreach (i, p; above)
+        {
+            if (cur[0] is p[0] && cur[1] is p[1])
+            {
+                return 0;
+            }
+        }
+        above ~= cur;
+        scope (exit)
+        {
+            above.length--;
+        }
         const Dynamic[] as = *a.value.arr;
         const Dynamic[] bs = *b.value.arr;
         if (int c = cmp(as.length, bs.length))
@@ -772,11 +761,24 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
         }
         return 0;
     case Dynamic.Type.tab:
+        Dynamic[2] cur = [a, b];
+        foreach (i, p; above)
+        {
+            if (cur[0] is p[0] && cur[1] is p[1])
+            {
+                return 0;
+            }
+        }
+        above ~= cur;
+        scope (exit)
+        {
+            above.length--;
+        }
         return cmpTable(a.value.tab, b.value.tab);
     case Dynamic.Type.fun:
         return cmp(a.value.fun.fun, b.value.fun.fun);
-    // case Dynamic.Type.del:
-    //     return cmp(a.value.fun.del, b.value.fun.del);
+        // case Dynamic.Type.del:
+        //     return cmp(a.value.fun.del, b.value.fun.del);
     case Dynamic.Type.pro:
         return cmpFunction(a.value.fun.pro, b.value.fun.pro);
     }
@@ -852,8 +854,8 @@ private string strFormat(Dynamic dyn)
         return dyn.tab.to!string;
     case Dynamic.Type.fun:
         return (*dyn.value.fun.fun).to!string;
-    // case Dynamic.Type.del:
-    //     return (*dyn.value.fun.del).to!string;
+        // case Dynamic.Type.del:
+        //     return (*dyn.value.fun.del).to!string;
     case Dynamic.Type.pro:
         return dyn.fun.pro.to!string;
     }
