@@ -34,6 +34,7 @@ Pair FunctionPair(alias func)(string name)
             args ~= argname.to!string.dynamic;
         }
     }
+    syms[func.mangleof] = &func;
     Fun fun = Fun(&func);
     fun.args = args;
     fun.names ~= name.dynamic;

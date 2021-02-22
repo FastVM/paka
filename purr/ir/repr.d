@@ -14,7 +14,7 @@ import purr.inter;
 import purr.ir.emit;
 import purr.ir.opt;
 
-alias InstrTypes = AliasSeq!(BooleanBranch, GotoBranch, ReturnBranch, BuildArrayInstruction,
+alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, ReturnBranch, BuildArrayInstruction,
         BuildTableInstruction, CallInstruction, PushInstruction, OperatorInstruction,
         LambdaInstruction, PopInstruction, StoreIndexInstruction, StoreInstruction,
         OperatorStoreInstruction, LoadInstruction, ArgsInstruction,);
@@ -52,6 +52,7 @@ class BasicBlock
     Instruction[] instrs;
     Branch exit;
     ushort[Function] counts;
+    bool start = false;
 
     this(string n = genName!"bb_")
     {
@@ -97,7 +98,7 @@ class Branch : Emittable
     BasicBlock[] target;
 }
 
-class BooleanBranch : Branch
+class LogicalBranch : Branch
 {
     this(BasicBlock ift, BasicBlock iff)
     {
@@ -247,10 +248,10 @@ class LambdaInstruction : Instruction
 
     this(BasicBlock bb, Dynamic[] args)
     {
+        bb.start = true;
         entry = bb;
         argNames = args;
     }
-
 
     override string toString()
     {

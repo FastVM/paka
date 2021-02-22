@@ -9,18 +9,17 @@ import purr.srcloc;
 
 /// operator precidence
 enum string[][] prec = [
-        ["+=", "~=", "*=", "/=", "%=", "-=", "=", "::"], ["|>", "<|"], ["=>"], ["||",
-            "&&"], ["<=", ">=", "<", "> ", "!=", "=="], ["+", "-", "~"], [
-            "*", "/", "%"
-        ]
+        ["+=", "~=", "*=", "/=", "%=", "-=", "=", "::"], ["|>", "<|"], ["=>"],
+        ["||", "&&"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-", "~"],
+        ["*", "/", "%"], ["->"]
     ];
 
 /// operators that dont work like binary operators sometimes
-enum string[] nops = [".", "!", ",", ":"];
+enum string[] nops = [".", "!", ",", ":", "\\"];
 
 /// language keywords
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "lambda","assert",
+        "if", "else", "while", "return", "def", "lambda", "assert",
     ];
 
 /// gets the operators by length not precidence
@@ -207,7 +206,7 @@ Token readToken(ref string code, ref Location location)
     {
         if (code.startsWith(i))
         {
-            foreach (_; 0..i.length)
+            foreach (_; 0 .. i.length)
             {
                 consume;
             }

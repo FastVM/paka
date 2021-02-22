@@ -20,26 +20,11 @@ static this()
     watch = StopWatch(AutoStart.yes);
 }
 
-bool syncFile(string filename)
-{
-    if (MemoryFile* pfile = filename in fileSystem)
-    {
-        if (MemoryTextFile textFile = cast(MemoryTextFile)*pfile)
-        {
-            File file = File(filename, "w");
-            file.write(textFile.location.src);
-            file.close();
-            return true;
-        }
-    }
-    return false;
-}
-
 void dumpToFile(string filename, string data)
 {
-    Location loc = Location(1, 1, filename, data);
-    MemoryTextFile memfile = new MemoryTextFile(loc, true, filename.timeLastModified);
-    fileSystem[filename] = memfile;
+    File file = File(filename, "w");
+    file.write(data);
+    file.close();
 }
 
 Location readFile(string path)

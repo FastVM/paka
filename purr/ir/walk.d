@@ -17,8 +17,8 @@ import purr.ir.bytecode;
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
         "@if", "@fun", "@do", "-", "+", "*", "/", "%", "<", ">", "<=", ">=",
-        "==", "!=", "...", "@index", "=>", "|>", "<|", "@env", "&&", "||", "~",
-        "@inspect",
+        "==", "!=", "...", "@index", "=>", "@env", "&&", "||", "~",
+        "@inspect", "@rcall", "@call"
     ];
 
 class Walker
@@ -40,6 +40,7 @@ class Walker
     Function walkProgram(Node node, size_t ctx)
     {
         BasicBlock entry = new BasicBlock;
+        entry.start = true;
         block = entry;
         funcblk = block;
         walk(node);
@@ -52,7 +53,7 @@ class Walker
             func.captab.define(i.name);
         }
         BytecodeEmitter emitter = new BytecodeEmitter;
-        emitter.entry(entry, func);
+        emitter.entryNew(entry, func);
         return func;
     }
 
@@ -162,7 +163,7 @@ class Walker
         BasicBlock iffalse = new BasicBlock;
         BasicBlock after = new BasicBlock;
         walk(args[0]);
-        emit(new BooleanBranch(iftrue, iffalse));
+        emit(new LogicalBranch(iftrue, iffalse));
         block = iftrue;
         walk(args[1]);
         emitDefault(new GotoBranch(after));
@@ -185,7 +186,7 @@ class Walker
         emit(new GotoBranch(cond));
         block = cond;
         walk(args[0]);
-        emit(new BooleanBranch(loop, after));
+        emit(new LogicalBranch(loop, after));
         block = after;
     }
 
@@ -455,6 +456,13 @@ class Walker
         walk(args[0]);
     }
 
+    void walkCall2(Node fun, Node arg)
+    {
+        walk(fun);
+        walk(arg);
+        emit(new CallInstruction(1));
+    }
+
     void walkSpecialCall(string special, Node[] args)
     {
         switch (special)
@@ -487,6 +495,12 @@ class Walker
             break;
         case "@inspect":
             walkAssert(args);
+            break;
+        case "@rcall":
+            walkCall2(args[1], args[0]);
+            break;
+        case "@call":
+            walkCall2(args[0], args[1]);
             break;
         case "@def":
             walkDef(args);

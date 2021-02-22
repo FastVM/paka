@@ -291,7 +291,7 @@ Dynamic dynamic(T...)(T a)
 struct Fun
 {
     Dynamic function(Args) value;
-    alias value this;
+    // alias value this;
     string mangled;
     Dynamic[] names;
     Dynamic[] args;
@@ -394,7 +394,7 @@ align(8): // do not change alignment!
 
     this(Fun fun)
     {
-        value.fun.fun = new Fun(fun);
+        value.fun.fun = [fun].ptr;
         type = Type.fun;
     }
 

@@ -78,6 +78,17 @@ Dynamic syslibupremap(Args args)
     return dynamic(ret);
 }
 
+Dynamic syslibfold(Args args)
+{
+    Dynamic func = args[0];
+    Dynamic ret = args[1];
+    foreach (elem; args[2].arr)
+    {
+        ret = func([ret, elem]);
+    }
+    return ret;
+}
+
 Dynamic domatch(Dynamic lhs, Dynamic rhs)
 {
     final switch(rhs.type)
@@ -106,13 +117,41 @@ Dynamic pakamatch(Args args)
     return domatch(args[0], args[1]);
 }
 
+Dynamic syslibrange(Args args)
+{
+    double start = args[0].as!double;
+    double stop = args[1].as!double;
+    if (args[0] < args[1])
+    {
+        Dynamic[] ret;
+        while (start < stop)
+        {
+            ret ~= dynamic(start);
+            start += 1;
+        }
+        return dynamic(ret);
+    }
+    else
+    {
+        Dynamic[] ret;
+        while (start > stop)
+        {
+            ret ~= dynamic(start);
+            start -= 1;
+        }
+        return dynamic(ret);
+    }
+}
+
 Pair[] pakaBaseLibs()
 {
     Pair[] ret;
-    ret ~= FunctionPair!syslibubothmap("_both_map");
-    ret ~= FunctionPair!syslibulhsmap("_lhs_map");
-    ret ~= FunctionPair!sysliburhsmap("_rhs_map");
-    ret ~= FunctionPair!syslibupremap("_pre_map");
+    ret ~= FunctionPair!syslibubothmap("_paka_map_both");
+    ret ~= FunctionPair!syslibulhsmap("_paka_map_lhs");
+    ret ~= FunctionPair!sysliburhsmap("_paka_map_rhs");
+    ret ~= FunctionPair!syslibupremap("_paka_map_pre");
+    ret ~= FunctionPair!syslibfold("_paka_fold");
+    ret ~= FunctionPair!syslibrange("_paka_range");
     ret ~= FunctionPair!pakabeginassert("_paka_begin_assert");
     ret ~= FunctionPair!pakaassert("_paka_assert");
     ret ~= FunctionPair!strconcat("_paka_str_concat");

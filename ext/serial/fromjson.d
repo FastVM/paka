@@ -196,6 +196,11 @@ Function deserialize(T : Function)(Json json)
             T);
 }
 
+Pair deserialize(T : Pair)(Json json)
+{
+    return json.elems!("name val",T);
+}
+
 ReturnType!func cache(alias func)(ParameterTypeTuple!func args)
 {
     alias Args = ParameterTypeTuple!func;
@@ -206,8 +211,13 @@ ReturnType!func cache(alias func)(ParameterTypeTuple!func args)
 
 alias deserializeCached = cache!(deserialize!(Dynamic));
 
+
 Dynamic deserialize(T : Dynamic)(Json json)
 {
+    if (json["type"].str == "ref")
+    {
+        throw new Exception("you have found a bug in libpaka_serial.so: cannot serialize self referential objects");
+    }
     final switch (json.dtype)
     {
     case Dynamic.Type.nil:
@@ -223,7 +233,8 @@ Dynamic deserialize(T : Dynamic)(Json json)
     case Dynamic.Type.tab:
         return json["table"].deserialize!(Table).dynamic;
     case Dynamic.Type.fun:
-        return json["function"].deserialize!(Dynamic function(Args)).dynamic;
+        Dynamic function(Args) res = json["function"].deserialize!(Dynamic function(Args));
+        return Fun(res, json["function"].deserialize!string).dynamic;
     case Dynamic.Type.pro:
         return json["program"].deserialize!(Function).dynamic;
     }

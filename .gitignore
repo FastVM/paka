@@ -30,6 +30,7 @@ remake
 test.*
 tmp
 trace.*
+*.json
 vgcore*
 vscode
 *.map

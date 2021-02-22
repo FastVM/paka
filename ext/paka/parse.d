@@ -611,7 +611,9 @@ Node readPreExprImpl(ref TokenArray tokens)
             Node[] xy = [new Ident("_rhs")];
             Node lambdaBody = new Call([call.args[0]] ~ xy);
             Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-            Call dotmap = new Call(new Ident("_pre_map"), [cast(Node) lambda] ~ call.args[1 .. $]);
+            Call dotmap = new Call(new Ident("_paka_map_pre"), [
+                    cast(Node) lambda
+                    ] ~ call.args[1 .. $]);
             ret = dotmap;
         }
         return ret;
@@ -619,23 +621,66 @@ Node readPreExprImpl(ref TokenArray tokens)
     return tokens.readPostExpr;
 }
 
+struct Dots
+{
+    string[] ops;
+    Dots opOpAssign(string op : "~")(string val)
+    {
+        ops ~= val;
+        return this;
+    }
+
+    Dots opOpAssign(string op : "~")(Dots other)
+    {
+        foreach (opv; other.ops)
+        {
+            ops ~= opv;
+        }
+        return this;
+    }
+
+    void pop()
+    {
+        ops.length--;
+    }
+
+    size_t length()
+    {
+        return ops.length;
+    }
+}
+
+bool isDotOperator(Token tok)
+{
+    return tok.isOperator(".") || tok.isOperator("\\");
+}
+
 /// hack for counting dots in an operator expression.
 /// only used for readExpr
-size_t[2] countDots(ref TokenArray tokens)
+Dots[2] countDots(ref TokenArray tokens)
 {
-    size_t pre;
-    size_t post;
-    while (tokens.length != 0 && tokens[0].isOperator("."))
+    Dots pre;
+    Dots post;
+    while (tokens.length != 0 && tokens[0].isDotOperator)
     {
-        pre += 1;
-        tokens.nextIs(Token.Type.operator, ".");
+        pre ~= tokens[0].value;
+        tokens.tokens = tokens.tokens[1 .. $];
     }
-    while (tokens.length != 0 && tokens[$ - 1].isOperator("."))
+    while (tokens.length != 0 && tokens[$ - 1].isDotOperator)
     {
-        post += 1;
+        post ~= tokens[$-1].value;
         tokens.tokens = tokens.tokens[0 .. $ - 1];
     }
     return [pre, post];
+}
+
+Node binaryFold(Node[] args)
+{
+    Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
+    Node lambdaBody = new Call(args[0 .. $ - 2] ~ xy);
+    Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
+    Call domap = new Call(new Ident("_paka_fold"), [cast(Node) lambda] ~ args[$ - 2 .. $]);
+    return domap;
 }
 
 Node binaryDotmap(string s)(Node[] args)
@@ -702,7 +747,7 @@ Node readExpr(ref TokenArray tokens, size_t level)
         {
             sub[$ - 1] ~= token;
         }
-        lastIsOp = token.isOperator && !token.isOperator(".");
+        lastIsOp = token.isOperator && !token.isDotOperator;
         tokens.nextIsAny;
     }
     if (opers.length > 0 && opers[0].isOperator("=>"))
@@ -726,12 +771,12 @@ Node readExpr(ref TokenArray tokens, size_t level)
         }
         return ret;
     }
-    size_t[2][] dotcount = [[0, 0]];
+    Dots[2][] dotcount = [[Dots.init, Dots.init]];
     foreach (i, ref v; sub)
     {
-        size_t[2] dc = v.countDots;
-        dotcount[$ - 1][1] += dc[0];
-        dotcount ~= [dc[1], 0];
+        Dots[2] dc = v.countDots;
+        dotcount[$ - 1][1] ~= dc[0];
+        dotcount ~= [dc[1], Dots.init];
     }
     Node ret = sub[0].readExpr(level + 1);
     Ident last;
@@ -739,10 +784,10 @@ Node readExpr(ref TokenArray tokens, size_t level)
     {
         switch (v.value)
         {
-        case "|>":
-            Node rhs = sub[i + 1].readExpr(level + 1);
-            ret = new Call([rhs, ret]);
-            break;
+            // case "|>":
+            //     Node rhs = sub[i + 1].readExpr(level + 1);
+            //     ret = new Call([rhs, ret]);
+            //     break;
         case "=":
             Node rhs = sub[i + 1].readExpr(level + 1);
             ret = new Call(new Ident("@set"), [ret, rhs]);
@@ -772,8 +817,8 @@ Node readExpr(ref TokenArray tokens, size_t level)
             ret = new Call(new Ident("@opset"), [new Ident("mod"), ret, rhs]);
             break;
         default:
-            size_t lhsc = dotcount[i + 1][0];
-            size_t rhsc = dotcount[i + 1][1];
+            Dots lhsc = dotcount[i + 1][0];
+            Dots rhsc = dotcount[i + 1][1];
             Node rhs = sub[i + 1].readExpr(level + 1);
             stdout.flush;
             if (cmpOps.canFind(v.value) && opers.length != 1)
@@ -784,10 +829,12 @@ Node readExpr(ref TokenArray tokens, size_t level)
                     rhs = new Call(new Ident("@set"), [next, rhs]);
                 }
                 Node opFunc = void;
-                if (v.value == "::") {
+                if (v.value == "::")
+                {
                     opFunc = new Ident("_paka_match");
                 }
-                else {
+                else
+                {
                     opFunc = new Ident(v.value);
                 }
                 if (i == 0)
@@ -807,32 +854,52 @@ Node readExpr(ref TokenArray tokens, size_t level)
             else
             {
                 Node opFunc = void;
-                if (v.value == "::") {
+                if (v.value == "::")
+                {
                     opFunc = new Ident("_paka_match");
                 }
-                else {
+                else if (v.value == "|>")
+                {
+                    opFunc = new Ident("@rcall");
+                }
+                else if (v.value == "->")
+                {
+                    opFunc = new Ident("_paka_range");
+                }
+                else if (v.value == "<|")
+                {
+                    opFunc = new Ident("@call");
+                }
+                else
+                {
                     opFunc = new Ident(v.value);
                 }
                 ret = new Call(opFunc, [ret, rhs]);
             }
-            while (rhsc != 0 || lhsc != 0)
+            while (rhsc.length != 0 || lhsc.length != 0)
             {
                 Call call = cast(Call) ret;
-                if (lhsc > rhsc)
+                if (lhsc.length > 0 && rhsc.length > 0 && lhsc.ops[0] == "\\" && rhsc.ops[0] == "\\")
                 {
-                    lhsc--;
-                    ret = call.args.binaryDotmap!"_lhs_map";
+                    lhsc.pop;
+                    rhsc.pop;
+                    ret = call.args.binaryFold;
                 }
-                else if (rhsc > lhsc)
+                else if (lhsc.length > rhsc.length)
                 {
-                    rhsc--;
-                    ret = call.args.binaryDotmap!"_rhs_map";
+                    lhsc.pop;
+                    ret = call.args.binaryDotmap!"_paka_map_lhs";
                 }
-                else if (lhsc == rhsc && lhsc != 0)
+                else if (rhsc.length > lhsc.length)
                 {
-                    lhsc--;
-                    rhsc--;
-                    ret = call.args.binaryDotmap!"_both_map";
+                    rhsc.pop;
+                    ret = call.args.binaryDotmap!"_paka_map_rhs";
+                }
+                else if (lhsc.length == rhsc.length && lhsc.length != 0)
+                {
+                    lhsc.pop;
+                    rhsc.pop;
+                    ret = call.args.binaryDotmap!"_paka_map_both";
                 }
             }
             break;

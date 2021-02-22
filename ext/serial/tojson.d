@@ -51,6 +51,11 @@ string serialize(Span span)
     return span.elems!"first last";
 }
 
+string serialize(Pair pair)
+{
+    return pair.elems!"name val";
+}
+
 string serialize(bool b)
 {
     return b.to!string;
@@ -176,8 +181,21 @@ string serialize(Table tab)
     return `{"pairs": [` ~ pairs ~ `], "meta": ` ~ meta ~ `}`;
 }
 
+Dynamic[] alreadySerialized;
 string serialize(Dynamic value)
 {
+    foreach (index, val; alreadySerialized)
+    {
+        if (val is value)
+        {
+            return `{"type": "ref", "ref": ` ~ index.to!string ~ `}`;
+        }
+    }
+    alreadySerialized ~= value;
+    scope(exit)
+    {
+        alreadySerialized.length--;
+    }
     final switch (value.type)
     {
     case Dynamic.Type.nil:

@@ -14,6 +14,7 @@ import purr.inter;
 import purr.ir.emit;
 import purr.ir.opt;
 import purr.ir.repr;
+import purr.ir.types;
 
 void modifyInstr(T)(Function func, T index, ushort v)
 {
@@ -67,6 +68,9 @@ class BytecodeEmitter
 {
     BasicBlock[] bbchecked;
     Function func;
+    TypeGenerator typeGenerator = new TypeGenerator;
+    void delegate()[] emitters;
+
     ushort[Function][BasicBlock] counts;
 
     bool within(BasicBlock block, Function func)
@@ -85,16 +89,20 @@ class BytecodeEmitter
         }
     }
 
-    ushort entry(BasicBlock block, Function newFunc)
+    void entryNew(BasicBlock block, Function newFunc)
     {
         Function oldFunc = func;
         func = newFunc;
-        scope (exit)
-        {
-            func = oldFunc;
-        }
         emit(block);
-        return counts[block][newFunc];
+        func = oldFunc;
+    }
+
+    void entry(BasicBlock block, Function newFunc, void delegate(ushort) cb)
+    {
+        emitters ~= {
+            entryNew(block, newFunc);
+            cb(counts[block][newFunc]);
+        };
     }
 
     string[] predef(BasicBlock block, string[] checked = null)
@@ -137,6 +145,10 @@ class BytecodeEmitter
         }
         if (!within(block, func))
         {
+            if (block.start)
+            {
+                typeGenerator.start(block);
+            }
             counts[block][func] = cast(ushort) func.instrs.length;
             foreach (sym; predef(block))
             {
@@ -151,6 +163,16 @@ class BytecodeEmitter
                 emit(instr);
             }
             emit(block.exit);
+            while (emitters.length != 0)
+            {
+                void delegate() cur = emitters[0];
+                emitters = emitters[1..$];
+                cur();
+            }
+            if (block.start)
+            {
+                typeGenerator.stop(block);
+            }
         }
     }
 
@@ -160,26 +182,33 @@ class BytecodeEmitter
         {
             if (typeid(em) == typeid(Instr))
             {
+                typeGenerator.genFrom(cast(Instr) em);
                 emit(cast(Instr) em);
             }
         }
     }
 
-    void emit(BooleanBranch branch)
+    void emit(LogicalBranch branch)
     {
         pushInstr(func, Opcode.iftrue, [cast(ushort) ushort.max]);
         size_t j0 = func.instrs.length;
         pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
         size_t j1 = func.instrs.length;
-        ushort t0 = entry(branch.target[0], func);
-        ushort t1 = entry(branch.target[1], func);
-        func.modifyInstr(j0, t0);
-        func.modifyInstr(j1, t1);
+        entry(branch.target[0], func, (t0){
+            func.modifyInstr(j0, t0);
+        });
+        entry(branch.target[1], func, (t1){
+            func.modifyInstr(j1, t1);
+        });
     }
 
     void emit(GotoBranch branch)
     {
-        pushInstr(func, Opcode.jump, [entry(branch.target[0], func)]);
+        pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
+        size_t j0 = func.instrs.length;
+        entry(branch.target[0], func, (t0){
+            func.modifyInstr(j0, t0);
+        });
     }
 
     void emit(ReturnBranch branch)
@@ -268,11 +297,6 @@ class BytecodeEmitter
         func.pushInstr(Opcode.inspect, null);
     }
 
-    void emit(InspectInstruction inspect)
-    {
-        func.pushInstr(Opcode.inspect, null);
-    }
-
     void emit(OperatorInstruction op)
     {
     sw:
@@ -296,7 +320,7 @@ class BytecodeEmitter
         Function newFunc = new Function;
         newFunc.parent = func;
         newFunc.args = lambda.argNames;
-        entry(lambda.entry, newFunc);
+        entryNew(lambda.entry, newFunc);
         func.pushInstr(Opcode.sub, [cast(ushort) func.funcs.length]);
         func.funcs ~= newFunc;
     }

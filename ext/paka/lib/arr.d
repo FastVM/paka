@@ -19,8 +19,9 @@ Pair[] libarr()
     ];
     return ret;
 } /// returns a list
+
 /// with one arg it returns 0..$0
-/// with two args it returns $1..$1
+/// with two args it returns $0..$1
 /// with three args it counts from $0 to $1 with interval $2
 Dynamic librange(Args args) @Arg("min")
 {

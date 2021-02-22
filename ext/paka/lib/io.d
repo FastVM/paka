@@ -10,6 +10,7 @@ import std.conv;
 
 Pair[] libio()
 {
+    // dfmt off
     Pair[] ret = [
         FunctionPair!libprint("print"),
         FunctionPair!libput("put"),
@@ -18,8 +19,8 @@ Pair[] libio()
         FunctionPair!libget("get"),
         FunctionPair!libslurp("slurp"),
         FunctionPair!libdump("dump"),
-        FunctionPair!libsync("sync"),
     ];
+    // dfmt on
     return ret;
 }
 
@@ -108,11 +109,6 @@ Dynamic libdump(Args args)
     return Dynamic.nil;
 }
 
-/// sync file from filesystem
-Dynamic libsync(Args args)
-{
-    return args[0].str.syncFile.dynamic;
-} 
 /// reads an entire file
 Dynamic libslurp(Args args)
 {

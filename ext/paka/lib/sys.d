@@ -29,7 +29,7 @@ Pair[] libsys()
     Pair[] ret = [
         FunctionPair!libleave("leave"), FunctionPair!libargs("args"),
         FunctionPair!libtypeof("typeof"), FunctionPair!libimport("import"),
-        FunctionPair!libassert("enforce"),
+        FunctionPair!libassert("enforce"), FunctionPair!libeval("eval"),
     ];
     ret.addLib("env", libsysenv);
     return ret;
@@ -53,6 +53,13 @@ Dynamic libimport(Args args) {
     }
     Location data = args[0].str.readFile;
     Dynamic val = ctx.eval(data);
+    return val;
+}
+
+/// imports value returning what it returned
+Dynamic libeval(Args args) {
+    Location data = Location(1, 1, "__eval__", args[0].str);
+    Dynamic val = eval(rootBases.length - 1, data);
     return val;
 }
 

@@ -70,9 +70,9 @@ void write1s(string str)
 {
 	foreach (chr; str)
 	{
-		if (chr == '\n')
+		if (chr == '\n' && reader.smart)
 		{
-			std.stdio.write("\x1B[1E\n");
+			std.stdio.write("\r\n");
 		}
 		else
 		{
@@ -349,7 +349,7 @@ class Reader
 		if (smart)
 		{
 			char[] read = read;
-			output.write("\x1B[1E\n");
+			output.write("\r\n");
 			return read;
 		}
 		else

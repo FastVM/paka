@@ -49,6 +49,13 @@ Thunk cliFileHandler(immutable string filename)
     };
 }
 
+Thunk cliArgHandler(immutable string arg)
+{
+    return {
+        fileArgs ~= arg.dynamic;
+    };
+}
+
 Thunk cliChainHandler(immutable string code)
 {
     return {
@@ -151,6 +158,11 @@ void domain(string[] args)
             string filename = extargs[$ - 1];
             extargs.length--;
             todo ~= filename.cliFileHandler;
+            break;
+        case "--arg":
+            string filearg = extargs[$ - 1];
+            extargs.length--;
+            todo ~= filearg.cliArgHandler;
             break;
         case "--chain":
             string code = extargs[$ - 1];

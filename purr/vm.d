@@ -39,13 +39,33 @@ enum string[2][] mutMap()
     return [["+", "add"], ["-", "sub"], ["*", "mul"], ["/", "div"], ["%", "mod"], ["~", "cat"]];
 }
 
-alias allocateStackAllowed = alloca;
 
 pragma(inline, true) T eat(T)(ubyte* bytes, ref ushort index)
 {
     T ret = *cast(T*)(bytes + (index));
     index += T.sizeof;
     return ret;
+}
+
+void[2 ^^ 16] values;
+void* stacks;
+
+// alias allocateStackAllowed = alloca;
+static this()
+{
+    stacks = values.ptr;
+}
+
+pragma(inline, true)
+void* allocateStackAllowed(size_t size)
+{
+    return (stacks += size) - size;
+}
+
+pragma(inline, true)
+void freeStackAllowed(size_t size)
+{
+    stacks -= size;
 }
 
 Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
@@ -57,25 +77,27 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     ushort index = 0;
     Dynamic* stack = void;
     Dynamic* locals = void;
-    version(PurrErrors)
+    version (PurrErrors)
     {
         scope (failure)
         {
             spans ~= func.spans[index];
         }
     }
+    size_t stackAlloc = void;
     if (func.flags & Function.Flags.isLocal)
     {
         locals = cast(Dynamic*) GC.malloc(func.stab.length * Dynamic.sizeof);
-        stack = (cast(Dynamic*) allocateStackAllowed(func.stackSize * Dynamic.sizeof));
+        stackAlloc = func.stackSize * Dynamic.sizeof;
+        stack = (cast(Dynamic*) allocateStackAllowed(stackAlloc));
     }
     else
     {
-        stack = cast(Dynamic*) allocateStackAllowed(
-                (func.stackSize + func.stab.length) * Dynamic.sizeof);
+        stackAlloc = (func.stackSize + func.stab.length) * Dynamic.sizeof;
+        stack = cast(Dynamic*) allocateStackAllowed(stackAlloc);
         locals = stack + func.stackSize;
     }
-    
+
     ubyte* instrs = func.instrs.ptr;
     Dynamic* lstack = stack;
     // writeln("max: ", func.stackSize);
@@ -83,7 +105,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     // writeln(cast(void*) func, func.captured);
     while (true)
     {
-        assert(GC.addrOf(cast(void*) func));
+        // assert(GC.addrOf(cast(void*) func));
         // assert(func.stackSize >= stack-lstack, "stack overflow error");
         Opcode cur = cast(Opcode) instrs[index++];
         // writeln(instrs);
@@ -142,9 +164,9 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             case Dynamic.Type.fun:
                 res = f.fun.fun.value(stack[0 .. 0 + count]);
                 break;
-            // case Dynamic.Type.del:
-            //     (*(stack - 1)) = f.fun.del.value(stack[0 .. 0 + instrs.get1!ushort(index)]);
-            //     break;
+                // case Dynamic.Type.del:
+                //     (*(stack - 1)) = f.fun.del.value(stack[0 .. 0 + instrs.get1!ushort(index)]);
+                //     break;
             case Dynamic.Type.pro:
                 res = run(f.fun.pro, stack[0 .. 0 + count]);
                 break;
@@ -189,7 +211,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.table:
             ushort count = instrs.eat!ushort(index);
             Mapping table = emptyMapping;
-            foreach (i; 0..count)
+            foreach (i; 0 .. count)
             {
                 stack -= 2;
                 table[*stack] = (*(stack + 1));
@@ -265,7 +287,8 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 (*(*(stack - 3)).arrPtr)[(*(stack - 2)).as!size_t] = (*(stack - 1));
                 break;
             case Dynamic.Type.tab:
-                if ((*(stack - 1)).type == Dynamic.Type.pro && (*(stack - 2)).type == Dynamic.Type.str)
+                if ((*(stack - 1)).type == Dynamic.Type.pro && (*(stack - 2))
+                        .type == Dynamic.Type.str)
                 {
                     if (!(*(stack - 1)).value.fun.pro.names.canFind(*(stack - 2)))
                     {
@@ -291,7 +314,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 {
             case opm[1].to!AssignOp:
                     mixin("locals[val] = locals[val] " ~ opm[0] ~ " (*(stack-1));");
-                    (*(stack-1)) = locals[val];
+                    (*(stack - 1)) = locals[val];
                     break switchOpp;
                 }
             }
@@ -338,6 +361,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                     }
                 }
             }
+            freeStackAllowed(stackAlloc);
             return v;
         case Opcode.retnone:
             static foreach (callback; rest)
@@ -350,6 +374,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                     }
                 }
             }
+            freeStackAllowed(stackAlloc);
             return Dynamic.nil;
         case Opcode.iftrue:
             Dynamic val = (*(--stack));
@@ -388,7 +413,8 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             stack++;
             break;
         case Opcode.inspect:
-            VMInfo info = VMInfo(func, args, index, lstack[0 .. stack - lstack], locals);
+            VMInfo info = VMInfo(func, args, index,
+                    lstack[0 .. stack - lstack], locals);
             foreach (ins; inspects)
             {
                 ins(info);
