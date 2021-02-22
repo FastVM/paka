@@ -52,7 +52,6 @@ class BasicBlock
     Instruction[] instrs;
     Branch exit;
     ushort[Function] counts;
-    bool start = false;
 
     this(string n = genName!"bb_")
     {
@@ -100,9 +99,12 @@ class Branch : Emittable
 
 class LogicalBranch : Branch
 {
-    this(BasicBlock ift, BasicBlock iff)
+    BasicBlock post;
+
+    this(BasicBlock ift, BasicBlock iff, BasicBlock post_)
     {
         target = [ift, iff];
+        post = post_;
     }
 
     override string toString()
@@ -248,7 +250,6 @@ class LambdaInstruction : Instruction
 
     this(BasicBlock bb, Dynamic[] args)
     {
-        bb.start = true;
         entry = bb;
         argNames = args;
     }

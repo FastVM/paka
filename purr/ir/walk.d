@@ -40,7 +40,6 @@ class Walker
     Function walkProgram(Node node, size_t ctx)
     {
         BasicBlock entry = new BasicBlock;
-        entry.start = true;
         block = entry;
         funcblk = block;
         walk(node);
@@ -53,7 +52,7 @@ class Walker
             func.captab.define(i.name);
         }
         BytecodeEmitter emitter = new BytecodeEmitter;
-        emitter.entryNew(entry, func);
+        emitter.entryFunc(entry, func);
         return func;
     }
 
@@ -163,7 +162,7 @@ class Walker
         BasicBlock iffalse = new BasicBlock;
         BasicBlock after = new BasicBlock;
         walk(args[0]);
-        emit(new LogicalBranch(iftrue, iffalse));
+        emit(new LogicalBranch(iftrue, iffalse, after));
         block = iftrue;
         walk(args[1]);
         emitDefault(new GotoBranch(after));
@@ -186,7 +185,7 @@ class Walker
         emit(new GotoBranch(cond));
         block = cond;
         walk(args[0]);
-        emit(new LogicalBranch(loop, after));
+        emit(new LogicalBranch(loop, after, after));
         block = after;
     }
 

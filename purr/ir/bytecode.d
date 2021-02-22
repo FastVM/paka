@@ -39,22 +39,17 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     {
         func.instrs ~= *cast(ubyte[2]*)&i;
     }
-    // if (func.spans.length != 0)
-    // {
     while (func.spans.length < func.instrs.length)
     {
         func.spans ~= func.spans[$ - 1];
     }
-    // }
     int* psize = op in opSizes;
     if (psize !is null)
     {
-        // writeln("auto: ", op, shorts, *psize);
         func.stackSizeCurrent += *psize;
     }
     else
     {
-        // writeln("find: ", op, shorts, size);
         func.stackSizeCurrent += size;
     }
     if (func.stackSizeCurrent >= func.stackSize)
@@ -64,12 +59,72 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     assert(func.stackSizeCurrent >= 0);
 }
 
+TodoBlock[] todoBlocks;
+size_t[BasicBlock] disabled;
+size_t delayed;
+
+struct TodoBlock
+{
+    BytecodeEmitter emitter;
+    BasicBlock block;
+    Function newFunc;
+    void delegate(ushort) cb;
+
+    this(BytecodeEmitter e, BasicBlock b, Function f, void delegate(ushort) c)
+    {
+        emitter = e;
+        block = b;
+        newFunc = f;
+        cb = c;
+    }
+
+    void opCall()
+    {
+        size_t delayCount = 0;
+        if (size_t* delayCountPtr = block in disabled)
+        {
+            delayCount = *delayCountPtr;
+        }
+        if (delayCount != 0)
+        {
+            foreach (key, ref value; disabled)
+            {
+                value--;
+            }
+            delayed++;
+            todoBlocks ~= this;
+        }
+        else
+        {
+            delayed = 0;
+            emitter.entryNew(block, newFunc);
+            cb(emitter.counts[block][newFunc]);
+        }
+    }
+}
+
+void enable(BasicBlock bb)
+{
+    disabled[bb]--;
+}
+
+void disable(BasicBlock bb)
+{
+    if (size_t* ptr = bb in disabled)
+    {
+        *ptr += 1;
+    }
+    else
+    {
+        disabled[bb] = 1;
+    }
+}
+
 class BytecodeEmitter
 {
     BasicBlock[] bbchecked;
     Function func;
     TypeGenerator typeGenerator = new TypeGenerator;
-    void delegate()[] emitters;
 
     ushort[Function][BasicBlock] counts;
 
@@ -89,20 +144,30 @@ class BytecodeEmitter
         }
     }
 
+    void entryFunc(BasicBlock block, Function func)
+    {
+        typeGenerator.startFunction(block, predef(block));
+        entryNew(block, func);
+        typeGenerator.stopFunction(block);
+    }
+
     void entryNew(BasicBlock block, Function newFunc)
     {
         Function oldFunc = func;
         func = newFunc;
         emit(block);
         func = oldFunc;
+        while (todoBlocks.length != 0)
+        {
+            TodoBlock cur = todoBlocks[0];
+            todoBlocks = todoBlocks[1..$];
+            cur();
+        }
     }
 
     void entry(BasicBlock block, Function newFunc, void delegate(ushort) cb)
     {
-        emitters ~= {
-            entryNew(block, newFunc);
-            cb(counts[block][newFunc]);
-        };
+        todoBlocks ~= TodoBlock(this, block, newFunc, cb);
     }
 
     string[] predef(BasicBlock block, string[] checked = null)
@@ -145,10 +210,7 @@ class BytecodeEmitter
         }
         if (!within(block, func))
         {
-            if (block.start)
-            {
-                typeGenerator.start(block);
-            }
+            typeGenerator.startBlock(block);
             counts[block][func] = cast(ushort) func.instrs.length;
             foreach (sym; predef(block))
             {
@@ -163,16 +225,7 @@ class BytecodeEmitter
                 emit(instr);
             }
             emit(block.exit);
-            while (emitters.length != 0)
-            {
-                void delegate() cur = emitters[0];
-                emitters = emitters[1..$];
-                cur();
-            }
-            if (block.start)
-            {
-                typeGenerator.stop(block);
-            }
+            typeGenerator.stopBlock(block);
         }
     }
 
@@ -194,20 +247,32 @@ class BytecodeEmitter
         size_t j0 = func.instrs.length;
         pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
         size_t j1 = func.instrs.length;
+        Function cfunc = func;
+        long remaining = cast(long) branch.target.length;
+        void afterLogicalTargets()
+        {
+            remaining--;
+            if (remaining == 0)
+            {
+                enable(branch.post);
+            }
+        }
         entry(branch.target[0], func, (t0){
-            func.modifyInstr(j0, t0);
+            cfunc.modifyInstr(j0, t0);
         });
         entry(branch.target[1], func, (t1){
-            func.modifyInstr(j1, t1);
+            cfunc.modifyInstr(j1, t1);
         });
+        disable(branch.post);
     }
 
     void emit(GotoBranch branch)
     {
         pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
         size_t j0 = func.instrs.length;
+        Function cfunc = func;
         entry(branch.target[0], func, (t0){
-            func.modifyInstr(j0, t0);
+            cfunc.modifyInstr(j0, cast(ushort) t0);
         });
     }
 
@@ -320,7 +385,7 @@ class BytecodeEmitter
         Function newFunc = new Function;
         newFunc.parent = func;
         newFunc.args = lambda.argNames;
-        entryNew(lambda.entry, newFunc);
+        entryFunc(lambda.entry, newFunc);
         func.pushInstr(Opcode.sub, [cast(ushort) func.funcs.length]);
         func.funcs ~= newFunc;
     }
