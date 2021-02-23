@@ -22,6 +22,7 @@ import purr.ir.walk;
 import purr.ir.emit;
 
 bool dumpbytecode = false;
+bool runjit = false;
 
 /// vm callback that sets the locals defined into the root base 
 LocalCallback exportLocalsToBaseCallback(Function func)
@@ -46,8 +47,14 @@ Dynamic evalImpl(Walker)(size_t ctx, Location code, Args args)
         oppr.walk(func);
         writeln(oppr.ret);
     }
-    Dynamic retval = run(func, args, func.exportLocalsToBaseCallback);
-    return retval;
+    if (runjit && func.jitted !is null)
+    {
+        return func.jitted().dynamic;
+    }
+    else
+    {
+        return run(func, args, func.exportLocalsToBaseCallback);
+    }
 }
 
 Dynamic eval(size_t ctx, Location code, Args args=Args.init)

@@ -100,11 +100,13 @@ class Branch : Emittable
 class LogicalBranch : Branch
 {
     BasicBlock post;
+    bool hasValue;
 
-    this(BasicBlock ift, BasicBlock iff, BasicBlock post_)
+    this(BasicBlock ift, BasicBlock iff, BasicBlock post_, bool hasValue_)
     {
         target = [ift, iff];
         post = post_;
+        hasValue = hasValue_;
     }
 
     override string toString()

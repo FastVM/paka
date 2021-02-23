@@ -66,8 +66,7 @@ void collapseNumbers(Type.Options opts)
         if (min == max)
         {
             num = new Type.Number(min);
-        }
-        // else if (isInt)
+        } // else if (isInt)
         // {
         //     num = new Type.Integer(min, max);
         // }
@@ -558,6 +557,9 @@ class TypeGenerator
     Type.Array[] argss = [];
     Type.Options[][] stacks = [null];
     Type.Options[string][] localss;
+    Type.Function[BasicBlock] blockTypes;
+    Type.Options[][BasicBlock] stackAt;
+    Type.Options[string][BasicBlock] localsAt;
     void delegate()[BasicBlock] atBlockEntry;
     void delegate()[BasicBlock] atBlockExit;
     string[][] argLocalss;
@@ -649,15 +651,18 @@ class TypeGenerator
         Type.Function ty = stacks[$ - 2][$ - 1].only(func);
         ty.retn = retn;
         ty.args = args;
+        localsAt[bb] = locals.dup;
         popa;
-        if (stacks.length == 1)
-        {
-            writeln("type: ", func.retn);
-        }
+        // if (stacks.length == 1)
+        // {
+        //     writeln("type: ", func.retn);
+        // }
+        blockTypes[bb] = ty; 
     }
 
     void startBlock(BasicBlock bb)
     {
+        stackAt[bb] = stack.dup;
         if (void delegate()* pdel = bb in atBlockEntry)
         {
             (*pdel)();
@@ -767,8 +772,11 @@ class TypeGenerator
     void genFrom(LogicalBranch branch)
     {
         Type log = pop.only(new Type.Logical);
-        void delegate() del = &mergeLogicalBranch;
-        atBlockEntry[branch.post] = del;
+        if (branch.hasValue)
+        {
+            void delegate() del = &mergeLogicalBranch;
+            atBlockEntry[branch.post] = del;
+        }
     }
 
     void genFrom(ArgsInstruction argsInstr)

@@ -15,6 +15,7 @@ import purr.ir.emit;
 import purr.ir.opt;
 import purr.ir.repr;
 import purr.ir.types;
+import purr.jit.jit;
 
 void modifyInstr(T)(Function func, T index, ushort v)
 {
@@ -124,9 +125,16 @@ class BytecodeEmitter
 {
     BasicBlock[] bbchecked;
     Function func;
-    TypeGenerator typeGenerator = new TypeGenerator;
-
     ushort[Function][BasicBlock] counts;
+    TypeGenerator typeGenerator;
+    CodeGenerator codeGenerator;
+    bool isFirst = true;
+
+    this()
+    {
+        typeGenerator = new TypeGenerator;
+        codeGenerator = new CodeGenerator;
+    }
 
     bool within(BasicBlock block, Function func)
     {
@@ -149,6 +157,17 @@ class BytecodeEmitter
         typeGenerator.startFunction(block, predef(block));
         entryNew(block, func);
         typeGenerator.stopFunction(block);
+        if (isFirst)
+        {
+            disabled = null;
+            auto mainfunc = codeGenerator.genMainFunc(block, typeGenerator, predef(block));
+            func.jitted = mainfunc;
+        }
+        else
+        {
+            codeGenerator.genFunc(block);
+        }
+        isFirst = false;
     }
 
     void entryNew(BasicBlock block, Function newFunc)
@@ -160,7 +179,7 @@ class BytecodeEmitter
         while (todoBlocks.length != 0)
         {
             TodoBlock cur = todoBlocks[0];
-            todoBlocks = todoBlocks[1..$];
+            todoBlocks = todoBlocks[1 .. $];
             cur();
         }
     }
@@ -210,6 +229,7 @@ class BytecodeEmitter
         }
         if (!within(block, func))
         {
+            // writeln(block);
             typeGenerator.startBlock(block);
             counts[block][func] = cast(ushort) func.instrs.length;
             foreach (sym; predef(block))
@@ -248,7 +268,7 @@ class BytecodeEmitter
         pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
         size_t j1 = func.instrs.length;
         Function cfunc = func;
-        long remaining = cast(long) branch.target.length;
+        long remaining = 0;
         void afterLogicalTargets()
         {
             remaining--;
@@ -257,13 +277,17 @@ class BytecodeEmitter
                 enable(branch.post);
             }
         }
-        entry(branch.target[0], func, (t0){
-            cfunc.modifyInstr(j0, t0);
-        });
-        entry(branch.target[1], func, (t1){
-            cfunc.modifyInstr(j1, t1);
-        });
         disable(branch.post);
+        remaining++;
+        entry(branch.target[0], func, (t0) {
+            cfunc.modifyInstr(j0, t0);
+            afterLogicalTargets;
+        });
+        remaining++;
+        entry(branch.target[1], func, (t1) {
+            cfunc.modifyInstr(j1, t1);
+            afterLogicalTargets;
+        });
     }
 
     void emit(GotoBranch branch)
@@ -271,7 +295,7 @@ class BytecodeEmitter
         pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
         size_t j0 = func.instrs.length;
         Function cfunc = func;
-        entry(branch.target[0], func, (t0){
+        entry(branch.target[0], func, (t0) {
             cfunc.modifyInstr(j0, cast(ushort) t0);
         });
     }

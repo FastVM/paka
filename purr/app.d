@@ -105,6 +105,11 @@ Thunk cliBytecodeHandler()
     return { dumpbytecode = !dumpbytecode; };
 }
 
+Thunk cliJitHandler()
+{
+    return { runjit = !runjit; };
+}
+
 Thunk cliEchoHandler()
 {
     return { writeln(dynamics[$ - 1]); dynamics.length--; };
@@ -191,6 +196,9 @@ void domain(string[] args)
             break;
         case "--bytecode":
             todo ~= cliBytecodeHandler;
+            break;
+        case "--jit":
+            todo ~= cliJitHandler;
             break;
         case "--echo":
             todo ~= cliEchoHandler;

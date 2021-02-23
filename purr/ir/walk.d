@@ -162,7 +162,7 @@ class Walker
         BasicBlock iffalse = new BasicBlock;
         BasicBlock after = new BasicBlock;
         walk(args[0]);
-        emit(new LogicalBranch(iftrue, iffalse, after));
+        emit(new LogicalBranch(iftrue, iffalse, after, true));
         block = iftrue;
         walk(args[1]);
         emitDefault(new GotoBranch(after));
@@ -176,17 +176,20 @@ class Walker
     {
         BasicBlock cond = new BasicBlock;
         BasicBlock loop = new BasicBlock;
-        BasicBlock after = new BasicBlock;
-        emit(new PushInstruction(Dynamic.nil));
+        BasicBlock after1 = new BasicBlock;
+        // BasicBlock after2 = new BasicBlock;
         emit(new GotoBranch(cond));
         block = loop;
-        emit(new PopInstruction);
         walk(args[1]);
         emit(new GotoBranch(cond));
+        emit(new PopInstruction);
         block = cond;
         walk(args[0]);
-        emit(new LogicalBranch(loop, after, after));
-        block = after;
+        emit(new LogicalBranch(loop, after1, after1, false));
+        block = after1;
+        emit(new PushInstruction(Dynamic.nil));
+        // emit(new GotoBranch(after2));
+        // block = after2;
     }
 
     void walkDo(Node[] args)

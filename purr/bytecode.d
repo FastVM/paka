@@ -116,6 +116,7 @@ class Function
     Lookup captab;
     Flags flags = cast(Flags) 0;
     Dynamic[] names;
+    double function() jitted;
 
     this()
     {
@@ -139,6 +140,7 @@ class Function
         stackSizeCurrent = other.stackSizeCurrent;
         stackAt = other.stackAt;
         names = other.names;
+        jitted = other.jitted;
     }
 
     uint doCapture(string name)
