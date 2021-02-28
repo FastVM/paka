@@ -26,6 +26,9 @@ import std.conv;
 import std.string;
 import std.getopt;
 import core.stdc.stdlib;
+import purr.jit.jit;
+
+version = JITEnabled;
 
 alias Thunk = void delegate();
 
@@ -51,9 +54,7 @@ Thunk cliFileHandler(immutable string filename)
 
 Thunk cliArgHandler(immutable string arg)
 {
-    return {
-        fileArgs ~= arg.dynamic;
-    };
+    return { fileArgs ~= arg.dynamic; };
 }
 
 Thunk cliChainHandler(immutable string code)
@@ -108,6 +109,15 @@ Thunk cliBytecodeHandler()
 Thunk cliJitHandler()
 {
     return { runjit = !runjit; };
+}
+
+Thunk cliOptHandler(string num)
+{
+    if (!["0", "1", "2", "3"].canFind(num))
+    {
+        throw new Exception("error in flag: --opt " ~ num.to!string);
+    }
+    return { optlevel = num.to!int; };
 }
 
 Thunk cliEchoHandler()
@@ -194,6 +204,11 @@ void domain(string[] args)
             extargs.length--;
             todo ~= langname.cliLangHandler;
             break;
+        case "--opt":
+            string optto = extargs[$ - 1];
+            extargs.length--;
+            todo ~= optto.cliOptHandler;
+            break;
         case "--bytecode":
             todo ~= cliBytecodeHandler;
             break;
@@ -205,6 +220,7 @@ void domain(string[] args)
             break;
         }
     }
+
     if (extargs.length != 0)
     {
         throw new Exception("unknown args: " ~ extargs.to!string);

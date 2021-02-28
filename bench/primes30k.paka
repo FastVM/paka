@@ -1,4 +1,4 @@
-upto = 20000;
+upto = 30000;
 
 ret = 0;
 at = 2;
@@ -17,4 +17,4 @@ while (at < upto) {
     at = at + 1;
 };
 
-ret
+io.print(ret);

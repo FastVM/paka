@@ -152,22 +152,25 @@ class BytecodeEmitter
         }
     }
 
-    void entryFunc(BasicBlock block, Function func)
+    void entryFunc(BasicBlock block, Function func, string[] args=null)
     {
+        bool isBlockFirst = isFirst;
+        isFirst = false;
+        if (isBlockFirst)
+        {
+            disabled = null;
+        }
         typeGenerator.startFunction(block, predef(block));
         entryNew(block, func);
         typeGenerator.stopFunction(block);
-        if (isFirst)
+        if (isBlockFirst)
         {
-            disabled = null;
-            auto mainfunc = codeGenerator.genMainFunc(block, typeGenerator, predef(block));
-            func.jitted = mainfunc;
+            if (runjit)
+            {
+                auto mainfunc = codeGenerator.genMainFunc(block, typeGenerator);
+                func.jitted = mainfunc;
+            }
         }
-        else
-        {
-            codeGenerator.genFunc(block);
-        }
-        isFirst = false;
     }
 
     void entryNew(BasicBlock block, Function newFunc)
@@ -344,12 +347,11 @@ class BytecodeEmitter
         bool unfound = true;
         foreach (argno, argname; func.args)
         {
-            import core.memory : GC;
-
             if (argname.str == load.var)
             {
                 pushInstr(func, Opcode.argno, [cast(ushort) argno]);
                 unfound = false;
+                load.capture = LoadInstruction.Capture.arg;
             }
         }
         if (unfound)
@@ -360,12 +362,16 @@ class BytecodeEmitter
             {
                 pushInstr(func, Opcode.load, [cast(ushort)*us]);
                 flags = func.stab.flags(load.var);
+                unfound = false;
+                load.capture = LoadInstruction.Capture.not;
             }
             else
             {
                 uint v = func.doCapture(load.var);
                 pushInstr(func, Opcode.loadc, [cast(ushort) v]);
                 flags = func.captab.flags(load.var);
+                unfound = false;
+                load.capture = LoadInstruction.Capture.cap;
             }
         }
     }
@@ -409,7 +415,7 @@ class BytecodeEmitter
         Function newFunc = new Function;
         newFunc.parent = func;
         newFunc.args = lambda.argNames;
-        entryFunc(lambda.entry, newFunc);
+        entryFunc(lambda.entry, newFunc, lambda.argNames.map!(x => x.str).array);
         func.pushInstr(Opcode.sub, [cast(ushort) func.funcs.length]);
         func.funcs ~= newFunc;
     }

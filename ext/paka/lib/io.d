@@ -6,13 +6,15 @@ import purr.vm;
 import purr.fs.files;
 import purr.fs.disk;
 import purr.io;
+import purr.ir.types;
 import std.conv;
 
 Pair[] libio()
 {
+    Type.Options printType = new Type.Options(new Type.Function(new Type.Options(new Type.Nil), new Type.Array(new Type.Options), "_print"));
     // dfmt off
     Pair[] ret = [
-        FunctionPair!libprint("print"),
+        FunctionPair!libprint("print", printType),
         FunctionPair!libput("put"),
         FunctionPair!libreadln("readln"),
         FunctionPair!libread("read"),

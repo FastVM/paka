@@ -49,7 +49,8 @@ Dynamic evalImpl(Walker)(size_t ctx, Location code, Args args)
     }
     if (runjit && func.jitted !is null)
     {
-        return func.jitted().dynamic;
+        func.jitted();
+        return Dynamic.nil;
     }
     else
     {

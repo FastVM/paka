@@ -6,6 +6,7 @@ import std.algorithm;
 import std.array;
 import purr.dynamic;
 import purr.ir.repr;
+import purr.base;
 
 Type[] checked;
 Type[] tostr;
@@ -52,6 +53,7 @@ void collapseNumbers(Type.Options opts)
         }
         else
         {
+            assert(typeid(opt) != typeid(Type.Options));
             types ~= opt;
         }
     }
@@ -66,11 +68,8 @@ void collapseNumbers(Type.Options opts)
         if (min == max)
         {
             num = new Type.Number(min);
-        } // else if (isInt)
-        // {
-        //     num = new Type.Integer(min, max);
-        // }
-    else
+        }
+        else
         {
             num = new Type.Number;
         }
@@ -92,9 +91,12 @@ void collapseDuplicates(Type.Options opts)
     {
         foreach (index2, opt2; opts.options)
         {
-            if (index1 < index2 && opt1.subsets(opt2))
+            if (index1 < index2)
             {
-                continue outter;
+                if (opt1.subsets(opt2))
+                {
+                    continue outter;
+                }
             }
         }
         types ~= opt1;
@@ -104,8 +106,8 @@ void collapseDuplicates(Type.Options opts)
 
 void collapse(Type.Options opts)
 {
-    opts.collapseNumbers;
     opts.collapseDuplicates;
+    opts.collapseNumbers;
 }
 
 class Type
@@ -225,7 +227,7 @@ class Type
                 }
                 else
                 {
-                    return false;
+                    return true;
                 }
             }
         }
@@ -335,27 +337,108 @@ class Type
         }
     }
 
-    // static class Table : Type
-    // {
-    //     override string toString()
-    //     {
-    //         return "Table";
-    //     }
-    // }
+    static class Table : Type
+    {
+        Type.Options[string] exact;
+        Type.Options[2] elem;
+
+        this(Type.Options[2] el = [new Type.Options, new Type.Options])
+        {
+            elem = el;
+        }
+
+        this(Type.Options[string] ex)
+        {
+            foreach (key, value; ex)
+            {
+                exact[key] = value;
+            }
+        }
+
+        this(Type.Options[2] el, Type.Options[string] ex)
+        {
+            elem = el;
+            foreach (key, value; ex)
+            {
+                exact[key] = value;
+            }
+        }
+
+        ref Type.Options key()
+        {
+            return elem[0];
+        }
+
+        ref Type.Options value()
+        {
+            return elem[1];
+        }
+
+        override string toString()
+        {
+            foreach (i; tostr)
+            {
+                if (i is this)
+                {
+                    return "rec";
+                }
+            }
+            tostr ~= this;
+            scope (exit)
+            {
+                tostr.length--;
+            }
+            if (exact.length == 0)
+            {
+                return "Table[key:" ~ key.to!string ~ ", value:" ~ value.to!string ~ "]";
+            }
+            if (elem[0].options.length == 0 && elem[1].options.length == 0)
+            {
+                string resBody;
+                size_t count;
+                foreach (key, value; exact)
+                {
+                    if (count != 0)
+                    {
+                        resBody ~= ", ";
+                    }
+                    resBody ~= key.to!string ~ ":" ~ value.to!string;
+                    count++;
+                }
+                return "Struct[" ~ resBody ~ "]";
+            }
+            return "Table[key:" ~ key.to!string ~ ", value:" ~ value.to!string ~ "]";
+        }
+    }
 
     static class Function : Type
     {
         Type.Options retn;
         Type.Array args;
+        bool exact;
+        string func;
 
         this(Type.Options r, Type.Array a)
         {
+            exact = false;
+            retn = r;
+            args = a;
+        }
+
+        this(Type.Options r, Type.Array a, string f)
+        {
+            exact = true;
+            func = f;
             retn = r;
             args = a;
         }
 
         override string toString()
         {
+            if (exact)
+            {
+                return "Builtin[\"" ~ func ~ "\"]";
+            }
             return args.to!string ~ " -> " ~ retn.to!string;
             // return "Function[" ~ args.to!string ~ ", " ~ retn.to!string ~ "]";
         }
@@ -372,7 +455,7 @@ class Type
         {
             static foreach (arg; args)
             {
-                options ~= arg;
+                this |= arg;
             }
         }
 
@@ -396,31 +479,24 @@ class Type
         Options opOpAssign(string op : "|")(Type other)
         {
             assert(this !is null);
-            bool replaced = false;
             if (Options otherOptions = cast(Options) other)
             {
-                if (!otherOptions.isAny)
+                foreach (opt; otherOptions.options)
                 {
-                    foreach (opt; otherOptions.options)
-                    {
-                        this |= opt;
-                    }
-                    replaced = true;
+                    this |= opt;
                 }
+                collapse(this);
+                return this;
             }
             foreach (index, option; options)
             {
-                if (option.supersets(other))
+                if (other.subsets(option))
                 {
-                    replaced = true;
-                    break;
+                    collapse(this);
+                    return this;
                 }
             }
-            if (!replaced)
-            {
-                options ~= other;
-                replaced = true;
-            }
+            options ~= other;
             collapse(this);
             return this;
         }
@@ -499,7 +575,7 @@ class Type
 
         Only only(Only)(Only input)
         {
-            options ~= input;
+            this |= input;
             foreach (cur; options)
             {
                 if (Only ret = cast(Only) cur)
@@ -553,17 +629,29 @@ class Type
 
 class TypeGenerator
 {
-    Type.Options[] retns = [];
-    Type.Array[] argss = [];
     Type.Options[][] stacks = [null];
-    Type.Options[string][] localss;
+    Type.Options[string][] localss = [null];
+    Type.Options[string][] capturess = [null];
+    string[][] argLocalss = [null];
+    Type.Array[] argss = [null];
     Type.Function[BasicBlock] blockTypes;
     Type.Options[][BasicBlock] stackAt;
+    Type.Options[] retns;
     Type.Options[string][BasicBlock] localsAt;
+    Type.Options[string][BasicBlock] capturesAt;
     void delegate()[BasicBlock] atBlockEntry;
     void delegate()[BasicBlock] atBlockExit;
-    string[][] argLocalss;
     string[] argNames;
+    Type.Options[][2] stackDatas;
+
+    this()
+    {
+        locals = loadBaseTypes;
+    }
+
+    ~this()
+    {
+    }
 
     ref Type.Options retn()
     {
@@ -585,6 +673,11 @@ class TypeGenerator
         return localss[$ - 1];
     }
 
+    ref Type.Options[string] captures()
+    {
+        return capturess[$ - 1];
+    }
+
     ref string[] argLocals()
     {
         return argLocalss[$ - 1];
@@ -597,6 +690,7 @@ class TypeGenerator
         argLocalss.length++;
         stacks.length++;
         localss.length++;
+        capturess.length++;
         foreach (key, argname; argNames)
         {
             argLocals ~= argname;
@@ -609,20 +703,14 @@ class TypeGenerator
         retns.length--;
         argss.length--;
         stacks.length--;
+        capturess.length--;
         localss.length--;
         argLocalss.length--;
     }
 
-    this()
-    {
-    }
-
-    ~this()
-    {
-    }
-
     Type.Options pop()
     {
+        stackDatas[0] ~= stack[$ - 1];
         Type.Options popv = stack[$ - 1];
         stack.length--;
         return popv;
@@ -631,13 +719,22 @@ class TypeGenerator
     Type.Options[] pops(size_t n)
     {
         Type.Options[] popv = stack[$ - n .. $];
-        stack.length -= n;
+        foreach (i; 0 .. n)
+        {
+            pop;
+        }
         return popv;
+    }
+
+    void push(Type.Options value)
+    {
+        stack ~= value;
+        stackDatas[1] ~= stack[$ - 1];
     }
 
     void startFunction(BasicBlock bb, string[] predef)
     {
-        stack ~= new Type.Options(new Type.Function(new Type.Options, new Type.Array));
+        push = new Type.Options(new Type.Function(new Type.Options, new Type.Array));
         pusha;
         foreach (sym; predef)
         {
@@ -652,12 +749,13 @@ class TypeGenerator
         ty.retn = retn;
         ty.args = args;
         localsAt[bb] = locals.dup;
+        capturesAt[bb] = captures.dup;
         popa;
         // if (stacks.length == 1)
         // {
         //     writeln("type: ", func.retn);
         // }
-        blockTypes[bb] = ty; 
+        blockTypes[bb] = ty;
     }
 
     void startBlock(BasicBlock bb)
@@ -679,97 +777,148 @@ class TypeGenerator
 
     void append(Type.Options ty)
     {
-        stack ~= ty;
+        push = ty;
     }
 
     void genFrom(Arg)(Arg arg)
     {
+        stackDatas = [null, null];
+        Type.Options[] stc = stack.dup;
+        genFromInstr(arg);
+        arg.stackData = [stackDatas[0], stackDatas[1]];
+    }
+
+    void genFromInstr(Arg)(Arg arg)
+    {
         assert(false, Arg.stringof);
     }
 
-    void genFrom(LambdaInstruction lambda)
+    void genFromInstr(LambdaInstruction lambda)
     {
         argNames = lambda.argNames.map!(x => x.str).array;
     }
 
-    void genFrom(PushInstruction push)
+    void genFromInstr(PushInstruction ipush)
     {
-        stack ~= new Type.Options(Type.from(push.value));
+        push = new Type.Options(Type.from(ipush.value));
     }
 
-    void genFrom(OperatorInstruction opinst)
+    void genFromInstr(OperatorStoreInstruction opstore)
+    {
+        pushLocal(opstore.var);
+        genOp(opstore.op);
+        Type.Options opts = pop;
+        locals[opstore.var] = opts;
+        push = opts;
+    }
+
+    void genFromInstr(OperatorInstruction opinst)
     {
         genOp(opinst.op);
     }
 
-    void genFrom(CallInstruction call)
+    void genFromInstr(CallInstruction call)
     {
         Type.Options[] fargs = pops(call.argc);
         Type.Options funcOpts = pop;
-        Type.Function defaultTo = new Type.Function(new Type.Options, new Type.Array);
-        Type.Function func = funcOpts.only(defaultTo);
-        foreach (key, arg; fargs)
+        Type.Function func;
+        foreach_reverse (opt; funcOpts.options)
         {
-            if (Type.Options* opt = key in func.args.exact)
+            if (typeid(opt) == typeid(Type.Function))
             {
-                *opt = arg;
-            }
-            else
-            {
-                func.args.exact[key] = arg;
+                func = cast(Type.Function) opt;
+                break;
             }
         }
-        stack ~= func.retn;
+        if (func is null)
+        {
+            Type.Function defaultTo = new Type.Function(new Type.Options, new Type.Array);
+            func = funcOpts.only(defaultTo);
+        }
+        if (!func.exact)
+        {
+            foreach (key, arg; fargs)
+            {
+                if (Type.Options* opt = key in func.args.exact)
+                {
+                    *opt = arg;
+                }
+                else
+                {
+                    func.args.exact[key] = arg;
+                }
+            }
+        }
+        push = func.retn;
     }
 
-    void genFrom(ReturnBranch ret)
+    void genFromInstr(ReturnBranch ret)
     {
-        retn |= pop;
+        Type.Options res = pop;
+        retn |= res;
+        push = res;
     }
 
-    void genFrom(GotoBranch go)
+    void genFromInstr(GotoBranch go)
     {
     }
 
-    void genFrom(LoadInstruction load)
+    void pushLocal(string var)
     {
+        bool isCapture = false;
         foreach_reverse (index, scope_; localss)
         {
-            if (Type.Options* refv = load.var in scope_)
+            if (Type.Options* refv = var in scope_)
             {
-                stack ~= *refv;
+                push = *refv;
+                if (isCapture)
+                {
+                    captures[var] = stack[$ - 1];
+                }
                 return;
             }
             foreach (argno, name; argLocalss[index])
             {
-                if (name == load.var)
+                if (name == var)
                 {
-                    stack ~= indexArray(argss[index], new Type.Number(argno));
+                    push = indexArray(argss[index], new Type.Number(argno));
+                    if (isCapture)
+                    {
+                        captures[var] = stack[$ - 1];
+                    }
                     return;
                 }
             }
+            isCapture = true;
         }
-        assert(false, load.var);
+        assert(false, "variable not found " ~ var);
     }
 
-    void genFrom(PopInstruction instr)
+    void genFromInstr(LoadInstruction load)
+    {
+        pushLocal(load.var);
+    }
+
+    void genFromInstr(PopInstruction instr)
     {
         pop;
     }
 
-    void genFrom(StoreInstruction store)
+    void genFromInstr(StoreInstruction store)
     {
-        locals[store.var] = stack[$ - 1];
+        Type.Options opts = pop;
+        locals[store.var] = opts;
+        push = opts;
     }
 
     void mergeLogicalBranch()
     {
         Type.Options iffalse = pop;
         Type.Options iftrue = pop;
-        stack ~= iffalse | iftrue;
+        push = iffalse | iftrue;
     }
 
-    void genFrom(LogicalBranch branch)
+    void genFromInstr(LogicalBranch branch)
     {
         Type log = pop.only(new Type.Logical);
         if (branch.hasValue)
@@ -779,9 +928,9 @@ class TypeGenerator
         }
     }
 
-    void genFrom(ArgsInstruction argsInstr)
+    void genFromInstr(ArgsInstruction argsInstr)
     {
-        stack ~= new Type.Options(args);
+        push = new Type.Options(args);
     }
 
     Type.Options indexArray(Type.Array arr, Type.Number num)
@@ -802,15 +951,50 @@ class TypeGenerator
         }
         else
         {
-            assert(false, "internal bug: array index must be knwon");
+            return null;
+        }
+    }
+
+    Type.Options indexTable(Type.Table tab, Type.String str)
+    {
+        if (str.exact)
+        {
+            if (Type.Options* ity = str.val in tab.exact)
+            {
+                return *ity;
+            }
+            else
+            {
+                Type.Options ity = new Type.Options;
+                tab.exact[str.val] = ity;
+                return ity;
+            }
+        }
+        else
+        {
+            return null;
         }
     }
 
     Type.Options indexArray(Type.Options cls, Type.Options ind)
     {
-        Type.Array arr = cls.only(new Type.Array(new Type.Options));
+        Type[] clss = cls.options.dup;
+        Type[] inds = ind.options.dup;
+        Type.Array arr = cls.only(new Type.Array);
         Type.Number num = ind.only(new Type.Number);
-        return indexArray(arr, num);
+        if (Type.Options ret = indexArray(arr, num))
+        {
+            return ret;
+        }
+        cls.options = clss;
+        ind.options = inds;
+        Type.Table tab = cls.only(new Type.Table);
+        Type.String str = ind.only(new Type.String);
+        if (Type.Options ret = indexTable(tab, str))
+        {
+            return ret;
+        }
+        throw new Exception("not indexable: " ~ cls.to!string);
     }
 
     void mathOp()
@@ -819,7 +1003,7 @@ class TypeGenerator
         Type.Options lhs = pop;
         rhs.only(new Type.Number);
         lhs.only(new Type.Number);
-        stack ~= new Type.Options(new Type.Number);
+        push = new Type.Options(new Type.Number);
     }
 
     void genOp(string op)
@@ -831,7 +1015,7 @@ class TypeGenerator
         case "index":
             Type.Options ind = pop;
             Type.Options cls = pop;
-            stack ~= indexArray(cls, ind);
+            push = indexArray(cls, ind);
             break;
         case "cat":
             assert(false);
@@ -856,32 +1040,32 @@ class TypeGenerator
         case "lt":
             Type.Options rhs = pop;
             Type.Options lhs = pop;
-            stack ~= new Type.Options(new Type.Logical);
+            push = new Type.Options(new Type.Logical);
             break;
         case "gt":
             Type.Options rhs = pop;
             Type.Options lhs = pop;
-            stack ~= new Type.Options(new Type.Logical);
+            push = new Type.Options(new Type.Logical);
             break;
         case "lte":
             Type.Options rhs = pop;
             Type.Options lhs = pop;
-            stack ~= new Type.Options(new Type.Logical);
+            push = new Type.Options(new Type.Logical);
             break;
         case "gte":
             Type.Options rhs = pop;
             Type.Options lhs = pop;
-            stack ~= new Type.Options(new Type.Logical);
+            push = new Type.Options(new Type.Logical);
             break;
         case "neq":
             Type.Options rhs = pop;
             Type.Options lhs = pop;
-            stack ~= new Type.Options(new Type.Logical);
+            push = new Type.Options(new Type.Logical);
             break;
         case "eq":
             Type.Options rhs = pop;
             Type.Options lhs = pop;
-            stack ~= new Type.Options(new Type.Logical);
+            push = new Type.Options(new Type.Logical);
             break;
         }
     }

@@ -1,0 +1,24 @@
+def sum_primes(upto) {
+    def is_prime(num) {
+        test = 2;
+        while (test * test <= num) {
+            if (num % test == 0) {
+                return false;
+            };
+            test += 1;
+        };
+        return true;
+    };
+    ret = 0;
+    at = 2;
+    while (at < upto) {
+        if (is_prime(at)) {
+            ret += 1;
+        };
+        at += 1;
+    };
+    return ret;
+};
+
+res = sum_primes(1000000);
+io.print(res);

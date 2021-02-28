@@ -9,6 +9,7 @@ import purr.bytecode;
 import purr.data.map;
 import purr.plugin.syms;
 import purr.plugin.plugins;
+import purr.ir.types;
 
 struct Arg
 {
@@ -24,7 +25,7 @@ struct Arg
     }
 }
 
-Pair FunctionPair(alias func)(string name)
+Pair FunctionPair(alias func)(string name, Type.Options type=new Type.Options)
 {
     Dynamic[] args;
     static if (hasUDA!(func, Arg))
@@ -39,17 +40,19 @@ Pair FunctionPair(alias func)(string name)
     fun.args = args;
     fun.names ~= name.dynamic;
     fun.mangled = func.mangleof;
-    return Pair(name, fun);
+    return Pair(name, fun, type);
 }
 
 struct Pair
 {
     string name;
     Dynamic val;
-    this(T...)(string n, T v)
+    Type.Options type;
+    this(T)(string n, T v, Type.Options t=null)
     {
         name = n;
         val = v.dynamic;
+        type = t;
     }
 
     unittest
@@ -98,6 +101,7 @@ string[] defined;
 void addLib(ref Pair[] pairs, string name, Pair[] lib)
 {
     Mapping dyn = emptyMapping;
+    Type.Table tableType = new Type.Table;
     foreach (entry; lib)
     {
         if (!entry.name.canFind('.'))
@@ -109,10 +113,11 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
                 entry.val.fun.fun.names ~= newName.dynamic;
             }
             dyn[dynamic(entry.name)] = entry.val;
+            tableType.exact[entry.name] = entry.type;
         }
     }
     definedLibs ~= name;
-    pairs ~= Pair(name, dyn);
+    pairs ~= Pair(name, dyn, new Type.Options(tableType));
 }
 
 // TODO: return Function.Lookup instead of empty function
@@ -142,6 +147,16 @@ Function baseFunction(size_t ctx = rootBases.length-1)
     func.stab = ctx.baseFunctionLookup;
     func.captured = ctx.loadBase;
     return func;
+}
+
+Type.Options[string] loadBaseTypes(size_t ctx = rootBases.length-1)
+{
+    Type.Options[string] ret;
+    foreach (i; ctx.rootBase)
+    {
+        ret[i.name] = i.type;
+    }
+    return ret;
 }
 
 version(unittest)

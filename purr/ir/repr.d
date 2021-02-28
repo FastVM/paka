@@ -11,6 +11,7 @@ import purr.srcloc;
 import purr.bytecode;
 import purr.dynamic;
 import purr.inter;
+import purr.ir.types;
 import purr.ir.emit;
 import purr.ir.opt;
 
@@ -75,7 +76,18 @@ class BasicBlock
 
 class Emittable
 {
+    Type.Options[][2] stackData;
     Span span;
+
+    Type.Options[] doesPush()
+    {
+        return stackData[1];
+    }
+
+    Type.Options[] doesPop()
+    {
+        return stackData[0];
+    }
 }
 
 class Instruction : Emittable
@@ -350,7 +362,16 @@ class OperatorStoreIndexInstruction : Instruction
 
 class LoadInstruction : Instruction
 {
+    enum Capture : ubyte
+    {
+        unk,
+        not,
+        arg,
+        cap,
+    }
+
     string var;
+    Capture capture;
 
     this(string v)
     {
