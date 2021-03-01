@@ -437,7 +437,7 @@ class Type
         {
             if (exact)
             {
-                return "Builtin[\"" ~ func ~ "\"]";
+                return "(" ~ func ~ " :: " ~ args.to!string ~ " -> " ~ retn.to!string ~ ")";
             }
             return args.to!string ~ " -> " ~ retn.to!string;
             // return "Function[" ~ args.to!string ~ ", " ~ retn.to!string ~ "]";
@@ -835,20 +835,26 @@ class TypeGenerator
             Type.Function defaultTo = new Type.Function(new Type.Options, new Type.Array);
             func = funcOpts.only(defaultTo);
         }
-        if (!func.exact)
+        if (func.exact)
         {
-            foreach (key, arg; fargs)
+            func = new Type.Function(func.retn, new Type.Array, func.func);
+            funcOpts.options ~= func;
+        }
+        // if (!func.exact)
+        // {
+        foreach (key, arg; fargs)
+        {
+            if (Type.Options* opt = key in func.args.exact)
             {
-                if (Type.Options* opt = key in func.args.exact)
-                {
-                    *opt = arg;
-                }
-                else
-                {
-                    func.args.exact[key] = arg;
-                }
+                *opt = arg;
+            }
+            else
+            {
+                func.args.exact[key] = arg;
             }
         }
+        // }
+        // writeln(func.retn, " <- ", func.args);
         push = func.retn;
     }
 
@@ -865,15 +871,15 @@ class TypeGenerator
 
     void pushLocal(string var)
     {
-        bool isCapture = false;
+        int count = 0;
         foreach_reverse (index, scope_; localss)
         {
             if (Type.Options* refv = var in scope_)
             {
                 push = *refv;
-                if (isCapture)
+                foreach (ref capt; capturess[$ - count .. $])
                 {
-                    captures[var] = stack[$ - 1];
+                    capt[var] = stack[$ - 1];
                 }
                 return;
             }
@@ -882,14 +888,14 @@ class TypeGenerator
                 if (name == var)
                 {
                     push = indexArray(argss[index], new Type.Number(argno));
-                    if (isCapture)
+                    foreach (ref capt; capturess[$ - count .. $])
                     {
-                        captures[var] = stack[$ - 1];
+                        capt[var] = stack[$ - 1];
                     }
                     return;
                 }
             }
-            isCapture = true;
+            count++;
         }
         assert(false, "variable not found " ~ var);
     }

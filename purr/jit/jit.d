@@ -62,6 +62,7 @@ class Local
 void* paka_gc_malloc(size_t size)
 {
     import core.stdc.stdlib;
+
     return GC.malloc(size);
 }
 
@@ -97,6 +98,17 @@ class CodeGenerator
         return jitCtx.getType(JITTypeKind.UNSIGNED_CHAR).pointerOf;
     }
 
+    JITType numberType()
+    {
+        // return jitCtx.getType(JITTypeKind.LONG);
+        return jitCtx.getType(JITTypeKind.DOUBLE);
+    }
+
+    JITRValue consNumber(T)(T v)
+    {
+        return jitCtx.newRValue(numberType, v.to!double);
+    }
+
     size_t funcno = 0;
     string genFuncName()
     {
@@ -125,7 +137,7 @@ class CodeGenerator
     {
         if (typeid(ty) == typeid(Type.Number))
         {
-            return jitCtx.getType(JITTypeKind.LONG);
+            return numberType;
         }
         if (typeid(ty) == typeid(Type.Logical))
         {
@@ -133,7 +145,7 @@ class CodeGenerator
         }
         if (typeid(ty) == typeid(Type.Nil))
         {
-            return jitCtx.getType(JITTypeKind.BOOL);
+            return jitCtx.getType(JITTypeKind.UNSIGNED_CHAR);
         }
         if (typeid(ty) == typeid(Type.Table))
         {
@@ -218,7 +230,7 @@ class CodeGenerator
         {
             foreach (_; jitParamTypes.length .. key + 1)
             {
-                jitParamTypes ~= jitCtx.getType(JITTypeKind.BOOL);
+                jitParamTypes ~= jitCtx.getType(JITTypeKind.UNSIGNED_CHAR);
             }
             jitParamTypes[key] = jitTypeOf(type);
         }
@@ -245,7 +257,6 @@ class CodeGenerator
         JITType offsetType = jitCtx.getType(JITTypeKind.SIZE_T);
         JITRValue curOffset = jitCtx.zero(offsetType);
         JITRValue alloc = jitCtx.newRValue(mallocFunction, &paka_gc_malloc);
-        JITLValue cvar = lastJitFunc.newLocal(bytePtr, funcName ~ "_closure");
         JITRValue[string] closureIndex;
         foreach (sym, ty; typeGenerator.capturesAt[block])
         {
@@ -256,12 +267,21 @@ class CodeGenerator
             curOffset = jitCtx.newBinaryOp(JITBinaryOp.PLUS, offsetType,
                     curOffset, jitCtx.getSizeOf(type));
         }
+        JITLValue cvar = lastJitFunc.newLocal(bytePtr, funcName ~ "_closure");
         lastJitBlock.addAssignment(cvar, jitCtx.newCall(alloc, curOffset));
         foreach (sym, ty; typeGenerator.capturesAt[block])
         {
-            JITType type = jitTypeOf(ty);
+            JITType type = jitTypeOf(ty).pointerOf;
             JITRValue rval = jitCtx.newArrayAccess(cvar, closureIndex[sym]).getAddress;
-            lastJitBlock.addAssignment(rval.castTo(type.pointerOf.pointerOf).dereference, lastLocals[sym].value.getAddress);
+            JITLValue symvar = rval.castTo(type.pointerOf).dereference;
+            if (Local* localPtr = sym in lastLocals)
+            {
+                lastJitBlock.addAssignment(symvar, localPtr.value.getAddress);
+            }
+            else
+            {
+                throw new Exception("internal error in closure");
+            }
         }
         todoBlocks = null;
         emit(block);
@@ -280,7 +300,7 @@ class CodeGenerator
         lastJitBlock.addAssignment(lval.accessField(funcptr),
                 curJitFunc.getAddress.castTo(voidfunc));
         lastJitBlock.addAssignment(lval.accessField(dataptr), cvar);
-        // jitFunc.dump("out." ~ funcName ~ ".txt");
+        curJitFunc.dump("out." ~ funcName ~ ".txt");
         return lval;
     }
 
@@ -392,12 +412,12 @@ class CodeGenerator
             jitBlock.addAssignmentOp(locals[var].value, JITBinaryOp.DIVIDE, stack[$ - 1]);
             break;
         case "mod":
-            // // Double
-            // JITFunction fmod = jitCtx.getBuiltinFunction("fmod");
-            // JITRValue rvalue = jitCtx.newCall(fmod, [locals[var], stack[$ - 1]]);
-            // jitBlock.addAssignment(locals[var], rvalue);
+            // Double
+            JITFunction fmod = jitCtx.getBuiltinFunction("fmod");
+            JITRValue rvalue = jitCtx.newCall(fmod, [locals[var].value, stack[$ - 1]]);
+            jitBlock.addAssignment(locals[var].value, rvalue);
             // // Integer.value
-            jitBlock.addAssignmentOp(locals[var].value, JITBinaryOp.MODULO, stack[$ - 1]);
+            // jitBlock.addAssignmentOp(locals[var].value, JITBinaryOp.MODULO, stack[$ - 1]);
             break;
         case "sub":
             jitBlock.addAssignmentOp(locals[var].value, JITBinaryOp.MINUS, stack[$ - 1]);
@@ -431,38 +451,33 @@ class CodeGenerator
         case "mul":
             JITRValue rhs = stack.pop;
             JITRValue lhs = stack.pop;
-            stack ~= jitCtx.newBinaryOp(JITBinaryOp.MULT,
-                    jitCtx.getType(JITTypeKind.LONG), lhs, rhs);
+            stack ~= jitCtx.newBinaryOp(JITBinaryOp.MULT, numberType, lhs, rhs);
             break;
         case "div":
             JITRValue rhs = stack.pop;
             JITRValue lhs = stack.pop;
-            stack ~= jitCtx.newBinaryOp(JITBinaryOp.DIVIDE,
-                    jitCtx.getType(JITTypeKind.LONG), lhs, rhs);
+            stack ~= jitCtx.newBinaryOp(JITBinaryOp.DIVIDE, numberType, lhs, rhs);
             break;
         case "mod":
-            // // Double
-            // JITRValue rhs = stack.pop;
-            // JITRValue lhs = stack.pop;
-            // JITFunction fmod = jitCtx.getBuiltinFunction("fmod");
-            // stack ~= jitCtx.newCall(fmod, [lhs, rhs]);
-            // // Integer
+            // Double
             JITRValue rhs = stack.pop;
             JITRValue lhs = stack.pop;
-            stack ~= jitCtx.newBinaryOp(JITBinaryOp.MODULO,
-                    jitCtx.getType(JITTypeKind.LONG), lhs, rhs);
+            JITFunction fmod = jitCtx.getBuiltinFunction("fmod");
+            stack ~= jitCtx.newCall(fmod, [lhs, rhs]);
+            // // Integer
+            // JITRValue rhs = stack.pop;
+            // JITRValue lhs = stack.pop;
+            // stack ~= jitCtx.newBinaryOp(JITBinaryOp.MODULO, numberType, lhs, rhs);
             break;
         case "sub":
             JITRValue rhs = stack.pop;
             JITRValue lhs = stack.pop;
-            stack ~= jitCtx.newBinaryOp(JITBinaryOp.MINUS,
-                    jitCtx.getType(JITTypeKind.LONG), lhs, rhs);
+            stack ~= jitCtx.newBinaryOp(JITBinaryOp.MINUS, numberType, lhs, rhs);
             break;
         case "add":
             JITRValue rhs = stack.pop;
             JITRValue lhs = stack.pop;
-            stack ~= jitCtx.newBinaryOp(JITBinaryOp.PLUS,
-                    jitCtx.getType(JITTypeKind.LONG), lhs, rhs);
+            stack ~= jitCtx.newBinaryOp(JITBinaryOp.PLUS, numberType, lhs, rhs);
             break;
         case "lt":
             JITRValue rhs = stack.pop;
@@ -499,23 +514,21 @@ class CodeGenerator
 
     JITRValue printNumFuncPtr()
     {
-        JITParam param1 = jitCtx.newParam(jitCtx.getType(JITTypeKind.LONG), "num");
+        JITParam param1 = jitCtx.newParam(numberType, "num");
         JITParam closure = jitCtx.newParam(bytePtr, "closure");
         JITFunction func = jitCtx.newFunction(JITFunctionKind.EXPORTED,
-                jitCtx.getType(JITTypeKind.BOOL), "_P2ioI5printFZ1N", false, [
-                    param1, closure,
-                ]);
+                jitCtx.getType(JITTypeKind.UNSIGNED_CHAR), "_P2ioI5printFZ1N",
+                false, [param1, closure,]);
         JITBlock blk = func.newBlock();
-        JITType[] printfArgs = [getStringType, jitCtx.getType(JITTypeKind.LONG)];
-        JITType printfType = jitCtx.newFunctionType(jitCtx.getType(JITTypeKind.LONG),
-                false, printfArgs);
+        JITType[] printfArgs = [getStringType, numberType];
+        JITType printfType = jitCtx.newFunctionType(numberType, false, printfArgs);
         JITFunction funcPrintf = jitCtx.getBuiltinFunction("__builtin_printf");
         JITRValue printfPtr = jitCtx.newCast(funcPrintf.getAddress, printfType);
         JITRValue arg = func.getParam(0);
-        JITRValue fmt = jitCtx.newRValue(getStringType, cast(void*) "%li\n".ptr);
+        JITRValue fmt = jitCtx.newRValue(getStringType, cast(void*) "%lf\n".ptr);
         JITRValue printfPtrCalled = jitCtx.newCall(printfPtr, [fmt, arg]);
         blk.addEval(printfPtrCalled);
-        blk.endWithReturn(jitCtx.newRValue(jitCtx.getType(JITTypeKind.BOOL), false));
+        blk.endWithReturn(jitCtx.newRValue(jitCtx.getType(JITTypeKind.UNSIGNED_CHAR), false));
         return func.getAddress;
     }
 
@@ -545,20 +558,33 @@ class CodeGenerator
     {
         if (op.op == "index")
         {
+            writeln(op.doesPush[0]);
             Type.Options opts = op.doesPush[0];
-            assert(opts.options.length == 1, "internal error: unions");
-            Type first = opts.options[0];
-            assert(typeid(first) == typeid(Type.Function),
-                    "internal error: not implemented yet: x[y]");
-            Type.Function func = cast(Type.Function) first;
-            assert(func.exact, "internal error: !func.exact");
-            final switch (func.func)
+            Type.Function[] funcs;
+            foreach (ty; opts.options)
             {
-            case "_print":
-                func.retn = new Type.Options(new Type.Nil);
-                stack ~= nullClosure(printNumFuncPtr);
-                return;
+                writeln(ty);
+                if(typeid(ty) != typeid(Type.Function))
+                {
+                    continue;
+                }
+                Type.Function func = cast(Type.Function) ty;
+                if (!func.exact)
+                {
+                    continue;
+                }
+                writeln(func.args.exact);
+                writeln(func.retn, " <- ", func.args);
+                final switch (func.func)
+                {
+                case "_print":
+                    
+                    func.retn = new Type.Options(new Type.Nil);
+                    stack ~= nullClosure(printNumFuncPtr);
+                    return;
+                }
             }
+            throw new Exception("cannot index dynamic yet");
         }
         emitOpBinary(op.op);
     }
@@ -624,13 +650,14 @@ class CodeGenerator
         switch (val.type)
         {
         case Dynamic.Type.nil:
-            stack ~= jitCtx.newRValue(jitCtx.getType(JITTypeKind.BOOL), false);
+            stack ~= jitCtx.newRValue(jitCtx.getType(JITTypeKind.UNSIGNED_CHAR), false);
             break;
         case Dynamic.Type.log:
-            stack ~= jitCtx.newRValue(jitCtx.getType(JITTypeKind.BOOL), val.log);
+            stack ~= jitCtx.newRValue(jitCtx.getType(JITTypeKind.UNSIGNED_CHAR), val.log);
             break;
         case Dynamic.Type.sml:
-            stack ~= jitCtx.newRValue(jitCtx.getType(JITTypeKind.LONG), val.as!int);
+            // stack ~= jitCtx.newRValue(numberType, val.as!int);
+            stack ~= consNumber(val.as!double);
             break;
         case Dynamic.Type.str:
             stack ~= newString(val.str);
@@ -668,7 +695,7 @@ class CodeGenerator
 
     void emit(ReturnBranch retb)
     {
-        JITLValue retn = jitFunc.newLocal(stack[$-1].getType, genTmpVar);
+        JITLValue retn = jitFunc.newLocal(stack[$ - 1].getType, genTmpVar);
         jitBlock.addAssignment(retn, stack.pop);
         stack ~= retn;
         if (jitFunc is jitFuncFirst)
@@ -693,12 +720,12 @@ class CodeGenerator
         JITBlock myJitBlock = jitBlock;
         if (logb.hasValue)
         {
-            JITLValue cond = jitFunc.newLocal(stack[$-1].getType, genTmpVar);
+            JITLValue cond = jitFunc.newLocal(stack[$ - 1].getType, genTmpVar);
             myJitBlock.addAssignment(cond, stack.pop);
             disable(logb.post);
             entry(logb.target[0], (iftrue) {
                 entry(logb.target[1], (iffalse) {
-                    JITLValue result = jitFunc.newLocal(stack[$-1].getType, genTmpVar);
+                    JITLValue result = jitFunc.newLocal(stack[$ - 1].getType, genTmpVar);
                     JITBlock iftrue2 = jitFunc.newBlock;
                     iftrue2.addAssignment(result, stack.pop);
                     iftrue2.endWithJump(iftrue);
