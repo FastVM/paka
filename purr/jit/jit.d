@@ -101,12 +101,12 @@ class CodeGenerator
     JITType numberType()
     {
         // return jitCtx.getType(JITTypeKind.LONG);
-        return jitCtx.getType(JITTypeKind.DOUBLE);
+        return jitCtx.getType(JITTypeKind.LONG);
     }
 
     JITRValue consNumber(T)(T v)
     {
-        return jitCtx.newRValue(numberType, v.to!double);
+        return jitCtx.newRValue(numberType, v.to!int);
     }
 
     size_t funcno = 0;
@@ -141,7 +141,7 @@ class CodeGenerator
         }
         if (typeid(ty) == typeid(Type.Logical))
         {
-            return jitCtx.getType(JITTypeKind.UNSIGNED_CHAR);
+            return jitCtx.getType(JITTypeKind.BOOL);
         }
         if (typeid(ty) == typeid(Type.Nil))
         {
@@ -203,9 +203,9 @@ class CodeGenerator
             todoBlocks = todoBlocks[1 .. $];
             cur();
         }
-        gcc_jit_context_compile_to_file(jitCtx.getContext(),
-                GCC_JIT_OUTPUT_KIND_ASSEMBLER, "out.s".ptr);
-        jitFunc.dump("out.txt");
+        // gcc_jit_context_compile_to_file(jitCtx.getContext(),
+        //         GCC_JIT_OUTPUT_KIND_ASSEMBLER, "out.s".ptr);
+        // jitFunc.dump("out.txt");
         JITResult jitResult = jitCtx.compile;
         void* vptr = jitResult.getCode("main");
         void function() res = cast(void function()) vptr;
@@ -230,7 +230,8 @@ class CodeGenerator
         {
             foreach (_; jitParamTypes.length .. key + 1)
             {
-                jitParamTypes ~= jitCtx.getType(JITTypeKind.UNSIGNED_CHAR);
+                // jitParamTypes ~= jitCtx.getType(JITTypeKind.UNSIGNED_CHAR);
+                jitParamTypes.length++;
             }
             jitParamTypes[key] = jitTypeOf(type);
         }
@@ -412,12 +413,12 @@ class CodeGenerator
             jitBlock.addAssignmentOp(locals[var].value, JITBinaryOp.DIVIDE, stack[$ - 1]);
             break;
         case "mod":
-            // Double
-            JITFunction fmod = jitCtx.getBuiltinFunction("fmod");
-            JITRValue rvalue = jitCtx.newCall(fmod, [locals[var].value, stack[$ - 1]]);
-            jitBlock.addAssignment(locals[var].value, rvalue);
-            // // Integer.value
-            // jitBlock.addAssignmentOp(locals[var].value, JITBinaryOp.MODULO, stack[$ - 1]);
+            // // Double
+            // JITFunction fmod = jitCtx.getBuiltinFunction("fmod");
+            // JITRValue rvalue = jitCtx.newCall(fmod, [locals[var].value, stack[$ - 1]]);
+            // jitBlock.addAssignment(locals[var].value, rvalue);
+            // Integer.value
+            jitBlock.addAssignmentOp(locals[var].value, JITBinaryOp.MODULO, stack[$ - 1]);
             break;
         case "sub":
             jitBlock.addAssignmentOp(locals[var].value, JITBinaryOp.MINUS, stack[$ - 1]);
@@ -459,15 +460,15 @@ class CodeGenerator
             stack ~= jitCtx.newBinaryOp(JITBinaryOp.DIVIDE, numberType, lhs, rhs);
             break;
         case "mod":
-            // Double
-            JITRValue rhs = stack.pop;
-            JITRValue lhs = stack.pop;
-            JITFunction fmod = jitCtx.getBuiltinFunction("fmod");
-            stack ~= jitCtx.newCall(fmod, [lhs, rhs]);
-            // // Integer
+            // // Double
             // JITRValue rhs = stack.pop;
             // JITRValue lhs = stack.pop;
-            // stack ~= jitCtx.newBinaryOp(JITBinaryOp.MODULO, numberType, lhs, rhs);
+            // JITFunction fmod = jitCtx.getBuiltinFunction("fmod");
+            // stack ~= jitCtx.newCall(fmod, [lhs, rhs]);
+            // Integer
+            JITRValue rhs = stack.pop;
+            JITRValue lhs = stack.pop;
+            stack ~= jitCtx.newBinaryOp(JITBinaryOp.MODULO, numberType, lhs, rhs);
             break;
         case "sub":
             JITRValue rhs = stack.pop;
@@ -525,7 +526,7 @@ class CodeGenerator
         JITFunction funcPrintf = jitCtx.getBuiltinFunction("__builtin_printf");
         JITRValue printfPtr = jitCtx.newCast(funcPrintf.getAddress, printfType);
         JITRValue arg = func.getParam(0);
-        JITRValue fmt = jitCtx.newRValue(getStringType, cast(void*) "%lf\n".ptr);
+        JITRValue fmt = jitCtx.newRValue(getStringType, cast(void*) "%ld\n".ptr);
         JITRValue printfPtrCalled = jitCtx.newCall(printfPtr, [fmt, arg]);
         blk.addEval(printfPtrCalled);
         blk.endWithReturn(jitCtx.newRValue(jitCtx.getType(JITTypeKind.UNSIGNED_CHAR), false));
@@ -558,12 +559,10 @@ class CodeGenerator
     {
         if (op.op == "index")
         {
-            writeln(op.doesPush[0]);
             Type.Options opts = op.doesPush[0];
             Type.Function[] funcs;
             foreach (ty; opts.options)
             {
-                writeln(ty);
                 if(typeid(ty) != typeid(Type.Function))
                 {
                     continue;
@@ -573,8 +572,6 @@ class CodeGenerator
                 {
                     continue;
                 }
-                writeln(func.args.exact);
-                writeln(func.retn, " <- ", func.args);
                 final switch (func.func)
                 {
                 case "_print":
@@ -613,7 +610,9 @@ class CodeGenerator
 
     void emit(StoreInstruction store)
     {
-        jitBlock.addAssignment(locals[store.var].value, stack[$ - 1]);
+        JITLValue lval = locals[store.var].value;
+        jitBlock.addAssignment(lval, stack.pop);
+        stack ~= lval;
     }
 
     void emit(PopInstruction _)
@@ -653,7 +652,7 @@ class CodeGenerator
             stack ~= jitCtx.newRValue(jitCtx.getType(JITTypeKind.UNSIGNED_CHAR), false);
             break;
         case Dynamic.Type.log:
-            stack ~= jitCtx.newRValue(jitCtx.getType(JITTypeKind.UNSIGNED_CHAR), val.log);
+            stack ~= jitCtx.newRValue(jitCtx.getType(JITTypeKind.BOOL), val.log);
             break;
         case Dynamic.Type.sml:
             // stack ~= jitCtx.newRValue(numberType, val.as!int);
@@ -695,8 +694,9 @@ class CodeGenerator
 
     void emit(ReturnBranch retb)
     {
-        JITLValue retn = jitFunc.newLocal(stack[$ - 1].getType, genTmpVar);
-        jitBlock.addAssignment(retn, stack.pop);
+        JITRValue res = stack.pop;
+        JITLValue retn = jitFunc.newLocal(res.getType, genTmpVar);
+        jitBlock.addAssignment(retn, res);
         stack ~= retn;
         if (jitFunc is jitFuncFirst)
         {
@@ -730,7 +730,7 @@ class CodeGenerator
                     iftrue2.addAssignment(result, stack.pop);
                     iftrue2.endWithJump(iftrue);
                     JITBlock iffalse2 = jitFunc.newBlock;
-                    iffalse2.addAssignment(result, stack.pop);
+                    iffalse2.addAssignment(result, stack.pop.castTo(result.getType));
                     iffalse2.endWithJump(iffalse);
                     myJitBlock.endWithConditional(cond, iftrue2, iffalse2);
                     stack ~= result;
