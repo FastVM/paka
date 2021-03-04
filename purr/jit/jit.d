@@ -208,6 +208,7 @@ class CodeGenerator
         // jitFunc.dump("out.txt");
         JITResult jitResult = jitCtx.compile;
         void* vptr = jitResult.getCode("main");
+        assert(vptr !is null);
         void function() res = cast(void function()) vptr;
         return res;
     }
@@ -513,8 +514,14 @@ class CodeGenerator
         }
     }
 
+    JITRValue res;
+
     JITRValue printNumFuncPtr()
     {
+        if (res !is null)
+        {
+            return res;
+        }
         JITParam param1 = jitCtx.newParam(numberType, "num");
         JITParam closure = jitCtx.newParam(bytePtr, "closure");
         JITFunction func = jitCtx.newFunction(JITFunctionKind.EXPORTED,
@@ -530,7 +537,8 @@ class CodeGenerator
         JITRValue printfPtrCalled = jitCtx.newCall(printfPtr, [fmt, arg]);
         blk.addEval(printfPtrCalled);
         blk.endWithReturn(jitCtx.newRValue(jitCtx.getType(JITTypeKind.UNSIGNED_CHAR), false));
-        return func.getAddress;
+        res = func.getAddress;
+        return res;
     }
 
     JITRValue nullClosure(JITRValue func)
@@ -617,7 +625,7 @@ class CodeGenerator
 
     void emit(PopInstruction _)
     {
-        stack.pop;
+        jitBlock.addEval(stack.pop);
     }
 
     JITType memoString;
@@ -724,11 +732,11 @@ class CodeGenerator
             myJitBlock.addAssignment(cond, stack.pop);
             disable(logb.post);
             entry(logb.target[0], (iftrue) {
+                JITLValue result = jitFunc.newLocal(stack[$ - 1].getType, genTmpVar);
+                JITBlock iftrue2 = jitFunc.newBlock;
+                iftrue2.addAssignment(result, stack.pop.castTo(result.getType));
+                iftrue2.endWithJump(iftrue);
                 entry(logb.target[1], (iffalse) {
-                    JITLValue result = jitFunc.newLocal(stack[$ - 1].getType, genTmpVar);
-                    JITBlock iftrue2 = jitFunc.newBlock;
-                    iftrue2.addAssignment(result, stack.pop);
-                    iftrue2.endWithJump(iftrue);
                     JITBlock iffalse2 = jitFunc.newBlock;
                     iffalse2.addAssignment(result, stack.pop.castTo(result.getType));
                     iffalse2.endWithJump(iffalse);
