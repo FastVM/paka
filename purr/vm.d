@@ -14,6 +14,8 @@ import purr.dynamic;
 import purr.bytecode;
 import purr.data.map;
 
+version = PurrErrors;
+
 Span[] spans;
 
 void delegate(VMInfo info)[] inspects;

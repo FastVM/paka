@@ -15,7 +15,6 @@ import purr.ir.emit;
 import purr.ir.opt;
 import purr.ir.repr;
 import purr.ir.types;
-import purr.jit.jit;
 
 void modifyInstr(T)(Function func, T index, ushort v)
 {
@@ -127,13 +126,13 @@ class BytecodeEmitter
     Function func;
     ushort[Function][BasicBlock] counts;
     // TypeGenerator typeGenerator;
-    CodeGenerator codeGenerator;
+    // CodeGenerator codeGenerator;
     bool isFirst = true;
 
     this()
     {
         // typeGenerator = new TypeGenerator;
-        codeGenerator = new CodeGenerator;
+        // codeGenerator = new CodeGenerator;
     }
 
     bool within(BasicBlock block, Function func)

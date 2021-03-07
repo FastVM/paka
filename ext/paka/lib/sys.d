@@ -20,9 +20,10 @@ import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;
 import std.array;
+import std.process;
 import std.conv;
 import purr.io;
-import std.parallelism: parallel;
+import std.parallelism : parallel;
 
 Pair[] libsys()
 {
@@ -30,13 +31,21 @@ Pair[] libsys()
         FunctionPair!libleave("leave"), FunctionPair!libargs("args"),
         FunctionPair!libtypeof("typeof"), FunctionPair!libimport("import"),
         FunctionPair!libassert("enforce"), FunctionPair!libeval("eval"),
+        FunctionPair!libshell("shell"),
     ];
     ret.addLib("env", libsysenv);
     return ret;
 }
 
+Dynamic libshell(Args args)
+{
+    auto res = executeShell(args[0].str);
+    return res.output.dynamic;
+}
+
 /// asserts value is true, with error msg
-Dynamic libassert(Args args) {
+Dynamic libassert(Args args)
+{
     if (args[0].type == Dynamic.Type.nil || (args[0].type == Dynamic.Type.log && !args[0].log))
     {
         throw new AssertException("assert error: " ~ args[1].to!string);
@@ -45,7 +54,8 @@ Dynamic libassert(Args args) {
 }
 
 /// imports value returning what it returned
-Dynamic libimport(Args args) {
+Dynamic libimport(Args args)
+{
     size_t ctx = enterCtx;
     scope (exit)
     {
@@ -57,7 +67,8 @@ Dynamic libimport(Args args) {
 }
 
 /// imports value returning what it returned
-Dynamic libeval(Args args) {
+Dynamic libeval(Args args)
+{
     Location data = Location(1, 1, "__eval__", args[0].str);
     Dynamic val = eval(rootBases.length - 1, data);
     return val;
@@ -66,24 +77,25 @@ Dynamic libeval(Args args) {
 /// returns type of value as a string
 Dynamic libtypeof(Args args)
 {
-    final switch (args[0].type) {
-        case Dynamic.Type.nil:
-            return dynamic("nil");
-        case Dynamic.Type.log:
-            return dynamic("logical");
-        case Dynamic.Type.sml:
-            return dynamic("number");
-        case Dynamic.Type.str:
-            return dynamic("string");
-        case Dynamic.Type.arr:
-            return dynamic("array");
-        case Dynamic.Type.tab:
-            return dynamic("table");
-        case Dynamic.Type.fun:
-            return dynamic("callable");
-        case Dynamic.Type.pro:
-            return dynamic("callable");
-    } 
+    final switch (args[0].type)
+    {
+    case Dynamic.Type.nil:
+        return dynamic("nil");
+    case Dynamic.Type.log:
+        return dynamic("logical");
+    case Dynamic.Type.sml:
+        return dynamic("number");
+    case Dynamic.Type.str:
+        return dynamic("string");
+    case Dynamic.Type.arr:
+        return dynamic("array");
+    case Dynamic.Type.tab:
+        return dynamic("table");
+    case Dynamic.Type.fun:
+        return dynamic("callable");
+    case Dynamic.Type.pro:
+        return dynamic("callable");
+    }
 }
 
 /// internal map function

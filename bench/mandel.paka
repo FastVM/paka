@@ -1,12 +1,10 @@
-scl = 50;
+scl = 0.5;
 it = 50;
-xv = [-2, 6/10, 5/100 / scl];
+xv = [-2, 6/10, 5/200 / scl];
 yv = [-1, 1, 5/100 / scl];
 
-io.print("P1");
 width = (xv[1] - xv[0]) / xv[2];
 height = (yv[1] - yv[0]) / yv[2];
-io.print(width, " ", height);
 
 y = yv[0];
 yc = 0;
@@ -24,9 +22,9 @@ while (yc < height) {
             i += 1;
         };
         if (i == it) {
-            io.put(1, " ");
+            io.put("#");
         } else {
-            io.put(0, " ");
+            io.put(" ");
         };
         x += xv[2];
         xc += 1;

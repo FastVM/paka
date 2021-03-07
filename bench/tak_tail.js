@@ -15,4 +15,4 @@ function tak(x, y, z) {
     return tak_rec(0, x, y, z);
 }
 
-console.log(tak_rec(0, 57, 49, 84));
+console.log(tak_rec);

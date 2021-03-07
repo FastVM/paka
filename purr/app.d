@@ -26,7 +26,6 @@ import std.conv;
 import std.string;
 import std.getopt;
 import core.stdc.stdlib;
-import purr.jit.jit;
 
 version = JITEnabled;
 
@@ -109,15 +108,6 @@ Thunk cliBytecodeHandler()
 Thunk cliJitHandler()
 {
     return { runjit = !runjit; };
-}
-
-Thunk cliOptHandler(string num)
-{
-    if (!["0", "1", "2", "3"].canFind(num))
-    {
-        throw new Exception("error in flag: --opt " ~ num.to!string);
-    }
-    return { optlevel = num.to!int; };
 }
 
 Thunk cliEchoHandler()
@@ -203,11 +193,6 @@ void domain(string[] args)
             string langname = extargs[$ - 1];
             extargs.length--;
             todo ~= langname.cliLangHandler;
-            break;
-        case "--opt":
-            string optto = extargs[$ - 1];
-            extargs.length--;
-            todo ~= optto.cliOptHandler;
             break;
         case "--bytecode":
             todo ~= cliBytecodeHandler;

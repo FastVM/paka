@@ -354,7 +354,8 @@ class Reader
 		}
 		else
 		{
-			return input.readln[0 .. $ - 1].dup;
+			string ret = input.readln;
+			return cast(char[]) ret.strip.array.dup;
 		}
 	}
 }

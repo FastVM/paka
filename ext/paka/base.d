@@ -10,6 +10,7 @@ import paka.lib.sys;
 import paka.lib.str;
 import paka.lib.arr;
 import paka.lib.tab;
+import paka.lib.math;
 import paka.enforce;
 
 /// string concatenate for format strings and unicode literals
@@ -161,5 +162,6 @@ Pair[] pakaBaseLibs()
     ret.addLib("tab", libtab);
     ret.addLib("io", libio);
     ret.addLib("sys", libsys);
+    ret.addLib("math", libmath);
     return ret;
 }
