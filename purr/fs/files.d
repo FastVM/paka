@@ -4,9 +4,9 @@ import purr.fs.memory;
 import purr.srcloc;
 import std.file;
 
-MemoryDirectory fileSystem;
+__gshared MemoryDirectory fileSystem;
 
-static this()
+shared static this()
 {
     fileSystem = new MemoryDirectory;
 }

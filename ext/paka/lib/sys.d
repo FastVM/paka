@@ -31,17 +31,17 @@ Pair[] libsys()
         FunctionPair!libleave("leave"), FunctionPair!libargs("args"),
         FunctionPair!libtypeof("typeof"), FunctionPair!libimport("import"),
         FunctionPair!libassert("enforce"), FunctionPair!libeval("eval"),
-        FunctionPair!libshell("shell"),
+        // FunctionPair!libshell("shell"),
     ];
     ret.addLib("env", libsysenv);
     return ret;
 }
 
-Dynamic libshell(Args args)
-{
-    auto res = executeShell(args[0].str);
-    return res.output.dynamic;
-}
+// Dynamic libshell(Args args)
+// {
+//     auto res = executeShell(args[0].str);
+//     return res.output.dynamic;
+// }
 
 /// asserts value is true, with error msg
 Dynamic libassert(Args args)
@@ -53,6 +53,7 @@ Dynamic libassert(Args args)
     return Dynamic.nil;
 }
 
+Dynamic[string] libs;
 /// imports value returning what it returned
 Dynamic libimport(Args args)
 {
@@ -61,8 +62,13 @@ Dynamic libimport(Args args)
     {
         exitCtx;
     }
+    if (Dynamic* ret = args[0].str in libs)
+    {
+        return *ret;
+    }
     Location data = args[0].str.readFile;
     Dynamic val = ctx.eval(data);
+    libs[args[0].str] = val;
     return val;
 }
 

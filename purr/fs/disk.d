@@ -13,9 +13,9 @@ import std.container;
 import std.datetime.stopwatch;
 import std.datetime.systime;
 
-StopWatch watch;
+__gshared StopWatch watch;
 
-static this()
+shared static this()
 {
     watch = StopWatch(AutoStart.yes);
 }
@@ -25,6 +25,11 @@ void dumpToFile(string filename, string data)
     File file = File(filename, "w");
     file.write(data);
     file.close();
+}
+
+bool fsexists(string path)
+{
+    return !(path !in fileSystem) || exists(path);
 }
 
 Location readFile(string path)

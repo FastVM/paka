@@ -28,8 +28,16 @@ bool runjit = false;
 LocalCallback exportLocalsToBaseCallback(Function func)
 {
     LocalCallback ret = (uint index, Dynamic* stack, Dynamic[] locals) {
-        foreach (i, v; locals[0 .. func.stab.length])
+        most: foreach (i, v; locals[0 .. func.stab.length])
         {
+            foreach (ref rb; rootBase)
+            {
+                if (rb.name == func.stab[i])
+                {
+                    rb.val = v;
+                    continue most;
+                }
+            }
             rootBase ~= Pair(func.stab[i], v);
         }
     };

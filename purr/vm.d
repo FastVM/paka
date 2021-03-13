@@ -49,25 +49,11 @@ pragma(inline, true) T eat(T)(ubyte* bytes, ref ushort index)
     return ret;
 }
 
-void[2 ^^ 16] values;
-void* stacks;
+alias allocateStackAllowed = alloca;
 
-// alias allocateStackAllowed = alloca;
-static this()
-{
-    stacks = values.ptr;
-}
-
-pragma(inline, true)
-void* allocateStackAllowed(size_t size)
-{
-    return (stacks += size) - size;
-}
-
-pragma(inline, true)
+pragma(inline, true) 
 void freeStackAllowed(size_t size)
 {
-    stacks -= size;
 }
 
 Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)

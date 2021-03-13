@@ -7,7 +7,6 @@ import purr.vm;
 import purr.srcloc;
 import purr.base;
 import purr.ast;
-import purr.base;
 import purr.dynamic;
 import purr.parse;
 import purr.inter;

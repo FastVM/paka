@@ -1,24 +1,39 @@
 module paka.lib.arr;
+
+import core.memory;
+import std.array;
+import std.algorithm;
+import std.parallelism;
+import std.concurrency;
+import std.conv;
+import std.conv;
 import purr.base;
 import purr.dynamic;
 import purr.error;
-import std.array;
-import std.algorithm;
 import purr.io;
-import std.conv;
 
 Pair[] libarr()
 {
-    Pair[] ret = [
-        FunctionPair!liblen("len"), FunctionPair!libsplit("split"),
-        FunctionPair!libpush("push"), FunctionPair!libextend("extend"),
-        FunctionPair!libpop("pop"), FunctionPair!libslice("slice"),
-        FunctionPair!libmap("map"), FunctionPair!libfilter("filter"),
-        FunctionPair!libzip("zip"), FunctionPair!librange("range"),
-        FunctionPair!libeach("each"), FunctionPair!libsorted("sorted"),
-    ];
+    Pair[] ret;
+    ret ~= FunctionPair!libsplit("split");
+    ret ~= FunctionPair!libextend("extend");
+    ret ~= FunctionPair!libslice("slice");
+    ret ~= FunctionPair!libfilter("filter");
+    ret ~= FunctionPair!librange("range");
+    ret ~= FunctionPair!libsorted("sorted");
+    ret ~= FunctionPair!liblen("len");
+    ret ~= FunctionPair!libpush("push");
+    ret ~= FunctionPair!libpop("pop");
+    ret ~= FunctionPair!libmap("map");
+    ret ~= FunctionPair!libzip("zip");
+    ret ~= FunctionPair!libeach("each");
+    ret ~= FunctionPair!libfrom("from");
     return ret;
 } /// returns a list
+
+Dynamic libfrom(Args args) {
+    return args[0].tab.meta["arr".dynamic](args);
+}
 
 /// with one arg it returns 0..$0
 /// with two args it returns $0..$1
@@ -62,7 +77,7 @@ Dynamic librange(Args args) @Arg("min")
 /// returns an array where the function has been called on each element
 Dynamic libmap(Args args)
 {
-    Dynamic[] res;
+    Array res = (cast(Dynamic*) GC.malloc(args[0].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0..args[0].arr.length];
     foreach (k, i; args[0].arr)
     {
         Dynamic cur = i;
@@ -70,7 +85,7 @@ Dynamic libmap(Args args)
         {
             cur = f([cur, k.dynamic]);
         }
-        res ~= cur;
+        res[k] = cur;
     }
     return dynamic(res);
 }

@@ -2,14 +2,20 @@ module paka.parse;
 
 import purr.io;
 import std.conv;
+import std.file;
 import std.array;
 import std.utf;
+import std.functional;
 import std.ascii;
 import std.string;
 import std.algorithm;
 import paka.tokens;
 import purr.ast;
+import purr.inter;
+import purr.base;
+import purr.dynamic;
 import purr.srcloc;
+import purr.fs.disk;
 import purr.fs.har;
 import purr.fs.memory;
 import purr.fs.files;
@@ -668,7 +674,7 @@ Dots[2] countDots(ref TokenArray tokens)
     }
     while (tokens.length != 0 && tokens[$ - 1].isDotOperator)
     {
-        post ~= tokens[$-1].value;
+        post ~= tokens[$ - 1].value;
         tokens.tokens = tokens.tokens[0 .. $ - 1];
     }
     return [pre, post];
@@ -997,6 +1003,153 @@ Node readStmtImpl(ref TokenArray tokens)
         return new Call(new Ident("@set"),
                 [cast(Node) new Call(call.args[0 .. $ - 1])] ~ dobody.args[2 .. $]);
     }
+    if (stmtTokens[0].isKeyword("use"))
+    {
+        stmtTokens.nextIs(Token.Type.keyword, "use");
+        Token[] mod;
+        while (!stmtTokens[0].isOperator(":"))
+        {
+            mod ~= stmtTokens[0];
+            stmtTokens.nextIsAny;
+            if (stmtTokens.length == 0)
+            {
+                throw new Exception(
+                        "parse error: need colon in use (consider using import or include)");
+            }
+        }
+        TokenArray pathToks = newTokenArray(mod);
+        stmtTokens.nextIs(Token.Type.operator, ":");
+        Node[] args = [new String(pathToks[0].value)];
+        pathToks.nextIs(Token.Type.ident);
+        while (pathToks.length >= 2 && pathToks[0].isOperator("/"))
+        {
+            pathToks.nextIs(Token.Type.operator, "/");
+            args ~= new String(pathToks[0].value);
+            pathToks.nextIs(Token.Type.ident);
+        }
+        Node libvar = genSym;
+        Node getlib = new Call(new Ident("_paka_import"), args);
+        Node setlib = new Call(new Ident("@set"), [libvar, getlib]);
+        Node[] each;
+        while (true)
+        {
+            Node value = new String(stmtTokens[0].value);
+            Node var = new Ident(stmtTokens[0].value);
+            stmtTokens.nextIs(Token.Type.ident);
+            if (stmtTokens.length != 0 && stmtTokens[0].isOperator("->"))
+            {
+                stmtTokens.nextIs(Token.Type.operator, "->");
+                var = new Ident(stmtTokens[0].value);
+                stmtTokens.nextIs(Token.Type.ident);
+            }
+            value = new Call(new Ident("@index"), [libvar, value]);
+            each ~= new Call(new Ident("@set"), [var, value]);
+            if (stmtTokens.length == 0)
+            {
+                break;
+            }
+            stmtTokens.nextIs(Token.Type.comma);
+        }
+        return new Call(new Ident("@do"), setlib ~ each ~ libvar);
+    }
+    if (stmtTokens[0].isKeyword("include"))
+    {
+        stmtTokens.nextIs(Token.Type.keyword, "include");
+        Token[] mod;
+        while (true)
+        {
+            mod ~= stmtTokens[0];
+            stmtTokens.nextIsAny;
+            if (stmtTokens.length == 0)
+            {
+                break;
+            }
+            if (stmtTokens[0].isSemicolon)
+            {
+                stmtTokens.nextIs(Token.Type.semicolon);
+                break;
+            }
+        }
+        TokenArray pathToks = newTokenArray(mod);
+        string filename = pathToks[0].value;
+        pathToks.nextIs(Token.Type.ident);
+        while (pathToks.length >= 2 && pathToks[0].isOperator("/"))
+        {
+            filename ~= "/";
+            pathToks.nextIs(Token.Type.operator, "/");
+            filename ~= pathToks[0].value;
+            pathToks.nextIs(Token.Type.ident);
+        }
+        if (filename.fsexists)
+        {
+        }
+        else if (fsexists(filename ~ ".paka"))
+        {
+            filename ~= ".paka";
+        }
+        else
+        {
+            throw new Exception("include error: cannot locate: " ~ filename);
+        }
+        Location data = filename.readFile;
+        return data.parsePaka;
+    }
+    if (stmtTokens[0].isKeyword("import"))
+    {
+        stmtTokens.nextIs(Token.Type.keyword, "import");
+        Token[] mod;
+        while (true)
+        {
+            mod ~= stmtTokens[0];
+            stmtTokens.nextIsAny;
+            if (stmtTokens.length == 0)
+            {
+                break;
+            }
+            if (stmtTokens[0].isSemicolon)
+            {
+                stmtTokens.nextIs(Token.Type.semicolon);
+                break;
+            }
+        }
+        TokenArray pathToks = newTokenArray(mod);
+        string filename = pathToks[0].value;
+        pathToks.nextIs(Token.Type.ident);
+        while (pathToks.length >= 2 && pathToks[0].isOperator("/"))
+        {
+            filename ~= "/";
+            pathToks.nextIs(Token.Type.operator, "/");
+            filename ~= pathToks[0].value;
+            pathToks.nextIs(Token.Type.ident);
+        }
+        if (filename.fsexists)
+        {
+        }
+        else if (fsexists(filename ~ ".paka"))
+        {
+            filename ~= ".paka";
+        }
+        else
+        {
+            throw new Exception("import error: cannot locate: " ~ filename);
+        }
+        Location data = filename.readFile;
+        size_t ctx = enterCtx;
+        scope (exit)
+        {
+            exitCtx;
+        }
+        Dynamic lib = ctx.eval(data);
+        rootBases[ctx - 1] ~= Pair(filename, lib);
+        foreach (key, value; lib.tab)
+        {
+            if (key.type == Dynamic.Type.str)
+            {
+                rootBases[ctx - 1] ~= Pair(key.str, value);
+            }
+        }
+        return new Ident(filename);
+    }
     return stmtTokens.readExprBase;
 }
 
@@ -1027,7 +1180,8 @@ Node readBlockImpl(ref TokenArray tokens)
     return ret;
 }
 
-alias parsePaka = parsePakaAs!readBlockBodyImpl;
+alias parsePakaValue = parsePakaAs!readBlockBodyImpl;
+alias parsePaka = memoize!parsePakaValue;
 /// parses code as the paka programming language
 Node parsePakaAs(alias parser)(Location loc)
 {
@@ -1071,7 +1225,12 @@ Node parsePakaAs(alias parser)(Location loc)
 /// parses code as archive of the paka programming language
 Node parse(Location loc)
 {
-    locs.length = 0;
+    Location[] olocs = locs;
+    locs = null;
+    scope(exit)
+    {
+        locs = olocs;
+    }
     fileSystem ~= parseHar(loc, fileSystem);
     MemoryTextFile main = "main.paka".readMemFile;
     if (main is null)

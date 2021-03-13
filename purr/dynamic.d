@@ -25,10 +25,18 @@ alias Args = Dynamic[];
 alias Array = Dynamic[];
 
 alias Delegate = Dynamic function(Args);
-alias Mapping = Map!(Dynamic, Dynamic);
+// alias Mapping = Map!(Dynamic, Dynamic);
+alias Mapping = Dynamic[Dynamic];
 Mapping emptyMapping()
 {
-    return new Mapping;
+    // return new Mapping;
+    return (Dynamic[Dynamic]).init;
+}
+
+private size_t symc = 0;
+Dynamic gensym()
+{
+    return dynamic(symc++);
 }
 
 Table[] beforeTables;
@@ -57,14 +65,14 @@ class Table
 
     this(typeof(table) t)
     {
-        assert(t !is null);
+        // assert(t !is null);
         table = t;
         metatable = null;
     }
 
     this(typeof(table) t, Table m)
     {
-        assert(t !is null);
+        // assert(t !is null);
         table = t;
         metatable = m;
     }
@@ -184,9 +192,13 @@ class Table
             }
             return null;
         }
-        if (metaget !is null && metaget.type == Dynamic.Type.tab)
+        else if (metaget !is null && metaget.type == Dynamic.Type.tab)
         {
             return other in (*metaget).tab;
+        }
+        else if (metaget !is null)
+        {
+            return new Dynamic((*metaget)([this.dynamic, other]));
         }
         return null;
     }
@@ -360,17 +372,15 @@ align(8): // do not change alignment!
 
     this(string str)
     {
-        // value.str = cast(string*) GC.malloc(string.sizeof);
-        // *value.str = str;
-        value.str = [str].ptr;
+        value.str = cast(string*) GC.malloc(string.sizeof);
+        *value.str = str;
         type = Type.str;
     }
 
     this(Array arr)
     {
-        value.arr = [arr].ptr;
-        // value.arr = cast(Array*) GC.malloc(Array.sizeof);
-        // *value.arr = arr;
+        value.arr = cast(Array*) GC.malloc(Array.sizeof);
+        *value.arr = arr;
         type = Type.arr;
     }
 
@@ -486,6 +496,40 @@ align(8): // do not change alignment!
         case Type.str:
             return cmp(*value.str, other.str);
         }
+    }
+
+    size_t toHash() const nothrow
+    {
+        final switch (type)
+        {
+        case Dynamic.Type.nil:
+            return 0;
+        case Dynamic.Type.log:
+            if (value.log) {
+                return 1;
+            }
+            else {
+                return 2;
+            }
+        case Dynamic.Type.sml:
+            if (value.sml > 0) {
+                return 3 + cast(size_t) value.sml;
+            }
+            else {
+                return 3 + cast(size_t) -value.sml;
+            }
+        case Dynamic.Type.str:
+            return (*value.str).hashOf;
+        case Dynamic.Type.arr:
+            return value.arr.length + 2 << 52;
+        case Dynamic.Type.tab:
+            return value.tab.table.length + 2 << 53;
+        case Dynamic.Type.fun:
+            return size_t.max - 3;
+        case Dynamic.Type.pro:
+            return size_t.max - 2;
+        }
+        return cast(size_t) type;
     }
 
     bool opEquals(const Dynamic other) const
@@ -789,7 +833,7 @@ string callableFormat(Dynamic[] names, Dynamic[] args)
     string argsRepr;
     if (args.length != 0)
     {
-        argsRepr = "(" ~ cast(string) args.map!(x => x.str).joiner(",").array ~ ") ";
+        argsRepr = "(" ~ args.map!(x => x.str).joiner(",").array.to!string ~ ") ";
     }
     string namesRepr;
     if (names.length >= 1)

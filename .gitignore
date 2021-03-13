@@ -34,3 +34,4 @@ trace.*
 vgcore*
 vscode
 *.map
+Aspen.toml

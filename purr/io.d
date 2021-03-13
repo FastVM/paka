@@ -21,10 +21,10 @@ alias stdout = std.stdio.stdout;
 alias stderr = std.stdio.stderr;
 
 // enum string newline = "\x1B[1E";
-Reader reader;
-termios init;
+__gshared Reader reader;
+__gshared termios init;
 
-static this()
+shared static this()
 {
 	reader = new Reader(null);
 	reader.smart = false;

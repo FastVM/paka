@@ -1,10 +1,16 @@
 module paka.base;
 
+import core.memory;
+import std.file;
 import std.conv;
+import std.parallelism;
 import purr.io;
 import purr.dynamic;
 import purr.base;
+import purr.inter;
+import purr.srcloc;
 import purr.error;
+import purr.fs.disk;
 import paka.lib.io;
 import paka.lib.sys;
 import paka.lib.str;
@@ -30,18 +36,18 @@ Dynamic strconcat(Args args)
     }
     return ret.dynamic;
 }
-
-/// internal map function
+/// intern
 Dynamic syslibubothmap(Args args)
 {
-    Array ret;
     if (args[1].arr.length != args[2].arr.length)
     {
         throw new BoundsException("bad lengths in dotmap");
     }
-    foreach (i; 0 .. args[1].arr.length)
+    Array ret = (cast(Dynamic*) GC.malloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
+        .. args[1].arr.length];
+    foreach (i, v; args[1].arr)
     {
-        ret ~= args[0]([args[1].arr[i], args[2].arr[i]]);
+        ret[i] = args[0]([v, args[2].arr[i]]);
     }
     return dynamic(ret);
 }
@@ -49,10 +55,11 @@ Dynamic syslibubothmap(Args args)
 /// internal map function
 Dynamic syslibulhsmap(Args args)
 {
-    Array ret;
-    foreach (i; args[1].arr)
+    Array ret = (cast(Dynamic*) GC.malloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
+        .. args[1].arr.length];
+    foreach (k, i; args[1].arr)
     {
-        ret ~= args[0]([i, args[2]]);
+        ret[k] = args[0]([i, args[2]]);
     }
     return dynamic(ret);
 }
@@ -60,10 +67,11 @@ Dynamic syslibulhsmap(Args args)
 /// internal map function
 Dynamic sysliburhsmap(Args args)
 {
-    Array ret;
-    foreach (i; args[2].arr)
+    Array ret = (cast(Dynamic*) GC.malloc(args[2].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
+        .. args[2].arr.length];
+    foreach (k, i; args[2].arr)
     {
-        ret ~= args[0]([args[1], i]);
+        ret[k] = args[0]([i, args[2]]);
     }
     return dynamic(ret);
 }
@@ -71,10 +79,11 @@ Dynamic sysliburhsmap(Args args)
 /// internal map function
 Dynamic syslibupremap(Args args)
 {
-    Array ret;
-    foreach (i; args[1].arr)
+    Array ret = (cast(Dynamic*) GC.malloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
+        .. args[1].arr.length];
+    foreach (k, i; args[1].arr)
     {
-        ret ~= args[0]([i]);
+        ret[k] = args[0]([i]);
     }
     return dynamic(ret);
 }
@@ -92,7 +101,7 @@ Dynamic syslibfold(Args args)
 
 Dynamic domatch(Dynamic lhs, Dynamic rhs)
 {
-    final switch(rhs.type)
+    final switch (rhs.type)
     {
     case Dynamic.Type.nil:
         return dynamic(lhs == rhs);
@@ -120,28 +129,82 @@ Dynamic pakamatch(Args args)
 
 Dynamic syslibrange(Args args)
 {
-    double start = args[0].as!double;
-    double stop = args[1].as!double;
-    if (args[0] < args[1])
+    long start = args[0].as!long;
+    long stop = args[1].as!long;
+    if (start < stop)
     {
-        Dynamic[] ret;
-        while (start < stop)
+        long dist = stop - start;
+        Array ret = (cast(Dynamic*) GC.malloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0..dist];
+        foreach (k, ref v; ret)
         {
-            ret ~= dynamic(start);
-            start += 1;
+            v = dynamic(k + start);
+        }
+        return dynamic(ret);
+    }
+    else if (start > stop)
+    {
+        long dist = start - stop;
+        Array ret = (cast(Dynamic*) GC.malloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0..dist];
+        foreach (k, ref v; ret)
+        {
+            v = dynamic(start - k);
         }
         return dynamic(ret);
     }
     else
     {
-        Dynamic[] ret;
-        while (start > stop)
-        {
-            ret ~= dynamic(start);
-            start -= 1;
-        }
-        return dynamic(ret);
+        Dynamic[] ret = null;
+        return ret.dynamic;
     }
+    // else
+    // {
+    //     Dynamic[] ret = new Dynamic[start-stop];
+    //     while (start > stop)
+    //     {
+    //         ret ~= dynamic(start);
+    //         start -= 1;
+    //     }
+    //     return dynamic(ret);
+    // }
+}
+
+Dynamic[string] libs;
+Dynamic pakaimport(Args args)
+{
+    size_t ctx = enterCtx;
+    scope (exit)
+    {
+        exitCtx;
+    }
+    string filename;
+    foreach (key, arg; args)
+    {
+        if (key != 0)
+        {
+            filename ~= "/";
+        }
+        filename ~= arg.str;
+    }
+    string basename = filename;
+    if (Dynamic* ret = basename in libs)
+    {
+        return *ret;
+    }
+    if (filename.fsexists)
+    {
+    }
+    else if (fsexists(filename ~ ".paka"))
+    {
+        filename ~= ".paka";
+    }
+    else
+    {
+        throw new Exception("import error: cannot locate: " ~ filename);
+    }
+    Location data = filename.readFile;
+    Dynamic val = ctx.eval(data);
+    libs[basename] = val;
+    return val;
 }
 
 Pair[] pakaBaseLibs()
@@ -157,6 +220,7 @@ Pair[] pakaBaseLibs()
     ret ~= FunctionPair!pakaassert("_paka_assert");
     ret ~= FunctionPair!strconcat("_paka_str_concat");
     ret ~= FunctionPair!pakamatch("_paka_match");
+    ret ~= FunctionPair!pakaimport("_paka_import");
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);
     ret.addLib("tab", libtab);

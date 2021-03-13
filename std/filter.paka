@@ -1,0 +1,36 @@
+def mapify(thing, f) {
+    if (sys.typeof(thing) != "array") {
+        return f(thing)
+    } else {
+        return arr.map(thing) {
+            mapify($0, f);
+        };
+    };
+};
+
+def resize_deep(thing, sizes, n) {
+    if (n == arr.len(sizes)) {
+        return thing;
+    };
+    scale = sizes[n] / arr.len(thing);
+    res = [];
+    arr.each(0 -> sizes[n]) {
+        cur = thing[$0 / scale];
+        arr.push(res, resize_deep(cur, sizes, n+1));
+    };
+    return res;
+};
+
+def resize(thing, size) {
+    if (sys.typeof(size) == "array") {
+        return resize_deep(thing, size, 0);
+    } else {
+        return resize_deep(thing, [size], 0);
+    };
+};
+
+filter = {};
+filter.map(thing, f) = mapify(thing, f);
+filter.invert(mat) = mapify(mat) {255 - $0;};
+filter.resize = resize;
+return filter;

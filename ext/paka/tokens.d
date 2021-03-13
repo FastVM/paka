@@ -19,7 +19,7 @@ enum string[] nops = [".", "!", ",", ":", "\\"];
 
 /// language keywords
 enum string[] keywords = [
-        "if", "else", "while", "return", "def", "lambda", "assert",
+        "if", "else", "while", "return", "def", "lambda", "assert", "use", "include", "import",
     ];
 
 /// gets the operators by length not precidence
@@ -213,12 +213,12 @@ Token readToken(ref string code, ref Location location)
             return consToken(Token.Type.operator, i);
         }
     }
-    if (peek.isAlphaNum || peek == '_' || peek == '$' || peek == '@')
+    if (peek.isAlphaNum || peek == '_' || peek == '$' || peek == '@' || peek == '?')
     {
         bool isNumber = true;
         char[] ret;
         while (peek.isAlphaNum || peek == '_' || peek == '$' || peek == '@'
-                || (isNumber && peek == '.'))
+                || peek == '?' || (isNumber && peek == '.'))
         {
             isNumber = isNumber && (peek.isDigit || peek == '.');
             if (peek != '@')

@@ -2,6 +2,7 @@ module purr.fs.har;
 
 import purr.io;
 import std.string;
+import std.array;
 import std.algorithm;
 import purr.fs.memory;
 import purr.fs.files;
@@ -19,14 +20,25 @@ MemoryDirectory parseHar(Location loc, MemoryDirectory dir)
     {
         foreach (name; names)
         {
+            MemoryTextFile mfile = void;
             if (name == "__main__")
             {
-                dir[name] = new MemoryTextFile(Location(ilno, 1, loc.file, file));
+                mfile = new MemoryTextFile(Location(ilno, 1, loc.file, file));
             }
             else
             {
-                dir[name] = new MemoryTextFile(Location(ilno, 1, name, file));
+                mfile = new MemoryTextFile(Location(ilno, 1, name, file));
             }
+            // if (MemoryFile* exists = name in dir)
+            // {
+            //     MemoryTextFile tf = cast(MemoryTextFile)*exists;
+            //     dir[name] = new MemoryTextFile(Location(tf.location.line, tf.location.column,
+            //             tf.location.file, tf.location.src ~ mfile.location.src));
+            // }
+            // else
+            // {
+                dir[name] = mfile;
+            // }
         }
         names = null;
         file = null;
@@ -51,7 +63,7 @@ MemoryDirectory parseHar(Location loc, MemoryDirectory dir)
             lastWasData = true;
         }
     }
-    
+
     process("--- __main__");
     foreach (line; loc.src.splitter("\n"))
     {

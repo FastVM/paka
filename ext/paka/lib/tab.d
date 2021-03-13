@@ -11,7 +11,7 @@ Pair[] libtab()
         FunctionPair!libeach("each"), FunctionPair!libfilter("filter"),
         FunctionPair!libfilterkeys("filter_keys"),
         FunctionPair!libfiltervalues("filter_values"),
-        FunctionPair!liblen("len"),
+        FunctionPair!liblen("len"), 
     ];
     ret.addLib("meta", libmeta);
     ret.addLib("raw", libraw);
