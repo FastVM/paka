@@ -231,7 +231,10 @@ class BytecodeEmitter
         }
         if (!within(block, func))
         {
-            // writeln(block);
+            if (dumpir)
+            {
+                writeln(block);
+            }
             // typeGenerator.startBlock(block);
             counts[block][func] = cast(ushort) func.instrs.length;
             foreach (sym; predef(block))
@@ -259,8 +262,10 @@ class BytecodeEmitter
             {
                 // typeGenerator.genFrom(cast(Instr) em);
                 emit(cast(Instr) em);
+                return;
             }
         }
+        assert(false);
     }
 
     void emit(LogicalBranch branch)

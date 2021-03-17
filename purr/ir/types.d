@@ -437,7 +437,7 @@ class Type
         {
             if (exact)
             {
-                return "(" ~ func ~ " :: " ~ args.to!string ~ " -> " ~ retn.to!string ~ ")";
+                return "(" ~ func ~ " : " ~ args.to!string ~ " -> " ~ retn.to!string ~ ")";
             }
             return args.to!string ~ " -> " ~ retn.to!string;
             // return "Function[" ~ args.to!string ~ ", " ~ retn.to!string ~ "]";

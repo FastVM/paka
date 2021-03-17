@@ -1,12 +1,3 @@
-def mapify(thing, f) {
-    if (sys.typeof(thing) != "array") {
-        return f(thing)
-    } else {
-        return arr.map(thing) {
-            mapify($0, f);
-        };
-    };
-};
 
 def resize_deep(thing, sizes, n) {
     if (n == arr.len(sizes)) {
@@ -30,7 +21,5 @@ def resize(thing, size) {
 };
 
 filter = {};
-filter.map(thing, f) = mapify(thing, f);
-filter.invert(mat) = mapify(mat) {255 - $0;};
 filter.resize = resize;
 return filter;

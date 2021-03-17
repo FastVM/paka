@@ -8,25 +8,28 @@ import purr.io;
 import purr.srcloc;
 
 /// operator precidence
-enum string[][] prec = [
-        ["+=", "~=", "*=", "/=", "%=", "-=", "=", "::"], ["|>", "<|"], ["=>"],
-        ["||", "&&"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-", "~"],
-        ["*", "/", "%"], ["->"]
-    ];
+string[][] prec = [
+    ["+=", "~=", "*=", "/=", "%=", "-=", "=", "::"], ["|>", "<|"], ["=>"],
+    ["||", "&&"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-", "~"],
+    ["*", "/", "%"], ["->"]
+];
 
 /// operators that dont work like binary operators sometimes
-enum string[] nops = [".", "!", ",", ":", "\\"];
+string[] nops = [".", "!", ",", ":", "\\"];
 
 /// language keywords
-enum string[] keywords = [
-        "if", "else", "while", "return", "def", "lambda", "assert", "use", "include", "import",
-    ];
+string[] keywords = [
+    "if", "else", "while", "return", "def", "lambda", "assert", "use", "include",
+    "import", "static"
+];
 
 /// gets the operators by length not precidence
-enum string[] levels()
+string[] levels()
 {
     return join(prec ~ nops).sort!"a.length > b.length".array;
 }
+
+Token.Type[] noFollow = [Token.Type.ident, Token.Type.string, Token.Type.format];
 
 /// simple token
 struct Token
@@ -202,7 +205,7 @@ Token readToken(ref string code, ref Location location)
     {
         return consToken(Token.Type.comma, [read]);
     }
-    static foreach (i; levels)
+    foreach (i; levels)
     {
         if (code.startsWith(i))
         {

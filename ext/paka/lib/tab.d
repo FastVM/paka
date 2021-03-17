@@ -1,7 +1,6 @@
 module paka.lib.tab;
 import purr.base;
 import purr.dynamic;
-import purr.data.map;
 import purr.io;
 
 Pair[] libtab()

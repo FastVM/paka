@@ -39,6 +39,7 @@ class Walker
 
     Function walkProgram(Node node, size_t ctx)
     {
+        // writeln(node);
         BasicBlock entry = new BasicBlock;
         block = entry;
         funcblk = block;
@@ -172,6 +173,38 @@ class Walker
         block = after;
     }
 
+    void walkAnd(Node[] args)
+    {
+        BasicBlock iftrue = new BasicBlock;
+        BasicBlock iffalse = new BasicBlock;
+        BasicBlock after = new BasicBlock;
+        walk(args[0]);
+        emit(new LogicalBranch(iftrue, iffalse, after, true));
+        block = iftrue;
+        walk(args[1]);
+        emitDefault(new GotoBranch(after));
+        block = iffalse;
+        emit(new PushInstruction(false.dynamic));
+        emitDefault(new GotoBranch(after));
+        block = after;
+    }
+
+    void walkOr(Node[] args)
+    {
+        BasicBlock iftrue = new BasicBlock;
+        BasicBlock iffalse = new BasicBlock;
+        BasicBlock after = new BasicBlock;
+        walk(args[0]);
+        emit(new LogicalBranch(iftrue, iffalse, after, true));
+        block = iftrue;
+        emit(new PushInstruction(true.dynamic));
+        emitDefault(new GotoBranch(after));
+        block = iffalse;
+        walk(args[1]);
+        emitDefault(new GotoBranch(after));
+        block = after;
+    }
+
     void walkWhile(Node[] args)
     {
         BasicBlock cond = new BasicBlock;
@@ -232,9 +265,8 @@ class Walker
         {
             if (Ident id = cast(Ident) call.args[0])
             {
-                if (specialForms.canFind(id.repr))
+                if (id.repr == "@index")
                 {
-                    assert(id.repr == "@index");
                     walk(call.args[1]);
                     walk(call.args[2]);
                     walk(args[1]);
@@ -277,9 +309,8 @@ class Walker
         {
             if (Ident id = cast(Ident) call.args[0])
             {
-                if (specialForms.canFind(id.repr))
+                if (id.repr == "@index")
                 {
-                    assert(id.repr == "@index");
                     walk(call.args[1]);
                     walk(call.args[2]);
                     walk(args[2]);
@@ -476,6 +507,12 @@ class Walker
             break;
         case "@if":
             walkIf(args);
+            break;
+        case "&&":
+            walkAnd(args);
+            break;
+        case "||":
+            walkOr(args);
             break;
         case "@while":
             walkWhile(args);

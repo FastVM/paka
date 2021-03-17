@@ -1,0 +1,98 @@
+None = {};
+Nil = {};
+Logical = {};
+String = {};
+Number = {};
+Array = {};
+Table = {};
+Callable = {};
+Any = {};
+
+Nil.match(val) = val == nil;
+Logical.match(val) = val == true || val == false;
+String.match(val) = sys.typeof(val) == "string";
+Number.match(val) = sys.typeof(val) == "number";
+Array.match(val) = sys.typeof(val) == "array";
+Table.match(val) = sys.typeof(val) == "table";
+Callable.match(val) = sys.typeof(val) == "callable";
+Any.match(val) = true;
+None.match(val) = false;
+
+array_ctrl = {};
+tab.meta.set(Array, array_ctrl);
+
+arr.dup(v) = arr.map(v) { $0 };
+
+def array_ctrl.call(Type) {
+    Ret = {};
+    def Ret.match(vals) {
+        if ((vals :: Array) == false) {
+            return false;
+        };
+        n = 0;
+        while (n < arr.len(vals)) {
+            if ((vals[n] :: Type) == false) {
+                return false;
+            };
+            n += 1;
+        };
+        return true;
+    };
+    tab.meta.set(Ret, Ret);
+    return Ret;
+};
+
+checked = [];
+
+def Box() {
+    Ret = {};
+    Ret.val = None;
+    def Ret.match(val) {
+        pair = [Ret.val, val];
+        n = arr.len(checked) - 1;
+        while (n >= 0) {
+            if (checked[n] == pair) {
+                return true;
+            };
+            n -= 1;
+        };
+        arr.push(checked, pair);
+        res = (val :: Ret.val);
+        arr.pop(checked);
+        return res;
+    };
+    return Ret;
+};
+
+def Union() {
+    Ret = {};
+    Ret.Types = arr.dup(args);
+    def Ret.match(val) {
+        n = 0;
+        while (n < arr.len(Ret.Types)) {
+            if (val :: Ret.Types[n]) {
+                return true;
+            };
+            n += 1;
+        };
+        return false;
+    };
+    meta_ret = {};
+    meta_ret.eq(self, other) = self.Types == other.Types;
+    tab.meta.set(Ret, meta_ret);
+    return Ret;
+};
+
+types = {};
+types.None = None;
+types.Nil = Nil;
+types.Logical = Logical;
+types.String = String;
+types.Number = Number;
+types.Array = Array;
+types.Table = Table;
+types.Callable = Callable;
+types.Any = Any;
+types.Box = Box;
+types.Union = Union;
+return types;

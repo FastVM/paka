@@ -99,32 +99,43 @@ Dynamic syslibfold(Args args)
     return ret;
 }
 
-Dynamic domatch(Dynamic lhs, Dynamic rhs)
+bool domatch(Dynamic lhs, Dynamic rhs)
 {
     final switch (rhs.type)
     {
     case Dynamic.Type.nil:
-        return dynamic(lhs == rhs);
+        return lhs == rhs;
     case Dynamic.Type.log:
-        return dynamic(lhs == rhs);
+        return lhs == rhs;
     case Dynamic.Type.sml:
-        return dynamic(lhs == rhs);
+        return lhs == rhs;
     case Dynamic.Type.str:
-        return dynamic(lhs == rhs);
+        return lhs == rhs;
     case Dynamic.Type.arr:
-        return dynamic(lhs == rhs);
+        if (lhs.arr.length != rhs.arr.length)
+        {
+            return false;
+        }
+        foreach (index; 0..lhs.arr.length)
+        {
+            if (domatch(lhs.arr[index], rhs.arr[index]))
+            {
+                return false;
+            }
+        }
+        return true;
     case Dynamic.Type.tab:
-        return rhs.tab["match".dynamic]([lhs]);
+        return domatch(lhs, rhs.tab["match".dynamic]);
     case Dynamic.Type.fun:
-        return rhs([lhs]);
+        return rhs([lhs]).log;
     case Dynamic.Type.pro:
-        return rhs([lhs]);
+        return rhs([lhs]).log;
     }
 }
 
 Dynamic pakamatch(Args args)
 {
-    return domatch(args[0], args[1]);
+    return domatch(args[0], args[1]).dynamic;
 }
 
 Dynamic syslibrange(Args args)
@@ -134,7 +145,7 @@ Dynamic syslibrange(Args args)
     if (start < stop)
     {
         long dist = stop - start;
-        Array ret = (cast(Dynamic*) GC.malloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0..dist];
+        Array ret = (cast(Dynamic*) GC.malloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0 .. dist];
         foreach (k, ref v; ret)
         {
             v = dynamic(k + start);
@@ -144,7 +155,7 @@ Dynamic syslibrange(Args args)
     else if (start > stop)
     {
         long dist = start - stop;
-        Array ret = (cast(Dynamic*) GC.malloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0..dist];
+        Array ret = (cast(Dynamic*) GC.malloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0 .. dist];
         foreach (k, ref v; ret)
         {
             v = dynamic(start - k);

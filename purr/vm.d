@@ -12,7 +12,6 @@ import purr.srcloc;
 import purr.error;
 import purr.dynamic;
 import purr.bytecode;
-import purr.data.map;
 
 version = PurrErrors;
 
@@ -161,8 +160,11 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             case Dynamic.Type.tab:
                 res = f.tab()(stack[0 .. 0 + count]);
                 break;
+            case Dynamic.Type.arr:
+                res = f.arr[(*stack).as!size_t];
+                break;
             default:
-                throw new TypeException("error: not a function: " ~ f.to!string);
+                throw new TypeException("error: not a pro, fun, tab, or arr: " ~ f.to!string);
             }
             (*(stack - 1)) = res;
             break;

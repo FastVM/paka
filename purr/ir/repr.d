@@ -18,7 +18,7 @@ import purr.ir.opt;
 alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, ReturnBranch, BuildArrayInstruction,
         BuildTableInstruction, CallInstruction, PushInstruction, OperatorInstruction,
         LambdaInstruction, PopInstruction, StoreIndexInstruction, StoreInstruction,
-        OperatorStoreInstruction, LoadInstruction, ArgsInstruction,);
+        OperatorStoreInstruction, LoadInstruction, ArgsInstruction, OperatorStoreIndexInstruction,);
 
 size_t nameCount;
 

@@ -6,7 +6,6 @@ import std.conv;
 import std.traits;
 import purr.dynamic;
 import purr.bytecode;
-import purr.data.map;
 import purr.plugin.syms;
 import purr.plugin.plugins;
 import purr.ir.types;
@@ -82,18 +81,6 @@ size_t enterCtx()
 void exitCtx()
 {
     rootBases.length--;
-}
-
-version(VSCodeGenerate)
-{
-    static ~this()
-    {
-        import std.array;
-        foreach (i; defined)
-        {
-            write(i.replace(".", "\\\\."), "|");
-        }
-    }
 }
 
 string[] definedLibs;

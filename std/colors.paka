@@ -18,6 +18,21 @@ hsv_meta.get = {};
 hsv_meta.arr(self) = [self.hue, self.saturation, self.value];
 hsv_meta.str(self) = "colors.hsv.cons(" ~ str.from(self.hue) ~ "deg, " ~ str.from(self.saturation) ~ "%, " ~ str.from(self.value) ~ "%)";
 
+colors.conv = {};
+
+def colors.conv.grey(color) {
+    rgb = colors.rgb.from(color);
+    return (rgb.red*3 + rgb.blue + rgb.green*4)*0.125;
+};
+
+colors.conv.red(color) = colors.rgb.from(color).red;
+colors.conv.green(color) = colors.rgb.from(color).green;
+colors.conv.blue(color) = colors.rgb.from(color).blue;
+
+colors.conv.hue(color) = colors.hsv.from(color).hue;
+colors.conv.saturation(color) = colors.hsv.from(color).saturation;
+colors.conv.value(color) = colors.hsv.from(color).value;
+
 def colors.rgb.from(argv) {
     if (sys.typeof(argv) == "array") {
         ret = {};

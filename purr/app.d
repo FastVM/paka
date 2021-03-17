@@ -104,6 +104,11 @@ Thunk cliBytecodeHandler()
     return { dumpbytecode = !dumpbytecode; };
 }
 
+Thunk cliIrHandler()
+{
+    return { dumpir = !dumpir; };
+}
+
 Thunk cliJitHandler()
 {
     return { runjit = !runjit; };
@@ -196,6 +201,9 @@ void domain(string[] args)
         case "--bytecode":
             todo ~= cliBytecodeHandler;
             break;
+        case "--ir":
+            todo ~= cliIrHandler;
+            break;
         case "--jit":
             todo ~= cliJitHandler;
             break;
@@ -215,6 +223,61 @@ void domain(string[] args)
     }
 }
 
+void thrown(Err)(Err e)
+{
+    size_t[] nums;
+    size_t[] times;
+    string[] files;
+    size_t ml = 0;
+    foreach (i; spans)
+    {
+        if (nums.length != 0 && nums[$ - 1] == i.first.line)
+        {
+            times[$ - 1]++;
+        }
+        else
+        {
+            nums ~= i.first.line;
+            files ~= i.first.file;
+            times ~= 1;
+            ml = max(ml, i.first.line.to!string.length);
+        }
+    }
+    string trace;
+    string last = "__main__";
+    foreach (i, v; nums)
+    {
+        if (i == 0)
+        {
+            trace ~= "  on line ";
+        }
+        else
+        {
+            trace ~= "from line ";
+        }
+        foreach (j; 0 .. ml - v.to!string.length)
+        {
+            trace ~= " ";
+        }
+        trace ~= v.to!string;
+        if (files[i] != last)
+        {
+            last = files[i];
+            trace ~= " (file: " ~ last ~ ")";
+        }
+        if (times[i] > 2)
+        {
+            trace ~= " (repeated: " ~ times[i].to!string ~ " times)";
+        }
+        trace ~= "\n";
+    }
+    spans.length = 0;
+    writeln(trace);
+    writeln(e.msg);
+    writeln;
+    throw e;
+}
+
 /// the main function that handles runtime errors
 void trymain(string[] args)
 {
@@ -222,59 +285,13 @@ void trymain(string[] args)
     {
         domain(args);
     }
+    catch (Error e)
+    {
+        e.thrown;
+    }
     catch (Exception e)
     {
-        size_t[] nums;
-        size_t[] times;
-        string[] files;
-        size_t ml = 0;
-        foreach (i; spans)
-        {
-            if (nums.length != 0 && nums[$ - 1] == i.first.line)
-            {
-                times[$ - 1]++;
-            }
-            else
-            {
-                nums ~= i.first.line;
-                files ~= i.first.file;
-                times ~= 1;
-                ml = max(ml, i.first.line.to!string.length);
-            }
-        }
-        string trace;
-        string last = "__main__";
-        foreach (i, v; nums)
-        {
-            if (i == 0)
-            {
-                trace ~= "  on line ";
-            }
-            else
-            {
-                trace ~= "from line ";
-            }
-            foreach (j; 0 .. ml - v.to!string.length)
-            {
-                trace ~= " ";
-            }
-            trace ~= v.to!string;
-            if (files[i] != last)
-            {
-                last = files[i];
-                trace ~= " (file: " ~ last ~ ")";
-            }
-            if (times[i] > 2)
-            {
-                trace ~= " (repeated: " ~ times[i].to!string ~ " times)";
-            }
-            trace ~= "\n";
-        }
-        spans.length = 0;
-        writeln(trace);
-        writeln(e.msg);
-        writeln;
-        throw e;
+        e.thrown;
     }
 }
 

@@ -9,7 +9,6 @@ import core.memory;
 import purr.bytecode;
 import purr.vm;
 import purr.error;
-import purr.data.map;
 
 // version(unsafe)
 // {
@@ -17,7 +16,7 @@ import purr.data.map;
 // }
 // else
 // {
-version = safe;
+// version = safe;
 // }
 pragma(inline, true):
 
@@ -225,9 +224,9 @@ class Table
     {
         if (Dynamic* dyn = "self".dynamic in meta)
         {
-            return meta[dynamic("call")](dyn.arr ~ args);
+            return meta[dynamic("index")](dyn.arr ~ args);
         }
-        return meta[dynamic("call")](args);
+        return meta[dynamic("index")](args);
     }
 
     Dynamic opUnary(string op)()
@@ -315,7 +314,7 @@ struct Fun
 
 struct Dynamic
 {
-    enum Type : int
+    enum Type : ubyte
     {
         nil,
         log,
@@ -344,7 +343,6 @@ struct Dynamic
     }
 
 pragma(inline, true):
-align(8): // do not change alignment!
     Type type = void;
     Value value = void;
 
@@ -505,18 +503,22 @@ align(8): // do not change alignment!
         case Dynamic.Type.nil:
             return 0;
         case Dynamic.Type.log:
-            if (value.log) {
+            if (value.log)
+            {
                 return 1;
             }
-            else {
+            else
+            {
                 return 2;
             }
         case Dynamic.Type.sml:
-            if (value.sml > 0) {
+            if (value.sml > 0)
+            {
                 return 3 + cast(size_t) value.sml;
             }
-            else {
-                return 3 + cast(size_t) -value.sml;
+            else
+            {
+                return 3 + cast(size_t)-value.sml;
             }
         case Dynamic.Type.str:
             return (*value.str).hashOf;

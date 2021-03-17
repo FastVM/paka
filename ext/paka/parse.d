@@ -10,15 +10,19 @@ import std.ascii;
 import std.string;
 import std.algorithm;
 import paka.tokens;
+import purr.vm;
 import purr.ast;
 import purr.inter;
 import purr.base;
 import purr.dynamic;
 import purr.srcloc;
+import purr.inter;
 import purr.fs.disk;
 import purr.fs.har;
 import purr.fs.memory;
 import purr.fs.files;
+import purr.bytecode;
+import purr.ir.walk;
 
 /// safe array of tokens
 alias TokenArray = PushArray!Token;
@@ -28,6 +32,9 @@ enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!=", "::"];
 
 /// locations for error handling
 Location[] locs;
+
+/// context for static expressions
+size_t[] staticCtx;
 
 /// wraps a function of type Node function(T...)(TokenArray tokens, T args).
 /// it gets the span of tokens consumed and it gives them a span
@@ -208,16 +215,19 @@ Node[][] readOpen(string v)(ref TokenArray tokens) if (v == "()")
     tokens.match(Token.Type.open, [v[0]]);
     while (!tokens[0].isClose([v[1]]))
     {
-        args ~= tokens.readExprBase;
-        if (tokens[0].isComma)
-        {
-            tokens.nextIs(Token.Type.comma);
-        }
         if (tokens[0].isSemicolon)
         {
             tokens.nextIs(Token.Type.semicolon);
             ret ~= args;
             args = null;
+        }
+        else
+        {
+            args ~= tokens.readExprBase;
+            if (tokens[0].isComma)
+            {
+                tokens.nextIs(Token.Type.comma);
+            }
         }
     }
     tokens.match(Token.Type.close, [v[1]]);
@@ -325,14 +335,27 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
         }
         ret = new Call(last, args);
     }
-    else if (tokens[0].isOpen("["))
+    else if (tokens.length > 2 && tokens[0].isOperator(".") && tokens[1].isOpen("("))
     {
-        ret = new Call(new Ident("@index"), last ~ tokens.readOpen!"[]");
+        tokens.nextIs(Token.Type.operator, ".");
+        Node[][] arr = tokens.readOpen!"()";
+        Node dov = new Call(new Ident("@do"),
+                arr.map!(s => cast(Node) new Call(new Ident("@do"), s)).array);
+        ret = new Call(new Ident("@index"), [last, dov]);
     }
     else if (tokens[0].isOperator("."))
     {
         tokens.nextIs(Token.Type.operator, ".");
-        ret = new Call(new Ident("@index"), [last, new String(tokens[0].value)]);
+        Node ind = void;
+        if (tokens[0].value[0].isDigit)
+        {
+            ind = new Ident(tokens[0].value);
+        }
+        else
+        {
+            ind = new String(tokens[0].value);
+        }
+        ret = new Call(new Ident("@index"), [last, ind]);
         tokens.nextIs(Token.Type.ident);
     }
     else
@@ -533,6 +556,17 @@ Node readPostExprImpl(ref TokenArray tokens)
             last = new Call(new Ident("@fun"), [new Call([]), tokens.readBlock]);
         }
     }
+    else if (tokens[0].isKeyword("static"))
+    {
+        tokens.nextIs(Token.Type.keyword, "static");
+        Node node = tokens.readBlock;
+        Walker walker = new Walker;
+        Function func = walker.walkProgram(node, staticCtx[$-1]);
+        Dynamic val = run(func, null, func.exportLocalsToBaseCallback);
+        Ident id = genSym;
+        rootBases[staticCtx[0]-1] ~= Pair(id.repr, val);
+        return id;
+    }
     else if (tokens[0].isOpen("("))
     {
         last = new Call(new Ident("@do"), tokens.readOpen1!"()");
@@ -585,7 +619,6 @@ Node readPostExprImpl(ref TokenArray tokens)
 }
 
 /// read prefix before postfix expression.
-/// prefix is able to be +, - or *
 alias readPreExpr = Spanning!readPreExprImpl;
 Node readPreExprImpl(ref TokenArray tokens)
 {
@@ -605,10 +638,18 @@ Node readPreExprImpl(ref TokenArray tokens)
         {
             val = "...";
         }
-        if (val == "=>")
+        else if (val == "=>")
         {
             val = "@fun";
             eargs ~= new Call(null);
+        }
+        else
+        {
+            if (val == "-")
+            {
+                throw new Exception("parse error: not a unary operator: " ~ val ~ " (consider using 0- instead)");
+            }
+            throw new Exception("parse error: not a unary operator: " ~ val);
         }
         Node ret = new Call(new Ident(val), eargs ~ [tokens.readPreExpr]);
         foreach (i; 0 .. count)
@@ -829,6 +870,10 @@ Node readExpr(ref TokenArray tokens, size_t level)
             stdout.flush;
             if (cmpOps.canFind(v.value) && opers.length != 1)
             {
+                if (v.value == "calc=")
+                {
+                    v.value = "!=";
+                }
                 Ident next = genSym;
                 if (i != opers.length)
                 {
@@ -961,11 +1006,40 @@ Node readStmtImpl(ref TokenArray tokens)
             tokens.nextIs(Token.Type.semicolon);
             break;
         }
+        if (depth == 0 && stmtTokens0.length > 0)
+        {
+            Token last = stmtTokens0[$ - 1];
+            Token next = tokens[0];
+            bool noFollowLast = noFollow.canFind(last.type);
+            bool noFollowNext = noFollow.canFind(next.type);
+            if (noFollowLast && noFollowNext)
+            {
+                break;
+            }
+            if (noFollowLast && (next.isOpen("[") || next.isOpen("{")))
+            {
+                tokens.nextIsAny;
+                break;
+            }
+            if (noFollowLast && next.isKeyword)
+            {
+                break;
+            }
+            if ((last.isClose) && (noFollowNext
+                    || next.isKeyword) && !next.isKeyword("else"))
+            {
+                break;
+            }
+        }
     }
     TokenArray stmtTokens = newTokenArray(stmtTokens0);
     if (stmtTokens.length == 0)
     {
         return null;
+    }
+    if (stmtTokens[0].isOpen("("))
+    {
+        throw new Exception("parse error: cannot have open paren to start a statement");
     }
     if (stmtTokens[0].isKeyword("return"))
     {
@@ -1227,9 +1301,11 @@ Node parse(Location loc)
 {
     Location[] olocs = locs;
     locs = null;
-    scope(exit)
+    staticCtx ~= enterCtx;
+    scope (exit)
     {
         locs = olocs;
+        staticCtx.length--;
     }
     fileSystem ~= parseHar(loc, fileSystem);
     MemoryTextFile main = "main.paka".readMemFile;

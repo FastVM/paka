@@ -22,6 +22,7 @@ import purr.ir.walk;
 import purr.ir.emit;
 
 bool dumpbytecode = false;
+bool dumpir = false;
 bool runjit = false;
 
 /// vm callback that sets the locals defined into the root base 

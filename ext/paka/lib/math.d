@@ -33,13 +33,20 @@ Pair[] libmath()
     ret ~= FunctionPair!libcbrt("cbrt");
     ret ~= Pair("inf", double.infinity);
     ret ~= Pair("nan", double.nan);
-    ret.addLib("inspect", lib2inspect);
-    ret.addLib("mod", lib2mod);
-    ret.addLib("cmp", lib2cmp);
-    ret.addLib("pow", lib2pow);
-    ret.addLib("round", lib2round);
-    ret.addLib("random", lib2rand);
-    ret.addLib("trig", lib2trig);
+    // ret.addLib("inspect", lib2inspect);
+    // ret.addLib("mod", lib2mod);
+    // ret.addLib("cmp", lib2cmp);
+    // ret.addLib("pow", lib2pow);
+    // ret.addLib("round", lib2round);
+    // ret.addLib("random", lib2rand);
+    // ret.addLib("trig", lib2trig);
+    ret ~= lib2inspect;
+    ret ~= lib2mod;
+    ret ~= lib2cmp;
+    ret ~= lib2pow;
+    ret ~= lib2round;
+    ret ~= lib2rand;
+    ret ~= lib2trig;
     return ret;
 }
 
