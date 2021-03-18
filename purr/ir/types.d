@@ -1,6 +1,6 @@
 module purr.ir.types;
 
-import std.stdio;
+import purr.io;
 import std.conv;
 import std.algorithm;
 import std.array;
@@ -112,14 +112,6 @@ void collapse(Type.Options opts)
 
 class Type
 {
-    // static class Any : Type
-    // {
-    //     override string toString()
-    //     {
-    //         return "Any";
-    //     }
-    // }
-
     static class Nil : Type
     {
         override string toString()
@@ -440,7 +432,6 @@ class Type
                 return "(" ~ func ~ " : " ~ args.to!string ~ " -> " ~ retn.to!string ~ ")";
             }
             return args.to!string ~ " -> " ~ retn.to!string;
-            // return "Function[" ~ args.to!string ~ ", " ~ retn.to!string ~ "]";
         }
     }
 
@@ -751,10 +742,6 @@ class TypeGenerator
         localsAt[bb] = locals.dup;
         capturesAt[bb] = captures.dup;
         popa;
-        // if (stacks.length == 1)
-        // {
-        //     writeln("type: ", func.retn);
-        // }
         blockTypes[bb] = ty;
     }
 
@@ -840,8 +827,6 @@ class TypeGenerator
             func = new Type.Function(func.retn, new Type.Array, func.func);
             funcOpts.options ~= func;
         }
-        // if (!func.exact)
-        // {
         foreach (key, arg; fargs)
         {
             if (Type.Options* opt = key in func.args.exact)
@@ -853,8 +838,6 @@ class TypeGenerator
                 func.args.exact[key] = arg;
             }
         }
-        // }
-        // writeln(func.retn, " <- ", func.args);
         push = func.retn;
     }
 

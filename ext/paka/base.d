@@ -71,7 +71,7 @@ Dynamic sysliburhsmap(Args args)
         .. args[2].arr.length];
     foreach (k, i; args[2].arr)
     {
-        ret[k] = args[0]([i, args[2]]);
+        ret[k] = args[0]([args[1], i]);
     }
     return dynamic(ret);
 }
@@ -167,16 +167,6 @@ Dynamic syslibrange(Args args)
         Dynamic[] ret = null;
         return ret.dynamic;
     }
-    // else
-    // {
-    //     Dynamic[] ret = new Dynamic[start-stop];
-    //     while (start > stop)
-    //     {
-    //         ret ~= dynamic(start);
-    //         start -= 1;
-    //     }
-    //     return dynamic(ret);
-    // }
 }
 
 Dynamic[string] libs;

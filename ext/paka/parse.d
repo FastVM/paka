@@ -28,7 +28,7 @@ import purr.ir.walk;
 alias TokenArray = PushArray!Token;
 
 /// operators for comparrason
-enum string[] cmpOps = ["<", ">", "<=", ">=", "==", "!=", "::"];
+string[] cmpOps = ["<", ">", "<=", ">=", "==", "!=", "::"];
 
 /// locations for error handling
 Location[] locs;
@@ -353,10 +353,10 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
         }
         else
         {
-            ind = new String(tokens[0].value);
+            ind = new Value(tokens[0].value);
         }
         ret = new Call(new Ident("@index"), [last, ind]);
-        tokens.nextIs(Token.Type.ident);
+        tokens.nextIsAny;
     }
     else
     {
@@ -505,7 +505,7 @@ Node readStringPart(ref string str, ref Span span)
     Node node = void;
     if (first != '\\')
     {
-        node = new String(ret);
+        node = new Value(ret);
     }
     else
     {
@@ -526,7 +526,7 @@ Node readStringPart(ref string str, ref Span span)
         else if (ret[0] == 'u')
         {
             string input = ret[2 .. $ - 1].strip;
-            node = new Call(new Ident("_unicode_ctrl"), [new String(input)]);
+            node = new Call(new Ident("_unicode_ctrl"), [new Value(input)]);
         }
         else
         {
@@ -600,7 +600,7 @@ Node readPostExprImpl(ref TokenArray tokens)
     {
         if (!tokens[0].value.canFind('\\'))
         {
-            last = new String(tokens[0].value);
+            last = new Value(tokens[0].value);
         }
         else
         {
@@ -831,10 +831,6 @@ Node readExpr(ref TokenArray tokens, size_t level)
     {
         switch (v.value)
         {
-            // case "|>":
-            //     Node rhs = sub[i + 1].readExpr(level + 1);
-            //     ret = new Call([rhs, ret]);
-            //     break;
         case "=":
             Node rhs = sub[i + 1].readExpr(level + 1);
             ret = new Call(new Ident("@set"), [ret, rhs]);
@@ -1093,12 +1089,12 @@ Node readStmtImpl(ref TokenArray tokens)
         }
         TokenArray pathToks = newTokenArray(mod);
         stmtTokens.nextIs(Token.Type.operator, ":");
-        Node[] args = [new String(pathToks[0].value)];
+        Node[] args = [new Value(pathToks[0].value)];
         pathToks.nextIs(Token.Type.ident);
         while (pathToks.length >= 2 && pathToks[0].isOperator("/"))
         {
             pathToks.nextIs(Token.Type.operator, "/");
-            args ~= new String(pathToks[0].value);
+            args ~= new Value(pathToks[0].value);
             pathToks.nextIs(Token.Type.ident);
         }
         Node libvar = genSym;
@@ -1107,7 +1103,7 @@ Node readStmtImpl(ref TokenArray tokens)
         Node[] each;
         while (true)
         {
-            Node value = new String(stmtTokens[0].value);
+            Node value = new Value(stmtTokens[0].value);
             Node var = new Ident(stmtTokens[0].value);
             stmtTokens.nextIs(Token.Type.ident);
             if (stmtTokens.length != 0 && stmtTokens[0].isOperator("->"))

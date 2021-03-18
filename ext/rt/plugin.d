@@ -1,12 +1,11 @@
-module ext.template.plugin;
+module ext.rt.plugin;
 
 import purr.io;
 import purr.base;
 import purr.dynamic;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
-
-static assert(false, "please implement this library");
+import ext.rt.purr;
 
 static this()
 {
@@ -16,6 +15,7 @@ static this()
 Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
+    plugin.libs.addLib("purr", libpurr);
     return plugin;
 }
 

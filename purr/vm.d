@@ -87,28 +87,13 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
 
     ubyte* instrs = func.instrs.ptr;
     Dynamic* lstack = stack;
-    // writeln("max: ", func.stackSize);
-    // writeln("cap: ", func.captured);
-    // writeln(cast(void*) func, func.captured);
     while (true)
     {
-        // assert(GC.addrOf(cast(void*) func));
-        // assert(func.stackSize >= stack-lstack, "stack overflow error");
         Opcode cur = cast(Opcode) instrs[index++];
-        // writeln(instrs);
-        // writeln(locals[0..func.stab.length]);
-        // assert(GC.sizeOf(cast(void*) func));
-        // assert(GC.addrOf(stack) is lstack);
-        // assert(stack - lstack < func.stackSize);
-        // writeln("len: ", stack - lstack);
-        // writeln("arr: ", lstack[0 .. stack - lstack]);
-        // writeln;
-        // writeln(index, ": ", cur);
         switch (cur)
         {
         default:
             assert(false);
-            // throw new RuntimeException("opcode not found: " ~ cur.to!string);
         case Opcode.nop:
             break;
         case Opcode.push:
@@ -151,9 +136,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             case Dynamic.Type.fun:
                 res = f.fun.fun.value(stack[0 .. 0 + count]);
                 break;
-                // case Dynamic.Type.del:
-                //     (*(stack - 1)) = f.fun.del.value(stack[0 .. 0 + instrs.get1!ushort(index)]);
-                //     break;
             case Dynamic.Type.pro:
                 res = run(f.fun.pro, stack[0 .. 0 + count]);
                 break;
@@ -368,26 +350,18 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             return Dynamic.nil;
         case Opcode.iftrue:
             Dynamic val = (*(--stack));
+            ushort id = instrs.eat!ushort(index);
             if (val.type != Dynamic.Type.nil && (val.type != Dynamic.Type.log || val.log))
             {
-                ushort id = instrs.eat!ushort(index);
                 index = id;
-            }
-            else
-            {
-                instrs.eat!ushort(index);
             }
             break;
         case Opcode.iffalse:
             Dynamic val = (*(--stack));
+            ushort id = instrs.eat!ushort(index);
             if (val.type == Dynamic.Type.nil || (val.type == Dynamic.Type.log && !val.log))
             {
-                ushort id = instrs.eat!ushort(index);
                 index = id;
-            }
-            else
-            {
-                instrs.eat!ushort(index);
             }
             break;
         case Opcode.jump:

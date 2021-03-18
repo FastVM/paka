@@ -3,10 +3,11 @@ module purr.ast;
 import std.algorithm;
 import std.conv;
 import std.meta;
+import purr.dynamic;
 import purr.srcloc;
 
 /// all possible node types
-alias NodeTypes = AliasSeq!(Call, String, Ident);
+alias NodeTypes = AliasSeq!(Call, Value, Ident);
 
 /// some names to unittest
 enum string[] names = [
@@ -99,36 +100,6 @@ class Atom : Node
     }
 }
 
-/// string type
-class String : Atom
-{
-    this(string s)
-    {
-        super(s);
-        id = "string";
-    }
-
-    override string toString()
-    {
-        return "\"" ~ repr ~ "\"";
-    }
-
-    unittest
-    {
-        assert(new String("literal").id == "string", "string has the wrong id");
-    }
-
-    unittest
-    {
-        foreach (str; names)
-        {
-            assert(new String(str).to!string == '"' ~ str ~ '"',
-                    "string should return the passed value in quotes");
-        }
-        assert(new String("\"").to!string != "\\\"", "string should not escape codes");
-    }
-}
-
 size_t usedSyms;
 
 Ident genSym()
@@ -158,5 +129,22 @@ class Ident : Atom
             assert(new Ident(name).to!string == name,
                     "ident to!string should return the passed value");
         }
+    }
+}
+
+/// dynamic value literal
+class Value : Node 
+{
+    Dynamic value;
+
+    this(T)(T v)
+    {
+        value = v.dynamic;
+        id = "value";
+    }
+
+    override string toString()
+    {
+        return "[" ~ value.to!string ~ "]";
     }
 }

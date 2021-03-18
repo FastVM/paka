@@ -10,25 +10,16 @@ import purr.bytecode;
 import purr.vm;
 import purr.error;
 
-// version(unsafe)
-// {
-
-// }
-// else
-// {
-// version = safe;
-// }
+version = safe;
 pragma(inline, true):
 
 alias Args = Dynamic[];
 alias Array = Dynamic[];
 
 alias Delegate = Dynamic function(Args);
-// alias Mapping = Map!(Dynamic, Dynamic);
 alias Mapping = Dynamic[Dynamic];
 Mapping emptyMapping()
 {
-    // return new Mapping;
     return (Dynamic[Dynamic]).init;
 }
 
@@ -64,14 +55,12 @@ class Table
 
     this(typeof(table) t)
     {
-        // assert(t !is null);
         table = t;
         metatable = null;
     }
 
     this(typeof(table) t, Table m)
     {
-        // assert(t !is null);
         table = t;
         metatable = m;
     }
@@ -222,11 +211,19 @@ class Table
 
     Dynamic opCall(Args args)
     {
-        if (Dynamic* dyn = "self".dynamic in meta)
+        if (Dynamic* index = "index".dynamic in meta)
         {
-            return meta[dynamic("index")](dyn.arr ~ args);
+            if (Dynamic* dyn = "self".dynamic in meta)
+            {
+                return meta[dynamic("index")](dyn.arr ~ args);
+            }
+            return meta[dynamic("index")](args);
         }
-        return meta[dynamic("index")](args);
+        if (Dynamic* ret = args[0] in table)
+        {
+            return *ret;
+        }
+        throw new Exception("");
     }
 
     Dynamic opUnary(string op)()
@@ -302,7 +299,6 @@ Dynamic dynamic(T...)(T a)
 struct Fun
 {
     Dynamic function(Args) value;
-    // alias value this;
     string mangled;
     Dynamic[] names;
     Dynamic[] args;
@@ -394,23 +390,11 @@ pragma(inline, true):
         type = Type.tab;
     }
 
-    // this(Dynamic function(Args) fun)
-    // {
-    //     value.fun.fun = new Fun(fun);
-    //     type = Type.fun;
-    // }
-
     this(Fun fun)
     {
         value.fun.fun = [fun].ptr;
         type = Type.fun;
     }
-
-    // this(Dynamic delegate(Args) del)
-    // {
-    //     value.fun.del = new Del(del);
-    //     type = Type.del;
-    // }
 
     this(Function pro)
     {
@@ -443,8 +427,6 @@ pragma(inline, true):
         {
         case Dynamic.Type.fun:
             return fun.fun.value(args);
-            // case Dynamic.Type.del:
-            //     return fun.del.value(args);
         case Dynamic.Type.pro:
             if (fun.pro.self.length == 0)
             {
@@ -472,7 +454,6 @@ pragma(inline, true):
         switch (t)
         {
         default:
-            // assert(0);
             throw new TypeException(
                     "error: not comparable: " ~ this.to!string ~ " " ~ other.to!string);
         case Type.nil:
@@ -647,7 +628,6 @@ pragma(inline, true):
     {
         version (safe)
         {
-            // if (type != Type.fun && type != Type.pro && type != Type.del)
             if (type != Type.fun && type != Type.pro)
             {
                 throw new TypeException("expected callable type not " ~ type.to!string);
@@ -823,8 +803,6 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
         return cmpTable(a.value.tab, b.value.tab);
     case Dynamic.Type.fun:
         return cmp(a.value.fun.fun, b.value.fun.fun);
-        // case Dynamic.Type.del:
-        //     return cmp(a.value.fun.del, b.value.fun.del);
     case Dynamic.Type.pro:
         return cmpFunction(a.value.fun.pro, b.value.fun.pro);
     }
@@ -900,8 +878,6 @@ private string strFormat(Dynamic dyn)
         return dyn.tab.to!string;
     case Dynamic.Type.fun:
         return (*dyn.value.fun.fun).to!string;
-        // case Dynamic.Type.del:
-        //     return (*dyn.value.fun.del).to!string;
     case Dynamic.Type.pro:
         return dyn.fun.pro.to!string;
     }

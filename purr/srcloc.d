@@ -28,7 +28,6 @@ struct Span
 {
     Location first;
     Location last;
-    string value;
 
     string pretty() {
         return "from " ~ first.pretty ~ " to " ~ last.pretty;
@@ -39,7 +38,6 @@ struct Span
         Span ret;
         ret.first = first.dup;
         ret.last = last.dup;
-        ret.value = value;
         return ret;
     }
 }

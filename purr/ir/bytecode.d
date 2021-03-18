@@ -125,14 +125,10 @@ class BytecodeEmitter
     BasicBlock[] bbchecked;
     Function func;
     ushort[Function][BasicBlock] counts;
-    // TypeGenerator typeGenerator;
-    // CodeGenerator codeGenerator;
     bool isFirst = true;
 
     this()
     {
-        // typeGenerator = new TypeGenerator;
-        // codeGenerator = new CodeGenerator;
     }
 
     bool within(BasicBlock block, Function func)
@@ -159,17 +155,7 @@ class BytecodeEmitter
         {
             disabled = null;
         }
-        // typeGenerator.startFunction(block, predef(block));
         entryNew(block, func);
-        // typeGenerator.stopFunction(block);
-        // if (isBlockFirst)
-        // {
-        //     if (runjit)
-        //     {
-        //         auto mainfunc = codeGenerator.genMainFunc(block, typeGenerator);
-        //         func.jitted = mainfunc;
-        //     }
-        // }
     }
 
     void entryNew(BasicBlock block, Function newFunc)
@@ -235,7 +221,6 @@ class BytecodeEmitter
             {
                 writeln(block);
             }
-            // typeGenerator.startBlock(block);
             counts[block][func] = cast(ushort) func.instrs.length;
             foreach (sym; predef(block))
             {
@@ -250,7 +235,6 @@ class BytecodeEmitter
                 emit(instr);
             }
             emit(block.exit);
-            // typeGenerator.stopBlock(block);
         }
     }
 
@@ -260,7 +244,6 @@ class BytecodeEmitter
         {
             if (typeid(em) == typeid(Instr))
             {
-                // typeGenerator.genFrom(cast(Instr) em);
                 emit(cast(Instr) em);
                 return;
             }

@@ -2,7 +2,7 @@ module purr.ir.walk;
 
 import core.memory;
 import std.conv;
-import std.stdio;
+import purr.io;
 import std.string;
 import std.algorithm;
 import std.ascii;
@@ -39,7 +39,6 @@ class Walker
 
     Function walkProgram(Node node, size_t ctx)
     {
-        // writeln(node);
         BasicBlock entry = new BasicBlock;
         block = entry;
         funcblk = block;
@@ -75,11 +74,11 @@ class Walker
         case "call":
             walkExact(cast(Call) node);
             break;
-        case "string":
-            walkExact(cast(String) node);
-            break;
         case "ident":
             walkExact(cast(Ident) node);
+            break;
+        case "value":
+            walkExact(cast(Value) node);
             break;
         default:
             assert(false);
@@ -210,7 +209,6 @@ class Walker
         BasicBlock cond = new BasicBlock;
         BasicBlock loop = new BasicBlock;
         BasicBlock after1 = new BasicBlock;
-        // BasicBlock after2 = new BasicBlock;
         emit(new GotoBranch(cond));
         block = loop;
         walk(args[1]);
@@ -221,8 +219,6 @@ class Walker
         emit(new LogicalBranch(loop, after1, after1, false));
         block = after1;
         emit(new PushInstruction(Dynamic.nil));
-        // emit(new GotoBranch(after2));
-        // block = after2;
     }
 
     void walkDo(Node[] args)
@@ -330,48 +326,6 @@ class Walker
         {
             assert(false);
         }
-        //     Ident op = cast(Ident) args[0];
-        //     if (Ident id = cast(Ident) args[1])
-        //     {
-        //         if (["add", "sub", "mul", "div", "mod", "cat"].canFind(op.repr))
-        //         {
-        //             walk(args[2]);
-        //             emit(new OperatorStoreInstruction(op.repr, id.repr));
-        //         }
-        //         else
-        //         {
-        //             walk(args[1]);
-        //             walk(args[2]);
-        //             emit(new OperatorInstruction(op.repr));
-        //             emit(new OperatorStoreInstruction(id.repr));
-        //         }
-        //     }
-        //     else if (Call call = cast(Call) args[0])
-        //     {
-        //         if (Ident id = cast(Ident) call.args[0])
-        //         {
-        //             if (specialForms.canFind(id.repr))
-        //             {
-        //                 assert(id.repr == "@index");
-        //                 walk(call.args[1]);
-        //                 walk(call.args[2]);
-        //                 walk(args[1]);
-        //                 emit(new OperatroStoreIndexInstruction());
-        //             }
-        //             else
-        //             {
-        //                 assert(false);
-        //             }
-        //         }
-        //         else
-        //         {
-        //             assert(false);
-        //         }
-        //     }
-        //     else
-        //     {
-        //         assert(false);
-        //     }
     }
 
     void walkDef(Node[] args)
@@ -623,8 +577,8 @@ class Walker
         }
     }
 
-    void walkExact(String str)
+    void walkExact(Value val)
     {
-        emit(new PushInstruction(str.repr.dynamic));
+        emit(new PushInstruction(val.value.dynamic));
     }
 }

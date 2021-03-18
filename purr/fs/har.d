@@ -29,16 +29,7 @@ MemoryDirectory parseHar(Location loc, MemoryDirectory dir)
             {
                 mfile = new MemoryTextFile(Location(ilno, 1, name, file));
             }
-            // if (MemoryFile* exists = name in dir)
-            // {
-            //     MemoryTextFile tf = cast(MemoryTextFile)*exists;
-            //     dir[name] = new MemoryTextFile(Location(tf.location.line, tf.location.column,
-            //             tf.location.file, tf.location.src ~ mfile.location.src));
-            // }
-            // else
-            // {
-                dir[name] = mfile;
-            // }
+            dir[name] = mfile;
         }
         names = null;
         file = null;

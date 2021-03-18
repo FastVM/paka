@@ -31,17 +31,10 @@ Pair[] libsys()
         FunctionPair!libleave("leave"), FunctionPair!libargs("args"),
         FunctionPair!libtypeof("typeof"), FunctionPair!libimport("import"),
         FunctionPair!libassert("enforce"), FunctionPair!libeval("eval"),
-        // FunctionPair!libshell("shell"),
     ];
     ret.addLib("env", libsysenv);
     return ret;
 }
-
-// Dynamic libshell(Args args)
-// {
-//     auto res = executeShell(args[0].str);
-//     return res.output.dynamic;
-// }
 
 /// asserts value is true, with error msg
 Dynamic libassert(Args args)
