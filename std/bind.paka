@@ -1,0 +1,25 @@
+static {
+    def $0.const(ctx) {
+        id = ctx.id()
+        ctx.op("=")
+        expr = ctx.expr()
+        body = ctx.body()
+        return [["@fun", [id], body], expr]
+    }
+
+    def $0.let(ctx) {
+        id = ctx.id()
+        ctx.op("=")
+        expr = ctx.expr()
+        body = ctx.body()
+        arg = ctx.sym()
+        return [["@fun", [arg], ["@do", ["@set", id, arg], body]], expr]
+    }
+
+    def $0.var(ctx) {
+        id = ctx.id()
+        ctx.op("=")
+        expr = ctx.expr()
+        return ["@set", id, expr]
+    }
+}

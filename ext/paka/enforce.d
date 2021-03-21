@@ -155,9 +155,13 @@ void assertInspects(VMInfo info)
             break;
         case Opcode.store:
             break;
+        case Opcode.cstore:
+            break;
         case Opcode.istore:
             break;
         case Opcode.opstore:
+            break;
+        case Opcode.opcstore:
             break;
         case Opcode.opistore:
             break;

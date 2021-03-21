@@ -89,7 +89,10 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     Dynamic* lstack = stack;
     while (true)
     {
+        // writeln(lstack[0..stack-lstack]);
         Opcode cur = cast(Opcode) instrs[index++];
+        // writeln(index, ": ", cur);
+        // writeln;
         switch (cur)
         {
         default:
@@ -252,6 +255,11 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             }
             locals[local] = rhs;
             break;
+        case Opcode.cstore:
+            Dynamic rhs = (*(stack - 1));
+            ushort local = instrs.eat!ushort(index);
+            *func.captured[local] = rhs; 
+            break;
         case Opcode.istore:
             switch ((*(stack - 3)).type)
             {
@@ -277,7 +285,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             break;
         case Opcode.opstore:
             ushort val = instrs.eat!ushort(index);
-        switchOpp:
+        switchOpstore:
             switch (instrs.eat!ushort(index))
             {
             default:
@@ -287,12 +295,28 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             case opm[1].to!AssignOp:
                     mixin("locals[val] = locals[val] " ~ opm[0] ~ " (*(stack-1));");
                     (*(stack - 1)) = locals[val];
-                    break switchOpp;
+                    break switchOpstore;
+                }
+            }
+            break;
+        case Opcode.opcstore:
+            ushort val = instrs.eat!ushort(index);
+        switchOpcstore:
+            switch (instrs.eat!ushort(index))
+            {
+            default:
+                assert(0);
+                static foreach (opm; mutMap)
+                {
+            case opm[1].to!AssignOp:
+                    mixin("*func.captured[val] = *func.captured[val] " ~ opm[0] ~ " (*(stack-1));");
+                    (*(stack - 1)) = *func.captured[val];
+                    break switchOpcstore;
                 }
             }
             break;
         case Opcode.opistore:
-        switchOpi:
+        switchOpistore:
             switch (instrs.eat!ushort(index))
             {
             default:
@@ -307,12 +331,12 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                         Array* arr2 = arr.arrPtr;
                         size_t ind = (*(stack - 2)).as!size_t;
                         mixin("(*arr2)[ind] = (*arr2)[ind] " ~ opm[0] ~ " (*(stack - 1));");
-                        break switchOpi;
+                        break switchOpistore;
                     case Dynamic.Type.tab:
                         mixin(
                                 "arr.tab.set((*(stack - 2)), arr.tab[(*(stack - 2))] "
                                 ~ opm[0] ~ " (*(stack - 1)));");
-                        break switchOpi;
+                        break switchOpistore;
                     default:
                         throw new TypeException(
                                 "error: cannot store at index on a " ~ arr.type.to!string);

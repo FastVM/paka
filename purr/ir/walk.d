@@ -7,12 +7,13 @@ import std.string;
 import std.algorithm;
 import std.ascii;
 import purr.base;
-import purr.ast;
+import purr.ast.ast;
 import purr.dynamic;
 import purr.srcloc;
 import purr.bytecode;
 import purr.ir.repr;
 import purr.ir.bytecode;
+import purr.ir.opt;
 
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
@@ -51,8 +52,10 @@ class Walker
         {
             func.captab.define(i.name);
         }
+        Opt opt = new Opt;
+        BasicBlock bb = opt.opt(entry);
         BytecodeEmitter emitter = new BytecodeEmitter;
-        emitter.entryFunc(entry, func);
+        emitter.entryFunc(bb, func);
         return func;
     }
 

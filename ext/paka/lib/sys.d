@@ -3,7 +3,7 @@ module paka.lib.sys;
 import purr.dynamic;
 import purr.base;
 import purr.error;
-import purr.ast;
+import purr.ast.ast;
 import purr.parse;
 import purr.ir.walk;
 import purr.vm;

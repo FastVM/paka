@@ -9,9 +9,7 @@ import std.functional;
 import std.ascii;
 import std.string;
 import std.algorithm;
-import paka.tokens;
 import purr.vm;
-import purr.ast;
 import purr.inter;
 import purr.base;
 import purr.dynamic;
@@ -23,6 +21,10 @@ import purr.fs.memory;
 import purr.fs.files;
 import purr.bytecode;
 import purr.ir.walk;
+import purr.ast.ast;
+import paka.tokens;
+import paka.macros;
+import paka.walk;
 
 /// safe array of tokens
 alias TokenArray = PushArray!Token;
@@ -36,6 +38,9 @@ Location[] locs;
 /// context for static expressions
 size_t[] staticCtx;
 
+/// macros for prefix operators
+Mapping[] prefixMacros;
+
 /// wraps a function of type Node function(T...)(TokenArray tokens, T args).
 /// it gets the span of tokens consumed and it gives them a span
 template Spanning(alias F, T...)
@@ -44,22 +49,28 @@ template Spanning(alias F, T...)
     {
         TokenArray orig = tokens;
         bool doLocs = orig.length != 0;
-        if (doLocs)
+        if (doLocs && orig.length != 0)
         {
             locs ~= orig[0].span.last;
         }
         scope (success)
         {
-            if (doLocs)
+            if (doLocs && orig.length != 0)
             {
                 locs.length--;
             }
         }
         Node ret = F(tokens, a);
-        if (orig.length > 0 && ret !is null)
+        if (orig.length != 0 && ret !is null)
         {
-            ret.span = Span(orig[0].span.first.dup,
-                    orig[orig.length - tokens.length - 1].span.last.dup);
+            if (tokens.length == 0)
+            {
+                ret.span = Span(orig[0].span.first.dup, orig[$-1].span.last.dup);
+            }
+            else
+            {
+                ret.span = Span(orig[0].span.first.dup, tokens[0].span.first.dup);
+            }
         }
         return ret;
     }
@@ -360,7 +371,8 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     }
     else
     {
-        throw new Exception("parse error " ~ tokens.to!string);
+        return last;
+        // throw new Exception("parse error " ~ tokens.to!string);
     }
     return tokens.readPostExtend(ret);
 }
@@ -562,10 +574,14 @@ Node readPostExprImpl(ref TokenArray tokens)
         Node node = tokens.readBlock;
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, staticCtx[$-1]);
-        Dynamic val = run(func, null, func.exportLocalsToBaseCallback);
-        Ident id = genSym;
-        rootBases[staticCtx[0]-1] ~= Pair(id.repr, val);
-        return id;
+        Dynamic ctx = genCtx;
+        Dynamic val = run(func, [ctx], func.exportLocalsToBaseCallback);
+        Mapping macros = ctx.tab.table;
+        foreach (key, value; macros)
+        {
+            prefixMacros[$-1][key] = value;
+        }
+        return new Value(val);
     }
     else if (tokens[0].isOpen("("))
     {
@@ -593,8 +609,25 @@ Node readPostExprImpl(ref TokenArray tokens)
     }
     else if (tokens[0].isIdent)
     {
-        last = new Ident(tokens[0].value);
-        tokens.nextIs(Token.Type.ident);
+        bool wasMacro = false;
+        outter: foreach_reverse (macros; prefixMacros)
+        {
+            foreach (key, value; macros)
+            {
+                if (key.str == tokens[0].value)
+                {
+                    tokens.nextIs(Token.Type.ident);
+                    last = readFromMacro(value, tokens);
+                    wasMacro = true;
+                    break outter;
+                }
+            }
+        }
+        if (!wasMacro)
+        {
+            last = new Ident(tokens[0].value);
+            tokens.nextIs(Token.Type.ident);
+        }
     }
     else if (tokens[0].isString)
     {
@@ -702,48 +735,23 @@ bool isDotOperator(Token tok)
     return tok.isOperator(".") || tok.isOperator("\\");
 }
 
-/// hack for counting dots in an operator expression.
-/// only used for readExpr
-Dots[2] countDots(ref TokenArray tokens)
-{
-    Dots pre;
-    Dots post;
-    while (tokens.length != 0 && tokens[0].isDotOperator)
-    {
-        pre ~= tokens[0].value;
-        tokens.tokens = tokens.tokens[1 .. $];
-    }
-    while (tokens.length != 0 && tokens[$ - 1].isDotOperator)
-    {
-        post ~= tokens[$ - 1].value;
-        tokens.tokens = tokens.tokens[0 .. $ - 1];
-    }
-    return [pre, post];
-}
-
-Node binaryFold(Node[] args)
-{
-    Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
-    Node lambdaBody = new Call(args[0 .. $ - 2] ~ xy);
-    Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Ident("_paka_fold"), [cast(Node) lambda] ~ args[$ - 2 .. $]);
-    return domap;
-}
-
-Node binaryDotmap(string s)(Node[] args)
-{
-    Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
-    Node lambdaBody = new Call(args[0 .. $ - 2] ~ xy);
-    Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Ident(s), [cast(Node) lambda] ~ args[$ - 2 .. $]);
-    return domap;
-}
-
 alias readExprBase = Spanning!(readExprBaseImpl);
 /// reads any expresssion with precedence of zero
 Node readExprBaseImpl(ref TokenArray tokens)
 {
     return tokens.readExpr(0);
+}
+
+bool isAnyOperator(Token tok, string[] ops)
+{
+    foreach (op; ops)
+    {
+        if (tok.isOperator(op))
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 /// reads any expresssion
@@ -753,116 +761,62 @@ Node readExpr(ref TokenArray tokens, size_t level)
     {
         return tokens.readPreExpr;
     }
-    TokenArray[] sub = [TokenArray.init];
     TokenArray opers = TokenArray.init;
-    bool lastIsOp = true;
-    size_t depth = 0;
-    while (tokens.length != 0)
-    {
-        Token token = tokens[0];
-        bool found = false;
-        if (token.isOpen)
-        {
-            depth++;
-        }
-        if (token.isClose)
-        {
-            if (depth == 0)
-            {
-                break;
-            }
-            depth--;
-        }
-        if (depth == 0)
-        {
-            if (token.isComma || token.isSemicolon || token.isOperator(":"))
-            {
-                break;
-            }
-            foreach (op; prec[level])
-            {
-                if (token.isOperator(op) && !lastIsOp)
-                {
-                    sub ~= TokenArray.init;
-                    opers ~= token;
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if (!found)
-        {
-            sub[$ - 1] ~= token;
-        }
-        lastIsOp = token.isOperator && !token.isDotOperator;
-        tokens.nextIsAny;
-    }
-    if (opers.length > 0 && opers[0].isOperator("=>"))
-    {
-        Node ret = sub[$ - 1].readExpr(level + 1);
-        foreach_reverse (v; sub[0 .. $ - 1])
-        {
-            ret = new Call(new Ident("@return"), [ret]);
-            if (v[0].isOpen("("))
-            {
-                ret = new Call(new Ident("@fun"), [
-                        new Call(v.readOpen1!"()"), ret
-                        ]);
-            }
-            else
-            {
-                ret = new Call(new Ident("@fun"), [
-                        new Call([v.readExpr(level + 1)]), ret
-                        ]);
-            }
-        }
-        return ret;
-    }
     Dots[2][] dotcount = [[Dots.init, Dots.init]];
-    foreach (i, ref v; sub)
+    Node[] subNodes = [tokens.readExpr(level + 1)];
+    while (tokens.length != 0 && tokens[0].isAnyOperator("." ~ prec[level]))
     {
-        Dots[2] dc = v.countDots;
-        dotcount[$ - 1][1] ~= dc[0];
-        dotcount ~= [dc[1], Dots.init];
+        Dots pre;
+        Dots post;
+        while (tokens.length != 0 && tokens[0].isDotOperator)
+        {
+            pre ~= tokens[0].value;
+            tokens.tokens = tokens.tokens[1 .. $];
+        }
+        opers ~= tokens[0];
+        tokens.nextIsAny;
+        subNodes ~= tokens.readExpr(level + 1);
+        dotcount[$ - 1][1] ~= pre;
+        dotcount ~= [post, Dots.init];
     }
-    Node ret = sub[0].readExpr(level + 1);
+    Node ret = subNodes[0];
     Ident last;
     foreach (i, v; opers)
     {
         switch (v.value)
         {
         case "=":
-            Node rhs = sub[i + 1].readExpr(level + 1);
+            Node rhs = subNodes[i + 1];
             ret = new Call(new Ident("@set"), [ret, rhs]);
             break;
         case "+=":
-            Node rhs = sub[i + 1].readExpr(level + 1);
+            Node rhs = subNodes[i + 1];
             ret = new Call(new Ident("@opset"), [new Ident("add"), ret, rhs]);
             break;
         case "~=":
-            Node rhs = sub[i + 1].readExpr(level + 1);
+            Node rhs = subNodes[i + 1];
             ret = new Call(new Ident("@opset"), [new Ident("cat"), ret, rhs]);
             break;
         case "-=":
-            Node rhs = sub[i + 1].readExpr(level + 1);
+            Node rhs = subNodes[i + 1];
             ret = new Call(new Ident("@opset"), [new Ident("sub"), ret, rhs]);
             break;
         case "*=":
-            Node rhs = sub[i + 1].readExpr(level + 1);
+            Node rhs = subNodes[i + 1];
             ret = new Call(new Ident("@opset"), [new Ident("mul"), ret, rhs]);
             break;
         case "/=":
-            Node rhs = sub[i + 1].readExpr(level + 1);
+            Node rhs = subNodes[i + 1];
             ret = new Call(new Ident("@opset"), [new Ident("div"), ret, rhs]);
             break;
         case "%=":
-            Node rhs = sub[i + 1].readExpr(level + 1);
+            Node rhs = subNodes[i + 1];
             ret = new Call(new Ident("@opset"), [new Ident("mod"), ret, rhs]);
             break;
         default:
             Dots lhsc = dotcount[i + 1][0];
             Dots rhsc = dotcount[i + 1][1];
-            Node rhs = sub[i + 1].readExpr(level + 1);
+            Node rhs = subNodes[i + 1];
             stdout.flush;
             if (cmpOps.canFind(v.value) && opers.length != 1)
             {
@@ -971,95 +925,37 @@ Node readStmtImpl(ref TokenArray tokens)
             return null;
         }
     }
-    Token[] stmtTokens0;
-    size_t depth;
-    while (depth != 0 || !tokens[0].isSemicolon)
-    {
-        if (tokens[0].isOpen)
-        {
-            depth++;
-        }
-        if (tokens[0].isClose)
-        {
-            if (depth == 0)
-            {
-                break;
-            }
-            depth--;
-        }
-        stmtTokens0 ~= tokens[0];
-        tokens.nextIsAny;
-        if (tokens.length == 0)
-        {
-            if (depth != 0)
-            {
-                throw new Exception("parse error: unbalanced");
-            }
-            break;
-        }
-        if (depth == 0 && tokens[0].isSemicolon)
-        {
-            tokens.nextIs(Token.Type.semicolon);
-            break;
-        }
-        if (depth == 0 && stmtTokens0.length > 0)
-        {
-            Token last = stmtTokens0[$ - 1];
-            Token next = tokens[0];
-            bool noFollowLast = noFollow.canFind(last.type);
-            bool noFollowNext = noFollow.canFind(next.type);
-            if (noFollowLast && noFollowNext)
-            {
-                break;
-            }
-            if (noFollowLast && (next.isOpen("[") || next.isOpen("{")))
-            {
-                tokens.nextIsAny;
-                break;
-            }
-            if (noFollowLast && next.isKeyword)
-            {
-                break;
-            }
-            if ((last.isClose) && (noFollowNext
-                    || next.isKeyword) && !next.isKeyword("else"))
-            {
-                break;
-            }
-        }
-    }
-    TokenArray stmtTokens = newTokenArray(stmtTokens0);
-    if (stmtTokens.length == 0)
+    if (tokens.length == 0)
     {
         return null;
     }
-    if (stmtTokens[0].isOpen("("))
+    if (tokens[0].isOpen("("))
     {
         throw new Exception("parse error: cannot have open paren to start a statement");
     }
-    if (stmtTokens[0].isKeyword("return"))
+    if (tokens[0].isKeyword("return"))
     {
-        stmtTokens.nextIs(Token.Type.keyword, "return");
-        return new Call(new Ident("@return"), [stmtTokens.readExprBase]);
+        tokens.nextIs(Token.Type.keyword, "return");
+        return new Call(new Ident("@return"), [tokens.readExprBase]);
     }
-    if (stmtTokens[0].isKeyword("assert"))
+    if (tokens[0].isKeyword("assert"))
     {
-        stmtTokens.nextIs(Token.Type.keyword, "assert");
+        tokens.nextIs(Token.Type.keyword, "assert");
         return new Call(new Ident("@do"),
                 [
                     cast(Node) new Call(new Ident("_paka_begin_assert"), null),
                     cast(Node) new Call(new Ident("_paka_assert"),
                         [
                             cast(Node) new Call(new Ident("@inspect"), [
-                                stmtTokens.readExprBase
+                                tokens.readExprBase
                             ])
                         ])
                 ]);
     }
-    if (stmtTokens[0].isKeyword("def"))
+    if (tokens[0].isKeyword("def"))
     {
-        stmtTokens.nextIs(Token.Type.keyword, "def");
-        Node name = stmtTokens.readExprBase;
+        tokens.nextIs(Token.Type.keyword, "def");
+        Node name = tokens.readExprBase;
         Call call = cast(Call) name;
         if (call is null)
         {
@@ -1073,22 +969,22 @@ Node readStmtImpl(ref TokenArray tokens)
         return new Call(new Ident("@set"),
                 [cast(Node) new Call(call.args[0 .. $ - 1])] ~ dobody.args[2 .. $]);
     }
-    if (stmtTokens[0].isKeyword("use"))
+    if (tokens[0].isKeyword("use"))
     {
-        stmtTokens.nextIs(Token.Type.keyword, "use");
+        tokens.nextIs(Token.Type.keyword, "use");
         Token[] mod;
-        while (!stmtTokens[0].isOperator(":"))
+        while (!tokens[0].isOperator(":"))
         {
-            mod ~= stmtTokens[0];
-            stmtTokens.nextIsAny;
-            if (stmtTokens.length == 0)
+            mod ~= tokens[0];
+            tokens.nextIsAny;
+            if (tokens.length == 0)
             {
                 throw new Exception(
                         "parse error: need colon in use (consider using import or include)");
             }
         }
         TokenArray pathToks = newTokenArray(mod);
-        stmtTokens.nextIs(Token.Type.operator, ":");
+        tokens.nextIs(Token.Type.operator, ":");
         Node[] args = [new Value(pathToks[0].value)];
         pathToks.nextIs(Token.Type.ident);
         while (pathToks.length >= 2 && pathToks[0].isOperator("/"))
@@ -1103,40 +999,40 @@ Node readStmtImpl(ref TokenArray tokens)
         Node[] each;
         while (true)
         {
-            Node value = new Value(stmtTokens[0].value);
-            Node var = new Ident(stmtTokens[0].value);
-            stmtTokens.nextIs(Token.Type.ident);
-            if (stmtTokens.length != 0 && stmtTokens[0].isOperator("->"))
+            Node value = new Value(tokens[0].value);
+            Node var = new Ident(tokens[0].value);
+            tokens.nextIs(Token.Type.ident);
+            if (tokens.length != 0 && tokens[0].isOperator("->"))
             {
-                stmtTokens.nextIs(Token.Type.operator, "->");
-                var = new Ident(stmtTokens[0].value);
-                stmtTokens.nextIs(Token.Type.ident);
+                tokens.nextIs(Token.Type.operator, "->");
+                var = new Ident(tokens[0].value);
+                tokens.nextIs(Token.Type.ident);
             }
             value = new Call(new Ident("@index"), [libvar, value]);
             each ~= new Call(new Ident("@set"), [var, value]);
-            if (stmtTokens.length == 0)
+            if (tokens.length == 0)
             {
                 break;
             }
-            stmtTokens.nextIs(Token.Type.comma);
+            tokens.nextIs(Token.Type.comma);
         }
         return new Call(new Ident("@do"), setlib ~ each ~ libvar);
     }
-    if (stmtTokens[0].isKeyword("include"))
+    if (tokens[0].isKeyword("include"))
     {
-        stmtTokens.nextIs(Token.Type.keyword, "include");
+        tokens.nextIs(Token.Type.keyword, "include");
         Token[] mod;
         while (true)
         {
-            mod ~= stmtTokens[0];
-            stmtTokens.nextIsAny;
-            if (stmtTokens.length == 0)
+            mod ~= tokens[0];
+            tokens.nextIsAny;
+            if (tokens.length == 0)
             {
                 break;
             }
-            if (stmtTokens[0].isSemicolon)
+            if (tokens[0].isSemicolon)
             {
-                stmtTokens.nextIs(Token.Type.semicolon);
+                tokens.nextIs(Token.Type.semicolon);
                 break;
             }
         }
@@ -1164,21 +1060,21 @@ Node readStmtImpl(ref TokenArray tokens)
         Location data = filename.readFile;
         return data.parsePaka;
     }
-    if (stmtTokens[0].isKeyword("import"))
+    if (tokens[0].isKeyword("import"))
     {
-        stmtTokens.nextIs(Token.Type.keyword, "import");
+        tokens.nextIs(Token.Type.keyword, "import");
         Token[] mod;
         while (true)
         {
-            mod ~= stmtTokens[0];
-            stmtTokens.nextIsAny;
-            if (stmtTokens.length == 0)
+            mod ~= tokens[0];
+            tokens.nextIsAny;
+            if (tokens.length == 0)
             {
                 break;
             }
-            if (stmtTokens[0].isSemicolon)
+            if (tokens[0].isSemicolon)
             {
-                stmtTokens.nextIs(Token.Type.semicolon);
+                tokens.nextIs(Token.Type.semicolon);
                 break;
             }
         }
@@ -1192,6 +1088,7 @@ Node readStmtImpl(ref TokenArray tokens)
             filename ~= pathToks[0].value;
             pathToks.nextIs(Token.Type.ident);
         }
+        writeln(filename);
         if (filename.fsexists)
         {
         }
@@ -1220,7 +1117,7 @@ Node readStmtImpl(ref TokenArray tokens)
         }
         return new Ident(filename);
     }
-    return stmtTokens.readExprBase;
+    return tokens.readExprBase;
 }
 
 /// reads many staments statement, each ending in a semicolon
@@ -1231,10 +1128,15 @@ Node readBlockBodyImpl(ref TokenArray tokens)
     Node[] ret;
     while (tokens.length > 0 && !tokens[0].isClose("}"))
     {
+        size_t lengthBefore = tokens.length;
         Node stmt = tokens.readStmt;
         if (stmt !is null)
         {
             ret ~= stmt;
+        }
+        if (tokens.length == lengthBefore)
+        {
+            break;
         }
     }
     return new Call(new Ident("@do"), ret);
@@ -1298,10 +1200,12 @@ Node parse(Location loc)
     Location[] olocs = locs;
     locs = null;
     staticCtx ~= enterCtx;
+    prefixMacros ~= emptyMapping;
     scope (exit)
     {
         locs = olocs;
         staticCtx.length--;
+        prefixMacros.length--;
     }
     fileSystem ~= parseHar(loc, fileSystem);
     MemoryTextFile main = "main.paka".readMemFile;

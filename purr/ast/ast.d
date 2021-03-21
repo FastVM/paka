@@ -1,4 +1,4 @@
-module purr.ast;
+module purr.ast.ast;
 
 import std.algorithm;
 import std.conv;

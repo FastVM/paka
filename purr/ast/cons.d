@@ -1,11 +1,11 @@
-module ext.rt.astcons;
+module purr.ast.cons;
 
 import std.algorithm;
 import std.conv;
 import std.array;
 import purr.srcloc;
 import purr.dynamic;
-import purr.ast;
+import purr.ast.ast;
 
 Dynamic astDynamic(Location loc)
 {

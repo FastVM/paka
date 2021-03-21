@@ -147,7 +147,7 @@ class BytecodeEmitter
         }
     }
 
-    void entryFunc(BasicBlock block, Function func, string[] args=null)
+    void entryFunc(BasicBlock block, Function func, string[] args = null)
     {
         bool isBlockFirst = isFirst;
         isFirst = false;
@@ -161,9 +161,14 @@ class BytecodeEmitter
     void entryNew(BasicBlock block, Function newFunc)
     {
         Function oldFunc = func;
+        TodoBlock[] oldTodoBlocks = todoBlocks;
+        scope(exit) {
+            func = oldFunc;
+            todoBlocks = oldTodoBlocks;
+        }
         func = newFunc;
+        todoBlocks = null;
         emit(block);
-        func = oldFunc;
         while (todoBlocks.length != 0)
         {
             TodoBlock cur = todoBlocks[0];
@@ -194,7 +199,7 @@ class BytecodeEmitter
         }
         foreach (instr; block.instrs)
         {
-            if (AssignmentInstruction si = cast(AssignmentInstruction) instr)
+            if (StoreInstruction si = cast(StoreInstruction) instr)
             {
                 if (!checked.canFind(si.var))
                 {
@@ -262,12 +267,12 @@ class BytecodeEmitter
         void afterLogicalTargets()
         {
             remaining--;
-            if (remaining == 0)
-            {
-                enable(branch.post);
-            }
+            // if (remaining == 0)
+            // {
+            //     enable(branch.post);
+            // }
         }
-        disable(branch.post);
+        // disable(branch.post);
         remaining++;
         entry(branch.target[0], func, (t0) {
             cfunc.modifyInstr(j0, t0);
@@ -307,8 +312,26 @@ class BytecodeEmitter
 
     void emit(StoreInstruction store)
     {
-        uint ius = func.stab[store.var];
-        pushInstr(func, Opcode.store, [cast(ushort) ius]);
+        if (uint *ius = store.var in func.captab.byName)
+        {
+            pushInstr(func, Opcode.cstore, [cast(ushort)*ius]);
+        }
+        else if (uint* ius = store.var in func.stab.byName)
+        {
+            pushInstr(func, Opcode.store, [cast(ushort)*ius]);
+        }
+        else
+        {
+            foreach (argno, argname; func.args)
+            {
+                if (argname.str == store.var)
+                {
+                    throw new Exception("not mutable: " ~ store.var);
+                }
+            }
+            uint ius = func.doCapture(store.var);
+            pushInstr(func, Opcode.cstore, [cast(ushort) ius]);
+        }
     }
 
     void emit(StoreIndexInstruction store)
@@ -317,11 +340,32 @@ class BytecodeEmitter
     }
 
     void emit(OperatorStoreInstruction store)
-    {
-        uint ius = func.stab[store.var];
-        pushInstr(func, Opcode.opstore, [
-                cast(ushort) ius, cast(ushort) store.op.to!AssignOp
-                ]);
+    {if (uint *ius = store.var in func.captab.byName)
+        {
+            pushInstr(func, Opcode.opcstore, [
+                    cast(ushort) *ius, cast(ushort) store.op.to!AssignOp
+                    ]);
+        }
+        else if (uint* ius = store.var in func.stab.byName)
+        {
+            pushInstr(func, Opcode.opstore, [
+                    cast(ushort) *ius, cast(ushort) store.op.to!AssignOp
+                    ]);
+        }
+        else
+        {
+            foreach (argno, argname; func.args)
+            {
+                if (argname.str == store.var)
+                {
+                    throw new Exception("not mutable: " ~ store.var);
+                }
+            }
+            uint ius = func.doCapture(store.var);
+            pushInstr(func, Opcode.opcstore, [
+                    cast(ushort) ius, cast(ushort) store.op.to!AssignOp
+                    ]);
+        }
     }
 
     void emit(OperatorStoreIndexInstruction store)
@@ -402,8 +446,8 @@ class BytecodeEmitter
         Function newFunc = new Function;
         newFunc.parent = func;
         newFunc.args = lambda.argNames;
-        entryFunc(lambda.entry, newFunc, lambda.argNames.map!(x => x.str).array);
         func.pushInstr(Opcode.sub, [cast(ushort) func.funcs.length]);
+        entryFunc(lambda.entry, newFunc, lambda.argNames.map!(x => x.str).array);
         func.funcs ~= newFunc;
     }
 

@@ -5,11 +5,11 @@ import std.conv;
 import purr.dynamic;
 import purr.base;
 import purr.srcloc;
-import purr.ast;
+import purr.ast.ast;
 import purr.parse;
 import purr.bytecode;
 import purr.ir.walk;
-import ext.rt.astcons;
+import purr.ast.cons;
 
 Pair[] lib2ast()
 {
@@ -97,10 +97,6 @@ Dynamic astparse(Args args)
         throw new Exception("wrong arguments to function: " ~ orig.to!string[1..$-1]);
     }
     Node parsed = loc.parse(lang);
-    // else
-    // {
-    //     throw new Exception("bad number of arguments: " ~ args.length.to!string);
-    // }
     return parsed.astDynamic;
 }
 

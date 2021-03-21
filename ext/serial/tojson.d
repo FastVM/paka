@@ -4,6 +4,7 @@ import purr.io;
 import std.conv;
 import std.format;
 import std.algorithm;
+import std.math;
 import std.traits;
 import std.array;
 import purr.base;
@@ -38,7 +39,8 @@ string elems(string names, Arg)(Arg arg)
 
 string serialize(char chr)
 {
-    return chr.to!byte.to!string;
+    return chr.to!byte
+        .to!string;
 }
 
 string serialize(Location location)
@@ -81,7 +83,8 @@ string serialize(string str)
     {
         if ("\b\f\n\r\t\"".canFind(v))
         {
-            ret ~= "\\" ~ v.to!size_t.to!string(16);
+            ret ~= "\\" ~ v.to!size_t
+                .to!string(16);
         }
         ret ~= v;
     }
@@ -192,7 +195,7 @@ string serialize(Dynamic value)
         }
     }
     alreadySerialized ~= value;
-    scope(exit)
+    scope (exit)
     {
         alreadySerialized.length--;
     }
@@ -203,8 +206,12 @@ string serialize(Dynamic value)
     case Dynamic.Type.log:
         return `{"type": "logical", "logical": ` ~ value.log.to!string ~ `}`;
     case Dynamic.Type.sml:
-        return `{"type": "number", "number": ` ~ value.as!double
-            .to!string ~ `}`;
+        double n = value.as!double;
+        if (isNaN(n) || isInfinity(n))
+        {
+            return `{"type": "number", "number": "nan"}`;
+        }
+        return `{"type": "number", "number": ` ~ n.to!string ~ `}`;
     case Dynamic.Type.str:
         return `{"type": "string", "string": ` ~ value.str.serialize ~ `}`;
     case Dynamic.Type.arr:

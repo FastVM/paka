@@ -202,6 +202,11 @@ override:
         line("store offset=", localIndex, " identifier=", func.stab[localIndex]);
     }
 
+    void cstore(ushort localIndex)
+    {
+        line("cstore offset=", localIndex, " identifier=", func.captab[localIndex]);
+    }
+
     void istore()
     {
         line("istore");
@@ -212,6 +217,13 @@ override:
         string name = to!string(cast(AssignOp) operation);
         line("opstore offset=", localIndex, " identifier=",
                 func.stab[localIndex], " operation=", name);
+    }
+
+    void opcstore(ushort localIndex, ushort operation)
+    {
+        string name = to!string(cast(AssignOp) operation);
+        line("opcstore offset=", localIndex, " identifier=",
+                func.captab[localIndex], " operation=", name);
     }
 
     void opistore(ushort operation)

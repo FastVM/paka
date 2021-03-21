@@ -353,9 +353,11 @@ enum Opcode : ubyte
     loadc,
     /// store to locals
     store,
+    cstore,
     istore,
     /// same but with operators like += and -=
     opstore,
+    opcstore,
     opistore,
     /// return a value
     retval,

@@ -35,3 +35,4 @@ vgcore*
 vscode
 *.map
 Aspen.toml
+.history

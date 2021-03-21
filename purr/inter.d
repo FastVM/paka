@@ -11,7 +11,7 @@ import purr.vm;
 import purr.bc.dump;
 import purr.bytecode;
 import purr.base;
-import purr.ast;
+import purr.ast.ast;
 import purr.dynamic;
 import purr.parse;
 import purr.vm;

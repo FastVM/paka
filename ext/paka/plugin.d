@@ -14,7 +14,6 @@ static this()
 Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
-    plugin.transformers = pakaTransforms;
     plugin.libs ~= pakaBaseLibs;
     plugin.parsers["paka"] = code => parse(code);
     return plugin;

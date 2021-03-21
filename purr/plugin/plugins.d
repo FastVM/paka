@@ -6,10 +6,9 @@ import purr.base;
 import purr.ir.walk;
 import purr.parse;
 import purr.srcloc;
-import purr.ast;
+import purr.ast.ast;
 import purr.srcloc;
 
-Node delegate(Node[])[string] transformers;
 Plugin[] plugins;
 
 Pair[] pluginLib()
@@ -42,5 +41,4 @@ void addPlugin(Plugin plugin)
 {
     plugins ~= plugin;
     pushPlugin(parsers, plugin.parsers);
-    pushPlugin(transformers, plugin.transformers);
 }

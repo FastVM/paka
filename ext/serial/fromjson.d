@@ -56,6 +56,10 @@ double deserialize(T)(Json json) if (is(T == double))
     {
         return cast(double) json.integer;
     }
+    else if (json.type == JSONType.string && json.str == "nan")
+    {
+        return double.nan;
+    }
     else
     {
         throw new Exception("bad json");

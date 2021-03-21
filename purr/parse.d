@@ -2,7 +2,7 @@ module purr.parse;
 
 import std.conv;
 import purr.io;
-import purr.ast;
+import purr.ast.ast;
 import purr.ir.walk;
 import purr.bytecode;
 import purr.base;
