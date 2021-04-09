@@ -1,8 +1,6 @@
-# combs
 U = f => f(f);
 I = x => x;
 
-# boolean
 TRUE = x => y => x;
 FALSE = x => y => y;
 IF = b => t => f => b(t)(f);
@@ -12,7 +10,6 @@ AND = a => b => IF(a)(IF(b, TRUE, FALSE))(FALSE);
 OR = a => b => IF(a)(TRUE)(IF(b)(TRUE)(FALSE));
 NOT = b => b(FALSE)(TRUE);
 
-# natural
 nat = n => f => lambda(y) {
     z = y;
     i = 0;

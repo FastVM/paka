@@ -208,6 +208,11 @@ Dynamic pakaimport(Args args)
     return val;
 }
 
+Dynamic pakalength(Args args)
+{
+    return args[0].arr.length.dynamic;
+}
+
 Pair[] pakaBaseLibs()
 {
     Pair[] ret;
@@ -217,6 +222,7 @@ Pair[] pakaBaseLibs()
     ret ~= FunctionPair!syslibupremap("_paka_map_pre");
     ret ~= FunctionPair!syslibfold("_paka_fold");
     ret ~= FunctionPair!syslibrange("_paka_range");
+    ret ~= FunctionPair!pakalength("_paka_length");
     ret ~= FunctionPair!pakabeginassert("_paka_begin_assert");
     ret ~= FunctionPair!pakaassert("_paka_assert");
     ret ~= FunctionPair!strconcat("_paka_str_concat");

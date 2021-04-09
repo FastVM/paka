@@ -46,10 +46,6 @@ ifeq ($(LD),ld.bfd)
 $(error cannot use LD=ld.bfd yet)
 endif
 
-ifeq ($(LD),gdc)
-$(error cannot use LD=gdc yet)
-endif
-
 LD_TYPE_FOUND=
 ifneq ($(findstring ld,$(LD)),)
 LD_TYPE_FOUND=ld

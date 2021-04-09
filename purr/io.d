@@ -38,15 +38,14 @@ shared static this()
 		raw.c_cflag |= (CS8);
 		raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
 		tcsetattr(stdin.fileno, TCSAFLUSH, &raw);
+		atexit(&purr_disable_smart_reader);
 	}
 }
 
-static ~this()
+extern(C)
+void purr_disable_smart_reader()
 {
-	if (reader.smart)
-	{
-		tcsetattr(stdin.fileno, TCSAFLUSH, &init);
-	}
+	tcsetattr(stdin.fileno, TCSAFLUSH, &init);
 }
 
 char readchar()
@@ -100,7 +99,7 @@ class ExitException : Exception
 	this(char l)
 	{
 		letter = l;
-		super("Got Ctrl-" ~ [getCtrl(l)]);
+		super("Got Ctrl-" ~ [getCtrl(l)].toUpper);
 	}
 }
 
@@ -129,7 +128,9 @@ class Reader
 	{
 		output.write("\x1B[K\x1B[1F\x1B[1B");
 		output.write(prefix, newLine);
+		output.write("\x1B[" ~ to!string(prefix.length + index + 1) ~ "G");
 		output.flush;
+		
 	}
 
 	private void deleteOne()
@@ -355,7 +356,7 @@ class Reader
 		else
 		{
 			string ret = input.readln;
-			return cast(char[]) ret.strip.array.dup;
+			return ret.strip.to!string.dup;
 		}
 	}
 }

@@ -23,15 +23,14 @@ import purr.ir.emit;
 
 bool dumpbytecode = false;
 bool dumpir = false;
-bool runjit = false;
 
 /// vm callback that sets the locals defined into the root base 
-LocalCallback exportLocalsToBaseCallback(Function func)
+LocalCallback exportLocalsToBaseCallback(size_t ctx, Function func)
 {
     LocalCallback ret = (uint index, Dynamic* stack, Dynamic[] locals) {
         most: foreach (i, v; locals[0 .. func.stab.length])
         {
-            foreach (ref rb; rootBase)
+            foreach (ref rb; rootBases[ctx])
             {
                 if (rb.name == func.stab[i])
                 {
@@ -39,11 +38,11 @@ LocalCallback exportLocalsToBaseCallback(Function func)
                     continue most;
                 }
             }
-            rootBase ~= Pair(func.stab[i], v);
+            rootBases[ctx] ~= Pair(func.stab[i], v);
         }
     };
     return ret;
-}
+} 
 
 Dynamic evalImpl(Walker)(size_t ctx, Location code, Args args)
 {
@@ -56,15 +55,7 @@ Dynamic evalImpl(Walker)(size_t ctx, Location code, Args args)
         oppr.walk(func);
         writeln(oppr.ret);
     }
-    if (runjit && func.jitted !is null)
-    {
-        func.jitted();
-        return Dynamic.nil;
-    }
-    else
-    {
-        return run(func, args, func.exportLocalsToBaseCallback);
-    }
+    return run(func, args, ctx.exportLocalsToBaseCallback(func));
 }
 
 Dynamic eval(size_t ctx, Location code, Args args=Args.init)

@@ -8,7 +8,7 @@ import purr.plugin.plugins;
 
 static assert(false, "please implement this library");
 
-static this()
+shared static this()
 {
     thisPlugin.addPlugin;
 }

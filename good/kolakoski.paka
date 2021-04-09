@@ -3,13 +3,13 @@ def kolakoski(self, len) {
     i = 0;
     k = 0;
     while (i < len) {
-        s[i] = self[k % arr.len(self)];
-        if (s[k] > 1) {
-            j = s[k]-1;
+        s.[i] = self.[k % arr.len(self)];
+        if (s.[k] > 1) {
+            j = s.[k]-1;
             while (j > 0) {
                 i += 1;
                 if (i != len) {
-                    s[i] = s[i-1];
+                    s.[i] = s.[i-1];
                 };
                 j -= 1;
             };

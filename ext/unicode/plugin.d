@@ -7,7 +7,7 @@ import purr.plugin.plugin;
 import purr.plugin.plugins;
 import unicode.getname;
 
-static this()
+shared static this()
 {
     thisPlugin.addPlugin;
 }

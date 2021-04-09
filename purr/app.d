@@ -19,14 +19,13 @@ import std.path;
 import purr.io;
 import std.array;
 import std.file;
+import std.ascii;
 import std.algorithm;
 import std.process;
 import std.conv;
 import std.string;
 import std.getopt;
 import core.stdc.stdlib;
-
-version = JITEnabled;
 
 alias Thunk = void delegate();
 
@@ -104,14 +103,14 @@ Thunk cliBytecodeHandler()
     return { dumpbytecode = !dumpbytecode; };
 }
 
+Thunk cliAstHandler()
+{
+    return { dumpast = !dumpast; };
+}
+
 Thunk cliIrHandler()
 {
     return { dumpir = !dumpir; };
-}
-
-Thunk cliJitHandler()
-{
-    return { runjit = !runjit; };
 }
 
 Thunk cliEchoHandler()
@@ -128,6 +127,20 @@ Thunk cliReplHandler()
         {
             replLine++;
             string line = readln("(" ~ replLine.to!string ~ ")> ");
+            while (line.length > 0)
+            {
+                if (line[0].isWhite)
+                {
+                    line = line[1..$];
+                }
+                else if (line[$-1].isWhite)
+                {
+                    line = line[0..$-1];
+                }
+                else {
+                    break;
+                }
+            }
             Location code = Location(1, replLine, "__main__", line);
             if (code.src.length == 0)
             {
@@ -201,25 +214,24 @@ void domain(string[] args)
         case "--bytecode":
             todo ~= cliBytecodeHandler;
             break;
+        case "--ast":
+            todo ~= cliAstHandler;
+            break;
         case "--ir":
             todo ~= cliIrHandler;
-            break;
-        case "--jit":
-            todo ~= cliJitHandler;
             break;
         case "--echo":
             todo ~= cliEchoHandler;
             break;
         }
     }
-
-    if (extargs.length != 0)
-    {
-        throw new Exception("unknown args: " ~ extargs.to!string);
-    }
     foreach_reverse (fun; todo)
     {
         fun();
+    }
+    foreach (arg; extargs) {
+        Thunk th = arg.cliFileHandler;
+        th();
     }
 }
 
@@ -275,7 +287,8 @@ void thrown(Err)(Err e)
     writeln(trace);
     writeln(e.msg);
     writeln;
-    throw e;
+    // throw e;
+    exit(1);
 }
 
 /// the main function that handles runtime errors

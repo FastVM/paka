@@ -15,6 +15,8 @@ import purr.ir.repr;
 import purr.ir.bytecode;
 import purr.ir.opt;
 
+bool dumpast = false;
+
 enum string[] specialForms = [
         "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
         "@if", "@fun", "@do", "-", "+", "*", "/", "%", "<", ">", "<=", ">=",
@@ -40,6 +42,11 @@ class Walker
 
     Function walkProgram(Node node, size_t ctx)
     {
+        if (dumpast)
+        {
+            writeln(node);
+            writeln;
+        }
         BasicBlock entry = new BasicBlock;
         block = entry;
         funcblk = block;
@@ -74,13 +81,13 @@ class Walker
         }
         switch (node.id)
         {
-        case "call":
+        case NodeKind.call:
             walkExact(cast(Call) node);
             break;
-        case "ident":
+        case NodeKind.ident:
             walkExact(cast(Ident) node);
             break;
-        case "value":
+        case NodeKind.value:
             walkExact(cast(Value) node);
             break;
         default:
@@ -333,7 +340,7 @@ class Walker
 
     void walkDef(Node[] args)
     {
-        if (args[0].id == "ident")
+        if (args[0].id == NodeKind.ident)
         {
             Ident ident = cast(Ident) args[0];
             walk(args[1]);

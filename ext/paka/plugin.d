@@ -6,7 +6,7 @@ import paka.parse;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
 
-static this()
+shared static this()
 {
     thisPlugin.addPlugin;
 }

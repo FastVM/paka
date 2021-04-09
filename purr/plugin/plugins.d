@@ -9,7 +9,7 @@ import purr.srcloc;
 import purr.ast.ast;
 import purr.srcloc;
 
-Plugin[] plugins;
+__gshared Plugin[] plugins;
 
 Pair[] pluginLib()
 {
@@ -39,6 +39,9 @@ void pushPlugin(ref Node delegate(Node[])[string] tf, Node delegate(Node[])[stri
 
 void addPlugin(Plugin plugin)
 {
-    plugins ~= plugin;
+    synchronized
+    {
+        plugins ~= plugin;
+    }
     pushPlugin(parsers, plugin.parsers);
 }

@@ -28,14 +28,16 @@ Dynamic astDynamic(Span span)
 Dynamic astDynamic(Node node, bool useSpan=false)
 {
     Mapping ret;
-    ret["id".dynamic] = node.id.dynamic;
+    ret["id".dynamic] = node.id.to!string.dynamic;
     if (useSpan)
     {
         ret["span".dynamic] = node.span.astDynamic; 
     }
     final switch (node.id)
     {
-    case "call":
+    case NodeKind.base:
+        assert(false);
+    case NodeKind.call:
         Call call = cast(Call) node;
         Dynamic[] args;
         foreach (arg; call.args)
@@ -44,11 +46,11 @@ Dynamic astDynamic(Node node, bool useSpan=false)
         }
         ret["args".dynamic] = args.dynamic;
         return ret.dynamic;
-    case "ident":
+    case NodeKind.ident:
         Ident id = cast(Ident) node;
         ret["repr".dynamic] = id.repr.dynamic;
         return ret.dynamic;
-    case "value":
+    case NodeKind.value:
         Value val = cast(Value) node;
         ret["value".dynamic] = val.value;
         return ret.dynamic;
@@ -89,18 +91,20 @@ Node getNode(Dynamic val)
         return new Call(val.arr.map!getNode.array);
     }
     Mapping map = val.tab.table;
-    string id = map["id".dynamic].str;
+    NodeKind id = map["id".dynamic].str.to!NodeKind;
     final switch (id) {
-    case "call":
+    case NodeKind.base:
+        assert(false);
+    case NodeKind.call:
         Node[] args;
         foreach (arg; map["args".dynamic].arr)
         {
             args ~= arg.getNode;
         }
         return new Call(args);
-    case "ident":
+    case NodeKind.ident:
         return new Ident(map["repr".dynamic].str);
-    case "value":
+    case NodeKind.value:
         return new Value(map["value".dynamic]);
     }
 }

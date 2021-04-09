@@ -7,7 +7,7 @@ import purr.plugin.plugin;
 import purr.plugin.plugins;
 import serial.cons;
 
-static this()
+shared static this()
 {
     thisPlugin.addPlugin;
 }

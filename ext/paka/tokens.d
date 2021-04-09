@@ -15,7 +15,7 @@ string[][] prec = [
 ];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "!", ",", ":", "\\"];
+string[] nops = [".", "!", ",", ":", "\\", "#", "<<", ">>"];
 
 /// language keywords
 string[] keywords = [
@@ -184,7 +184,7 @@ Token readToken(ref string code, ref Location location)
         return Token(span, t, v);
     }
 
-    if (peek == '#')
+    if (peek == '#' && code.length >= 2 && code[1] == '#')
     {
         while (code.length != 0 && peek != '\n')
         {
@@ -310,7 +310,7 @@ Token readToken(ref string code, ref Location location)
         consume;
         return consToken(Token.Type.string, ret);
     }
-    throw new Exception("parse error: bad char " ~ peek);
+    throw new Exception("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
 }
 
 /// repeatedly calls a readToken until its empty

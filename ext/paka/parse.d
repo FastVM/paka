@@ -65,7 +65,7 @@ template Spanning(alias F, T...)
         {
             if (tokens.length == 0)
             {
-                ret.span = Span(orig[0].span.first.dup, orig[$-1].span.last.dup);
+                ret.span = Span(orig[0].span.first.dup, orig[$ - 1].span.last.dup);
             }
             else
             {
@@ -346,15 +346,26 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
         }
         ret = new Call(last, args);
     }
-    else if (tokens.length > 2 && tokens[0].isOperator(".") && tokens[1].isOpen("("))
+    else if (tokens.length > 2 && tokens[0].isOperator(".")
+            && (tokens[1].isOpen("(") || tokens[1].isOpen("[")))
     {
         tokens.nextIs(Token.Type.operator, ".");
-        Node[][] arr = tokens.readOpen!"()";
-        Node dov = new Call(new Ident("@do"),
-                arr.map!(s => cast(Node) new Call(new Ident("@do"), s)).array);
-        ret = new Call(new Ident("@index"), [last, dov]);
+        if (tokens[0].isOpen("["))
+        {
+            Node[] arr = tokens.readOpen!"[]";
+            ret = new Call(new Ident("@index"), [
+                    last, new Call(new Ident("@do"), arr)
+                    ]);
+        }
+        else
+        {
+            Node[][] arr = tokens.readOpen!"()";
+            Node dov = new Call(new Ident("@do"),
+                    arr.map!(s => cast(Node) new Call(new Ident("@do"), s)).array);
+            ret = new Call(new Ident("@index"), [last, dov]);
+        }
     }
-    else if (tokens[0].isOperator("."))
+    else if (tokens[0].isOperator(".") && !tokens[1].isOperator)
     {
         tokens.nextIs(Token.Type.operator, ".");
         Node ind = void;
@@ -573,13 +584,13 @@ Node readPostExprImpl(ref TokenArray tokens)
         tokens.nextIs(Token.Type.keyword, "static");
         Node node = tokens.readBlock;
         Walker walker = new Walker;
-        Function func = walker.walkProgram(node, staticCtx[$-1]);
+        Function func = walker.walkProgram(node, staticCtx[$ - 1]);
         Dynamic ctx = genCtx;
-        Dynamic val = run(func, [ctx], func.exportLocalsToBaseCallback);
+        Dynamic val = run(func, [ctx], staticCtx[$ - 1].exportLocalsToBaseCallback(func));
         Mapping macros = ctx.tab.table;
         foreach (key, value; macros)
         {
-            prefixMacros[$-1][key] = value;
+            prefixMacros[$ - 1][key] = value;
         }
         return new Value(val);
     }
@@ -657,77 +668,59 @@ Node readPreExprImpl(ref TokenArray tokens)
 {
     if (tokens[0].isOperator)
     {
-        Token op = tokens[0];
+        string val = tokens[0].value;
         tokens.nextIs(Token.Type.operator);
-        size_t count;
-        while (tokens[0].isOperator("."))
+        string[] count;
+        while (tokens[0].isDotOperator)
         {
-            count++;
-            tokens.nextIs(Token.Type.operator, ".");
+            count ~= tokens[0].value;
+            tokens.nextIs(Token.Type.operator);
         }
-        string val = op.value;
-        Node[] eargs;
-        if (val == "*")
+        Node ret = void;
+        if (val == "=>")
         {
-            val = "...";
+            ret = new Call(new Ident("@fun"), [new Call(null), tokens.readPreExpr]);
         }
-        else if (val == "=>")
+        else if (val == "#")
         {
-            val = "@fun";
-            eargs ~= new Call(null);
+            ret = new Call(new Ident("_paka_length"), [tokens.readPreExpr]);
+        }
+        else if (count.length != 0 && count[0] != "\\")
+        {
+            throw new Exception("prefix injection fold does not work yet");
         }
         else
         {
             if (val == "-")
             {
-                throw new Exception("parse error: not a unary operator: " ~ val ~ " (consider using 0- instead)");
+                throw new Exception(
+                        "parse error: not a unary operator: " ~ val ~ " (consider using 0- instead)");
             }
             throw new Exception("parse error: not a unary operator: " ~ val);
         }
-        Node ret = new Call(new Ident(val), eargs ~ [tokens.readPreExpr]);
-        foreach (i; 0 .. count)
+        foreach_reverse (dotop; count)
         {
-            Call call = cast(Call) ret;
-            Node[] xy = [new Ident("_rhs")];
-            Node lambdaBody = new Call([call.args[0]] ~ xy);
-            Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-            Call dotmap = new Call(new Ident("_paka_map_pre"), [
-                    cast(Node) lambda
-                    ] ~ call.args[1 .. $]);
-            ret = dotmap;
+            switch (dotop)
+            {
+            default:
+                assert(false);
+            case ".":
+                Call call = cast(Call) ret;
+                Node[] xy = [new Ident("_rhs")];
+                Node lambdaBody = new Call([call.args[0]] ~ xy);
+                Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
+                Call dotmap = new Call(new Ident("_paka_map_pre"), [
+                        cast(Node) lambda
+                        ] ~ call.args[1 .. $]);
+                ret = dotmap;
+                break;
+            case "\\":
+                throw new Exception("prefix injection fold does not work yet");
+            }
         }
         return ret;
     }
     return tokens.readPostExpr;
-}
-
-struct Dots
-{
-    string[] ops;
-    Dots opOpAssign(string op : "~")(string val)
-    {
-        ops ~= val;
-        return this;
-    }
-
-    Dots opOpAssign(string op : "~")(Dots other)
-    {
-        foreach (opv; other.ops)
-        {
-            ops ~= opv;
-        }
-        return this;
-    }
-
-    void pop()
-    {
-        ops.length--;
-    }
-
-    size_t length()
-    {
-        return ops.length;
-    }
 }
 
 bool isDotOperator(Token tok)
@@ -762,12 +755,12 @@ Node readExpr(ref TokenArray tokens, size_t level)
         return tokens.readPreExpr;
     }
     TokenArray opers = TokenArray.init;
-    Dots[2][] dotcount = [[Dots.init, Dots.init]];
+    string[][2][] dotcount;
     Node[] subNodes = [tokens.readExpr(level + 1)];
-    while (tokens.length != 0 && tokens[0].isAnyOperator("." ~ prec[level]))
+    while (tokens.length != 0 && tokens[0].isAnyOperator([".", "\\"] ~ prec[level]))
     {
-        Dots pre;
-        Dots post;
+        string[] pre;
+        string[] post;
         while (tokens.length != 0 && tokens[0].isDotOperator)
         {
             pre ~= tokens[0].value;
@@ -775,9 +768,13 @@ Node readExpr(ref TokenArray tokens, size_t level)
         }
         opers ~= tokens[0];
         tokens.nextIsAny;
+        while (tokens.length != 0 && tokens[0].isDotOperator)
+        {
+            post ~= tokens[0].value;
+            tokens.tokens = tokens.tokens[1 .. $];
+        }
         subNodes ~= tokens.readExpr(level + 1);
-        dotcount[$ - 1][1] ~= pre;
-        dotcount ~= [post, Dots.init];
+        dotcount ~= [pre, post];
     }
     Node ret = subNodes[0];
     Ident last;
@@ -814,16 +811,12 @@ Node readExpr(ref TokenArray tokens, size_t level)
             ret = new Call(new Ident("@opset"), [new Ident("mod"), ret, rhs]);
             break;
         default:
-            Dots lhsc = dotcount[i + 1][0];
-            Dots rhsc = dotcount[i + 1][1];
+            string[] lhsc = dotcount[i][0];
+            string[] rhsc = dotcount[i][1];
             Node rhs = subNodes[i + 1];
             stdout.flush;
             if (cmpOps.canFind(v.value) && opers.length != 1)
             {
-                if (v.value == "calc=")
-                {
-                    v.value = "!=";
-                }
                 Ident next = genSym;
                 if (i != opers.length)
                 {
@@ -854,52 +847,54 @@ Node readExpr(ref TokenArray tokens, size_t level)
             }
             else
             {
-                Node opFunc = void;
                 if (v.value == "::")
                 {
-                    opFunc = new Ident("_paka_match");
+                    ret = new Call(new Ident("_paka_match"), [ret, rhs]);
                 }
                 else if (v.value == "|>")
                 {
-                    opFunc = new Ident("@rcall");
+                    ret = new Call(new Ident("@rcall"), [ret, rhs]);
                 }
                 else if (v.value == "->")
                 {
-                    opFunc = new Ident("_paka_range");
+                    ret = new Call(new Ident("_paka_range"), [ret, rhs]);
                 }
                 else if (v.value == "<|")
                 {
-                    opFunc = new Ident("@call");
+                    ret = new Call(new Ident("@call"), [ret, rhs]);
+                }
+                else if (v.value == "=>")
+                {
+                    ret = new Call(new Ident("@fun"), [new Call([ret]), rhs]);
                 }
                 else
                 {
-                    opFunc = new Ident(v.value);
+                    ret = new Call(new Ident(v.value), [ret, rhs]);
                 }
-                ret = new Call(opFunc, [ret, rhs]);
             }
             while (rhsc.length != 0 || lhsc.length != 0)
             {
                 Call call = cast(Call) ret;
-                if (lhsc.length > 0 && rhsc.length > 0 && lhsc.ops[0] == "\\" && rhsc.ops[0] == "\\")
+                if (lhsc.length > 0 && rhsc.length > 0 && lhsc[0] == "\\" && rhsc[0] == "\\")
                 {
-                    lhsc.pop;
-                    rhsc.pop;
+                    lhsc.length--;
+                    rhsc.length--;
                     ret = call.args.binaryFold;
                 }
                 else if (lhsc.length > rhsc.length)
                 {
-                    lhsc.pop;
+                    lhsc.length--;
                     ret = call.args.binaryDotmap!"_paka_map_lhs";
                 }
                 else if (rhsc.length > lhsc.length)
                 {
-                    rhsc.pop;
+                    rhsc.length--;
                     ret = call.args.binaryDotmap!"_paka_map_rhs";
                 }
                 else if (lhsc.length == rhsc.length && lhsc.length != 0)
                 {
-                    lhsc.pop;
-                    rhsc.pop;
+                    lhsc.length--;
+                    rhsc.length--;
                     ret = call.args.binaryDotmap!"_paka_map_both";
                 }
             }
@@ -1088,7 +1083,6 @@ Node readStmtImpl(ref TokenArray tokens)
             filename ~= pathToks[0].value;
             pathToks.nextIs(Token.Type.ident);
         }
-        writeln(filename);
         if (filename.fsexists)
         {
         }
