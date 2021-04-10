@@ -15,7 +15,7 @@ import purr.fs.har;
 import purr.fs.files;
 import purr.fs.disk;
 import paka.lib.sysenv;
-import paka.parse;
+import paka.parse.parse;
 import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;

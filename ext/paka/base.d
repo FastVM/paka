@@ -88,11 +88,22 @@ Dynamic syslibupremap(Args args)
     return dynamic(ret);
 }
 
-Dynamic syslibfold(Args args)
+Dynamic syslibfoldbinary(Args args)
 {
     Dynamic func = args[0];
     Dynamic ret = args[1];
     foreach (elem; args[2].arr)
+    {
+        ret = func([ret, elem]);
+    }
+    return ret;
+}
+
+Dynamic syslibfoldunary(Args args)
+{
+    Dynamic func = args[0];
+    Dynamic ret = args[1].arr[0];
+    foreach (elem; args[1].arr[1..$])
     {
         ret = func([ret, elem]);
     }
@@ -220,7 +231,8 @@ Pair[] pakaBaseLibs()
     ret ~= FunctionPair!syslibulhsmap("_paka_map_lhs");
     ret ~= FunctionPair!sysliburhsmap("_paka_map_rhs");
     ret ~= FunctionPair!syslibupremap("_paka_map_pre");
-    ret ~= FunctionPair!syslibfold("_paka_fold");
+    ret ~= FunctionPair!syslibfoldbinary("_paka_fold_binary");
+    ret ~= FunctionPair!syslibfoldunary("_paka_fold_unary");
     ret ~= FunctionPair!syslibrange("_paka_range");
     ret ~= FunctionPair!pakalength("_paka_length");
     ret ~= FunctionPair!pakabeginassert("_paka_begin_assert");

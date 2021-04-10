@@ -10,7 +10,7 @@ import purr.vm;
 import purr.inter;
 import purr.srcloc;
 import purr.bytecode;
-import paka.parse;
+import paka.parse.parse;
 import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;

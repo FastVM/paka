@@ -287,7 +287,7 @@ void thrown(Err)(Err e)
     writeln(trace);
     writeln(e.msg);
     writeln;
-    // throw e;
+    throw e;
     exit(1);
 }
 

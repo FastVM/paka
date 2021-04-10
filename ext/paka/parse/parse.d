@@ -1,4 +1,4 @@
-module paka.parse;
+module paka.parse.parse;
 
 import purr.io;
 import std.conv;
@@ -24,199 +24,8 @@ import purr.ir.walk;
 import purr.ast.ast;
 import paka.tokens;
 import paka.macros;
-import paka.walk;
-
-/// safe array of tokens
-alias TokenArray = PushArray!Token;
-
-/// operators for comparrason
-string[] cmpOps = ["<", ">", "<=", ">=", "==", "!=", "::"];
-
-/// locations for error handling
-Location[] locs;
-
-/// context for static expressions
-size_t[] staticCtx;
-
-/// macros for prefix operators
-Mapping[] prefixMacros;
-
-/// wraps a function of type Node function(T...)(TokenArray tokens, T args).
-/// it gets the span of tokens consumed and it gives them a span
-template Spanning(alias F, T...)
-{
-    Node spanning(ref TokenArray tokens, T a)
-    {
-        TokenArray orig = tokens;
-        bool doLocs = orig.length != 0;
-        if (doLocs && orig.length != 0)
-        {
-            locs ~= orig[0].span.last;
-        }
-        scope (success)
-        {
-            if (doLocs && orig.length != 0)
-            {
-                locs.length--;
-            }
-        }
-        Node ret = F(tokens, a);
-        if (orig.length != 0 && ret !is null)
-        {
-            if (tokens.length == 0)
-            {
-                ret.span = Span(orig[0].span.first.dup, orig[$ - 1].span.last.dup);
-            }
-            else
-            {
-                ret.span = Span(orig[0].span.first.dup, tokens[0].span.first.dup);
-            }
-        }
-        return ret;
-    }
-
-    alias Spanning = spanning;
-}
-
-/// array that is bounds checked always and throws decent errors.
-/// usually used as a TokenArray.
-struct PushArray(T)
-{
-    /// the tokens is just an array
-    T[] tokens;
-
-    /// safely index the array
-    T opIndex(size_t i)
-    {
-        if (i >= tokens.length)
-        {
-            throw new Exception("parse error 1");
-        }
-        return tokens[i];
-    }
-
-    /// utils that only happens if the token is a token array
-    static if (is(T == Token))
-    {
-        /// consumes token if it is of type, returns weather it was consumed
-        bool match(Token.Type type)
-        {
-            if (this[0].type == type)
-            {
-                tokens = tokens[1 .. $];
-                return true;
-            }
-            return false;
-        }
-
-        /// consumes token matching the args, returns weather it was consumed
-        bool match(Token.Type type, string val)
-        {
-            if (this[0].type == type && this[0].value == val)
-            {
-                tokens = tokens[1 .. $];
-                return true;
-            }
-            return false;
-        }
-
-        /// wraps match, it throws a nice error when it does not match
-        void nextIs(T...)(T a)
-        {
-            if (!match(a))
-            {
-                throw new Exception("expected " ~ a[$ - 1].to!string ~ " got " ~ this[0].to!string);
-            }
-        }
-
-        /// this just skips a token, often used for bracket matching
-        void nextIsAny()
-        {
-            tokens = tokens[1 .. $];
-        }
-    }
-    else
-    {
-        PushArray!T opSlice(size_t i, size_t j)
-        {
-            if (j < i || tokens.length < j)
-            {
-                throw new Exception("parse error 2");
-            }
-            return PushArray(tokens[i .. j]);
-        }
-    }
-
-    /// appends to the array
-    void opOpAssign(string S)(T v) if (S == "~")
-    {
-        tokens ~= v;
-    }
-
-    /// implements foreach(i; this)
-    int opApply(scope int delegate(ref T) dg)
-    {
-        int result = 0;
-
-        foreach (item; tokens)
-        {
-            result = dg(item);
-            if (result)
-                break;
-        }
-
-        return result;
-    }
-
-    /// implements foreach(i, ref v; this)
-    int opApply(scope int delegate(size_t, ref T) dg)
-    {
-        int result = 0;
-
-        foreach (k, item; tokens)
-        {
-            result = dg(k, item);
-            if (result)
-                break;
-        }
-
-        return result;
-    }
-
-    /// the length of the array, not often needed, errors are prefered
-    size_t length()
-    {
-        return tokens.length;
-    }
-
-    /// this is the same as length
-    size_t opDollar()
-    {
-        return tokens.length;
-    }
-
-    /// the same as this.tokens.to!string
-    string toString()
-    {
-        return tokens.to!string;
-    }
-}
-
-/// implements errors when the parser knows what should be next
-void skip(ref TokenArray tokens, string name)
-{
-    if (tokens.length == 0 || tokens[0].value != name)
-    {
-        throw new Exception("parse error: got " ~ tokens[0].value ~ " found " ~ name);
-    }
-}
-
-// TODO: replace with TokenArray calls
-/// constructs a token array, this will soon be replaced
-TokenArray newTokenArray(Token[] a)
-{
-    return TokenArray(a);
-}
+import paka.parse.util;
+import paka.parse.op;
 
 /// reads open parens
 Node[][] readOpen(string v)(ref TokenArray tokens) if (v == "()")
@@ -668,57 +477,13 @@ Node readPreExprImpl(ref TokenArray tokens)
 {
     if (tokens[0].isOperator)
     {
-        string val = tokens[0].value;
-        tokens.nextIs(Token.Type.operator);
-        string[] count;
-        while (tokens[0].isDotOperator)
+        string[] vals;
+        while (tokens[0].isOperator)
         {
-            count ~= tokens[0].value;
+            vals ~= tokens[0].value;
             tokens.nextIs(Token.Type.operator);
         }
-        Node ret = void;
-        if (val == "=>")
-        {
-            ret = new Call(new Ident("@fun"), [new Call(null), tokens.readPreExpr]);
-        }
-        else if (val == "#")
-        {
-            ret = new Call(new Ident("_paka_length"), [tokens.readPreExpr]);
-        }
-        else if (count.length != 0 && count[0] != "\\")
-        {
-            throw new Exception("prefix injection fold does not work yet");
-        }
-        else
-        {
-            if (val == "-")
-            {
-                throw new Exception(
-                        "parse error: not a unary operator: " ~ val ~ " (consider using 0- instead)");
-            }
-            throw new Exception("parse error: not a unary operator: " ~ val);
-        }
-        foreach_reverse (dotop; count)
-        {
-            switch (dotop)
-            {
-            default:
-                assert(false);
-            case ".":
-                Call call = cast(Call) ret;
-                Node[] xy = [new Ident("_rhs")];
-                Node lambdaBody = new Call([call.args[0]] ~ xy);
-                Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-                Call dotmap = new Call(new Ident("_paka_map_pre"), [
-                        cast(Node) lambda
-                        ] ~ call.args[1 .. $]);
-                ret = dotmap;
-                break;
-            case "\\":
-                throw new Exception("prefix injection fold does not work yet");
-            }
-        }
-        return ret;
+        return parseUnaryOp(vals)(tokens.readPostExpr);
     }
     return tokens.readPostExpr;
 }
@@ -747,8 +512,9 @@ bool isAnyOperator(Token tok, string[] ops)
     return false;
 }
 
+alias readExpr = Spanning!(readExprImpl, size_t);
 /// reads any expresssion
-Node readExpr(ref TokenArray tokens, size_t level)
+Node readExprImpl(ref TokenArray tokens, size_t level)
 {
     if (level == prec.length)
     {
@@ -780,126 +546,7 @@ Node readExpr(ref TokenArray tokens, size_t level)
     Ident last;
     foreach (i, v; opers)
     {
-        switch (v.value)
-        {
-        case "=":
-            Node rhs = subNodes[i + 1];
-            ret = new Call(new Ident("@set"), [ret, rhs]);
-            break;
-        case "+=":
-            Node rhs = subNodes[i + 1];
-            ret = new Call(new Ident("@opset"), [new Ident("add"), ret, rhs]);
-            break;
-        case "~=":
-            Node rhs = subNodes[i + 1];
-            ret = new Call(new Ident("@opset"), [new Ident("cat"), ret, rhs]);
-            break;
-        case "-=":
-            Node rhs = subNodes[i + 1];
-            ret = new Call(new Ident("@opset"), [new Ident("sub"), ret, rhs]);
-            break;
-        case "*=":
-            Node rhs = subNodes[i + 1];
-            ret = new Call(new Ident("@opset"), [new Ident("mul"), ret, rhs]);
-            break;
-        case "/=":
-            Node rhs = subNodes[i + 1];
-            ret = new Call(new Ident("@opset"), [new Ident("div"), ret, rhs]);
-            break;
-        case "%=":
-            Node rhs = subNodes[i + 1];
-            ret = new Call(new Ident("@opset"), [new Ident("mod"), ret, rhs]);
-            break;
-        default:
-            string[] lhsc = dotcount[i][0];
-            string[] rhsc = dotcount[i][1];
-            Node rhs = subNodes[i + 1];
-            stdout.flush;
-            if (cmpOps.canFind(v.value) && opers.length != 1)
-            {
-                Ident next = genSym;
-                if (i != opers.length)
-                {
-                    rhs = new Call(new Ident("@set"), [next, rhs]);
-                }
-                Node opFunc = void;
-                if (v.value == "::")
-                {
-                    opFunc = new Ident("_paka_match");
-                }
-                else
-                {
-                    opFunc = new Ident(v.value);
-                }
-                if (i == 0)
-                {
-                    ret = new Call(opFunc, [ret, rhs]);
-                }
-                else
-                {
-                    Ident lastCmp = genSym;
-                    ret = new Call(new Ident("@if"), [
-                            new Call(new Ident("@set"), [lastCmp, ret]),
-                            new Call(opFunc, [last, rhs]), lastCmp
-                            ]);
-                }
-                last = next;
-            }
-            else
-            {
-                if (v.value == "::")
-                {
-                    ret = new Call(new Ident("_paka_match"), [ret, rhs]);
-                }
-                else if (v.value == "|>")
-                {
-                    ret = new Call(new Ident("@rcall"), [ret, rhs]);
-                }
-                else if (v.value == "->")
-                {
-                    ret = new Call(new Ident("_paka_range"), [ret, rhs]);
-                }
-                else if (v.value == "<|")
-                {
-                    ret = new Call(new Ident("@call"), [ret, rhs]);
-                }
-                else if (v.value == "=>")
-                {
-                    ret = new Call(new Ident("@fun"), [new Call([ret]), rhs]);
-                }
-                else
-                {
-                    ret = new Call(new Ident(v.value), [ret, rhs]);
-                }
-            }
-            while (rhsc.length != 0 || lhsc.length != 0)
-            {
-                Call call = cast(Call) ret;
-                if (lhsc.length > 0 && rhsc.length > 0 && lhsc[0] == "\\" && rhsc[0] == "\\")
-                {
-                    lhsc.length--;
-                    rhsc.length--;
-                    ret = call.args.binaryFold;
-                }
-                else if (lhsc.length > rhsc.length)
-                {
-                    lhsc.length--;
-                    ret = call.args.binaryDotmap!"_paka_map_lhs";
-                }
-                else if (rhsc.length > lhsc.length)
-                {
-                    rhsc.length--;
-                    ret = call.args.binaryDotmap!"_paka_map_rhs";
-                }
-                else if (lhsc.length == rhsc.length && lhsc.length != 0)
-                {
-                    lhsc.length--;
-                    rhsc.length--;
-                    ret = call.args.binaryDotmap!"_paka_map_both";
-                }
-            }
-            break;
-        }
+        ret = parseBinaryOp(dotcount[i][0] ~ v.value ~ dotcount[i][1])(ret, subNodes[1]);
     }
     return ret;
 }

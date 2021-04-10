@@ -1,8 +1,7 @@
 module paka.plugin;
 
-import paka.walk;
 import paka.base;
-import paka.parse;
+import paka.parse.parse;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
 
