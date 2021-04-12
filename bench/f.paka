@@ -1,8 +1,0 @@
-Q = f => a => f(f)(a);
-F = f => a => if (a < 2) {
-    a;
-} else {
-    Q(f)(a - 1) + Q(f)(a - 2);
-};
-fib = Q(F);
-io.print(fib(30));

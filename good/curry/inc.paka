@@ -1,8 +1,0 @@
-add(x)(y) = x + y;
-
-inc = add(1);
-
-x = 2;
-
-assert inc(x) == 3; 
-assert inc == add(1); 
