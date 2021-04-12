@@ -137,13 +137,7 @@ UnaryOp parseUnaryOp(string[] ops)
             }
             else
             {
-                BinaryOp curBinary = rest.parseBinaryOp;
-                UnaryOp nextUnary = ops.parseUnaryOp();
-                return (Node rhs) {
-                    Node tmp = new Call(new Ident("@set"), [genSym, rhs]);
-                    Node res = curBinary(curUnary(tmp), nextUnary(tmp));
-                    return new Call(new Ident("@do"), [tmp, res]);
-                };
+                throw new Exception("parse error: not a unary operator");
             }
         }
         return curUnary;

@@ -567,13 +567,31 @@ Node readStmtImpl(ref TokenArray tokens)
             return null;
         }
     }
+    scope (exit)
+    {
+        while (tokens.length > 0 && tokens[0].isSemicolon)
+        {
+            tokens.nextIs(Token.Type.semicolon);
+        }
+    }
     if (tokens.length == 0)
     {
         return null;
     }
+    if (tokens[0].isOpen("{"))
+    {
+        throw new Exception(
+                "parse error: cannot have open curly brace to start a statement");
+    }
     if (tokens[0].isOpen("("))
     {
-        throw new Exception("parse error: cannot have open paren to start a statement");
+        throw new Exception(
+                "parse error: cannot have open curly paren to start a statement");
+    }
+    if (tokens[0].isOpen("["))
+    {
+        throw new Exception(
+                "parse error: cannot have open square brace to start a statement");
     }
     if (tokens[0].isKeyword("return"))
     {
@@ -610,153 +628,6 @@ Node readStmtImpl(ref TokenArray tokens)
         }
         return new Call(new Ident("@set"),
                 [cast(Node) new Call(call.args[0 .. $ - 1])] ~ dobody.args[2 .. $]);
-    }
-    if (tokens[0].isKeyword("use"))
-    {
-        tokens.nextIs(Token.Type.keyword, "use");
-        Token[] mod;
-        while (!tokens[0].isOperator(":"))
-        {
-            mod ~= tokens[0];
-            tokens.nextIsAny;
-            if (tokens.length == 0)
-            {
-                throw new Exception(
-                        "parse error: need colon in use (consider using import or include)");
-            }
-        }
-        TokenArray pathToks = newTokenArray(mod);
-        tokens.nextIs(Token.Type.operator, ":");
-        Node[] args = [new Value(pathToks[0].value)];
-        pathToks.nextIs(Token.Type.ident);
-        while (pathToks.length >= 2 && pathToks[0].isOperator("/"))
-        {
-            pathToks.nextIs(Token.Type.operator, "/");
-            args ~= new Value(pathToks[0].value);
-            pathToks.nextIs(Token.Type.ident);
-        }
-        Node libvar = genSym;
-        Node getlib = new Call(new Ident("_paka_import"), args);
-        Node setlib = new Call(new Ident("@set"), [libvar, getlib]);
-        Node[] each;
-        while (true)
-        {
-            Node value = new Value(tokens[0].value);
-            Node var = new Ident(tokens[0].value);
-            tokens.nextIs(Token.Type.ident);
-            if (tokens.length != 0 && tokens[0].isOperator("->"))
-            {
-                tokens.nextIs(Token.Type.operator, "->");
-                var = new Ident(tokens[0].value);
-                tokens.nextIs(Token.Type.ident);
-            }
-            value = new Call(new Ident("@index"), [libvar, value]);
-            each ~= new Call(new Ident("@set"), [var, value]);
-            if (tokens.length == 0)
-            {
-                break;
-            }
-            tokens.nextIs(Token.Type.comma);
-        }
-        return new Call(new Ident("@do"), setlib ~ each ~ libvar);
-    }
-    if (tokens[0].isKeyword("include"))
-    {
-        tokens.nextIs(Token.Type.keyword, "include");
-        Token[] mod;
-        while (true)
-        {
-            mod ~= tokens[0];
-            tokens.nextIsAny;
-            if (tokens.length == 0)
-            {
-                break;
-            }
-            if (tokens[0].isSemicolon)
-            {
-                tokens.nextIs(Token.Type.semicolon);
-                break;
-            }
-        }
-        TokenArray pathToks = newTokenArray(mod);
-        string filename = pathToks[0].value;
-        pathToks.nextIs(Token.Type.ident);
-        while (pathToks.length >= 2 && pathToks[0].isOperator("/"))
-        {
-            filename ~= "/";
-            pathToks.nextIs(Token.Type.operator, "/");
-            filename ~= pathToks[0].value;
-            pathToks.nextIs(Token.Type.ident);
-        }
-        if (filename.fsexists)
-        {
-        }
-        else if (fsexists(filename ~ ".paka"))
-        {
-            filename ~= ".paka";
-        }
-        else
-        {
-            throw new Exception("include error: cannot locate: " ~ filename);
-        }
-        Location data = filename.readFile;
-        return data.parsePaka;
-    }
-    if (tokens[0].isKeyword("import"))
-    {
-        tokens.nextIs(Token.Type.keyword, "import");
-        Token[] mod;
-        while (true)
-        {
-            mod ~= tokens[0];
-            tokens.nextIsAny;
-            if (tokens.length == 0)
-            {
-                break;
-            }
-            if (tokens[0].isSemicolon)
-            {
-                tokens.nextIs(Token.Type.semicolon);
-                break;
-            }
-        }
-        TokenArray pathToks = newTokenArray(mod);
-        string filename = pathToks[0].value;
-        pathToks.nextIs(Token.Type.ident);
-        while (pathToks.length >= 2 && pathToks[0].isOperator("/"))
-        {
-            filename ~= "/";
-            pathToks.nextIs(Token.Type.operator, "/");
-            filename ~= pathToks[0].value;
-            pathToks.nextIs(Token.Type.ident);
-        }
-        if (filename.fsexists)
-        {
-        }
-        else if (fsexists(filename ~ ".paka"))
-        {
-            filename ~= ".paka";
-        }
-        else
-        {
-            throw new Exception("import error: cannot locate: " ~ filename);
-        }
-        Location data = filename.readFile;
-        size_t ctx = enterCtx;
-        scope (exit)
-        {
-            exitCtx;
-        }
-        Dynamic lib = ctx.eval(data);
-        rootBases[ctx - 1] ~= Pair(filename, lib);
-        foreach (key, value; lib.tab)
-        {
-            if (key.type == Dynamic.Type.str)
-            {
-                rootBases[ctx - 1] ~= Pair(key.str, value);
-            }
-        }
-        return new Ident(filename);
     }
     return tokens.readExprBase;
 }

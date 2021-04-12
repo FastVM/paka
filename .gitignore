@@ -16,8 +16,6 @@ callgrind*
 default.profdata
 default.profraw
 dlang
-docs.json
-docs/
 dub.selections.json
 dub_platform_probe*
 UnicodeData.txt
