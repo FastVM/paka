@@ -1,4 +1,4 @@
-module serial.fromjson;
+module purr.serial.fromjson;
 
 import purr.io;
 import std.conv;
@@ -195,9 +195,10 @@ Function.Flags deserialize(T : Function.Flags)(Json json)
 
 Function deserialize(T : Function)(Json json)
 {
-    return json.elems!(
+    Function retn = json.elems!(
             "capture instrs constants funcs captured self args stackSize stab captab flags names",
             T);
+    return retn;
 }
 
 Pair deserialize(T : Pair)(Json json)
@@ -215,12 +216,18 @@ ReturnType!func cache(alias func)(ParameterTypeTuple!func args)
 
 alias deserializeCached = cache!(deserialize!(Dynamic));
 
-
+Dynamic[] above;
 Dynamic deserialize(T : Dynamic)(Json json)
 {
     if (json["type"].str == "ref")
     {
-        throw new Exception("you have found a bug in libpaka_serial.so: cannot serialize self referential objects");
+        return above[json["ref"].integer];
+        // throw new Exception("you have found a bug in libpaka_serial.so: cannot serialize self referential objects");
+    }
+    above ~= Dynamic.nil;
+    scope(exit)
+    {
+        above.length--;
     }
     final switch (json.dtype)
     {
@@ -233,13 +240,27 @@ Dynamic deserialize(T : Dynamic)(Json json)
     case Dynamic.Type.str:
         return json["string"].deserialize!string.dynamic;
     case Dynamic.Type.arr:
-        return json["array"].deserialize!(Dynamic[]).dynamic;
+        above[$-1] = Array.init.dynamic;
+        Array got = json["array"].deserialize!(Array);
+        foreach (elem; got) {
+            (*above[$-1].arrPtr) ~= elem;
+        }
+        return above[$-1];
     case Dynamic.Type.tab:
-        return json["table"].deserialize!(Table).dynamic;
+        Table child = new Table;
+        above[$-1] = child.dynamic;
+        Table got = json["table"].deserialize!(Table);
+        child.table = got.table;
+        child.metatable = got.metatable;
+        return child.dynamic;
     case Dynamic.Type.fun:
         Dynamic function(Args) res = json["function"].deserialize!(Dynamic function(Args));
         return Fun(res, json["function"].deserialize!string).dynamic;
     case Dynamic.Type.pro:
-        return json["program"].deserialize!(Function).dynamic;
+        Function child = new Function;
+        above[$-1] = child.dynamic;
+        Function got = json["program"].deserialize!(Function);
+        child.copy(got);
+        return child.dynamic;
     }
 }

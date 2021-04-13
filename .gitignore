@@ -34,3 +34,4 @@ vscode
 *.map
 Aspen.toml
 .history
+.repl

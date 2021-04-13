@@ -68,7 +68,10 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     {
         scope (failure)
         {
-            spans ~= func.spans[index];
+            if (index < func.spans.length)
+            {
+                spans ~= func.spans[index];
+            }
         }
     }
     size_t stackAlloc = void;

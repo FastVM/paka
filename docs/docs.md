@@ -1,7 +1,7 @@
 # Docs
 
 ## Paka
-The Paka language docs are in [docs/paka/lang.md](docs/paka/lang.md).
-The Paka core library docs are in [docs/paka/lib.md](docs/paka/lib.md).
+The Paka language docs are in [docs/paka/lang.md](paka/lang.md).
+The Paka core library docs are in [docs/paka/core.md](paka/core.md).
 
 ## Purr

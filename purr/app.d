@@ -11,6 +11,8 @@ import purr.dynamic;
 import purr.parse;
 import purr.inter;
 import purr.io;
+import purr.serial.fromjson;
+import purr.serial.tojson;
 import purr.plugin.loader;
 import purr.fs.files;
 import purr.fs.disk;
@@ -19,6 +21,7 @@ import std.path;
 import purr.io;
 import std.array;
 import std.file;
+import std.json;
 import std.ascii;
 import std.algorithm;
 import std.process;
@@ -120,11 +123,33 @@ Thunk cliEchoHandler()
 
 size_t replLine = 0;
 
+string serialFile = null;
+
+Thunk cliSerialHandler(string filename)
+{
+    return {
+        serialFile = filename;
+    };
+}
+
 Thunk cliReplHandler()
 {
     return {
+        if (serialFile !is null && serialFile.exists)
+        {
+            rootBases[ctx] = serialFile.readText.parseJSON.deserialize!(Pair[]);
+        }
         while (true)
         {
+            if (serialFile !is null)
+            {
+                File outFile = File(serialFile, "w");
+                scope(exit)
+                {
+                    outFile.close;
+                }
+                outFile.write(rootBases[ctx].serialize);
+            }
             replLine++;
             string line = readln("(" ~ replLine.to!string ~ ")> ");
             while (line.length > 0)
@@ -175,6 +200,11 @@ void domain(string[] args)
             break;
         case "--repl":
             todo ~= cliReplHandler;
+            break;
+        case "--serial":
+            string filename = extargs[$ - 1];
+            extargs.length--;
+            todo ~= filename.cliSerialHandler;
             break;
         case "--file":
             string filename = extargs[$ - 1];

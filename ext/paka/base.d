@@ -17,7 +17,6 @@ import paka.lib.str;
 import paka.lib.arr;
 import paka.lib.tab;
 import paka.lib.math;
-import paka.enforce;
 
 /// string concatenate for format strings and unicode literals
 Dynamic strconcat(Args args)
@@ -175,7 +174,7 @@ Dynamic syslibrange(Args args)
     }
     else
     {
-        Dynamic[] ret = null;
+        Array ret = null;
         return ret.dynamic;
     }
 }
@@ -235,8 +234,6 @@ Pair[] pakaBaseLibs()
     ret ~= FunctionPair!syslibfoldunary("_paka_fold_unary");
     ret ~= FunctionPair!syslibrange("_paka_range");
     ret ~= FunctionPair!pakalength("_paka_length");
-    ret ~= FunctionPair!pakabeginassert("_paka_begin_assert");
-    ret ~= FunctionPair!pakaassert("_paka_assert");
     ret ~= FunctionPair!strconcat("_paka_str_concat");
     ret ~= FunctionPair!pakamatch("_paka_match");
     ret ~= FunctionPair!pakaimport("_paka_import");

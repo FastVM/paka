@@ -123,6 +123,11 @@ class Function
 
     this(Function other)
     {
+        copy(other);
+    }
+
+    void copy(Function other)
+    {
         capture = other.capture;
         instrs = other.instrs;
         spans = other.spans;

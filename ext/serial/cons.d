@@ -7,8 +7,8 @@ import purr.base;
 import purr.dynamic;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
-import serial.tojson;
-import serial.fromjson;
+import purr.serial.tojson;
+import purr.serial.fromjson;
 
 Dynamic serialdumps(Args args)
 {

@@ -6,7 +6,7 @@ Paka's Syntax is defined by a series of forms. Each form can be slotted into oth
 
 Blocks are groups of Statments. The only block_body ever parsed outside of a block is the program's top level block.
 
-``` ebnf
+``` bnf
 block: "{" block_body "}" 
 block_body: (";"* stmt)* ";"*
 ```
@@ -16,7 +16,7 @@ block_body: (";"* stmt)* ";"*
 Statments result in no value. When used at the end of a block, the block results in `nil` .
 A statment must not start with `(` , `[` or `{` . This fixes ambiguity issues that would arrise otheriwse, as well as making it an erorr to write something like `thing[2]` when trying to get index `2` of thing (Use `thing.2` or `thing.[2]` instead).
 
-``` ebnf
+``` bnf
 stmt: return | assert | def | base_expr
 return: "return" base_expr
 assert: "assert" base_expr
@@ -28,7 +28,7 @@ def: "def" base_expr parens block
 
 Expressions result in some value.
 
-``` ebnf
+``` bnf
 base_expr: binary_set
 ```
 
@@ -36,7 +36,7 @@ base_expr: binary_set
 
 Binary Expressions are a prefix value, or the result of binary operators. 
 
-``` ebnf
+``` bnf
 binary_set: binary_pipe (dot_set binary_pipe)*
 binary_pipe: binary_func (dot_pipe binary_func)*
 binary_func: bianry_cmp (dot_func bianry_cmp)*
@@ -50,7 +50,7 @@ Binary operators follow a table currently defined in [ext/paka/tokens.d](/ext/pa
 
 #### Binary Operators
 
-``` ebnf
+``` bnf
 SET: "+=" | "~=" | "*=" | "/=" | "%=" | "-=" | "="
 PIPE: "|>" | "<|"
 FUNC: "=>"
@@ -78,7 +78,7 @@ For any binary operator there are 4 meta-operations, defined by 2 meta operators
     - no equivalent `arr.` call
     - folds the array rhs, starting with lhs
 
-``` ebnf
+``` bnf
 dot_set: SET
     | META_MAP dot_set
     | dot_set META_MAP
@@ -111,7 +111,7 @@ dot_range: RANGE
 
 ### Preifx Expression
 
-``` ebnf
+``` bnf
 prefix: prefix_op postfix
 ```
 
@@ -119,7 +119,7 @@ prefix: prefix_op postfix
 
 The only unique preifx operator is `#` .
 
-``` ebnf
+``` bnf
 LENGTH: "#"
 ```
 
@@ -127,7 +127,7 @@ LENGTH: "#"
 
 Binary Operators can be used in prefix when followed by `\` . This will cause the operaotr to fold over the array on thr right hand side.
 
-``` ebnf
+``` bnf
 prefix_op: single_prefix_op+
 single_prefix_op: LENGTH 
     | prefix_op META_MAP
@@ -139,14 +139,14 @@ prefix_foldable: dot_pipe | dot_func | dot_logic | dot_cmp | dot_add | dot_mult
 
 There are many types of postfix expression. They are a single value followed by zero or more postfix-extend sequence.
 
-``` ebnf
+``` bnf
 postfix: single postfix_extension
 ```
 
 ### Postfix Extensions
 These are the function calls and array index type operations.
 
-```ebnf
+```bnf
 postfix_extension: call
 call: args block+
 args: "("  (expr_base ",")* expr_base? ")"
@@ -157,7 +157,7 @@ index: "." parens | "." IDENT | "." "[" expr_base "]"
 
 Single values are of the lowest precidence.
 
-``` ebnf
+``` bnf
 single: lambda
     | static
     | parens
@@ -187,5 +187,5 @@ QUOTE: "\""
 
 ### Skipped Characters
 
-```ebnf
+```bnf
 %ignore " " | "\n" | "\r" | "\t" 

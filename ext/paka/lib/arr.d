@@ -16,6 +16,7 @@ Pair[] libarr()
 {
     Pair[] ret;
     ret ~= FunctionPair!libsplit("split");
+    ret ~= FunctionPair!libfsplit("fsplit");
     ret ~= FunctionPair!libextend("extend");
     ret ~= FunctionPair!libslice("slice");
     ret ~= FunctionPair!libfilter("filter");
@@ -31,7 +32,8 @@ Pair[] libarr()
     return ret;
 } /// returns a list
 
-Dynamic libfrom(Args args) {
+Dynamic libfrom(Args args)
+{
     return args[0].tab.meta["arr".dynamic](args);
 }
 
@@ -77,7 +79,8 @@ Dynamic librange(Args args) @Arg("min")
 /// returns an array where the function has been called on each element
 Dynamic libmap(Args args)
 {
-    Array res = (cast(Dynamic*) GC.malloc(args[0].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0..args[0].arr.length];
+    Array res = (cast(Dynamic*) GC.malloc(args[0].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
+        .. args[0].arr.length];
     foreach (k, i; args[0].arr)
     {
         Dynamic cur = i;
@@ -148,7 +151,39 @@ Dynamic liblen(Args args)
 /// splits array with deep equality by elemtns
 Dynamic libsplit(Args args)
 {
-    return dynamic(args[0].arr.splitter(args[1]).map!(x => dynamic(x)).array);
+    return dynamic(args[0].arr.splitter(args[1 .. $]).map!(x => dynamic(x)).array);
+}
+
+/// splits array when function returns true
+Dynamic libfsplit(Args args)
+{
+    Array ret;
+    Array last;
+    Array input = args[0].arr;
+    size_t index = 0;
+    while (index < input.length)
+    {
+        Dynamic cur = args[1](input[index .. $]);
+        if (cur.type == Dynamic.Type.nil || (cur.type == Dynamic.Type.log && !cur.log))
+        {
+            last ~= input[index];
+            index++;
+        }
+        else if (cur.type == Dynamic.Type.sml)
+        {
+            ret ~= last.dynamic;
+            last = null;
+            index += cur.as!size_t;
+        }
+        else
+        {
+            ret ~= last.dynamic;
+            last = null;
+            index += 1;
+        }
+    }
+    ret ~= last.dynamic;
+    return ret.dynamic;
 }
 
 /// pushes to an existing array, returning nil
@@ -179,13 +214,13 @@ Dynamic libextend(Args args)
 /// slices array from $1..$2 for 2 argumnets
 Dynamic libslice(Args args)
 {
-    if (args.length == 2)
+    if (args.length == 3)
     {
-        return dynamic(args[0].arr[args[1].as!size_t .. $].dup);
+        return dynamic(args[0].arr[args[1].as!size_t .. args[2].as!size_t].dup);
     }
     else
     {
-        return dynamic(args[0].arr[args[1].as!size_t .. args[2].as!size_t].dup);
+        throw new Exception("arr.slice takes 3 arguments");
     }
 }
 

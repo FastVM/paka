@@ -1,4 +1,4 @@
-module serial.tojson;
+module purr.serial.tojson;
 
 import purr.io;
 import std.conv;
@@ -13,7 +13,6 @@ import purr.dynamic;
 import purr.bytecode;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
-import serial.cons;
 
 Dynamic[] above;
 
