@@ -212,26 +212,6 @@ override:
         line("istore");
     }
 
-    void opstore(ushort localIndex, ushort operation)
-    {
-        string name = to!string(cast(AssignOp) operation);
-        line("opstore offset=", localIndex, " identifier=",
-                func.stab[localIndex], " operation=", name);
-    }
-
-    void opcstore(ushort localIndex, ushort operation)
-    {
-        string name = to!string(cast(AssignOp) operation);
-        line("opcstore offset=", localIndex, " identifier=",
-                func.captab[localIndex], " operation=", name);
-    }
-
-    void opistore(ushort operation)
-    {
-        string name = to!string(cast(AssignOp) operation);
-        line("store operation=", name);
-    }
-
     void retval()
     {
         line("retval");

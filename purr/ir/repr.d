@@ -11,14 +11,13 @@ import purr.srcloc;
 import purr.bytecode;
 import purr.dynamic;
 import purr.inter;
-import purr.ir.types;
 import purr.ir.emit;
 import purr.ir.opt;
 
-alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, ReturnBranch, BuildArrayInstruction,
-        BuildTableInstruction, CallInstruction, PushInstruction, OperatorInstruction,
-        LambdaInstruction, PopInstruction, StoreIndexInstruction, StoreInstruction,
-        OperatorStoreInstruction, LoadInstruction, ArgsInstruction, OperatorStoreIndexInstruction,);
+alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, ReturnBranch,
+        BuildArrayInstruction, BuildTableInstruction, CallInstruction, PushInstruction,
+        OperatorInstruction, LambdaInstruction, PopInstruction,
+        StoreIndexInstruction, StoreInstruction, LoadInstruction, ArgsInstruction,);
 
 size_t nameCount;
 
@@ -58,7 +57,7 @@ class BasicBlock
     {
         name = n;
     }
-    
+
     override string toString()
     {
         string ret;
@@ -77,18 +76,7 @@ class BasicBlock
 
 class Emittable
 {
-    Type.Options[][2] stackData;
     Span span;
-
-    Type.Options[] doesPush()
-    {
-        return stackData[1];
-    }
-
-    Type.Options[] doesPop()
-    {
-        return stackData[0];
-    }
 }
 
 class Instruction : Emittable
@@ -136,6 +124,7 @@ class GotoBranch : Branch
     {
         target = [t];
     }
+
     override string toString()
     {
         string ret;
@@ -250,6 +239,7 @@ class OperatorInstruction : Instruction
         op = oper;
         assert(operators.canFind(oper) || oper == "index");
     }
+
     override string toString()
     {
         string ret;
@@ -272,7 +262,8 @@ class LambdaInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "lambda " ~ entry.name ~ " (" ~ cast(string) argNames.map!(x => x.str).joiner(", ").array ~ ")" ~ "\n";
+        ret ~= "lambda " ~ entry.name ~ " (" ~ cast(string) argNames.map!(x => x.str)
+            .joiner(", ").array ~ ")" ~ "\n";
         return ret;
     }
 }
@@ -304,7 +295,6 @@ class StoreInstruction : AssignmentInstruction
         super(v);
     }
 
-
     override string toString()
     {
         string ret;
@@ -323,40 +313,6 @@ class StoreIndexInstruction : Instruction
     {
         string ret;
         ret ~= "index-store\n";
-        return ret;
-    }
-}
-
-class OperatorStoreInstruction : AssignmentInstruction
-{
-    string op;
-    this(string o, string v)
-    {
-        super(v);
-        op = o;
-    }
-
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "operator-store " ~ op ~ " " ~ var ~ "\n";
-        return ret;
-    }
-}
-
-class OperatorStoreIndexInstruction : Instruction
-{
-    string op;
-    this(string o)
-    {
-        op = o;
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "operator-store-index " ~ op ~ "\n";
         return ret;
     }
 }

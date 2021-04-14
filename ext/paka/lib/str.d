@@ -50,10 +50,10 @@ Dynamic libchar(Args args)
 /// reutrns string split at deliminer
 Dynamic libsplit(Args args)
 {
-    Dynamic[] ret = args[0 .. 1];
+    Array ret = args[0 .. 1];
     foreach (at; args[1 .. $])
     {
-        Dynamic[] tmp = [];
+        Array tmp;
         foreach (str; ret)
         {
             tmp ~= str.str.splitter(at.str).map!dynamic.array;

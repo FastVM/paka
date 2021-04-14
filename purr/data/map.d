@@ -22,23 +22,25 @@ int compare(T1, T2)(T1 a, T2 b)
     }
 }
 
-class Map(Key, Value)
+alias Map(K, V) = MapImpl!(K, V);
+
+class MapImpl(Key, Value)
 {
-    alias This = typeof(this);
-    This leftv;
-    This rightv;
-    Key key = void;
-    Value value = void;
-    size_t length;
+    alias This = Map!(Key, Value);
+    shared This leftv;
+    shared This rightv;
+    shared Key key = void;
+    shared Value value = void;
+    shared size_t length;
     long children;
 
-    this(typeof(null) n = null)
+    this(typeof(null) n = null) shared
     {
         length = 0;
         children = 0;
     }
 
-    this(This l, This r, Key k, Value v)
+    this(shared This l, shared This r, Key k, Value v) shared
     {
         right = r;
         left = l;
@@ -47,26 +49,26 @@ class Map(Key, Value)
         length = left.length + right.length + 1;
         children = max(left.children, right.children) + 1;
     }
-
-    ref This left()
+    
+    ref shared(This) left() shared
     {
         if (leftv is null)
         {
-            leftv = new This;
+            leftv = new shared This;
         }
         return leftv;
     }
 
-    ref This right()
+    ref shared(This) right() shared
     {
         if (rightv is null)
         {
-            rightv = new This;
+            rightv = new shared This;
         }
         return rightv;
     }
 
-    int opApply(int delegate(Value) dg)
+    int opApply(int delegate(Value) dg) shared
     {
         if (length != 0)
         {
@@ -86,7 +88,7 @@ class Map(Key, Value)
         return 0;
     }
 
-    int opApply(int delegate(Key, Value) dg)
+    int opApply(int delegate(shared Key, shared Value) dg) shared
     {
         if (length != 0)
         {
@@ -106,14 +108,14 @@ class Map(Key, Value)
         return 0;
     }
 
-    void rebalance()
+    void rebalance() shared
     {
         if (left.children - 1 > right.children)
         {
-            This left2 = left;
-            This right2 = right;
+            shared This left2 = left;
+            shared This right2 = right;
             left = left2.left;
-            right = new This(left2.right, right2, key, value);
+            right = new shared This(left2.right, right2, key, value);
             key = left2.key;
             value = left2.value;
             assert(length == right.length + left.length + 1);
@@ -122,9 +124,9 @@ class Map(Key, Value)
         }
         if (right.children - 1 > left.children)
         {
-            This left2 = left;
-            This right2 = right;
-            left = new This(left2, right2.left, key, value);
+            shared This left2 = left;
+            shared This right2 = right;
+            left = new shared This(left2, right2.left, key, value);
             right = right2.right;
             key = right2.key;
             value = right2.value;
@@ -134,7 +136,12 @@ class Map(Key, Value)
         }
     }
 
-    void opIndexAssign(Value v, Key k)
+    shared(Value) opIndex(shared Key k) shared
+    {
+        return *(k in this);
+    }
+
+    void opIndexAssign(shared Value v, shared Key k) shared
     {
         if (length == 0)
         {
@@ -168,7 +175,7 @@ class Map(Key, Value)
         }
     }
 
-    Value* opBinaryRight(string op)(Key k) if (op == "in")
+    shared(Value*) opBinaryRight(string op : "in")(Key k) shared
     {
         if (length == 0)
         {

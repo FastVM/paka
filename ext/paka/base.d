@@ -44,7 +44,7 @@ Dynamic syslibubothmap(Args args)
     }
     Array ret = (cast(Dynamic*) GC.malloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[1].arr.length];
-    foreach (i, v; args[1].arr)
+    foreach (i, v; args[1].arr.parallel)
     {
         ret[i] = args[0]([v, args[2].arr[i]]);
     }
@@ -56,7 +56,7 @@ Dynamic syslibulhsmap(Args args)
 {
     Array ret = (cast(Dynamic*) GC.malloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[1].arr.length];
-    foreach (k, i; args[1].arr)
+    foreach (k, i; args[1].arr.parallel)
     {
         ret[k] = args[0]([i, args[2]]);
     }
@@ -68,7 +68,7 @@ Dynamic sysliburhsmap(Args args)
 {
     Array ret = (cast(Dynamic*) GC.malloc(args[2].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[2].arr.length];
-    foreach (k, i; args[2].arr)
+    foreach (k, i; args[2].arr.parallel)
     {
         ret[k] = args[0]([args[1], i]);
     }
@@ -80,7 +80,7 @@ Dynamic syslibupremap(Args args)
 {
     Array ret = (cast(Dynamic*) GC.malloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[1].arr.length];
-    foreach (k, i; args[1].arr)
+    foreach (k, i; args[1].arr.parallel)
     {
         ret[k] = args[0]([i]);
     }
@@ -107,45 +107,6 @@ Dynamic syslibfoldunary(Args args)
         ret = func([ret, elem]);
     }
     return ret;
-}
-
-bool domatch(Dynamic lhs, Dynamic rhs)
-{
-    final switch (rhs.type)
-    {
-    case Dynamic.Type.nil:
-        return lhs == rhs;
-    case Dynamic.Type.log:
-        return lhs == rhs;
-    case Dynamic.Type.sml:
-        return lhs == rhs;
-    case Dynamic.Type.str:
-        return lhs == rhs;
-    case Dynamic.Type.arr:
-        if (lhs.arr.length != rhs.arr.length)
-        {
-            return false;
-        }
-        foreach (index; 0..lhs.arr.length)
-        {
-            if (domatch(lhs.arr[index], rhs.arr[index]))
-            {
-                return false;
-            }
-        }
-        return true;
-    case Dynamic.Type.tab:
-        return domatch(lhs, rhs.tab["match".dynamic]);
-    case Dynamic.Type.fun:
-        return rhs([lhs]).log;
-    case Dynamic.Type.pro:
-        return rhs([lhs]).log;
-    }
-}
-
-Dynamic pakamatch(Args args)
-{
-    return domatch(args[0], args[1]).dynamic;
 }
 
 Dynamic syslibrange(Args args)
@@ -235,7 +196,6 @@ Pair[] pakaBaseLibs()
     ret ~= FunctionPair!syslibrange("_paka_range");
     ret ~= FunctionPair!pakalength("_paka_length");
     ret ~= FunctionPair!strconcat("_paka_str_concat");
-    ret ~= FunctionPair!pakamatch("_paka_match");
     ret ~= FunctionPair!pakaimport("_paka_import");
     ret.addLib("str", libstr);
     ret.addLib("arr", libarr);

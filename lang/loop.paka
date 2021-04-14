@@ -1,0 +1,15 @@
+def fib(n) {
+    if (n < 2) {
+        return n
+    } else {
+        return fib(n-2) + fib(n-1)
+    }
+}
+
+def repeat(n, f) {
+    arr.map(0 -> (n+1), f)
+}
+
+0 \+\ repeat (35) {
+    fib($0)
+} |> io.print

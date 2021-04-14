@@ -42,7 +42,7 @@ Dynamic libmap(Args args)
 
 Dynamic libmaparr(Args args)
 {
-    Dynamic[] ret;
+    Array ret;
     foreach (key, value; args[0].tab)
     {
         ret ~= args[1]([key, value]);
@@ -61,7 +61,7 @@ Dynamic libeach(Args args)
 
 Dynamic libfiltervalues(Args args)
 {
-    Dynamic[] ret;
+    Array ret;
     foreach (key, value; args[0].tab)
     {
         if (args[1]([key, value]).isTruthy)
@@ -74,7 +74,7 @@ Dynamic libfiltervalues(Args args)
 
 Dynamic libfilterkeys(Args args)
 {
-    Dynamic[] ret;
+    Array ret;
     foreach (key, value; args[0].tab)
     {
         if (args[1]([key, value]).isTruthy)

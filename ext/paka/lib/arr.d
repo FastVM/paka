@@ -17,13 +17,11 @@ Pair[] libarr()
     Pair[] ret;
     ret ~= FunctionPair!libsplit("split");
     ret ~= FunctionPair!libfsplit("fsplit");
-    ret ~= FunctionPair!libextend("extend");
     ret ~= FunctionPair!libslice("slice");
     ret ~= FunctionPair!libfilter("filter");
     ret ~= FunctionPair!librange("range");
     ret ~= FunctionPair!libsorted("sorted");
     ret ~= FunctionPair!liblen("len");
-    ret ~= FunctionPair!libpush("push");
     ret ~= FunctionPair!libpop("pop");
     ret ~= FunctionPair!libmap("map");
     ret ~= FunctionPair!libzip("zip");
@@ -40,11 +38,11 @@ Dynamic libfrom(Args args)
 /// with one arg it returns 0..$0
 /// with two args it returns $0..$1
 /// with three args it counts from $0 to $1 with interval $2
-Dynamic librange(Args args) @Arg("min")
+Dynamic librange(Args args)
 {
     if (args.length == 1)
     {
-        Dynamic[] ret;
+        Array ret;
         foreach (i; cast(double) 0 .. args[0].as!double)
         {
             ret ~= dynamic(i);
@@ -53,7 +51,7 @@ Dynamic librange(Args args) @Arg("min")
     }
     if (args.length == 2)
     {
-        Dynamic[] ret;
+        Array ret;
         foreach (i; args[0].as!double .. args[1].as!double)
         {
             ret ~= dynamic(i);
@@ -65,7 +63,7 @@ Dynamic librange(Args args) @Arg("min")
         double start = args[0].as!double;
         double stop = args[1].as!double;
         double step = args[2].as!double;
-        Dynamic[] ret;
+        Array ret;
         while (start < stop)
         {
             ret ~= dynamic(start);
@@ -81,7 +79,7 @@ Dynamic libmap(Args args)
 {
     Array res = (cast(Dynamic*) GC.malloc(args[0].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[0].arr.length];
-    foreach (k, i; args[0].arr)
+    foreach (k, i; args[0].arr.parallel)
     {
         Dynamic cur = i;
         foreach (f; args[1 .. $])
@@ -96,7 +94,7 @@ Dynamic libmap(Args args)
 /// calls $1+ on each and returns nil
 Dynamic libeach(Args args)
 {
-    foreach (k, i; args[0].arr)
+    foreach (k, i; args[0].arr.parallel)
     {
         Dynamic cur = i;
         foreach (f; args[1 .. $])
@@ -110,7 +108,7 @@ Dynamic libeach(Args args)
 /// creates new array with only the elemtns that $1 returnd true with
 Dynamic libfilter(Args args)
 {
-    Dynamic[] res;
+    Array res;
     foreach (k, i; args[0].arr)
     {
         Dynamic cur = i;
@@ -129,10 +127,10 @@ Dynamic libfilter(Args args)
 /// zips arrays interleaving
 Dynamic libzip(Args args)
 {
-    Dynamic[] res;
+    Array res;
     foreach (i; 0 .. args[0].arr.length)
     {
-        Dynamic[] sub = new Dynamic[args.length];
+        Array sub = new Dynamic[args.length];
         foreach (k, ref v; sub)
         {
             v = args[k].arr[i];

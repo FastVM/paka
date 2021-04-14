@@ -137,7 +137,13 @@ UnaryOp parseUnaryOp(string[] ops)
             }
             else
             {
-                throw new Exception("parse error: not a unary operator");
+                BinaryOp curBinary = rest.parseBinaryOp;
+                UnaryOp nextUnary = ops.parseUnaryOp();
+                return (Node rhs) {
+                    Node tmp = new Call(new Ident("@set"), [genSym, rhs]);
+                    Node res = curBinary(curUnary(tmp), nextUnary(tmp));
+                    return new Call(new Ident("@do"), [tmp, res]);
+                };
             }
         }
         return curUnary;
@@ -201,41 +207,12 @@ BinaryOp parseBinaryOp(string[] ops)
             return new Call(new Ident("@set"), [lhs, rhs]);
         };
     case "+=":
-        return (Node lhs, Node rhs) {
-            return new Call(new Ident("@opset"), [
-                    cast(Node) new Ident("add"), lhs, rhs
-                    ]);
-        };
     case "~=":
-        return (Node lhs, Node rhs) {
-            return new Call(new Ident("@opset"), [
-                    cast(Node) new Ident("cat"), lhs, rhs
-                    ]);
-        };
     case "-=":
-        return (Node lhs, Node rhs) {
-            return new Call(new Ident("@opset"), [
-                    cast(Node) new Ident("sub"), lhs, rhs
-                    ]);
-        };
     case "*=":
-        return (Node lhs, Node rhs) {
-            return new Call(new Ident("@opset"), [
-                    cast(Node) new Ident("mul"), lhs, rhs
-                    ]);
-        };
     case "/=":
-        return (Node lhs, Node rhs) {
-            return new Call(new Ident("@opset"), [
-                    cast(Node) new Ident("div"), lhs, rhs
-                    ]);
-        };
     case "%=":
-        return (Node lhs, Node rhs) {
-            return new Call(new Ident("@opset"), [
-                    cast(Node) new Ident("mod"), lhs, rhs
-                    ]);
-        };
+        throw new Exception("no operator assignment");
     default:
         if (opName == "|>")
         {

@@ -8,59 +8,26 @@ import purr.dynamic;
 import purr.bytecode;
 import purr.plugin.syms;
 import purr.plugin.plugins;
-import purr.ir.types;
 
-struct Arg
+Pair FunctionPair(alias func)(string name)
 {
-    string name;
-    this(string n)
-    {
-        name = n;
-    }
-
-    string toString()
-    {
-        return name;
-    }
-}
-
-Pair FunctionPair(alias func)(string name, Type.Options type=new Type.Options)
-{
-    Dynamic[] args;
-    static if (hasUDA!(func, Arg))
-    {
-        static foreach (argname; getUDAs!(func, Arg))
-        {
-            args ~= argname.to!string.dynamic;
-        }
-    }
     syms[func.mangleof] = &func;
     Fun fun = Fun(&func);
-    fun.args = args;
     fun.names ~= name.dynamic;
     fun.mangled = func.mangleof;
-    return Pair(name, fun, type);
+    return Pair(name, fun);
 }
 
-struct Pair
+alias Pair = shared PairStruct;
+
+struct PairStruct
 {
     string name;
     Dynamic val;
-    Type.Options type;
-    this(T)(string n, T v, Type.Options t=null)
+    this(T)(string n, T v) shared
     {
         name = n;
         val = v.dynamic;
-        type = t;
-    }
-
-    unittest
-    {
-        enum string[] strs = ["10", "[1.dynamic, 2.dynamic, 3.dynamic]", "\"hello\""];
-        static foreach (str; strs)
-        {
-            assert(Pair("x", mixin(str)).val == mixin(str).dynamic);
-        }
     }
 }
 
@@ -88,23 +55,17 @@ string[] defined;
 void addLib(ref Pair[] pairs, string name, Pair[] lib)
 {
     Mapping dyn = emptyMapping;
-    Type.Table tableType = new Type.Table;
     foreach (entry; lib)
     {
         if (!entry.name.canFind('.'))
         {
             string newName = name ~ "." ~ entry.name;
             defined ~= newName;
-            if (entry.val.type == Dynamic.Type.fun)
-            {
-                entry.val.fun.fun.names ~= newName.dynamic;
-            }
             dyn[dynamic(entry.name)] = entry.val;
-            tableType.exact[entry.name] = entry.type;
         }
     }
     definedLibs ~= name;
-    pairs ~= Pair(name, dyn, new Type.Options(tableType));
+    pairs ~= Pair(name, dyn);
 }
 
 // TODO: return Function.Lookup instead of empty function
@@ -118,9 +79,9 @@ Function.Lookup baseFunctionLookup(size_t ctx)
     return stab;
 }
 
-Dynamic*[] loadBase(size_t ctx)
+shared(Dynamic*[]) loadBase(size_t ctx)
 {
-    Dynamic*[] ret;
+    shared(Dynamic*[]) ret;
     foreach (i; ctx.rootBase)
     {
         ret ~= new Dynamic(i.val);
@@ -134,16 +95,6 @@ Function baseFunction(size_t ctx = rootBases.length-1)
     func.stab = ctx.baseFunctionLookup;
     func.captured = ctx.loadBase;
     return func;
-}
-
-Type.Options[string] loadBaseTypes(size_t ctx = rootBases.length-1)
-{
-    Type.Options[string] ret;
-    foreach (i; ctx.rootBase)
-    {
-        ret[i.name] = i.type;
-    }
-    return ret;
 }
 
 version(unittest)

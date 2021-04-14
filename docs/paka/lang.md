@@ -51,7 +51,7 @@ Binary operators follow a table currently defined in [ext/paka/tokens.d](/ext/pa
 #### Binary Operators
 
 ``` bnf
-SET: "+=" | "~=" | "*=" | "/=" | "%=" | "-=" | "="
+SET: "="
 PIPE: "|>" | "<|"
 FUNC: "=>"
 LOGIC: "||" | "&&"

@@ -25,22 +25,6 @@ input | output | reasoning
 `arr.fsplit([0, 1, 2, 3, 4, 5, 6, 7, 8]) { $0 % 3 == 0 }` | `[[1, 2], [4, 5], [7, 8]]` | splits on every element divisible by 3
 `arr.fsplit([0, "sep", "no", 1, "sep", "nope", 2]) { $0 == "sep" && 2 }` | `[[0], [1], [2]]` | splits on every string "sep", 2 indicates that sep and the next value are the sperator
 
-## arr.extend
-
-Takes an array followed by some number of other arrays, each value in the other arrays is pushed to the array.
-Differnet to `~=` in that it does not allocate a new array.
-
-with `the_array = []` before each run
-setup | input | equivalent | reasoning
---- | --- | --- | ---
-`my_aray = []` | `arr.extend(my_array, [0, 1])` | `my_aray = [0, 1]` | the array is extended with a literal
-`empty = []` | `arr.extend(empty, the_array)` | `empty = []` | nothing is added
-`abc = []` | `arr.extend(abc, ["eyy"], ["bee"], ["sea"])` | `["eyy", "bee", "sea"]` | extend can take multiple arrays as if they were joined
-`arr_of_arr = [[0]]` | `arr.extend(arr_of_arr, [[1], [2], [3]]) ` | `arr_of_arr = [[0], [1], [2], [3]]` | extend does not flatten its inputs
-`self_ref = ["me", "myself", "i"]` | `arr.extend(self_ref, self_ref)` | `self_ref = ["me", "myself", "i", "me", "myself", "i"]` | the array is modified after being passed as arguments to extend
-`sentance = ["my", "username", "is"]` | `arr.extend(sentance, 4984)` | type error | arr.extend expects an array
-`chars = []` | `arr.extend(chars, "hello")` | type error | arr.extend, like other functions, does not treat strings as arrays
-
 ## arr.slice
 
 Takes an array, a starting position, and an ending position. Returns a new array containing the indexes in the array from the start upto the end. Does not handle negative indexes.
@@ -78,15 +62,6 @@ setup | input | equivalent
 --- | --- | ---
 `a = [0, 1, 2, 3]` | `arr.pop(a)` | `a = [0, 1, 2]`
 `empty = []` | `arr.pop(empty)` | range error
-
-## arr.push
-
-Takes an array and some elemsts to add. 
-setup | input | equivalent
---- | --- | ---
-`a = []` | `arr.push(a, 0)` | `a = [0]`
-`b = [0]` | `arr.push(b, 1, 2, 3)` | `b = [0, 1, 2, 3]`
-`b = [0]` | `arr.push(b, b)` | `[&0]`
 
 ## arr.zip
 

@@ -28,6 +28,7 @@ import std.process;
 import std.conv;
 import std.string;
 import std.getopt;
+import core.memory;
 import core.stdc.stdlib;
 
 alias Thunk = void delegate();
@@ -182,6 +183,7 @@ Thunk cliReplHandler()
 
 void domain(string[] args)
 {
+    // GC.disable;
     args = args[1 .. $];
     string[] extargs;
     Thunk[] todo;

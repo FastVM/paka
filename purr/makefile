@@ -9,5 +9,8 @@ $(BIN)/purr.o: dcomp $(BIN)
 debug: $(BIN)
 	$(RUN) dmd -g -Iext -i ext/rt/plugin.d ext/paka/plugin.d ext/serial/plugin.d purr/app.d -od=$(BIN) -of=$(BIN)/paka $(DFLAGS)
 
+thread: $(BIN)
+	$(RUN) ldc2 -g -gc -Iext -i ext/paka/plugin.d purr/app.d -od=$(BIN) -of=$(BIN)/paka $(DFLAGS) -fsanitize=thread
+
 release: $(BIN)
 	$(RUN) ldc2  -Iext -i ext/rt/plugin.d ext/paka/plugin.d ext/serial/plugin.d purr/app.d -od=$(BIN) -of=$(BIN)/paka $(DFLAGS) -O3

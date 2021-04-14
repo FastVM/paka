@@ -27,7 +27,7 @@ Dynamic astcall(Args args)
 {
     Mapping ret;
     ret["id".dynamic] = "call".dynamic;
-    Dynamic[] nodes;
+    Array nodes;
     foreach (k, arg; args)
     {
         if (arg.type == Dynamic.Type.arr)

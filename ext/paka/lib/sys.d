@@ -1,5 +1,6 @@
 module paka.lib.sys;
 
+import purr.io;
 import purr.dynamic;
 import purr.base;
 import purr.error;
@@ -22,8 +23,7 @@ import std.algorithm;
 import std.array;
 import std.process;
 import std.conv;
-import purr.io;
-import std.parallelism : parallel;
+import std.parallelism;
 
 Pair[] libsys()
 {
@@ -100,10 +100,10 @@ Dynamic libtypeof(Args args)
 /// internal map function
 Dynamic syslibmap(Args args)
 {
-    Dynamic[] ret;
+    Array ret;
     foreach (i; 0 .. args[1].arr.length)
     {
-        Dynamic[] fargs;
+        Array fargs;
         foreach (j; args[1 .. $])
         {
             fargs ~= j.arr[i];

@@ -18,7 +18,7 @@ import purr.ir.opt;
 bool dumpast = false;
 
 enum string[] specialForms = [
-        "@def", "@set", "@opset", "@while", "@array", "@table", "@return",
+        "@def", "@set", "@while", "@array", "@table", "@return",
         "@if", "@fun", "@do", "-", "+", "*", "/", "%", "<", ">", "<=", ">=",
         "==", "!=", "...", "@index", "=>", "@env", "&&", "||", "~",
         "@inspect", "@rcall", "@call"
@@ -294,50 +294,6 @@ class Walker
         }
     }
 
-    void walkOpStore(Node[] args)
-    {
-        string opname;
-        if (Ident id = cast(Ident) args[0])
-        {
-            opname = id.repr;
-            assert(["add", "sub", "mul", "div", "mod", "cat"].canFind(opname));
-        }
-        else
-        {
-            assert(false);
-        }
-        if (Ident id = cast(Ident) args[1])
-        {
-            walk(args[2]);
-            emit(new OperatorStoreInstruction(opname, id.repr));
-        }
-        else if (Call call = cast(Call) args[1])
-        {
-            if (Ident id = cast(Ident) call.args[0])
-            {
-                if (id.repr == "@index")
-                {
-                    walk(call.args[1]);
-                    walk(call.args[2]);
-                    walk(args[2]);
-                    emit(new OperatorStoreIndexInstruction(opname));
-                }
-                else
-                {
-                    assert(false);
-                }
-            }
-            else
-            {
-                assert(false);
-            }
-        }
-        else
-        {
-            assert(false);
-        }
-    }
-
     void walkDef(Node[] args)
     {
         if (args[0].id == NodeKind.ident)
@@ -489,9 +445,6 @@ class Walker
             break;
         case "@table":
             walkTable(args);
-            break;
-        case "@opset":
-            walkOpStore(args);
             break;
         case "@fun":
             walkFun(args);

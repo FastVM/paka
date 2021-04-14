@@ -132,7 +132,22 @@ string serialize(T)(T[] arr)
     return str;
 }
 
-string serialize(K, V)(V[K] assocArray)
+string serialize(Array arr)
+{
+    string str = `[`;
+    foreach (n, elem; arr)
+    {
+        if (n != 0)
+        {
+            str ~= ", ";
+        }
+        str ~= elem.serialize;
+    }
+    str ~= `]`;
+    return str;
+}
+
+string serialize(T)(T assocArray) if (isAssociativeArray!T)
 {
     string str = `[`;
     size_t n = 0;

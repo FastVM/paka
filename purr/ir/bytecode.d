@@ -14,7 +14,6 @@ import purr.inter;
 import purr.ir.emit;
 import purr.ir.opt;
 import purr.ir.repr;
-import purr.ir.types;
 
 void modifyInstr(T)(Function func, T index, ushort v)
 {
@@ -46,11 +45,11 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     int* psize = op in opSizes;
     if (psize !is null)
     {
-        func.stackSizeCurrent += *psize;
+        func.stackSizeCurrent = func.stackSizeCurrent + *psize;
     }
     else
     {
-        func.stackSizeCurrent += size;
+        func.stackSizeCurrent = func.stackSizeCurrent + size;
     }
     if (func.stackSizeCurrent >= func.stackSize)
     {
@@ -162,7 +161,8 @@ class BytecodeEmitter
     {
         Function oldFunc = func;
         TodoBlock[] oldTodoBlocks = todoBlocks;
-        scope(exit) {
+        scope (exit)
+        {
             func = oldFunc;
             todoBlocks = oldTodoBlocks;
         }
@@ -312,11 +312,11 @@ class BytecodeEmitter
 
     void emit(StoreInstruction store)
     {
-        if (uint *ius = store.var in func.captab.byName)
+        if (shared(uint)* ius = store.var in func.captab.byName)
         {
             pushInstr(func, Opcode.cstore, [cast(ushort)*ius]);
         }
-        else if (uint* ius = store.var in func.stab.byName)
+        else if (shared(uint)* ius = store.var in func.stab.byName)
         {
             pushInstr(func, Opcode.store, [cast(ushort)*ius]);
         }
@@ -339,40 +339,6 @@ class BytecodeEmitter
         pushInstr(func, Opcode.istore);
     }
 
-    void emit(OperatorStoreInstruction store)
-    {if (uint *ius = store.var in func.captab.byName)
-        {
-            pushInstr(func, Opcode.opcstore, [
-                    cast(ushort) *ius, cast(ushort) store.op.to!AssignOp
-                    ]);
-        }
-        else if (uint* ius = store.var in func.stab.byName)
-        {
-            pushInstr(func, Opcode.opstore, [
-                    cast(ushort) *ius, cast(ushort) store.op.to!AssignOp
-                    ]);
-        }
-        else
-        {
-            foreach (argno, argname; func.args)
-            {
-                if (argname.str == store.var)
-                {
-                    throw new Exception("not mutable: " ~ store.var);
-                }
-            }
-            uint ius = func.doCapture(store.var);
-            pushInstr(func, Opcode.opcstore, [
-                    cast(ushort) ius, cast(ushort) store.op.to!AssignOp
-                    ]);
-        }
-    }
-
-    void emit(OperatorStoreIndexInstruction store)
-    {
-        pushInstr(func, Opcode.opistore, [cast(ushort) store.op.to!AssignOp]);
-    }
-
     void emit(LoadInstruction load)
     {
         bool unfound = true;
@@ -387,7 +353,7 @@ class BytecodeEmitter
         }
         if (unfound)
         {
-            uint* us = load.var in func.stab.byName;
+            shared(uint)* us = load.var in func.stab.byName;
             Function.Lookup.Flags flags;
             if (us !is null)
             {
@@ -442,7 +408,7 @@ class BytecodeEmitter
 
     void emit(LambdaInstruction lambda)
     {
-        func.flags |= Function.flags.isLocal;
+        func.flags = cast(Function.Flags) (func.flags | Function.flags.isLocal);
         Function newFunc = new Function;
         newFunc.parent = func;
         newFunc.args = lambda.argNames;
