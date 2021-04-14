@@ -47,12 +47,7 @@ bool deserialize(T)(Json json) if (is(T == bool))
     return json.boolean;
 }
 
-bool deserialize(T)(Json json) if (is(T == shared bool))
-{
-    return json.boolean;
-}
-
-double deserialize(T)(Json json) if (is(T == double) || is(T == shared double))
+double deserialize(T)(Json json) if (is(T == double) || is(T == double))
 {
     if (json.type == JSONType.float_)
     {
@@ -77,11 +72,6 @@ string deserialize(T)(Json json) if (is(T == string))
     return json.str;
 }
 
-string deserialize(T)(Json json) if (is(T == shared string))
-{
-    return json.str;
-}
-
 Int deserialize(Int)(Json json)
         if (is(Int == int) || is(Int == uint) || is(Int == short)
             || is(Int == ushort) || is(Int == byte) || is(Int == ubyte))
@@ -89,20 +79,7 @@ Int deserialize(Int)(Json json)
     return cast(Int) json.integer;
 }
 
-Int deserialize(Int)(Json json)
-        if (is(Int == shared int) || is(Int == shared uint)
-            || is(Int == shared short) || is(Int == shared ushort)
-            || is(Int == shared byte) || is(Int == shared ubyte))
-{
-    return cast(Int) json.integer;
-}
-
 Int deserialize(Int)(Json json) if (is(Int == long) || is(Int == ulong))
-{
-    return cast(Int) json.integer;
-}
-
-Int deserialize(Int)(Json json) if (is(Int == shared long) || is(Int == shared ulong))
 {
     return cast(Int) json.integer;
 }
@@ -206,12 +183,12 @@ Function.Capture deserialize(T : Function.Capture)(Json json)
     return json.elems!("from is2 isArg offset", T);
 }
 
-Function.Lookup.Flags deserialize(T : shared Function.Lookup.Flags)(Json json)
+Function.Lookup.Flags deserialize(T : Function.Lookup.Flags)(Json json)
 {
     return json.str.to!T;
 }
 
-Function.Lookup deserialize(T : shared Function.Lookup)(Json json)
+Function.Lookup deserialize(T : Function.Lookup)(Json json)
 {
     return json.elems!("byName byPlace flagsByPlace", T);
 }

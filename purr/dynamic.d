@@ -15,16 +15,16 @@ import purr.data.map;
 import purr.data.rope;
 
 version = safe;
-pragma(inline, false):
+pragma(inline, true):
 
-alias Dynamic = shared DynamicImpl;
-alias Table = shared TableImpl;
+alias Dynamic = DynamicImpl;
+alias Table = TableImpl;
 
-alias Args = shared Dynamic[];
-alias Array = shared Dynamic[];
+alias Args = Dynamic[];
+alias Array = Dynamic[];
 
 alias Delegate = Dynamic function(Args);
-alias Mapping = shared Dynamic[Dynamic];
+alias Mapping = Dynamic[Dynamic];
 Mapping emptyMapping()
 {
     return Mapping.init;
@@ -46,7 +46,7 @@ class TableImpl
     Mutex mutex;
     alias table this;
 
-    Table init() shared
+    Table init()
     {
         return Table.empty;
     }
@@ -56,24 +56,24 @@ class TableImpl
         return new Table;
     }
 
-    this() shared
+    this()
     {
         table = emptyMapping;
     }
 
-    this(typeof(table) t) shared
+    this(typeof(table) t)
     {
         table = t;
         metatable = null;
     }
 
-    this(typeof(table) t, Table m) shared
+    this(typeof(table) t, Table m)
     {
         table = t;
         metatable = m;
     }
 
-    // Table withGet(Table newget) shared
+    // Table withGet(Table newget)
     // {
     //     if (Dynamic* get = "get".dynamic in table)
     //     {
@@ -86,7 +86,7 @@ class TableImpl
     //     return this;
     // }
 
-    // Table withGet(Args...)(Args args) shared if (args.length != 1)
+    // Table withGet(Args...)(Args args) if (args.length != 1)
     // {
     //     if (args.length == 0)
     //     {
@@ -95,14 +95,14 @@ class TableImpl
     //     return withGet(args[0]).withGet(args[1 .. $]);
     // }
 
-    // Table withProto(Table proto) shared
+    // Table withProto(Table proto)
     // {
     //     withGet(proto);
     //     meta.withGet(proto.meta);
     //     return this;
     // }
 
-    // Table withProto(Args...)(Args args) shared if (args.length != 1) 
+    // Table withProto(Args...)(Args args) if (args.length != 1) 
     // {
     //     if (args.length == 0)
     //     {
@@ -111,28 +111,28 @@ class TableImpl
     //     return withProto(args[0]).withProto(args[1 .. $]);
     // }
 
-    ref Table meta() shared
+    ref Table meta()
     {
         return metatable;
     }
 
-    Dynamic rawIndex(Dynamic key) shared
+    Dynamic rawIndex(Dynamic key)
     {
-        if (shared(Dynamic*) d = key in table)
+        if (Dynamic* d = key in table)
         {
             return *d;
         }
         throw new BoundsException("key not found: " ~ key.to!string);
     }
 
-    void rawSet(Dynamic key, Dynamic value) shared
+    void rawSet(Dynamic key, Dynamic value)
     {
         table[key] = value;
     }
 
-    void set(Dynamic key, Dynamic value) shared
+    void set(Dynamic key, Dynamic value)
     {
-        shared(Dynamic*) metaset = dynamic("set") in meta;
+        Dynamic* metaset = dynamic("set") in meta;
         if (metaset !is null)
         {
             (*metaset)([dynamic(this), key, value]);
@@ -140,16 +140,16 @@ class TableImpl
         rawSet(key, value);
     }
 
-    ref Dynamic opIndex(Dynamic key) shared
+    ref Dynamic opIndex(Dynamic key)
     {
-        if (shared(Dynamic*) val = key in this)
+        if (Dynamic* val = key in this)
         {
             return *val;
         }
         throw new BoundsException("key not found: " ~ key.to!string);
     }
 
-    shared(Dynamic*) opBinaryRight(string op : "in")(Dynamic other) shared
+    Dynamic* opBinaryRight(string op : "in")(Dynamic other)
     {
         foreach (i; lookingFor)
         {
@@ -163,20 +163,20 @@ class TableImpl
         {
             lookingFor.length--;
         }
-        shared(Dynamic*) ret = other in table;
+        Dynamic* ret = other in table;
         if (ret)
         {
             return ret;
-        }
-        if (meta.length == 0)
-        {
-            return null;
         }
         if (metatable is null)
         {
             return null;
         }
-        shared(Dynamic*) metaget = "get".dynamic in metatable;
+        if (meta.length == 0)
+        {
+            return null;
+        }
+        Dynamic* metaget = "get".dynamic in metatable;
         if (metaget is null)
         {
             return null;
@@ -185,7 +185,7 @@ class TableImpl
         {
             foreach (getter; metaget.arr)
             {
-                if (shared(Dynamic*) got = other in getter.tab)
+                if (Dynamic* got = other in getter.tab)
                 {
                     return got;
                 }
@@ -202,7 +202,7 @@ class TableImpl
         }
     }
 
-    Dynamic opBinary(string op)(Dynamic other) shared
+    Dynamic opBinary(string op)(Dynamic other)
     {
         enum string opname(string op)()
         {
@@ -220,24 +220,24 @@ class TableImpl
         return meta[dynamic(opname!op)]([dynamic(this), other]);
     }
 
-    Dynamic opCall(Args args) shared
+    Dynamic opCall(Args args)
     {
-        if (shared(Dynamic*) index = "index".dynamic in meta)
+        if (Dynamic* index = "index".dynamic in meta)
         {
-            if (shared(Dynamic*) dyn = "self".dynamic in meta)
+            if (Dynamic* dyn = "self".dynamic in meta)
             {
                 return meta[dynamic("index")](dyn.arr ~ args);
             }
             return meta[dynamic("index")](args);
         }
-        if (shared(Dynamic*) ret = args[0] in table)
+        if (Dynamic* ret = args[0] in table)
         {
             return *ret;
         }
         throw new Exception("");
     }
 
-    Dynamic opUnary(string op)() shared
+    Dynamic opUnary(string op)()
     {
         enum string opname(string op)()
         {
@@ -250,7 +250,7 @@ class TableImpl
         return meta[dynamic(opname!op)]([this]);
     }
 
-    string toString() shared
+    override string toString()
     {
         foreach (i, v; beforeTables)
         {
@@ -264,7 +264,7 @@ class TableImpl
         {
             beforeTables.length--;
         }
-        shared(Dynamic*) str = "str".dynamic in meta;
+        Dynamic* str = "str".dynamic in meta;
         if (str !is null)
         {
             Dynamic res = *str;
@@ -281,7 +281,7 @@ class TableImpl
         return rawToString;
     }
 
-    string rawToString() shared
+    string rawToString()
     {
         char[] ret;
         ret ~= "{";
@@ -307,7 +307,7 @@ Dynamic dynamic(T...)(T a)
     return Dynamic(a);
 }
 
-alias Fun = shared FunStruct;
+alias Fun = FunStruct;
 
 struct FunStruct
 {
@@ -315,7 +315,7 @@ struct FunStruct
     string mangled;
     Dynamic[] names;
     Dynamic[] args;
-    string toString() shared
+    string toString()
     {
         return callableFormat(names, args);
     }
@@ -342,7 +342,7 @@ struct DynamicImpl
         string* str;
         Array* arr;
         Table tab;
-        alias Callable = shared CallableUnion;
+        alias Callable = CallableUnion;
         union CallableUnion
         {
             Fun* fun;
@@ -352,7 +352,7 @@ struct DynamicImpl
         Callable fun;
     }
 
-pragma(inline, false):
+pragma(inline, true):
     Type type;
     Value value;
 
@@ -361,64 +361,62 @@ pragma(inline, false):
         return dynamic(s.to!double);
     }
 
-    this(Type t) shared
+    this(Type t)
     {
         type = t;
     }
 
-    this(bool log) shared
+    this(bool log)
     {
         value.log = log;
         type = Type.log;
     }
 
-    this(double num) shared
+    this(double num)
     {
         value.sml = num;
         type = Type.sml;
     }
 
-    this(string str) shared
+    this(string str)
     {
-        string* strp = cast(string*) GC.malloc(string.sizeof);
-        *strp = str;
-        value.str = cast(shared string*) strp;
+        value.str = cast(string*) GC.malloc(string.sizeof);
+        *value.str = str;
         type = Type.str;
     }
 
-    this(Array arr) shared
+    this(Array arr)
     {
-        Array* arrp = cast(Array*) GC.malloc(Array.sizeof);
-        *arrp = arr;
-        value.arr = cast(shared Array*) arrp;
+        value.arr = cast(Array*) GC.malloc(Array.sizeof);
+        *value.arr = arr;
         type = Type.arr;
     }
 
-    this(shared Mapping tab) shared
+    this(Mapping tab)
     {
         value.tab = new Table(tab);
         type = Type.tab;
     }
 
-    this(Table tab) shared
+    this(Table tab)
     {
         value.tab = tab;
         type = Type.tab;
     }
 
-    this(Fun fun) shared
+    this(Fun fun)
     {
         value.fun.fun = [fun].ptr;
         type = Type.fun;
     }
 
-    this(Function pro) shared
+    this(Function pro)
     {
         value.fun.pro = pro;
         type = Type.pro;
     }
 
-    this(Dynamic other) shared
+    this(Dynamic other)
     {
         value = other.value;
         type = other.type;
@@ -432,12 +430,12 @@ pragma(inline, false):
         return ret;
     }
 
-    string toString() shared
+    string toString()
     {
         return this.strFormat;
     }
 
-    Dynamic opCall(Args args) shared
+    Dynamic opCall(Args args)
     {
         switch (type)
         {
@@ -459,12 +457,12 @@ pragma(inline, false):
         }
     }
 
-    int opCmp(Dynamic other) shared
+    int opCmp(Dynamic other)
     {
         return cmpDynamic(this, other);
     }
 
-    int flatOpCmp(Dynamic other) shared
+    int flatOpCmp(Dynamic other)
     {
         Type t = type;
         switch (t)
@@ -536,12 +534,12 @@ pragma(inline, false):
         return cmpDynamic(cast(Dynamic) this, cast(Dynamic) other) == 0;
     }
 
-    bool opEquals(Dynamic other) shared
+    bool opEquals(Dynamic other)
     {
         return cmpDynamic(this, other) == 0;
     }
 
-    Dynamic opBinary(string op)(Dynamic other) shared
+    Dynamic opBinary(string op)(Dynamic other)
     {
         static if (op == "~")
         {
@@ -568,12 +566,12 @@ pragma(inline, false):
         throw new TypeException("invalid types: " ~ type.to!string ~ op ~ other.type.to!string);
     }
 
-    Dynamic opUnary(string op)() shared
+    Dynamic opUnary(string op)()
     {
         return dynamic(mixin(op ~ "as!double"));
     }
 
-    bool log() shared
+    bool log()
     {
         version (safe)
         {
@@ -585,7 +583,7 @@ pragma(inline, false):
         return value.log;
     }
 
-    string str() shared
+    string str()
     {
         version (safe)
         {
@@ -597,7 +595,7 @@ pragma(inline, false):
         return *value.str;
     }
 
-    Array arr() shared
+    Array arr()
     {
         version (safe)
         {
@@ -609,7 +607,7 @@ pragma(inline, false):
         return *value.arr;
     }
 
-    Table tab() shared
+    Table tab()
     {
         version (safe)
         {
@@ -621,7 +619,7 @@ pragma(inline, false):
         return value.tab;
     }
 
-    shared(string*) strPtr() shared
+    string* strPtr()
     {
         version (safe)
         {
@@ -633,7 +631,7 @@ pragma(inline, false):
         return value.str;
     }
 
-    Array* arrPtr() shared
+    Array* arrPtr()
     {
         version (safe)
         {
@@ -645,7 +643,7 @@ pragma(inline, false):
         return value.arr;
     }
 
-    Value.Callable fun() shared
+    Value.Callable fun()
     {
         version (safe)
         {
@@ -657,7 +655,7 @@ pragma(inline, false):
         return value.fun;
     }
 
-    T as(T)() shared if (isIntegral!T)
+    T as(T)() if (isIntegral!T)
     {
         if (type == Type.sml)
         {
@@ -669,7 +667,7 @@ pragma(inline, false):
         }
     }
 
-    T as(T)() shared if (isFloatingPoint!T)
+    T as(T)() if (isFloatingPoint!T)
     {
         if (type == Type.sml)
         {
@@ -681,7 +679,7 @@ pragma(inline, false):
         }
     }
 
-    bool isTruthy() shared
+    bool isTruthy()
     {
         return type != Type.nil && (type != Type.log || value.log);
     }
@@ -730,7 +728,7 @@ int cmpTable(Table at, Table bt)
     }
     if (at.metatable !is null)
     {
-        if (shared(Dynamic*) mcmp = "cmp".dynamic in at.metatable)
+        if (Dynamic* mcmp = "cmp".dynamic in at.metatable)
         {
             return cast(int)(*mcmp)([at.dynamic, bt.dynamic]).value.sml;
         }
@@ -741,7 +739,7 @@ int cmpTable(Table at, Table bt)
     }
     foreach (key, value; at)
     {
-        const shared Dynamic* bValue = key in bt;
+        const Dynamic* bValue = key in bt;
         if (bValue is null)
         {
             foreach (key2, value2; bt)

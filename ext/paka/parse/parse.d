@@ -96,10 +96,6 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
         {
             tokens.nextIs(Token.Type.comma);
         }
-        else if (tokens[0].isOperator(":"))
-        {
-            tokens.nextIs(Token.Type.operator, ":");
-        }
     }
     tokens.match(Token.Type.close, [v[1]]);
     return args;
@@ -114,16 +110,9 @@ void stripNewlines(ref TokenArray tokens)
     }
 }
 
-alias readPostCallExtend = Spanning!(readPostExtendImpl, Node);
-Node readPostCallExtendImpl(ref TokenArray tokens, Node last)
+Node readPostCallExtend(ref TokenArray tokens, Node last)
 {
     Node[][] args = tokens.readOpen!"()";
-    while (tokens.length != 0 && tokens[0].isOpen("{"))
-    {
-        args[$ - 1] ~= cast(Node) new Call(new Ident("@fun"), [
-                new Call([]), tokens.readBlock
-                ]);
-    }
     foreach (argList; args)
     {
         last = new Call(last, argList);
@@ -142,18 +131,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     Node ret = void;
     if (tokens[0].isOpen("("))
     {
-        ret = tokens.readPostCallExtendImpl(last);
-    }
-    else if (tokens[0].isOpen("{"))
-    {
-        Node[] args;
-        while (tokens.length != 0 && tokens[0].isOpen("{"))
-        {
-            args ~= cast(Node) new Call(new Ident("@fun"), [
-                    new Call([]), tokens.readBlock
-                    ]);
-        }
-        ret = new Call(last, args);
+        ret = tokens.readPostCallExtend(last);
     }
     else if (tokens.length > 2 && tokens[0].isOperator(".")
             && (tokens[1].isOpen("(") || tokens[1].isOpen("[")))
@@ -201,11 +179,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
 alias readIf = Spanning!readIfImpl;
 Node readIfImpl(ref TokenArray tokens)
 {
-    Node[] cond = tokens.readOpen1!"()";
-    if (tokens.length < 1)
-    {
-        throw new Exception("if cannot have empty parens");
-    }
+    Node cond = tokens.readExprBase;
     Node iftrue = tokens.readBlock;
     Node iffalse;
     if (tokens.length > 0 && tokens[0].isKeyword("else"))
@@ -217,7 +191,7 @@ Node readIfImpl(ref TokenArray tokens)
     {
         iffalse = new Ident("@nil");
     }
-    return new Call(new Ident("@if"), [cond[0], iftrue, iffalse]);
+    return new Call(new Ident("@if"), [cond, iftrue, iffalse]);
 }
 
 void skip1(ref string str, ref Span span)
@@ -420,13 +394,6 @@ Node readPostExprImpl(ref TokenArray tokens)
         tokens.nextIs(Token.Type.keyword, "if");
         last = tokens.readIf;
     }
-    else if (tokens[0].isKeyword("while"))
-    {
-        tokens.nextIs(Token.Type.keyword, "while");
-        Node cond = tokens.readOpen1!"()"[$ - 1];
-        Node loop = tokens.readBlock;
-        last = new Call(new Ident("@while"), [cond, loop]);
-    }
     else if (tokens[0].isIdent)
     {
         bool wasMacro = false;
@@ -598,36 +565,12 @@ Node readStmtImpl(ref TokenArray tokens)
         tokens.nextIs(Token.Type.keyword, "return");
         return new Call(new Ident("@return"), [tokens.readExprBase]);
     }
-    if (tokens[0].isKeyword("assert"))
-    {
-        tokens.nextIs(Token.Type.keyword, "assert");
-        return new Call(new Ident("@do"),
-                [
-                    cast(Node) new Call(new Ident("_paka_begin_assert"), null),
-                    cast(Node) new Call(new Ident("_paka_assert"),
-                        [
-                            cast(Node) new Call(new Ident("@inspect"), [
-                                tokens.readExprBase
-                            ])
-                        ])
-                ]);
-    }
     if (tokens[0].isKeyword("def"))
     {
         tokens.nextIs(Token.Type.keyword, "def");
         Node name = tokens.readExprBase;
-        Call call = cast(Call) name;
-        if (call is null)
-        {
-            throw new Exception("parse error: body of def");
-        }
-        Call dobody = cast(Call) call.args[$ - 1];
-        if (dobody is null)
-        {
-            throw new Exception("parse error: body of def");
-        }
-        return new Call(new Ident("@set"),
-                [cast(Node) new Call(call.args[0 .. $ - 1])] ~ dobody.args[2 .. $]);
+        Node dobody = tokens.readBlock;
+        return new Call(new Ident("@set"), [name, dobody]);
     }
     return tokens.readExprBase;
 }
@@ -638,7 +581,7 @@ alias readBlockBody = Spanning!readBlockBodyImpl;
 Node readBlockBodyImpl(ref TokenArray tokens)
 {
     Node[] ret;
-    while (tokens.length > 0 && !tokens[0].isClose("}"))
+    while (tokens.length > 0 && !tokens[0].isClose("}") && !tokens[0].isKeyword("else"))
     {
         size_t lengthBefore = tokens.length;
         Node stmt = tokens.readStmt;
@@ -658,10 +601,18 @@ Node readBlockBodyImpl(ref TokenArray tokens)
 alias readBlock = Spanning!readBlockImpl;
 Node readBlockImpl(ref TokenArray tokens)
 {
-    tokens.nextIs(Token.Type.open, "{");
-    Node ret = readBlockBody(tokens);
-    tokens.nextIs(Token.Type.close, "}");
-    return ret;
+    if (tokens[0].isOperator(":"))
+    {
+        tokens.nextIs(Token.Type.operator, ":");
+        return tokens.readStmt;  
+    }
+    else
+    {
+        tokens.nextIs(Token.Type.open, "{");
+        Node ret = readBlockBody(tokens);
+        tokens.nextIs(Token.Type.close, "}");
+        return ret;
+    }
 }
 
 alias parsePakaValue = parsePakaAs!readBlockBodyImpl;
@@ -730,5 +681,6 @@ Node parse(Location loc)
         throw new Exception("input error: missing __main__");
     }
     Location location = main.location;
-    return location.parsePaka;
+    Node ret = location.parsePaka;
+    return ret;
 }

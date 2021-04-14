@@ -27,20 +27,20 @@ alias Map(K, V) = MapImpl!(K, V);
 class MapImpl(Key, Value)
 {
     alias This = Map!(Key, Value);
-    shared This leftv;
-    shared This rightv;
-    shared Key key = void;
-    shared Value value = void;
-    shared size_t length;
+    This leftv;
+    This rightv;
+    Key key = void;
+    Value value = void;
+    size_t length;
     long children;
 
-    this(typeof(null) n = null) shared
+    this(typeof(null) n = null)
     {
         length = 0;
         children = 0;
     }
 
-    this(shared This l, shared This r, Key k, Value v) shared
+    this(This l, This r, Key k, Value v)
     {
         right = r;
         left = l;
@@ -49,26 +49,26 @@ class MapImpl(Key, Value)
         length = left.length + right.length + 1;
         children = max(left.children, right.children) + 1;
     }
-    
-    ref shared(This) left() shared
+
+    ref This left()
     {
         if (leftv is null)
         {
-            leftv = new shared This;
+            leftv = new This;
         }
         return leftv;
     }
 
-    ref shared(This) right() shared
+    ref This right()
     {
         if (rightv is null)
         {
-            rightv = new shared This;
+            rightv = new This;
         }
         return rightv;
     }
 
-    int opApply(int delegate(Value) dg) shared
+    int opApply(int delegate(Value) dg)
     {
         if (length != 0)
         {
@@ -88,7 +88,7 @@ class MapImpl(Key, Value)
         return 0;
     }
 
-    int opApply(int delegate(shared Key, shared Value) dg) shared
+    int opApply(int delegate(Key, Value) dg)
     {
         if (length != 0)
         {
@@ -108,14 +108,14 @@ class MapImpl(Key, Value)
         return 0;
     }
 
-    void rebalance() shared
+    void rebalance()
     {
         if (left.children - 1 > right.children)
         {
-            shared This left2 = left;
-            shared This right2 = right;
+            This left2 = left;
+            This right2 = right;
             left = left2.left;
-            right = new shared This(left2.right, right2, key, value);
+            right = new This(left2.right, right2, key, value);
             key = left2.key;
             value = left2.value;
             assert(length == right.length + left.length + 1);
@@ -124,9 +124,9 @@ class MapImpl(Key, Value)
         }
         if (right.children - 1 > left.children)
         {
-            shared This left2 = left;
-            shared This right2 = right;
-            left = new shared This(left2, right2.left, key, value);
+            This left2 = left;
+            This right2 = right;
+            left = new This(left2, right2.left, key, value);
             right = right2.right;
             key = right2.key;
             value = right2.value;
@@ -136,12 +136,12 @@ class MapImpl(Key, Value)
         }
     }
 
-    shared(Value) opIndex(shared Key k) shared
+    Value opIndex(Key k)
     {
         return *(k in this);
     }
 
-    void opIndexAssign(shared Value v, shared Key k) shared
+    void opIndexAssign(Value v, Key k)
     {
         if (length == 0)
         {
@@ -175,12 +175,13 @@ class MapImpl(Key, Value)
         }
     }
 
-    shared(Value*) opBinaryRight(string op : "in")(Key k) shared
+    Value* opBinaryRight(string op : "in")(Key k)
     {
         if (length == 0)
         {
             return null;
         }
+
         int c = compare(key, k);
         if (c > 0)
         {
@@ -196,7 +197,7 @@ class MapImpl(Key, Value)
         }
     }
 
-    override string toString() 
+    override string toString()
     {
         return "Map(...)";
     }

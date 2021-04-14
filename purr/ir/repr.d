@@ -17,7 +17,7 @@ import purr.ir.opt;
 alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, ReturnBranch,
         BuildArrayInstruction, BuildTableInstruction, CallInstruction, PushInstruction,
         OperatorInstruction, LambdaInstruction, PopInstruction,
-        StoreIndexInstruction, StoreInstruction, LoadInstruction, ArgsInstruction,);
+        StoreInstruction, LoadInstruction, ArgsInstruction, RecInstruction);
 
 size_t nameCount;
 
@@ -211,6 +211,20 @@ class PushInstruction : Instruction
     }
 }
 
+class RecInstruction : Instruction
+{
+    this()
+    {
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "rec\n";
+        return ret;
+    }
+}
+
 class InspectInstruction : Instruction
 {
     this()
@@ -299,20 +313,6 @@ class StoreInstruction : AssignmentInstruction
     {
         string ret;
         ret ~= "store " ~ var ~ "\n";
-        return ret;
-    }
-}
-
-class StoreIndexInstruction : Instruction
-{
-    this()
-    {
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "index-store\n";
         return ret;
     }
 }

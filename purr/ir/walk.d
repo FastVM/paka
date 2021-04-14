@@ -146,6 +146,10 @@ class Walker
         {
             emit(new PushInstruction(false.dynamic));
         }
+        else if (ident == "rec")
+        {
+            emit(new RecInstruction);
+        }
         else if (ident == "args")
         {
             emit(new ArgsInstruction);
@@ -271,17 +275,7 @@ class Walker
         {
             if (Ident id = cast(Ident) call.args[0])
             {
-                if (id.repr == "@index")
-                {
-                    walk(call.args[1]);
-                    walk(call.args[2]);
-                    walk(args[1]);
-                    emit(new StoreIndexInstruction);
-                }
-                else
-                {
-                    walkStoreDef(call, args[1]);
-                }
+                walkStoreDef(call, args[1]);
             }
             else
             {

@@ -17,9 +17,8 @@ Statments result in no value. When used at the end of a block, the block results
 A statment must not start with `(` , `[` or `{` . This fixes ambiguity issues that would arrise otheriwse, as well as making it an erorr to write something like `thing[2]` when trying to get index `2` of thing (Use `thing.2` or `thing.[2]` instead).
 
 ``` bnf
-stmt: return | assert | def | base_expr
+stmt: return | def | base_expr
 return: "return" base_expr
-assert: "assert" base_expr
 def: "def" base_expr parens block
 %ignore ";"
 ```
@@ -162,7 +161,7 @@ single: lambda
     | static
     | parens
     | array | table
-    | if | while
+    | if
     | ident | string
 lambda: "lambda" call
 static: "static" block
@@ -171,7 +170,6 @@ table: "{" (table_entry ", ")* table_entry? "}"
 table_entry: expr_base ":" expr_base
 array: "{" (expr_base ", ")* expr_base? "}"
 if: "if" parens block 
-while: "while" parens block
 string: QUOTE string_part QUOTE
 string_part: string_char
     | string_escape_format

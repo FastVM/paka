@@ -7,9 +7,9 @@ def fib(n) {
 }
 
 def repeat(n, f) {
-    return (0 -> (n+1)) .|> f
+    arr.map(0 -> (n+1), f)
 }
 
-repeat (5, lambda(s) {
-    fib(28) |> io.print
-})
+repeat (32) {
+    fib(32) |> io.print
+}

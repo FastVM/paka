@@ -253,7 +253,7 @@ class BytecodeEmitter
                 return;
             }
         }
-        assert(false);
+        assert(false, "not emittable " ~ em.to!string);
     }
 
     void emit(LogicalBranch branch)
@@ -312,31 +312,14 @@ class BytecodeEmitter
 
     void emit(StoreInstruction store)
     {
-        if (shared(uint)* ius = store.var in func.captab.byName)
-        {
-            pushInstr(func, Opcode.cstore, [cast(ushort)*ius]);
-        }
-        else if (shared(uint)* ius = store.var in func.stab.byName)
+        if (uint* ius = store.var in func.stab.byName)
         {
             pushInstr(func, Opcode.store, [cast(ushort)*ius]);
         }
         else
         {
-            foreach (argno, argname; func.args)
-            {
-                if (argname.str == store.var)
-                {
-                    throw new Exception("not mutable: " ~ store.var);
-                }
-            }
-            uint ius = func.doCapture(store.var);
-            pushInstr(func, Opcode.cstore, [cast(ushort) ius]);
+            throw new Exception("not mutable: " ~ store.var);
         }
-    }
-
-    void emit(StoreIndexInstruction store)
-    {
-        pushInstr(func, Opcode.istore);
     }
 
     void emit(LoadInstruction load)
@@ -353,7 +336,7 @@ class BytecodeEmitter
         }
         if (unfound)
         {
-            shared(uint)* us = load.var in func.stab.byName;
+            uint* us = load.var in func.stab.byName;
             Function.Lookup.Flags flags;
             if (us !is null)
             {
@@ -384,6 +367,11 @@ class BytecodeEmitter
         func.constants ~= push.value;
     }
 
+    void emit(RecInstruction rec)
+    {
+        pushInstr(func, Opcode.rec, []);
+    }
+
     void emit(InspectInstruction inspect)
     {
         func.pushInstr(Opcode.inspect, null);
@@ -408,7 +396,7 @@ class BytecodeEmitter
 
     void emit(LambdaInstruction lambda)
     {
-        func.flags = cast(Function.Flags) (func.flags | Function.flags.isLocal);
+        func.flags |= Function.flags.isLocal;
         Function newFunc = new Function;
         newFunc.parent = func;
         newFunc.args = lambda.argNames;

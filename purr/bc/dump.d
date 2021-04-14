@@ -91,6 +91,11 @@ override:
         line("pop");
     }
 
+    void rec()
+    {
+        line("rec");
+    }
+
     void sub(ushort funcIndex)
     {
         line("sub index=", funcIndex, " func={");
@@ -200,16 +205,6 @@ override:
     void store(ushort localIndex)
     {
         line("store offset=", localIndex, " identifier=", func.stab[localIndex]);
-    }
-
-    void cstore(ushort localIndex)
-    {
-        line("cstore offset=", localIndex, " identifier=", func.captab[localIndex]);
-    }
-
-    void istore()
-    {
-        line("istore");
     }
 
     void retval()

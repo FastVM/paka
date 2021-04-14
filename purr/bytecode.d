@@ -8,12 +8,9 @@ import std.array;
 import purr.io;
 import std.conv;
 
-alias Function = shared FunctionStruct;
-
-class FunctionStruct
+class Function
 {
-    alias Lookup = shared LookupStruct;
-    struct LookupStruct
+    struct Lookup
     {
         uint[string] byName;
         string[] byPlace;
@@ -25,12 +22,12 @@ class FunctionStruct
             noAssign = 1,
         }
 
-        size_t length() shared
+        size_t length()
         {
             return byPlace.length;
         }
 
-        void set(string name, uint us, Flags flags) shared
+        void set(string name, uint us, Flags flags)
         {
             assert(byName.length == byPlace.length);
             if (name !in byName)
@@ -42,36 +39,35 @@ class FunctionStruct
             assert(byName.length == byPlace.length, byPlace.to!string);
         }
 
-        shared(uint) define(string name, Flags flags = Flags.noFlags) shared
+        uint define(string name, Flags flags = Flags.noFlags)
         {
-            shared uint ret = cast(shared uint)(byPlace.length);
+            uint ret = cast(uint)(byPlace.length);
             set(name, ret, flags);
             return ret;
         }
 
-        Flags flags(string name) shared
+        Flags flags(string name)
         {
             return flagsByPlace[byName[name]];
         }
 
-        Flags flags(T)(T index) shared
+        Flags flags(T)(T index)
         {
             return flagsByPlace[index];
         }
 
-        uint opIndex(string name) shared
+        uint opIndex(string name)
         {
             return byName[name];
         }
 
-        string opIndex(T)(T name) shared
+        string opIndex(T)(T name)
         {
             return byPlace[name];
         }
     }
 
-    alias Capture = shared CaptureStruct;
-    struct CaptureStruct
+    struct Capture
     {
         uint from;
         bool is2;
@@ -79,8 +75,7 @@ class FunctionStruct
         uint offset;
     }
 
-    alias Flags = shared FlagsEnum;
-    enum FlagsEnum : ubyte
+    enum Flags : ubyte
     {
         none = 0,
         isLocal = 1,
@@ -91,7 +86,7 @@ class FunctionStruct
     Span[] spans = null;
     Dynamic[] constants = null;
     Function[] funcs = null;
-    shared(Dynamic*[]) captured = null;
+    Dynamic[] captured = null;
     Dynamic[] self = null;
     Dynamic[] args = null;
     int[size_t] stackAt = null;
@@ -103,16 +98,16 @@ class FunctionStruct
     Flags flags = cast(Flags) 0;
     Dynamic[] names;
 
-    this() shared
+    this()
     {
     }
 
-    this(Function other) shared
+    this(Function other)
     {
         copy(other);
     }
 
-    void copy(Function other) shared
+    void copy(Function other)
     {
         capture = other.capture;
         instrs = other.instrs;
@@ -132,9 +127,9 @@ class FunctionStruct
         names = other.names;
     }
 
-    uint doCapture(string name) shared
+    uint doCapture(string name)
     {
-        shared(uint)* got = name in captab.byName;
+        uint* got = name in captab.byName;
         if (got !is null)
         {
             return *got;
@@ -149,7 +144,7 @@ class FunctionStruct
             }
         }
         Lookup.Flags flags;
-        if (shared(uint)* found = name in parent.stab.byName)
+        if (uint* found = name in parent.stab.byName)
         {
             capture ~= Capture(parent.stab.byName[name], false, false);
             flags = parent.stab.flags(name);
@@ -174,7 +169,7 @@ class FunctionStruct
         return ret;
     }
 
-    string toString() shared
+    override string toString()
     {
         return callableFormat(names, args);
     }
@@ -197,6 +192,8 @@ enum Opcode : ubyte
     /// stack ops
     push,
     pop,
+    /// current funcion
+    rec,
     /// subroutine
     sub,
     /// call without spread
@@ -228,8 +225,6 @@ enum Opcode : ubyte
     loadc,
     /// store to locals
     store,
-    cstore,
-    istore,
     /// return a value
     retval,
     /// return no value
@@ -250,14 +245,13 @@ enum Opcode : ubyte
 
 /// may change: call, array, targeta, table
 enum int[Opcode] opSizes = [
-        Opcode.nop : 0, Opcode.push : 1, Opcode.pop : -1, Opcode.sub : 1,
-        Opcode.oplt : -1, Opcode.opgt : -1, Opcode.oplte
-        : -1, Opcode.opgte : -1, Opcode.opeq : -1, Opcode.opneq : -1,
-        Opcode.index : -1, Opcode.opneg : 0, Opcode.opcat
-        : -1, Opcode.opadd : -1, Opcode.opsub : -1, Opcode.opmul : -1,
-        Opcode.opdiv : -1, Opcode.opmod : -1, Opcode.load : 1, Opcode.loadc : 1,
-        Opcode.store : 0, Opcode.istore : -2,
-        Opcode.retval : 0, Opcode.retnone : 0,
-        Opcode.iftrue : -1, Opcode.iffalse : -1, Opcode.jump : 0,
-        Opcode.argno : 1, Opcode.args : 1, Opcode.inspect: 0,
+        Opcode.nop : 0, Opcode.push : 1, Opcode.rec : 1, Opcode.pop : -1, Opcode.sub : 1,
+        Opcode.oplt : -1, Opcode.opgt : -1, Opcode.oplte : -1, Opcode.opgte
+        : -1, Opcode.opeq : -1, Opcode.opneq : -1, Opcode.index : -1,
+        Opcode.opneg : 0, Opcode.opcat : -1, Opcode.opadd : -1, Opcode.opsub
+        : -1, Opcode.opmul : -1, Opcode.opdiv : -1, Opcode.opmod : -1,
+        Opcode.load : 1, Opcode.loadc : 1,
+        Opcode.retval : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
+        Opcode.iffalse : -1, Opcode.jump : 0, Opcode.argno : 1, Opcode.args
+        : 1, Opcode.inspect : 0,
     ];

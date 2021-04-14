@@ -18,13 +18,11 @@ Pair FunctionPair(alias func)(string name)
     return Pair(name, fun);
 }
 
-alias Pair = shared PairStruct;
-
-struct PairStruct
+struct Pair
 {
     string name;
     Dynamic val;
-    this(T)(string n, T v) shared
+    this(T)(string n, T v) 
     {
         name = n;
         val = v.dynamic;
@@ -79,12 +77,12 @@ Function.Lookup baseFunctionLookup(size_t ctx)
     return stab;
 }
 
-shared(Dynamic*[]) loadBase(size_t ctx)
+Dynamic[] loadBase(size_t ctx)
 {
-    shared(Dynamic*[]) ret;
+    Dynamic[] ret;
     foreach (i; ctx.rootBase)
     {
-        ret ~= new Dynamic(i.val);
+        ret ~= i.val;
     }
     return ret;
 }

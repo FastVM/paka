@@ -60,6 +60,9 @@ class OpcodeIterator
             case Opcode.pop:
                 pop;
                 break;
+            case Opcode.rec:
+                rec;
+                break;
             case Opcode.sub:
                 sub(get);
                 break;
@@ -123,12 +126,6 @@ class OpcodeIterator
             case Opcode.store:
                 store(get);
                 break;
-            case Opcode.cstore:
-                cstore(get);
-                break;
-            case Opcode.istore:
-                istore;
-                break;
             case Opcode.retval:
                 retval;
                 break;
@@ -178,6 +175,10 @@ class OpcodeIterator
     }
 
     void pop()
+    {
+    }
+
+    void rec()
     {
     }
 
@@ -262,14 +263,6 @@ class OpcodeIterator
     }
 
     void store(ushort localIndex)
-    {
-    }
-
-    void cstore(ushort localIndex)
-    {
-    }
-
-    void istore()
     {
     }
 

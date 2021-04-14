@@ -2,7 +2,9 @@ module ext.paka.parse.op;
 
 import purr.io;
 import std.conv;
+import purr.dynamic;
 import purr.ast.ast;
+import paka.built;
 import paka.parse.util;
 
 Node binaryFold(BinaryOp op, Node lhs, Node rhs)
@@ -10,7 +12,7 @@ Node binaryFold(BinaryOp op, Node lhs, Node rhs)
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
     Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Ident("_paka_fold_binary"), [lambda, lhs, rhs]);
+    Call domap = new Call(new Value(Fun(&metaFoldBinary)), [lambda, lhs, rhs]);
     return domap;
 }
 
@@ -19,7 +21,7 @@ Node unaryFold(BinaryOp op, Node rhs)
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
     Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Ident("_paka_fold_unary"), [lambda, rhs]);
+    Call domap = new Call(new Value(Fun(&metaFoldUnary)), [lambda, rhs]);
     return domap;
 }
 
@@ -28,16 +30,16 @@ Node unaryDotmap(UnaryOp op, Node rhs)
     Node[] xy = [new Ident("_rhs")];
     Node lambdaBody = op(xy[0]);
     Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Ident("_paka_map_pre"), [lambda, rhs]);
+    Call domap = new Call(new Value(Fun(&metaMapPreParallel)), [lambda, rhs]);
     return domap;
 }
 
-Node binaryDotmap(string s)(BinaryOp op, Node lhs, Node rhs)
+Node binaryDotmap(alias func)(BinaryOp op, Node lhs, Node rhs)
 {
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
     Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Ident(s), [lambda, lhs, rhs]);
+    Call domap = new Call(new Value(Fun(&func)), [lambda, lhs, rhs]);
     return domap;
 }
 
@@ -153,7 +155,7 @@ UnaryOp parseUnaryOp(string[] ops)
     {
         return (Node rhs)
         {
-            return new Call(new Ident("_paka_length"), [rhs]);
+            return new Call(new Value(Fun(&lengthOp)), [rhs]);
         };
     }
     else if (opName == "-")
@@ -175,7 +177,7 @@ BinaryOp parseBinaryOp(string[] ops)
         {
             BinaryOp next = parseBinaryOp(ops[1 .. $ - 1]);
             return (Node lhs, Node rhs) {
-                return binaryDotmap!"_paka_map_both"(next, lhs, rhs);
+                return binaryDotmap!metaMapBothParallel(next, lhs, rhs);
             };
         }
         if (ops[0] == "\\" && ops[$ - 1] == "\\")
@@ -187,14 +189,14 @@ BinaryOp parseBinaryOp(string[] ops)
         {
             BinaryOp next = parseBinaryOp(ops[1 .. $]);
             return (Node lhs, Node rhs) {
-                return binaryDotmap!"_paka_map_lhs"(next, lhs, rhs);
+                return binaryDotmap!metaMapLhsParallel(next, lhs, rhs);
             };
         }
         if (ops[$ - 1] == ".")
         {
             BinaryOp next = parseBinaryOp(ops[0 .. $ - 1]);
             return (Node lhs, Node rhs) {
-                return binaryDotmap!"_paka_map_rhs"(next, lhs, rhs);
+                return binaryDotmap!metaMapRhsParallel(next, lhs, rhs);
             };
         }
         assert(false);
@@ -223,7 +225,7 @@ BinaryOp parseBinaryOp(string[] ops)
         else if (opName == "->")
         {
             return (Node lhs, Node rhs) {
-                return new Call(new Ident("_paka_range"), [lhs, rhs]);
+                return new Call(new Value(Fun(&rangeOp)), [lhs, rhs]);
             };
         }
         else if (opName == "<|")
