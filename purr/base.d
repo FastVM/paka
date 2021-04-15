@@ -11,7 +11,10 @@ import purr.plugin.plugins;
 
 Pair FunctionPair(alias func)(string name)
 {
-    syms[func.mangleof] = &func;
+    synchronized
+    {
+        syms[func.mangleof] = &func;
+    }
     Fun fun = Fun(&func);
     fun.names ~= name.dynamic;
     fun.mangled = func.mangleof;
@@ -29,7 +32,7 @@ struct Pair
     }
 }
 
-Pair[][] rootBases;
+__gshared Pair[][] rootBases;
 
 ref Pair[] rootBase(size_t index = rootBases.length - 1)
 {
@@ -48,8 +51,6 @@ void exitCtx()
     rootBases.length--;
 }
 
-string[] definedLibs;
-string[] defined;
 void addLib(ref Pair[] pairs, string name, Pair[] lib)
 {
     Mapping dyn = emptyMapping;
@@ -58,11 +59,9 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
         if (!entry.name.canFind('.'))
         {
             string newName = name ~ "." ~ entry.name;
-            defined ~= newName;
             dyn[dynamic(entry.name)] = entry.val;
         }
     }
-    definedLibs ~= name;
     pairs ~= Pair(name, dyn);
 }
 

@@ -29,7 +29,7 @@ Pair[] libsys()
 {
     Pair[] ret = [
         FunctionPair!libleave("leave"), FunctionPair!libargs("args"),
-        FunctionPair!libtypeof("typeof"), FunctionPair!libimport("import"),
+        FunctionPair!libtypeof("typeof"),
         FunctionPair!libassert("enforce"), FunctionPair!libeval("eval"),
     ];
     ret.addLib("env", libsysenv);
@@ -44,25 +44,6 @@ Dynamic libassert(Args args)
         throw new AssertException("assert error: " ~ args[1].to!string);
     }
     return Dynamic.nil;
-}
-
-Dynamic[string] libs;
-/// imports value returning what it returned
-Dynamic libimport(Args args)
-{
-    size_t ctx = enterCtx;
-    scope (exit)
-    {
-        exitCtx;
-    }
-    if (Dynamic* ret = args[0].str in libs)
-    {
-        return *ret;
-    }
-    Location data = args[0].str.readFile;
-    Dynamic val = ctx.eval(data);
-    libs[args[0].str] = val;
-    return val;
 }
 
 /// imports value returning what it returned

@@ -513,7 +513,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
     Ident last;
     foreach (i, v; opers)
     {
-        ret = parseBinaryOp(dotcount[i][0] ~ v.value ~ dotcount[i][1])(ret, subNodes[1]);
+        ret = parseBinaryOp(dotcount[i][0] ~ v.value ~ dotcount[i][1])(ret, subNodes[i+1]);
     }
     return ret;
 }

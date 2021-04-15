@@ -22,10 +22,8 @@ Pair[] libarr()
     ret ~= FunctionPair!librange("range");
     ret ~= FunctionPair!libsorted("sorted");
     ret ~= FunctionPair!liblen("len");
-    ret ~= FunctionPair!libpop("pop");
     ret ~= FunctionPair!libmap("map");
     ret ~= FunctionPair!libzip("zip");
-    ret ~= FunctionPair!libeach("each");
     ret ~= FunctionPair!libfrom("from");
     return ret;
 } /// returns a list
@@ -77,7 +75,7 @@ Dynamic librange(Args args)
 /// returns an array where the function has been called on each element
 Dynamic libmap(Args args)
 {
-    Array res = (cast(Dynamic*) GC.malloc(args[0].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
+    Array res = (cast(Dynamic*) GC.calloc(args[0].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[0].arr.length];
     foreach (k, i; args[0].arr.parallel)
     {
@@ -89,20 +87,6 @@ Dynamic libmap(Args args)
         res[k] = cur;
     }
     return dynamic(res);
-}
-
-/// calls $1+ on each and returns nil
-Dynamic libeach(Args args)
-{
-    foreach (k, i; args[0].arr.parallel)
-    {
-        Dynamic cur = i;
-        foreach (f; args[1 .. $])
-        {
-            cur = f([cur, k.dynamic]);
-        }
-    }
-    return Dynamic.nil;
 }
 
 /// creates new array with only the elemtns that $1 returnd true with
@@ -182,30 +166,6 @@ Dynamic libfsplit(Args args)
     }
     ret ~= last.dynamic;
     return ret.dynamic;
-}
-
-/// pushes to an existing array, returning nil
-Dynamic libpush(Args args)
-{
-    *args[0].arrPtr ~= args[1 .. $];
-    return Dynamic.nil;
-}
-
-/// pops from an existing array, returning nil
-Dynamic libpop(Args args)
-{
-    (*args[0].arrPtr).length--;
-    return Dynamic.nil;
-}
-
-/// extends pushes arrays to array
-Dynamic libextend(Args args)
-{
-    foreach (i; args[1 .. $])
-    {
-        (*args[0].arrPtr) ~= i.arr;
-    }
-    return Dynamic.nil;
 }
 
 /// slices array from 0..$1 for 1 argumnet

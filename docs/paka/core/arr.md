@@ -55,14 +55,6 @@ input | output
 `arr.len([1])` | `1`
 `arr.len([1, [2, 3]])` | `2`
 
-## arr.pop
-
-Removes the last element of an array
-setup | input | equivalent
---- | --- | ---
-`a = [0, 1, 2, 3]` | `arr.pop(a)` | `a = [0, 1, 2]`
-`empty = []` | `arr.pop(empty)` | range error
-
 ## arr.zip
 
 Zips arrays together. Similar to reflecting a matrix.

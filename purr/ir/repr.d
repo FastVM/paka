@@ -19,12 +19,15 @@ alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, ReturnBranch,
         OperatorInstruction, LambdaInstruction, PopInstruction,
         StoreInstruction, LoadInstruction, ArgsInstruction, RecInstruction);
 
-size_t nameCount;
+__gshared size_t nameCount;
 
 string genName(string prefix)()
 {
-    nameCount++;
-    return prefix ~ nameCount.to!string;
+    size_t ret = void;
+    synchronized{
+        ret = nameCount++;
+    }
+    return prefix ~ ret.to!string;
 }
 
 string indent(alias rule = x => true)(string input)

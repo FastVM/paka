@@ -15,7 +15,6 @@ import purr.data.map;
 import purr.data.rope;
 
 version = safe;
-pragma(inline, true):
 
 alias Dynamic = DynamicImpl;
 alias Table = TableImpl;
@@ -30,10 +29,13 @@ Mapping emptyMapping()
     return Mapping.init;
 }
 
-private size_t symc = 0;
+private __gshared size_t symc = 0;
 Dynamic gensym()
 {
-    return dynamic(symc++);
+    synchronized
+    {
+        return dynamic(symc++);
+    }
 }
 
 void*[] beforeTables;
@@ -72,44 +74,6 @@ class TableImpl
         table = t;
         metatable = m;
     }
-
-    // Table withGet(Table newget)
-    // {
-    //     if (Dynamic* get = "get".dynamic in table)
-    //     {
-    //         *get.arrPtr ~= newget.dynamic;
-    //     }
-    //     else
-    //     {
-    //         table["get".dynamic] = [newget.dynamic].dynamic;
-    //     }
-    //     return this;
-    // }
-
-    // Table withGet(Args...)(Args args) if (args.length != 1)
-    // {
-    //     if (args.length == 0)
-    //     {
-    //         return this;
-    //     }
-    //     return withGet(args[0]).withGet(args[1 .. $]);
-    // }
-
-    // Table withProto(Table proto)
-    // {
-    //     withGet(proto);
-    //     meta.withGet(proto.meta);
-    //     return this;
-    // }
-
-    // Table withProto(Args...)(Args args) if (args.length != 1) 
-    // {
-    //     if (args.length == 0)
-    //     {
-    //         return this;
-    //     }
-    //     return withProto(args[0]).withProto(args[1 .. $]);
-    // }
 
     ref Table meta()
     {
@@ -340,7 +304,7 @@ struct DynamicImpl
         bool log;
         double sml;
         string* str;
-        Array* arr;
+        Dynamic* arr;
         Table tab;
         alias Callable = CallableUnion;
         union CallableUnion
@@ -352,8 +316,8 @@ struct DynamicImpl
         Callable fun;
     }
 
-pragma(inline, true):
     Type type;
+    uint len;
     Value value;
 
     static Dynamic strToNum(string s)
@@ -380,15 +344,15 @@ pragma(inline, true):
 
     this(string str)
     {
-        value.str = cast(string*) GC.malloc(string.sizeof);
+        value.str = cast(string*) GC.calloc(string.sizeof);
         *value.str = str;
         type = Type.str;
     }
 
     this(Array arr)
     {
-        value.arr = cast(Array*) GC.malloc(Array.sizeof);
-        *value.arr = arr;
+        value.arr = arr.ptr;
+        len = cast(uint) arr.length;
         type = Type.arr;
     }
 
@@ -518,7 +482,7 @@ pragma(inline, true):
         case Dynamic.Type.str:
             return (*value.str).hashOf;
         case Dynamic.Type.arr:
-            return value.arr.length + 2 << 52;
+            return cast(size_t) len + 2 << 52;
         case Dynamic.Type.tab:
             return value.tab.table.length + 2 << 53;
         case Dynamic.Type.fun:
@@ -604,7 +568,7 @@ pragma(inline, true):
                 throw new TypeException("expected array type");
             }
         }
-        return *value.arr;
+        return value.arr[0..len];
     }
 
     Table tab()
@@ -629,18 +593,6 @@ pragma(inline, true):
             }
         }
         return value.str;
-    }
-
-    Array* arrPtr()
-    {
-        version (safe)
-        {
-            if (type != Type.arr)
-            {
-                throw new TypeException("expected array type");
-            }
-        }
-        return value.arr;
     }
 
     Value.Callable fun()
@@ -794,8 +746,8 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
         {
             above.length--;
         }
-        const Dynamic[] as = *a.value.arr;
-        const Dynamic[] bs = *b.value.arr;
+        const Dynamic[] as = a.arr;
+        const Dynamic[] bs = b.arr;
         if (int c = cmp(as.length, bs.length))
         {
             return c;

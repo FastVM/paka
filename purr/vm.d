@@ -15,9 +15,7 @@ import purr.bytecode;
 
 version = PurrErrors;
 
-Span[] spans;
-
-void delegate(VMInfo info)[] inspects;
+__gshared Span[] spans;
 
 struct VMInfo
 {
@@ -49,12 +47,32 @@ pragma(inline, true) T eat(T)(ubyte* bytes, ref ushort index)
 }
 
 alias allocateStackAllowed = alloca;
-
-pragma(inline, true) 
-void freeStackAllowed(size_t size)
+void freeStackAllowed(size_t n)
 {
 }
 
+// void* buf;
+
+// static this()
+// {
+//     buf = GC.calloc(2 ^^ 24 * 2 * Dynamic.sizeof);
+// }
+
+// pragma(inline, true)
+// void* allocateStackAllowed(size_t size)
+// {
+//     void* ret = buf;
+//     buf += size;
+//     return ret;
+// }
+
+// pragma(inline, true) 
+// void freeStackAllowed(size_t size)
+// {
+//     buf -= size;
+// }
+
+pragma(inline, false)
 Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
 {
     static foreach (I; T)
@@ -62,8 +80,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         static assert(is(I == LocalCallback));
     }
     ushort index = 0;
-    Dynamic* stack = void;
-    Dynamic* locals = void;
     version (PurrErrors)
     {
         scope (failure)
@@ -73,8 +89,8 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     }
     size_t stackAlloc = void;
     stackAlloc = (func.stackSize + func.stab.length) * Dynamic.sizeof;
-    stack = cast(Dynamic*) allocateStackAllowed(stackAlloc);
-    locals = stack + func.stackSize;
+    Dynamic* stack = cast(Dynamic*) allocateStackAllowed(stackAlloc);
+    Dynamic* locals = stack + func.stackSize;
 
     ubyte* instrs = func.instrs.ptr;
     Dynamic* lstack = stack;
@@ -227,7 +243,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             break;
         case Opcode.opmod:
             stack--;
-            writeln((*(stack - 1)), (*stack));
             (*(stack - 1)) = (*(stack - 1)) % (*stack);
             break;
         case Opcode.load:
@@ -306,13 +321,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             stack++;
             break;
         case Opcode.inspect:
-            VMInfo info = VMInfo(func, args, index,
-                    lstack[0 .. stack - lstack], locals);
-            foreach (ins; inspects)
-            {
-                ins(info);
-            }
-            break;
+            assert(false);
         }
     }
     assert(0);

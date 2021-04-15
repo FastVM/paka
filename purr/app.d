@@ -33,9 +33,9 @@ import core.stdc.stdlib;
 
 alias Thunk = void delegate();
 
-size_t ctx = size_t.max;
-Dynamic[] dynamics;
-Dynamic[] fileArgs;
+__gshared size_t ctx = size_t.max;
+__gshared Dynamic[] dynamics;
+__gshared Dynamic[] fileArgs;
 Thunk cliFileHandler(immutable string filename)
 {
     return {
@@ -122,9 +122,9 @@ Thunk cliEchoHandler()
     return { writeln(dynamics[$ - 1]); dynamics.length--; };
 }
 
-size_t replLine = 0;
+__gshared size_t replLine = 0;
 
-string serialFile = null;
+__gshared string serialFile = null;
 
 Thunk cliSerialHandler(string filename)
 {
@@ -183,7 +183,6 @@ Thunk cliReplHandler()
 
 void domain(string[] args)
 {
-    // GC.disable;
     args = args[1 .. $];
     string[] extargs;
     Thunk[] todo;

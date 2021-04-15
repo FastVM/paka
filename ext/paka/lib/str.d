@@ -19,6 +19,7 @@ Pair[] libstr()
         FunctionPair!libtonumber("to_number"), FunctionPair!libslice("slice"),
         FunctionPair!libstrip("strip"), FunctionPair!libchar("char"),
         FunctionPair!libascii("ascii"), FunctionPair!libfrom("from"),
+        FunctionPair!libfroms("froms"),
     ];
     return ret;
 }
@@ -27,6 +28,24 @@ Pair[] libstr()
 Dynamic libfrom(Args args)
 {
     return dynamic(args[0].to!string);
+}
+
+/// calls tostring of object
+Dynamic libfroms(Args args)
+{
+    string ret;
+    foreach (i; args)
+    {
+        if (i.type == Dynamic.Type.str)
+        {
+            ret ~= i.to!string[1..$-1];
+        }
+        else
+        {
+            ret ~= i.to!string;
+        }
+    }
+    return ret.dynamic;
 }
 
 /// gets length of string

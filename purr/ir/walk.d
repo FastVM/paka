@@ -15,7 +15,7 @@ import purr.ir.repr;
 import purr.ir.bytecode;
 import purr.ir.opt;
 
-bool dumpast = false;
+__gshared bool dumpast = false;
 
 enum string[] specialForms = [
         "@def", "@set", "@while", "@array", "@table", "@return",

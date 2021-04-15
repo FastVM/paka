@@ -1,4 +1,4 @@
-module ext.paka.parse.op;
+module paka.parse.op;
 
 import purr.io;
 import std.conv;

@@ -1,7 +1,8 @@
-module ext.paka.built;
+module paka.built;
 
 import core.memory;
 import std.parallelism;
+import purr.io;
 import purr.dynamic;
 
 // interns
@@ -11,7 +12,7 @@ Dynamic metaMapBothParallel(Args args)
     {
         throw new Exception("bad lengths in dotmap");
     }
-    Array ret = (cast(Dynamic*) GC.malloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
+    Array ret = (cast(Dynamic*) GC.calloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[1].arr.length];
     foreach (i, v; args[1].arr.parallel)
     {
@@ -22,7 +23,7 @@ Dynamic metaMapBothParallel(Args args)
 
 Dynamic metaMapLhsParallel(Args args)
 {
-    Array ret = (cast(Dynamic*) GC.malloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
+    Array ret = (cast(Dynamic*) GC.calloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[1].arr.length];
     foreach (k, i; args[1].arr.parallel)
     {
@@ -33,7 +34,7 @@ Dynamic metaMapLhsParallel(Args args)
 
 Dynamic metaMapRhsParallel(Args args)
 {
-    Array ret = (cast(Dynamic*) GC.malloc(args[2].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
+    Array ret = (cast(Dynamic*) GC.calloc(args[2].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[2].arr.length];
     foreach (k, i; args[2].arr.parallel)
     {
@@ -44,7 +45,7 @@ Dynamic metaMapRhsParallel(Args args)
 
 Dynamic metaMapPreParallel(Args args)
 {
-    Array ret = (cast(Dynamic*) GC.malloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
+    Array ret = (cast(Dynamic*) GC.calloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[1].arr.length];
     foreach (k, i; args[1].arr.parallel)
     {
@@ -82,7 +83,7 @@ Dynamic rangeOp(Args args)
     if (start < stop)
     {
         long dist = stop - start;
-        Array ret = (cast(Dynamic*) GC.malloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0 .. dist];
+        Array ret = (cast(Dynamic*) GC.calloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0 .. dist];
         foreach (k, ref v; ret)
         {
             v = dynamic(k + start);
@@ -92,7 +93,7 @@ Dynamic rangeOp(Args args)
     else if (start > stop)
     {
         long dist = start - stop;
-        Array ret = (cast(Dynamic*) GC.malloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0 .. dist];
+        Array ret = (cast(Dynamic*) GC.calloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0 .. dist];
         foreach (k, ref v; ret)
         {
             v = dynamic(start - k);

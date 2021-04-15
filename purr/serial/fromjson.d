@@ -246,11 +246,13 @@ Dynamic deserialize(T : Dynamic)(Json json)
         return json["string"].deserialize!string.dynamic;
     case Dynamic.Type.arr:
         above[$ - 1] = Array.init.dynamic;
-        Array got = json["array"].deserialize!(Array);
+        Dynamic[] got = json["array"].deserialize!(Array);
         foreach (elem; got)
         {
-            (*above[$ - 1].arrPtr) ~= elem;
+            got ~= elem;
         }
+        above[$-1].value.arr = got.ptr;
+        above[$-1].len = cast(uint) got.length;
         return above[$ - 1];
     case Dynamic.Type.tab:
         Table child = new Table;

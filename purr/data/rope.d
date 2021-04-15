@@ -4,7 +4,7 @@ import std.algorithm;
 import purr.io;
 
 /// the maximum difference for a rope to rebalance
-double maxdiff = 64;
+enum double maxdiff = 64;
 
 /// an immutable array
 /// currently the implementation is not very good

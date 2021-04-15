@@ -1,4 +1,4 @@
-module ext.paka.parse.util;
+module paka.parse.util;
 
 import std.conv;
 import purr.srcloc;

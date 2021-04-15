@@ -58,9 +58,9 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     assert(func.stackSizeCurrent >= 0);
 }
 
-TodoBlock[] todoBlocks;
-size_t[BasicBlock] disabled;
-size_t delayed;
+TodoBlock[] todoBlocks = void;
+size_t[BasicBlock] disabled = void;
+size_t delayed = void;
 
 struct TodoBlock
 {
@@ -75,6 +75,7 @@ struct TodoBlock
         block = b;
         newFunc = f;
         cb = c;
+        
     }
 
     void opCall()
@@ -128,6 +129,9 @@ class BytecodeEmitter
 
     this()
     {
+        todoBlocks = null;
+        disabled = null;
+        delayed = 0;
     }
 
     bool within(BasicBlock block, Function func)
