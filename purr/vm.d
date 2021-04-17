@@ -72,7 +72,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         stack = cast(Dynamic*) alloca(stackAlloc);
     }
     Dynamic* locals = stack + func.stackSize;
-
     ubyte* instrs = func.instrs.ptr;
     Dynamic* lstack = stack;
     while (true)

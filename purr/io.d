@@ -26,7 +26,7 @@ __gshared termios init;
 
 shared static this()
 {
-	makeReader(false);
+	makeReader(true);
 }
 
 void makeReader(bool smart)

@@ -17,8 +17,8 @@ $(BIN)/purr.o: dcomp $(BIN)
 
 # ifeq ($(LANG),passerine)
 debug: $(BIN)
-	$(RUN) dmd -g -Iext -i ext/rt/plugin.d ext/passerine/plugin.d ext/serial/plugin.d purr/app.d -od=$(BIN) -of=$(BIN)/passerine $(DFLAGS)
+	$(RUN) dmd -g -Iext -i ext/rt/plugin.d ext/passerine/plugin.d ext/paka/plugin.d ext/serial/plugin.d purr/app.d -od=$(BIN) -of=$(BIN)/passerine $(DFLAGS)
 
 release: $(BIN)
-	$(RUN) ldc2 -Iext -i ext/rt/plugin.d ext/passerine/plugin.d ext/serial/plugin.d purr/app.d -od=$(BIN) -of=$(BIN)/passerine -O3 -release $(DFLAGS)
+	$(RUN) ldc2 -Iext -i ext/rt/plugin.d ext/passerine/plugin.d ext/paka/plugin.d ext/serial/plugin.d purr/app.d -od=$(BIN) -of=$(BIN)/passerine -O3 -release $(DFLAGS)
 # endif

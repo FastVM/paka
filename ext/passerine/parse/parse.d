@@ -317,7 +317,7 @@ Node readPreExprImpl(ref TokenArray tokens)
     Node ret = tokens.readPostExpr;
     while (!tokens.first.isSemicolon && !tokens.first.isClose && !tokens.first.isComma && !tokens.first.isOperator)
     {
-        ret = new Call(new Ident("@call"), [ret, tokens.readPreExprImpl]);
+        ret = new Call(new Ident("@call"), [ret, tokens.readPostExpr]);
     }
     return ret;
 }
@@ -357,13 +357,28 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
         tokens.nextIsAny;
         subNodes ~= tokens.readExpr(level + 1);
     }
-    Node ret = subNodes[0];
-    Ident last;
-    foreach (i, v; opers)
+    if (opers.length == 0)
     {
-        ret = parseBinaryOp([v])(ret, subNodes[i+1]);
+        return subNodes[0];
     }
-    return ret;
+    else if (opers[0] == "->")
+    {
+        Node ret = subNodes[$-1];
+        foreach(i, v; opers)
+        {
+            ret = parseBinaryOp(["->"])(subNodes[$-2-i], ret);
+        }
+        return ret;
+    }
+    else
+    {
+        Node ret = subNodes[0];
+        foreach (i, v; opers)
+        {
+            ret = parseBinaryOp([v])(ret, subNodes[i+1]);
+        }
+        return ret;
+    }
 }
 
 /// reads any statement ending in a semicolon
@@ -422,18 +437,10 @@ Node readBlockBodyImpl(ref TokenArray tokens)
 alias readBlock = Spanning!readBlockImpl;
 Node readBlockImpl(ref TokenArray tokens)
 {
-    if (tokens.first.isOperator(":"))
-    {
-        tokens.nextIs(Token.Type.operator, ":");
-        return tokens.readStmt;  
-    }
-    else
-    {
-        tokens.nextIs(Token.Type.open, "{");
-        Node ret = readBlockBody(tokens);
-        tokens.nextIs(Token.Type.close, "}");
-        return ret;
-    }
+    tokens.nextIs(Token.Type.open, "{");
+    Node ret = readBlockBody(tokens);
+    tokens.nextIs(Token.Type.close, "}");
+    return ret;
 }
 
 alias parsePasserineValue = parsePasserineAs!readBlockBodyImpl;

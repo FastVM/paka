@@ -284,7 +284,7 @@ template native(alias func)
     {
         Fun fun = Fun(&func);
         fun.names ~= func.mangleof.dynamic;
-        fun.mangled = func.mangleof;
+        fun.mangled = __traits(identifier, func);
         return fun;
 
     }

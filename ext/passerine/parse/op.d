@@ -81,7 +81,7 @@ BinaryOp parseBinaryOp(string[] ops)
         return (Node lhs, Node rhs) {
             if (Call call = cast(Call) lhs)
             {
-                return new Call(new Ident("@fun"), [new Call(call.args), rhs]);
+                return new Call(new Ident("@fun"), [new Call(call.args[1..$]), rhs]);
             }
             else
             {

@@ -345,6 +345,8 @@ void thrown(Err)(Err e)
     writeln(trace);
     writeln(e.msg);
     writeln;
+    purr_disable_smart_reader();
+    makeReader(false);
     throw e;
     exit(1);
 }
