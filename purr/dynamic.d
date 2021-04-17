@@ -13,6 +13,7 @@ import purr.vm;
 import purr.error;
 import purr.data.map;
 import purr.data.rope;
+import purr.plugin.syms;
 
 version = safe;
 
@@ -77,6 +78,10 @@ class TableImpl
 
     ref Table meta()
     {
+        if (metatable is null)
+        {
+            metatable = new Table;
+        }
         return metatable;
     }
 
@@ -266,9 +271,23 @@ class TableImpl
     }
 }
 
-Dynamic dynamic(T...)(T a)
+template native(alias func)
 {
-    return Dynamic(a);
+    alias native = impl;
+
+    shared static this()
+    {
+        syms[func.mangleof] = &func;
+    }
+
+    Fun impl()
+    {
+        Fun fun = Fun(&func);
+        fun.names ~= func.mangleof.dynamic;
+        fun.mangled = func.mangleof;
+        return fun;
+
+    }
 }
 
 alias Fun = FunStruct;
@@ -283,6 +302,11 @@ struct FunStruct
     {
         return callableFormat(names, args);
     }
+}
+
+Dynamic dynamic(T...)(T a)
+{
+    return Dynamic(a);
 }
 
 struct DynamicImpl
@@ -568,7 +592,7 @@ struct DynamicImpl
                 throw new TypeException("expected array type");
             }
         }
-        return value.arr[0..len];
+        return value.arr[0 .. len];
     }
 
     Table tab()

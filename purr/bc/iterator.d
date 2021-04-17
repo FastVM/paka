@@ -126,6 +126,9 @@ class OpcodeIterator
             case Opcode.store:
                 store(get);
                 break;
+            case Opcode.cstore:
+                cstore(get);
+                break;
             case Opcode.retval:
                 retval;
                 break;
@@ -263,6 +266,10 @@ class OpcodeIterator
     }
 
     void store(ushort localIndex)
+    {
+    }
+
+    void cstore(ushort captureIndex)
     {
     }
 

@@ -86,7 +86,7 @@ class Function
     Span[] spans = null;
     Dynamic[] constants = null;
     Function[] funcs = null;
-    Dynamic[] captured = null;
+    Dynamic*[] captured = null;
     Dynamic[] self = null;
     Dynamic[] args = null;
     int[size_t] stackAt = null;
@@ -95,7 +95,7 @@ class Function
     int stackSizeCurrent;
     Lookup stab;
     Lookup captab;
-    Flags flags = cast(Flags) 0;
+    Flags flags = Flags.none;
     Dynamic[] names;
 
     this()
@@ -223,8 +223,9 @@ enum Opcode : ubyte
     load,
     /// load from captured
     loadc,
-    /// store to locals
+    /// stores
     store,
+    cstore,
     /// return a value
     retval,
     /// return no value

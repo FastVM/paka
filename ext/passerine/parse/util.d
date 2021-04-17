@@ -1,10 +1,10 @@
-module paka.parse.util;
+module passerine.parse.util;
 
 import std.conv;
 import purr.srcloc;
 import purr.dynamic;
 import purr.ast.ast;
-import paka.tokens;
+import passerine.tokens;
 
 alias UnaryOp = Node delegate(Node rhs);
 alias BinaryOp = Node delegate(Node lhs, Node rhs);

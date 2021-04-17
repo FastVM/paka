@@ -1,5 +1,7 @@
 module purr.app;
 
+import purr.io;
+import purr.repl;
 import purr.ir.repr;
 import purr.ir.walk;
 import purr.ir.emit;
@@ -18,7 +20,6 @@ import purr.fs.files;
 import purr.fs.disk;
 import std.uuid;
 import std.path;
-import purr.io;
 import std.array;
 import std.file;
 import std.json;
@@ -122,52 +123,77 @@ Thunk cliEchoHandler()
     return { writeln(dynamics[$ - 1]); dynamics.length--; };
 }
 
-__gshared size_t replLine = 0;
-
-__gshared string serialFile = null;
-
 Thunk cliSerialHandler(string filename)
 {
-    return {
-        serialFile = filename;
-    };
+    return { serialFile = filename; };
 }
+
+__gshared string serialFile = null;
+__gshared Dynamic[] bases = null;
 
 Thunk cliReplHandler()
 {
     return {
+        bases = [];
         if (serialFile !is null && serialFile.exists)
         {
-            rootBases[ctx] = serialFile.readText.parseJSON.deserialize!(Pair[]);
+            bases = serialFile.readText.parseJSON.deserialize!(Dynamic[]);
+            loadBaseObject(ctx, bases[$-1].tab.table);
+        }
+        else
+        {
+            rootBases[ctx].addLib("repl", librepl);
         }
         while (true)
         {
+            bases ~= ctx.baseObject().dynamic;
+            before:
             if (serialFile !is null)
             {
                 File outFile = File(serialFile, "w");
-                scope(exit)
+                scope (exit)
                 {
                     outFile.close;
                 }
-                outFile.write(rootBases[ctx].serialize);
+                outFile.write(bases.serialize);
             }
-            replLine++;
-            string line = readln("(" ~ replLine.to!string ~ ")> ");
+            string prompt = "(" ~ bases.length.to!string ~ ")> ";
+            string line = null;
+            try
+            {
+                line = readln(prompt);
+            }
+            catch (ExitException ee)
+            {
+                if (ee.letter == 'Z' && bases.length > 1)
+                {
+                    reader.history.length--;
+                    bases.length--;
+                    loadBaseObject(ctx, bases[$-1].tab.table);
+                    reader.output.write("\x1B[K\x1B[1F\x1B[1B");
+                    goto before;
+                }
+                else
+                {
+                    throw ee;
+                }                
+            } 
             while (line.length > 0)
             {
                 if (line[0].isWhite)
                 {
-                    line = line[1..$];
+                    line = line[1 .. $];
                 }
-                else if (line[$-1].isWhite)
+                else if (line[$ - 1].isWhite)
                 {
-                    line = line[0..$-1];
+                    line = line[0 .. $ - 1];
                 }
-                else {
+                else
+                {
                     break;
                 }
             }
-            Location code = Location(1, replLine, "__main__", line);
+            Location code = Location(bases.length, 1, "__main__", line);
             if (code.src.length == 0)
             {
                 break;
@@ -186,7 +212,7 @@ void domain(string[] args)
     args = args[1 .. $];
     string[] extargs;
     Thunk[] todo;
-    langNameDefault = "paka";
+    langNameDefault = "passerine";
     ctx = enterCtx;
     scope (exit)
     {
@@ -260,7 +286,8 @@ void domain(string[] args)
     {
         fun();
     }
-    foreach (arg; extargs) {
+    foreach (arg; extargs)
+    {
         Thunk th = arg.cliFileHandler;
         th();
     }

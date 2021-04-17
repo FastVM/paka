@@ -15,7 +15,7 @@ import purr.bytecode;
 
 version = PurrErrors;
 
-__gshared Span[] spans;
+Span[] spans;
 
 struct VMInfo
 {
@@ -46,32 +46,6 @@ pragma(inline, true) T eat(T)(ubyte* bytes, ref ushort index)
     return ret;
 }
 
-alias allocateStackAllowed = alloca;
-void freeStackAllowed(size_t n)
-{
-}
-
-// void* buf;
-
-// static this()
-// {
-//     buf = GC.calloc(2 ^^ 24 * 2 * Dynamic.sizeof);
-// }
-
-// pragma(inline, true)
-// void* allocateStackAllowed(size_t size)
-// {
-//     void* ret = buf;
-//     buf += size;
-//     return ret;
-// }
-
-// pragma(inline, true) 
-// void freeStackAllowed(size_t size)
-// {
-//     buf -= size;
-// }
-
 pragma(inline, false)
 Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
 {
@@ -87,9 +61,16 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             spans ~= func.spans[index];
         }
     }
-    size_t stackAlloc = void;
-    stackAlloc = (func.stackSize + func.stab.length) * Dynamic.sizeof;
-    Dynamic* stack = cast(Dynamic*) allocateStackAllowed(stackAlloc);
+    size_t stackAlloc = (func.stackSize + func.stab.length) * Dynamic.sizeof;
+    Dynamic* stack = void;
+    if (func.flags & Function.Flags.isLocal)
+    {
+        stack = cast(Dynamic*) GC.malloc(stackAlloc);
+    }
+    else
+    {
+        stack = cast(Dynamic*) alloca(stackAlloc);
+    }
     Dynamic* locals = stack + func.stackSize;
 
     ubyte* instrs = func.instrs.ptr;
@@ -120,7 +101,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             Function built = new Function(func.funcs[instrs.eat!ushort(index)]);
             built.parent = func;
             built.names = null;
-            built.captured = new Dynamic[built.capture.length];
+            built.captured = new Dynamic*[built.capture.length];
             foreach (i, v; built.capture)
             {
                 Function.Capture cap = built.capture[i];
@@ -130,11 +111,11 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 }
                 else if (cap.isArg)
                 {
-                    built.captured[i] = args[cap.from];
+                    built.captured[i] = new Dynamic(args[cap.from]);
                 }
                 else
                 {
-                    built.captured[i] = locals[cap.from];
+                    built.captured[i] = &locals[cap.from];
                 }
             }
             (*(stack++)) = dynamic(built);
@@ -250,7 +231,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             break;
         case Opcode.loadc:
             ushort capIndex = instrs.eat!ushort(index);
-            (*(stack++)) = func.captured[capIndex];
+            (*(stack++)) = *func.captured[capIndex];
             break;
         case Opcode.store:
             Dynamic rhs = (*(stack - 1));
@@ -265,6 +246,11 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             }
             locals[local] = rhs;
             break;
+        case Opcode.cstore:
+            Dynamic rhs = (*(stack - 1));
+            ushort local = instrs.eat!ushort(index);
+            *func.captured[local] = rhs; 
+            break;
         case Opcode.retval:
             Dynamic v = (*(--stack));
             static foreach (callback; rest)
@@ -277,7 +263,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                     }
                 }
             }
-            freeStackAllowed(stackAlloc);
             return v;
         case Opcode.retnone:
             static foreach (callback; rest)
@@ -290,7 +275,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                     }
                 }
             }
-            freeStackAllowed(stackAlloc);
             return Dynamic.nil;
         case Opcode.iftrue:
             Dynamic val = (*(--stack));

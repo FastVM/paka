@@ -11,13 +11,8 @@ import purr.plugin.plugins;
 
 Pair FunctionPair(alias func)(string name)
 {
-    synchronized
-    {
-        syms[func.mangleof] = &func;
-    }
-    Fun fun = Fun(&func);
+    Fun fun = native!func;
     fun.names ~= name.dynamic;
-    fun.mangled = func.mangleof;
     return Pair(name, fun);
 }
 
@@ -51,7 +46,26 @@ void exitCtx()
     rootBases.length--;
 }
 
-void addLib(ref Pair[] pairs, string name, Pair[] lib)
+Mapping baseObject(size_t ctx)
+{
+    Mapping ret;
+    foreach (pair; rootBases[ctx])
+    {
+        ret[pair.name.dynamic] = pair.val;
+    }
+    return ret;
+}
+
+void loadBaseObject(size_t ctx, Mapping map)
+{
+    rootBases[ctx] = null;
+    foreach (key, value; map)
+    {
+        rootBases[ctx] ~= Pair(key.str, value);
+    }
+}
+
+Table addLib(ref Pair[] pairs, string name, Pair[] lib)
 {
     Mapping dyn = emptyMapping;
     foreach (entry; lib)
@@ -62,7 +76,9 @@ void addLib(ref Pair[] pairs, string name, Pair[] lib)
             dyn[dynamic(entry.name)] = entry.val;
         }
     }
-    pairs ~= Pair(name, dyn);
+    Table ret = new Table(dyn);
+    pairs ~= Pair(name, ret);
+    return ret;
 }
 
 // TODO: return Function.Lookup instead of empty function
@@ -76,12 +92,12 @@ Function.Lookup baseFunctionLookup(size_t ctx)
     return stab;
 }
 
-Dynamic[] loadBase(size_t ctx)
+Dynamic*[] loadBase(size_t ctx)
 {
-    Dynamic[] ret;
+    Dynamic*[] ret;
     foreach (i; ctx.rootBase)
     {
-        ret ~= i.val;
+        ret ~= new Dynamic(i.val);
     }
     return ret;
 }
@@ -111,84 +127,5 @@ version(unittest)
             FunctionPair!libunitvoid("void"),
             Pair("value", 10),
         ];
-    }
-}
-
-unittest
-{
-    size_t ctx = enterCtx;
-    assert(rootBases.length == 1, "no base should exist before construction");
-    assert(ctx.rootBase.length == 0, "no base values should be defined");
-    exitCtx;
-}
-
-unittest
-{
-    size_t ctx = enterCtx;
-    foreach (libname; libnames)
-    {
-        ctx.rootBase.addLib(libname, libunit);
-    }
-    assert(ctx.rootBase.length == libnames.length, "addlib should add ctx single base value for libs");
-    exitCtx;
-}
-
-unittest
-{
-    
-    size_t ctx = enterCtx;
-    foreach (libname; libnames)
-    {
-        ctx.rootBase.addLib(libname, libunit);
-        ctx.rootBase ~= Pair(libname, Dynamic.nil);
-    }
-    Function.Lookup stab = ctx.baseFunctionLookup;
-    foreach (libname; libnames)
-    {
-        assert(libname in stab.byName, libname ~ " should have been defined by addLib");
-        size_t index = stab.byName[libname];
-        assert(stab.byPlace[index] == libname, "symbol table should define a symbol once exactly");
-    }
-    exitCtx;
-}
-
-unittest
-{
-    size_t ctx = enterCtx;
-    Dynamic orig = dynamic(&libunitvoid);
-    ctx.rootBase ~= Pair(voidname, &libunitvoid);
-    Function func = ctx.baseFunction;
-    func.captured = ctx.loadBase;
-    size_t index = func.stab[voidname];
-    Dynamic var = *func.captured[index];
-    assert(var == orig, "symbol table should work");
-    foreach (i; 0..3)
-    {
-        assert(var(new Dynamic[i]) == orig(new Dynamic[i]), "symbol table should work for calls");
-    }
-    exitCtx;
-}
-
-unittest
-{
-    import std.random;
-    import std.conv;
-    size_t ctx = enterCtx;
-    Dynamic[string] vars;
-    Random rand = Random(0);
-    foreach (varname; varnames)
-    {
-        double dval = uniform!"()"(0.0, 1.0, rand);
-        vars[varname] = dval.dynamic;
-        ctx.rootBase ~= Pair(varname, dval);
-    }
-    ctx.rootBase ~= Pair(voidname, &libunitvoid);
-    Function func = ctx.baseFunction;
-    func.captured = ctx.loadBase;
-    foreach (varname; varnames)
-    {
-        size_t index = func.stab[varname];
-        Dynamic var = *func.captured[index];
-        assert(var == vars[varname], "var " ~ varname ~ " should be " ~ var.to!string ~ " not " ~ vars[varname].dynamic.to!string);
     }
 }

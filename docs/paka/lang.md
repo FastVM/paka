@@ -37,8 +37,7 @@ Binary Expressions are a prefix value, or the result of binary operators.
 
 ``` bnf
 binary_set: binary_pipe (dot_set binary_pipe)*
-binary_pipe: binary_func (dot_pipe binary_func)*
-binary_func: bianry_cmp (dot_func bianry_cmp)*
+binary_pipe: bianry_cmp (dot_pipe bianry_cmp)*
 bianry_cmp: bianry_add (dot_cmp bianry_add)*
 bianry_add: bianry_mult (dot_add bianry_mult)*
 bianry_mult: bianry_range (dot_mult bianry_range)*
@@ -52,7 +51,6 @@ Binary operators follow a table currently defined in [ext/paka/tokens.d](/ext/pa
 ``` bnf
 SET: "="
 PIPE: "|>" | "<|"
-FUNC: "=>"
 LOGIC: "||" | "&&"
 CMP: "<=" | ">=" | "<" | ">" | "!=" | "=="
 ADD: "+" | "-" | "~"
@@ -86,10 +84,6 @@ dot_pipe: PIPE
     | META_MAP dot_pipe
     | dot_pipe META_MAP
     | META_FOLD dot_pipe META_FOLD 
-dot_func: FUNC
-    | META_MAP dot_func
-    | dot_func META_MAP
-    | META_FOLD dot_func META_FOLD 
 dot_cmp: CMP
     | META_MAP dot_cmp
     | dot_cmp META_MAP
@@ -131,7 +125,7 @@ prefix_op: single_prefix_op+
 single_prefix_op: LENGTH 
     | prefix_op META_MAP
     | prefix_foldable "\"
-prefix_foldable: dot_pipe | dot_func | dot_logic | dot_cmp | dot_add | dot_mult
+prefix_foldable: dot_pipe | dot_logic | dot_cmp | dot_add | dot_mult
 ```
 
 ### Postfix Expressions
@@ -164,7 +158,7 @@ single: lambda
     | if
     | ident | string
 lambda: "lambda" call
-static: "static" block
+static: "macro" NAME block
 parens: "(" expr_base ")"
 table: "{" (table_entry ", ")* table_entry? "}"
 table_entry: expr_base ":" expr_base

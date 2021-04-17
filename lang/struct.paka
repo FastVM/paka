@@ -1,0 +1,3 @@
+syntax conat x with y {
+    x ~ y
+}

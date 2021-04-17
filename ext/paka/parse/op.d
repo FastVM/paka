@@ -12,7 +12,7 @@ Node binaryFold(BinaryOp op, Node lhs, Node rhs)
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
     Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Value(Fun(&metaFoldBinary)), [lambda, lhs, rhs]);
+    Call domap = new Call(new Value(native!metaFoldBinary), [lambda, lhs, rhs]);
     return domap;
 }
 
@@ -21,7 +21,7 @@ Node unaryFold(BinaryOp op, Node rhs)
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
     Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Value(Fun(&metaFoldUnary)), [lambda, rhs]);
+    Call domap = new Call(new Value(native!metaFoldUnary), [lambda, rhs]);
     return domap;
 }
 
@@ -30,7 +30,7 @@ Node unaryDotmap(UnaryOp op, Node rhs)
     Node[] xy = [new Ident("_rhs")];
     Node lambdaBody = op(xy[0]);
     Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Value(Fun(&metaMapPreParallel)), [lambda, rhs]);
+    Call domap = new Call(new Value(native!metaMapPreParallel), [lambda, rhs]);
     return domap;
 }
 
@@ -39,7 +39,7 @@ Node binaryDotmap(alias func)(BinaryOp op, Node lhs, Node rhs)
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
     Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Value(Fun(&func)), [lambda, lhs, rhs]);
+    Call domap = new Call(new Value(native!func), [lambda, lhs, rhs]);
     return domap;
 }
 
@@ -155,7 +155,7 @@ UnaryOp parseUnaryOp(string[] ops)
     {
         return (Node rhs)
         {
-            return new Call(new Value(Fun(&lengthOp)), [rhs]);
+            return new Call(new Value(native!lengthOp), [rhs]);
         };
     }
     else if (opName == "-")
@@ -225,19 +225,13 @@ BinaryOp parseBinaryOp(string[] ops)
         else if (opName == "->")
         {
             return (Node lhs, Node rhs) {
-                return new Call(new Value(Fun(&rangeOp)), [lhs, rhs]);
+                return new Call(new Value(native!rangeOp), [lhs, rhs]);
             };
         }
         else if (opName == "<|")
         {
             return (Node lhs, Node rhs) {
                 return new Call(new Ident("@call"), [lhs, rhs]);
-            };
-        }
-        else if (opName == "=>")
-        {
-            return (Node lhs, Node rhs) {
-                return new Call(new Ident("@call"), [new Call([lhs]), rhs]);
             };
         }
         else

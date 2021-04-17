@@ -26,19 +26,27 @@ __gshared termios init;
 
 shared static this()
 {
-	reader = new Reader(null);
-	reader.smart = false;
-	if (reader.smart)
+	makeReader(false);
+}
+
+void makeReader(bool smart)
+{
+	synchronized
 	{
-		tcgetattr(stdin.fileno, &init);
-		termios raw;
-		tcgetattr(stdin.fileno, &raw);
-		raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-		raw.c_oflag &= ~(OPOST);
-		raw.c_cflag |= (CS8);
-		raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-		tcsetattr(stdin.fileno, TCSAFLUSH, &raw);
-		atexit(&purr_disable_smart_reader);
+		reader = new Reader(null);
+		reader.smart = smart;
+		if (reader.smart)
+		{
+			tcgetattr(stdin.fileno, &init);
+			termios raw;
+			tcgetattr(stdin.fileno, &raw);
+			raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+			raw.c_oflag &= ~(OPOST);
+			raw.c_cflag |= (CS8);
+			raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+			tcsetattr(stdin.fileno, TCSAFLUSH, &raw);
+			atexit(&purr_disable_smart_reader);
+		}
 	}
 }
 
@@ -98,8 +106,8 @@ class ExitException : Exception
 	char letter;
 	this(char l)
 	{
-		letter = l;
-		super("Got Ctrl-" ~ [getCtrl(l)].toUpper);
+		letter = [getCtrl(l)].toUpper[0];
+		super("Got Ctrl-" ~ letter);
 	}
 }
 

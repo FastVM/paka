@@ -20,7 +20,7 @@ __gshared bool dumpast = false;
 enum string[] specialForms = [
         "@def", "@set", "@while", "@array", "@table", "@return",
         "@if", "@fun", "@do", "-", "+", "*", "/", "%", "<", ">", "<=", ">=",
-        "==", "!=", "...", "@index", "=>", "@env", "&&", "||", "~",
+        "==", "!=", "...", "@index", "@env", "&&", "||", "~",
         "@inspect", "@rcall", "@call"
     ];
 
@@ -314,6 +314,7 @@ class Walker
         foreach (i, v; argl.args)
         {
             Ident id = cast(Ident) v;
+            assert(id, v.to!string);
             argNames ~= id.repr.dynamic;
         }
         BasicBlock lambda = new BasicBlock;

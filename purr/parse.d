@@ -14,7 +14,7 @@ import purr.srcloc;
 enum string bashLine = "#!";
 enum string langLine = "#?";
 
-__gshared string langNameDefault = "ir";
+__gshared string langNameDefault = "passerine";
 
 __gshared Node delegate(Location code)[string] parsers;
 

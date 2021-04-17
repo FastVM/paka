@@ -1,0 +1,4 @@
+then = n -> n
+else = n -> (fib (n - 2)) + (fib (n - 1))
+fib = n -> magic "if" (magic "greater" (2, n), then, else) n
+print fib 35

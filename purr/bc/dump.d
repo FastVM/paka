@@ -207,6 +207,11 @@ override:
         line("store offset=", localIndex, " identifier=", func.stab[localIndex]);
     }
 
+    void cstore(ushort captureIndex)
+    {
+        line("store offset=", captureIndex, " identifier=", func.captab[captureIndex]);
+    }
+
     void retval()
     {
         line("retval");
