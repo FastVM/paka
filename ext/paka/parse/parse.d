@@ -616,7 +616,7 @@ Node parsePakaAs(alias parser)(Location loc)
         Node node = parser(tokens);
         return node;
     }
-    catch (Exception e)
+    catch (Error e)
     {
         string[] lines = loc.src.split("\n");
         size_t[] nums;

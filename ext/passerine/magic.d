@@ -1,4 +1,4 @@
-module ext.passerine.magic;
+module passerine.magic;
 
 import std.stdio;
 import purr.dynamic;
