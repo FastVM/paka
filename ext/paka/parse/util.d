@@ -1,5 +1,6 @@
 module paka.parse.util;
 
+import purr.io;
 import std.conv;
 import purr.srcloc;
 import purr.dynamic;
@@ -81,6 +82,7 @@ struct PushArray(T)
     /// utils that only happens if the token is a token array
     static if (is(T == Token))
     {
+
         /// consumes token if it is of type, returns weather it was consumed
         bool match(Token.Type type)
         {
@@ -184,18 +186,13 @@ struct PushArray(T)
     }
 }
 
-/// implements errors when the parser knows what should be next
-void skip(ref TokenArray tokens, string name)
-{
-    if (tokens.length == 0 || tokens.first.value != name)
-    {
-        throw new Exception("parse error: got " ~ tokens.first.value ~ " found " ~ name);
-    }
-}
-
 // TODO: replace with TokenArray calls
 /// constructs a token array, this will soon be replaced
 TokenArray newTokenArray(Token[] a)
 {
     return TokenArray(a);
+}
+
+void stripSpace(Type)(ref Type tokens)
+{
 }

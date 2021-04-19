@@ -1,3 +1,13 @@
-b = x -> x + 1
-c = 2
-(print b) c
+syntax 'if cond then 'else other {
+    (magic "if" (cond, _ -> then, _ -> other)) ()
+}
+
+until_zero = n -> {
+    if (n == 0) {
+        ()
+    } else {
+        until_zero (n - 1)
+    }
+}
+
+print (until_zero 1000000)

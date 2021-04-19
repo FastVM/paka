@@ -226,6 +226,8 @@ string serialize(Dynamic value)
             return `{"type": "number", "number": "nan"}`;
         }
         return `{"type": "number", "number": ` ~ n.to!string ~ `}`;
+    case Dynamic.Type.sym:
+        return `{"type": "symbol", "symbol": ` ~ value.str.serialize ~ `}`;
     case Dynamic.Type.str:
         return `{"type": "string", "string": ` ~ value.str.serialize ~ `}`;
     case Dynamic.Type.arr:

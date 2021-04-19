@@ -1,4 +1,4 @@
-module paka.ext.template._plugin;
+module ext.template._plugin;
 
 import purr.io;
 import purr.base;

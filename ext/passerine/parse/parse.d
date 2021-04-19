@@ -15,6 +15,7 @@ import purr.base;
 import purr.dynamic;
 import purr.srcloc;
 import purr.inter;
+import purr.ast.cons;
 import purr.fs.disk;
 import purr.fs.har;
 import purr.fs.memory;
@@ -26,31 +27,27 @@ import passerine.magic;
 import passerine.tokens;
 import passerine.parse.util;
 import passerine.parse.op;
+import passerine.parse.syntax;
 
-/// reads open parens
-Node readOpen(string v)(ref TokenArray tokens) if (v == "()")
+Node readParenBody(ref TokenArray tokens, size_t start)
 {
     Node[] args;
     bool hasComma = false;
-    tokens.nextIs(Token.Type.open, [v[0]]);
-    while (!tokens.first.isClose([v[1]]))
+    while (!tokens.first.isClose(")"))
     {
-        args ~= tokens.readExprBase;
+        tokens.eat;
+        args ~= tokens.readExpr(start);
         if (tokens.first.isComma)
         {
             tokens.nextIs(Token.Type.comma);
             hasComma = true;
-        }
-        else if (tokens.first.isClose([v[1]]))
-        {
-            break;
+            continue;
         }
         else
         {
-            throw new Exception("comma");
+            break;
         }
     }
-    tokens.nextIs(Token.Type.close, [v[1]]);
     if (args.length == 0)
     {
         return new Call(new Ident("@array"), null);
@@ -63,6 +60,15 @@ Node readOpen(string v)(ref TokenArray tokens) if (v == "()")
     {
         return new Call(new Ident("@array"), args);
     }
+}
+
+/// reads open parens
+Node readOpen(string v)(ref TokenArray tokens) if (v == "()")
+{
+    tokens.nextIs(Token.Type.open, [v[0]]);
+    Node ret = tokens.readParenBody(0);
+    tokens.nextIs(Token.Type.close, [v[1]]);
+    return ret;
 }
 
 /// reads square brackets
@@ -114,34 +120,7 @@ void stripNewlines(ref TokenArray tokens)
 alias readPostExtend = Spanning!(readPostExtendImpl, Node);
 Node readPostExtendImpl(ref TokenArray tokens, Node last)
 {
-    if (tokens.length == 0)
-    {
-        return last;
-    }
-    Node ret = void;
-    if (tokens.length > 2 && tokens.first.isOperator("."))
-    {
-        tokens.nextIs(Token.Type.operator, ".");
-        if (tokens.first.value[0].isDigit)
-        {
-            throw new Exception("index");
-        }
-        else
-        {
-            ret = new Call(new Ident("@index"), [last, new Value(tokens.first.value)]);
-            tokens.nextIsAny;
-        }
-    }
-    else if (tokens.first.isOperator(".") && !tokens.first.isOperator)
-    {
-        tokens.nextIs(Token.Type.operator, ".");
-    }
-    else
-    {
-        return last;
-        // throw new Exception("parse error " ~ tokens.to!string);
-    }
-    return tokens.readPostExtend(ret);
+    return last;
 }
 
 void skip1(ref string str, ref Span span)
@@ -225,10 +204,13 @@ size_t escapeNumber(ref string input)
 alias readPostExpr = Spanning!readPostExprImpl;
 Node readPostExprImpl(ref TokenArray tokens)
 {
+    tokens.eat;
     Node last = void;
+    redo:
     if (tokens.first.isKeyword("syntax"))
     {
-        throw new Exception("Syntax");
+        tokens.readSyntax;
+        return new Value(Dynamic.nil);
     }
     else if (tokens.first.isKeyword("magic"))
     {
@@ -241,25 +223,89 @@ Node readPostExprImpl(ref TokenArray tokens)
             if (tokens.first.isOpen("("))
             {
                 tokens.nextIs(Token.type.open, "(");
-                Node cond = tokens.readExprBase;
+                Node cond = tokens.readExpr(1);
                 tokens.nextIs(Token.Type.comma);
-                Node iftrue = tokens.readExprBase;
+                Node iftrue = tokens.readExpr(1);
                 tokens.nextIs(Token.Type.comma);
-                Node iffalse = tokens.readExprBase;
+                Node iffalse = tokens.readExpr(1);
+                if (tokens.first.isComma)
+                {
+                    tokens.nextIs(Token.Type.comma);
+                }
+                tokens.eat;
                 tokens.nextIs(Token.type.close, ")");
                 return new Call(new Ident("@if"), [cond, iftrue, iffalse]);
             }
             else
             {
                 throw new Exception("Magic If");
-            }   
+            }
+        case "add":
+            if (tokens.first.isOpen("("))
+            {
+                tokens.nextIs(Token.type.open, "(");
+                Node lhs = tokens.readExpr(1);
+                tokens.nextIs(Token.Type.comma);
+                Node rhs = tokens.readExpr(1);
+                if (tokens.first.isComma)
+                {
+                    tokens.nextIs(Token.Type.comma);
+                }
+                tokens.nextIs(Token.type.close, ")");
+                return new Call(new Ident("+"), [lhs, rhs]);
+            }
+            else
+            {
+                throw new Exception("Magic Add");
+            }
+        case "sub":
+            if (tokens.first.isOpen("("))
+            {
+                tokens.nextIs(Token.type.open, "(");
+                Node lhs = tokens.readExpr(1);
+                tokens.nextIs(Token.Type.comma);
+                Node rhs = tokens.readExpr(1);
+                if (tokens.first.isComma)
+                {
+                    tokens.nextIs(Token.Type.comma);
+                }
+                tokens.nextIs(Token.type.close, ")");
+                return new Call(new Ident("-"), [lhs, rhs]);
+            }
+            else
+            {
+                throw new Exception("Magic Sub");
+            }
+        case "to_string":
+            last = new Value(native!magictostring);
+            break;
+        case "print":
+            last = new Value(native!magicprint);
+            break;
+        case "println":
+            last = new Value(native!magicprintln);
+            break;
+        case "equal":
+            if (tokens.first.isOpen("("))
+            {
+                tokens.nextIs(Token.type.open, "(");
+                Node lhs = tokens.readExpr(1);
+                tokens.nextIs(Token.Type.comma);
+                Node rhs = tokens.readExpr(1);
+                tokens.nextIs(Token.type.close, ")");
+                return new Call(new Ident("=="), [lhs, rhs]);
+            }
+            else
+            {
+                throw new Exception("Magic Equals");
+            }
         case "greater":
             if (tokens.first.isOpen("("))
             {
                 tokens.nextIs(Token.type.open, "(");
-                Node lhs = tokens.readExprBase;
+                Node lhs = tokens.readExpr(1);
                 tokens.nextIs(Token.Type.comma);
-                Node rhs = tokens.readExprBase;
+                Node rhs = tokens.readExpr(1);
                 tokens.nextIs(Token.type.close, ")");
                 return new Call(new Ident(">"), [lhs, rhs]);
             }
@@ -268,7 +314,7 @@ Node readPostExprImpl(ref TokenArray tokens)
                 throw new Exception("Magic Greater");
             }
         default:
-            throw new Exception("magic " ~ word);
+            throw new Exception("not implemented: magic " ~ word);
         }
     }
     else if (tokens.first.isOpen("("))
@@ -281,21 +327,53 @@ Node readPostExprImpl(ref TokenArray tokens)
     }
     else if (tokens.first.isOpen("{"))
     {
-        throw new Exception("Curly");
+        last = tokens.readBlock;
     }
     else if (tokens.first.isIdent)
     {
-        last = new Ident(tokens.first.value);
-        tokens.nextIs(Token.Type.ident);
+        switch (tokens.first.value)
+        {
+        default:
+            if (tokens.first.value[0].isUpper)
+            {
+                Node name = new Value(Dynamic.sym(tokens.first.value));
+                tokens.nextIsAny;
+                last = new Call(new Ident("@array"), [name, tokens.readPostExpr]);
+            }
+            else if (tokens.first.value.isNumeric)
+            {
+                last = new Value(tokens.first.value.to!double);
+                tokens.nextIs(Token.Type.ident);
+            }
+            else
+            {
+                last = new Ident(tokens.first.value);
+                tokens.nextIs(Token.Type.ident);
+            }
+            break;
+        case "true":
+            last = new Value(true);
+            tokens.nextIs(Token.Type.ident);
+            break;
+        case "false":
+            last = new Value(false);
+            tokens.nextIs(Token.Type.ident);
+            break;
+        }
     }
     else if (tokens.first.isString)
     {
         last = new Value(tokens.first.value);
         tokens.nextIs(Token.Type.string);
     }
+    // else if (tokens.first.isSemicolon)
+    // {
+    //     tokens.nextIsAny;
+    //     goto redo;
+    // }
     else
     {
-        throw new Exception("end");
+        return new Value(Dynamic.nil);
     }
     return tokens.readPostExtend(last);
 }
@@ -311,13 +389,20 @@ Node readPreExprImpl(ref TokenArray tokens)
         {
             vals ~= tokens.first.value;
             tokens.nextIs(Token.Type.operator);
+            tokens.eat;
         }
         return parseUnaryOp(vals)(tokens.readPostExpr);
     }
     Node ret = tokens.readPostExpr;
-    while (!tokens.first.isSemicolon && !tokens.first.isClose && !tokens.first.isComma && !tokens.first.isOperator)
+    while (tokens.length != 0 && !tokens.first.isSemicolon
+            && !tokens.first.isClose && !tokens.first.isComma && !tokens.first.isOperator)
     {
+        size_t llen = tokens.length;
         ret = new Call(new Ident("@call"), [ret, tokens.readPostExpr]);
+        if (llen == tokens.length)
+        {
+            break;
+        }
     }
     return ret;
 }
@@ -347,15 +432,44 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
 {
     if (level == prec.length)
     {
-        return tokens.readPreExpr;
+        Node ret = tokens.readPreExpr;
+        outter: foreach_reverse (macros; syntaxMacros)
+        {
+            foreach (Dynamic[2] pair; macros)
+            {
+                Dynamic pattern = pair[0];
+                Dynamic astBody = pair[1];
+                if (Table reps = pattern.arr.matchMacro(ret))
+                {
+                    ret = astBody.getNode.macroLike(reps);
+                }
+            }
+        }
+        return ret;
     }
     string[] opers;
-    Node[] subNodes = [tokens.readExpr(level + 1)];
+    Node[] subNodes;
+    if (prec[level].canFind("="))
+    {
+        subNodes ~= tokens.readParenBody(level + 1);
+    }
+    else
+    {
+        subNodes ~= tokens.readExpr(level + 1);
+    }
     while (tokens.length != 0 && tokens.first.isAnyOperator(prec[level]))
     {
         opers ~= tokens.first.value;
         tokens.nextIsAny;
-        subNodes ~= tokens.readExpr(level + 1);
+        tokens.eat;
+        if (prec[level].canFind("="))
+        {
+            subNodes ~= tokens.readParenBody(level + 1);
+        }
+        else
+        {
+            subNodes ~= tokens.readExpr(level + 1);
+        }
     }
     if (opers.length == 0)
     {
@@ -363,10 +477,10 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
     }
     else if (opers[0] == "->")
     {
-        Node ret = subNodes[$-1];
-        foreach(i, v; opers)
+        Node ret = subNodes[$ - 1];
+        foreach (i, v; opers)
         {
-            ret = parseBinaryOp(["->"])(subNodes[$-2-i], ret);
+            ret = parseBinaryOp(["->"])(subNodes[$ - 2 - i], ret);
         }
         return ret;
     }
@@ -375,7 +489,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
         Node ret = subNodes[0];
         foreach (i, v; opers)
         {
-            ret = parseBinaryOp([v])(ret, subNodes[i+1]);
+            ret = parseBinaryOp([v])(ret, subNodes[i + 1]);
         }
         return ret;
     }
@@ -385,30 +499,14 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
 alias readStmt = Spanning!readStmtImpl;
 Node readStmtImpl(ref TokenArray tokens)
 {
+    tokens.eat;
     if (tokens.length == 0)
     {
         return null;
     }
-    while (tokens.length > 0 && tokens.first.isSemicolon)
-    {
-        tokens.nextIs(Token.Type.semicolon);
-        if (tokens.length == 0)
-        {
-            return null;
-        }
-    }
-    scope (exit)
-    {
-        while (tokens.length > 0 && tokens.first.isSemicolon)
-        {
-            tokens.nextIs(Token.Type.semicolon);
-        }
-    }
-    if (tokens.length == 0)
-    {
-        return null;
-    }
-    return tokens.readExprBase;
+    Node ret = tokens.readExprBase;
+    tokens.eat;
+    return ret;
 }
 
 /// reads many staments statement, each ending in a semicolon
@@ -417,7 +515,7 @@ alias readBlockBody = Spanning!readBlockBodyImpl;
 Node readBlockBodyImpl(ref TokenArray tokens)
 {
     Node[] ret;
-    while (tokens.length > 0 && !tokens.first.isClose("}") && !tokens.first.isKeyword("else"))
+    while (tokens.length > 0 && !tokens.first.isClose("}"))
     {
         size_t lengthBefore = tokens.length;
         Node stmt = tokens.readStmt;
@@ -491,12 +589,10 @@ Node parse(Location loc)
     Location[] olocs = locs;
     locs = null;
     staticCtx ~= enterCtx;
-    prefixMacros ~= emptyMapping;
     scope (exit)
     {
         locs = olocs;
         staticCtx.length--;
-        prefixMacros.length--;
     }
     fileSystem ~= parseHar(loc, fileSystem);
     MemoryTextFile main = "main.passerine".readMemFile;

@@ -1,11 +1,11 @@
 module passerine.magic;
 
-import std.stdio;
+import purr.io;
+import std.conv;
 import purr.dynamic;
 
 Dynamic magicif(Dynamic[] args)
 {
-    writeln(args);
     Dynamic cond = args[0].arr[0];
     if (cond.log)
     {
@@ -15,4 +15,21 @@ Dynamic magicif(Dynamic[] args)
     {
         return args[0].arr[2];
     }
+}
+
+Dynamic magicprint(Dynamic[] args)
+{
+    write(args[0]);
+    return Dynamic.nil;
+}
+
+Dynamic magicprintln(Dynamic[] args)
+{
+    writeln(args[0]);
+    return Dynamic.nil;
+}
+
+Dynamic magictostring(Dynamic[] args)
+{
+    return args[0].to!string.dynamic;
 }

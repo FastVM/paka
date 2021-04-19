@@ -316,6 +316,7 @@ struct DynamicImpl
         nil,
         log,
         sml,
+        sym,
         str,
         arr,
         tab,
@@ -340,13 +341,20 @@ struct DynamicImpl
         Callable fun;
     }
 
-    Type type;
-    uint len;
-    Value value;
+    Type type = void;
+    uint len = void;
+    Value value = void;
 
     static Dynamic strToNum(string s)
     {
         return dynamic(s.to!double);
+    }
+
+    static Dynamic sym(string s)
+    {
+        Dynamic ret = dynamic(s);
+        ret.type = Type.sym;
+        return ret;
     }
 
     this(Type t)
@@ -503,6 +511,8 @@ struct DynamicImpl
             {
                 return 3 + cast(size_t)-value.sml;
             }
+        case Dynamic.Type.sym:
+            return (*value.str).hashOf;
         case Dynamic.Type.str:
             return (*value.str).hashOf;
         case Dynamic.Type.arr:
@@ -529,18 +539,7 @@ struct DynamicImpl
 
     Dynamic opBinary(string op)(Dynamic other)
     {
-        static if (op == "~")
-        {
-            if (type == Type.str && other.type == Type.str)
-            {
-                return dynamic(str ~ other.str);
-            }
-            if (type == Type.arr && other.type == Type.arr)
-            {
-                return dynamic(arr ~ other.arr);
-            }
-        }
-        else
+        static if (op != "~")
         {
             if (type == Type.sml && other.type == Type.sml)
             {
@@ -549,6 +548,17 @@ struct DynamicImpl
             if (type == Type.tab)
             {
                 return mixin("tab " ~ op ~ " other");
+            }
+        }
+        static if (op == "~" || op == "+")
+        {
+            if (type == Type.str && other.type == Type.str)
+            {
+                return dynamic(str ~ other.str);
+            }
+            if (type == Type.arr && other.type == Type.arr)
+            {
+                return dynamic(arr ~ other.arr);
             }
         }
         throw new TypeException("invalid types: " ~ type.to!string ~ op ~ other.type.to!string);
@@ -752,6 +762,8 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
         return 0;
     case Dynamic.Type.log:
         return cmp(a.value.log, b.value.log);
+    case Dynamic.Type.sym:
+        return cmp(*a.value.str, *b.value.str);
     case Dynamic.Type.str:
         return cmp(*a.value.str, *b.value.str);
     case Dynamic.Type.sml:
@@ -850,18 +862,13 @@ private string strFormat(Dynamic dyn)
             return to!string(cast(long) dyn.value.sml);
         }
         return dyn.value.sml.to!string;
+    case Dynamic.Type.sym:
+        return ':' ~ *dyn.value.str;
     case Dynamic.Type.str:
-        if (before.length == 0)
-        {
-            return dyn.str;
-        }
-        else
-        {
-            return '"' ~ dyn.str ~ '"';
-        }
+        return '"' ~ dyn.str ~ '"';
     case Dynamic.Type.arr:
         char[] ret;
-        ret ~= "[";
+        ret ~= "(";
         foreach (i, v; dyn.arr)
         {
             if (i != 0)
@@ -870,7 +877,7 @@ private string strFormat(Dynamic dyn)
             }
             ret ~= v.to!string;
         }
-        ret ~= "]";
+        ret ~= ")";
         return cast(string) ret;
     case Dynamic.Type.tab:
         return dyn.tab.toString;

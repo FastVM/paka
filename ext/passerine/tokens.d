@@ -8,10 +8,10 @@ import purr.io;
 import purr.srcloc;
 
 /// operator precidence
-string[][] prec = [["="], ["->"], ["<", ">", "<=", ">="] ,["+", "-"], ["*", "/"]];
+string[][] prec = [["="], ["->"], ["<", ">", "<=", ">=", "=="] ,["+", "-"], ["*", "/", "%"], ["."]];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [","];
+string[] nops = [",", "'"];
 
 /// language keywords
 string[] keywords = [
@@ -65,7 +65,8 @@ struct Token
     /// shows token along with location
     string toString()
     {
-        return span.pretty ~ " -> \"" ~ value ~ "\"";
+        // return span.pretty ~ " -> \"" ~ value ~ "\"";
+        return "\"" ~ value ~ "\"";
     }
 
     bool isIdent()
@@ -188,9 +189,15 @@ Token readToken(ref string code, ref Location location)
         consume;
         return consToken(Token.Type.none, " ");
     }
-    if (peek == ';' || peek == '\n')
+    if (peek == ';' )
     {
-        return consToken(Token.Type.semicolon, [read]);
+        read;
+        return consToken(Token.Type.semicolon, ";");
+    }
+    if (peek == '\n')
+    {
+        read;
+        return consToken(Token.Type.semicolon, "__newline__");
     }
     if (peek == ',')
     {
@@ -245,11 +252,11 @@ Token readToken(ref string code, ref Location location)
     }
     if (peek == '"')
     {
-        char got = read;
+        char first = read;
         char[] ret;
-        while (peek != '"')
+        while (peek != first)
         {
-            got = read;
+            char got = read;
             if (got == '\\')
             {
                 switch (got = read)

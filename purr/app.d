@@ -40,6 +40,19 @@ __gshared Dynamic[] fileArgs;
 Thunk cliFileHandler(immutable string filename)
 {
     return {
+        string oldLang = langNameDefault;
+        scope(exit)
+        {
+            langNameDefault = oldLang;
+        }
+        if (filename.endsWith(".paka"))
+        {
+            langNameDefault = "paka";
+        }
+        if (filename.endsWith(".pn"))
+        {
+            langNameDefault = "passerine";
+        }
         Location code = Location(1, 1, filename, filename.readText);
         string cdir = getcwd;
         Dynamic retval;

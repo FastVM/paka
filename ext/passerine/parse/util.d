@@ -21,9 +21,6 @@ Location[] locs;
 /// context for static expressions
 size_t[] staticCtx;
 
-/// macros for prefix operators
-Mapping[] prefixMacros;
-
 /// wraps a function of type Node function(T...)(TokenArray tokens, T args).
 /// it gets the span of tokens consumed and it gives them a span
 template Spanning(alias F, T...)
@@ -81,6 +78,14 @@ struct PushArray(T)
     /// utils that only happens if the token is a token array
     static if (is(T == Token))
     {
+        void eat()
+        {
+            while (this.length != 0 && this[0].type == Token.Type.semicolon)
+            {
+                tokens = tokens[1 .. $];
+            }
+        }
+
         /// consumes token if it is of type, returns weather it was consumed
         bool match(Token.Type type)
         {
@@ -95,10 +100,9 @@ struct PushArray(T)
         /// consumes token matching the args, returns weather it was consumed
         bool match(Token.Type type, string val)
         {
-            if (this[0].type == type && this[0].value == val)
+            if (this[0].value == val)
             {
-                tokens = tokens[1 .. $];
-                return true;
+                return match(type);
             }
             return false;
         }

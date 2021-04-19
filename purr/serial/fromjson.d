@@ -244,6 +244,8 @@ Dynamic deserialize(T : Dynamic)(Json json)
         return json["number"].deserialize!double.dynamic;
     case Dynamic.Type.str:
         return json["string"].deserialize!string.dynamic;
+    case Dynamic.Type.sym:
+        return Dynamic.sym(json["symbol"].deserialize!string);
     case Dynamic.Type.arr:
         above[$ - 1] = Array.init.dynamic;
         Dynamic[] got = json["array"].deserialize!(Array);

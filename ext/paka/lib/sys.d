@@ -65,6 +65,8 @@ Dynamic libtypeof(Args args)
         return dynamic("logical");
     case Dynamic.Type.sml:
         return dynamic("number");
+    case Dynamic.Type.sym:
+        return dynamic("symbol");
     case Dynamic.Type.str:
         return dynamic("string");
     case Dynamic.Type.arr:
