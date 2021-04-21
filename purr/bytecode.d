@@ -185,7 +185,7 @@ enum AssignOp : ubyte
     mod,
 }
 
-enum Opcode : ubyte
+enum Opcode : ushort
 {
     /// never generated
     nop,

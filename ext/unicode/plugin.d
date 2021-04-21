@@ -32,8 +32,3 @@ Plugin thisPlugin()
     plugin.libs ~= FunctionPair!unictrl("_unicode_ctrl");
     return plugin;
 }
-
-export extern (C) Plugin purr_get_library_plugin()
-{
-    return thisPlugin;
-}

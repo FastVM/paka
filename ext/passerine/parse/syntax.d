@@ -2,6 +2,9 @@ module passerine.parse.syntax;
 
 import purr.io;
 import std.algorithm;
+import std.array;
+import std.conv;
+import purr.srcloc;
 import purr.dynamic;
 import purr.ir.walk;
 import purr.ast.ast;
@@ -11,11 +14,7 @@ import passerine.parse.parse;
 import passerine.parse.util;
 
 Dynamic[2][][] syntaxMacros = [null];
-
-Node readFromMacro(Dynamic tree, ref TokenArray tokens)
-{
-    assert(false);
-}
+Table[] nameSubs;
 
 Table matchMacro(Dynamic[] pattern, Node ast)
 {
@@ -55,16 +54,17 @@ Table matchMacro(Dynamic[] pattern, Node ast)
     Table ret = new Table;
     foreach (index, value; pattern)
     {
-        Node cur = flat[$-1-index];
+        Node cur = flat[$ - 1 - index];
         if (value.arr[0].str == "keyword")
         {
             if (Ident id = cast(Ident) cur)
             {
-                if (id.repr != value.arr[1].str)
+                if (id.repr == value.arr[1].str)
                 {
-                    return null;
+                    continue;
                 }
             }
+            return null;
         }
         else if (value.arr[0].str == "arg")
         {
@@ -135,6 +135,47 @@ void readSyntax(ref TokenArray tokens)
             tokens.nextIsAny;
         }
     }
-    Dynamic value = tokens.readBlock.astDynamic;
-    syntaxMacros[$ - 1] ~= [pattern.dynamic, value];
+    Token[] bodyTokens = tokens.tokens;
+    tokens.readBlock;
+    bodyTokens = bodyTokens[0 .. $ - tokens.tokens.length];
+    syntaxMacros[$ - 1] ~= [pattern.dynamic, bodyTokens.map!tokDynamic.array.dynamic];
+}
+
+Dynamic locDynamic(Location loc)
+{
+    return [loc.line.dynamic, loc.column.dynamic, loc.file.dynamic].dynamic;
+}
+
+Dynamic spanDynamic(Span span)
+{
+    return [span.first.locDynamic, span.last.locDynamic].dynamic;
+}
+
+Dynamic tokDynamic(Token tok)
+{
+    Mapping ret = emptyMapping;
+    ret["type".dynamic] = tok.type.to!string.dynamic;
+    ret["value".dynamic] = tok.value.dynamic;
+    ret["span".dynamic] = tok.span.spanDynamic;
+    return new Table(ret).dynamic;
+}
+
+Location getLoc(Dynamic dyn)
+{
+    return Location(dyn.arr[0].as!size_t, dyn.arr[1].as!size_t, dyn.arr[2].str);
+}
+
+Span getSpan(Dynamic dyn)
+{
+    return Span(dyn.arr[0].getLoc, dyn.arr[1].getLoc);
+}
+
+Token getToken(Dynamic dyn)
+{
+    return Token(dyn.tab["span".dynamic].getSpan, dyn.tab["type".dynamic].str.to!(Token.Type), dyn.tab["value".dynamic].str);
+}
+
+TokenArray getTokens(Dynamic dyn)
+{
+    return newTokenArray(dyn.arr.map!getToken.array);
 }

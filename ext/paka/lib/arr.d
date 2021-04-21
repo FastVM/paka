@@ -7,6 +7,7 @@ import std.parallelism;
 import std.concurrency;
 import std.conv;
 import std.conv;
+import std.random;
 import purr.base;
 import purr.dynamic;
 import purr.error;
@@ -25,8 +26,17 @@ Pair[] libarr()
     ret ~= FunctionPair!libmap("map");
     ret ~= FunctionPair!libzip("zip");
     ret ~= FunctionPair!libfrom("from");
+    ret ~= FunctionPair!libshuffle("shuffle");
     return ret;
 } /// returns a list
+
+Dynamic libshuffle(Dynamic[] args)
+{
+    auto rnd = MinstdRand0(1);
+    Array arr = args[0].arr.dup;
+    arr.randomShuffle(rnd);
+    return arr.dynamic;
+}
 
 Dynamic libfrom(Args args)
 {

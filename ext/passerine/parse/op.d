@@ -4,6 +4,7 @@ import purr.io;
 import std.conv;
 import purr.dynamic;
 import purr.ast.ast;
+import passerine.parse.pattern;
 import passerine.parse.util;
 
 UnaryOp parseUnaryOp(string[] ops)
@@ -11,7 +12,11 @@ UnaryOp parseUnaryOp(string[] ops)
     string opName = ops[0];
     if (opName == "-")
     {
-        return (Node rhs) { return new Call(new Ident("-"), [new Ident("0"), rhs]); };
+        return (Node rhs) { return new Call(new Ident("-"), [new Value(0), rhs]); };
+    }
+    if (opName == "..")
+    {
+        return (Node rhs) { return new Call(new Ident(".."), [rhs]); };
     }
     else
     {
@@ -28,51 +33,13 @@ Dynamic check(Dynamic[] args)
     return args[1];
 }
 
-Node doAssign(Node lhs, Node rhs)
-{
-    if (Ident lhsv = cast(Ident) lhs)
-    {
-        if (lhsv.repr == "_")
-        {
-            return rhs;
-        }
-        return new Call(new Ident("@set"), [lhs, rhs]);
-    }
-    else if (Value lhsv = cast(Value) lhs)
-    {
-        return new Call(new Value(native!check), [lhs, rhs]);
-    }
-    Call call = cast(Call) lhs;
-    assert(call, "compiler got to illegal state");
-    if (Ident id = cast(Ident) call.args[0])
-    {
-        switch (id.repr)
-        {
-        default:
-            break;
-        case "@array":
-            Node[] ret;
-            Ident sym = genSym;
-            foreach (index, arg; call.args[1 .. $])
-            {
-                ret ~= doAssign(arg, new Call(new Ident("@index"), [
-                            sym, new Value(index)
-                        ]));
-            }
-            Node val = new Call(new Ident("@set"), [sym, rhs]);
-            return new Call(new Ident("@do"), val ~ ret ~ sym);
-        }
-    }
-    return new Call(new Value(native!check), [lhs, rhs]);
-}
-
 BinaryOp parseBinaryOp(string[] ops)
 {
     string opName = ops[0];
     switch (opName)
     {
     case "=":
-        return (rhs, lhs) => doAssign(rhs, lhs);
+        return (rhs, lhs) => matcher(lhs, rhs);
     case "->":
         return (Node lhs, Node rhs) {
             Node[] args;
@@ -111,7 +78,7 @@ BinaryOp parseBinaryOp(string[] ops)
                 if (Call call = cast(Call) arg)
                 {
                     Node sym = genSym;
-                    Node func = new Call(new Ident("@do"), [doAssign(arg, sym), ret]);
+                    Node func = new Call(new Ident("@do"), [matcher(sym, arg), ret]);
                     ret = new Call(new Ident("@fun"), [new Call([sym]), func]);
                 }
             }

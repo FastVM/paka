@@ -1,13 +1,14 @@
-syntax 'if cond then 'else other {
-    (magic "if" (cond, _ -> then, _ -> other)) ()
+v1 = match 1 {
+    x | x % 2 == 0 -> 0
+    x | x % 2 == 1 -> 1
 }
-
-until_zero = n -> {
-    if (n == 0) {
-        ()
-    } else {
-        until_zero (n - 1)
+v2 = match [4, 9, 8, 4] {
+    [4, ..mid, 4] -> match mid {
+        [9, 4 + 4] -> 2
     }
 }
-
-print (until_zero 1000000)
+v3 = match 3 {
+    3 : r -> r - v2 + v1 + v1 
+}
+[one, ..[two], three] = [v1, v2, v3]
+(one, two, three)

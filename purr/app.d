@@ -15,7 +15,6 @@ import purr.inter;
 import purr.io;
 import purr.serial.fromjson;
 import purr.serial.tojson;
-import purr.plugin.loader;
 import purr.fs.files;
 import purr.fs.disk;
 import std.uuid;
@@ -106,10 +105,6 @@ Thunk cliEvalHandler(immutable string code)
     };
 }
 
-Thunk cliLoadHandler(immutable string load)
-{
-    return { linkLang(load); };
-}
 
 Thunk cliLangHandler(immutable string langname)
 {
@@ -270,11 +265,6 @@ void domain(string[] args)
             string code = extargs[$ - 1];
             extargs.length--;
             todo ~= code.cliEvalHandler;
-            break;
-        case "--load":
-            string load = extargs[$ - 1];
-            extargs.length--;
-            todo ~= load.cliLoadHandler;
             break;
         case "--lang":
             string langname = extargs[$ - 1];

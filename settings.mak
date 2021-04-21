@@ -1,7 +1,9 @@
+DEFAULT_DC=dmd
+
 ifdef DC
 DC_CMD=$(DC)
 else
-DC_CMD=dmd
+DC_CMD=$(DEFAULT_DC)
 endif
 
 ifeq ($(DC_TYPE),)
@@ -288,12 +290,6 @@ endif
 
 RUN=
 INFO=echo
-
-ifeq ($(DC_TYPE),ldc)
-REALOCATON_MODE_TO_PIC=-relocation-model=pic
-else
-REALOCATON_MODE_TO_PIC=-fPIC
-endif
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 dlangsrc=$(call rwildcard,$1,*.d)

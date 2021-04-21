@@ -26,6 +26,7 @@ import purr.ast.ast;
 import passerine.magic;
 import passerine.tokens;
 import passerine.parse.util;
+import passerine.parse.pattern;
 import passerine.parse.op;
 import passerine.parse.syntax;
 
@@ -72,20 +73,26 @@ Node readOpen(string v)(ref TokenArray tokens) if (v == "()")
 }
 
 /// reads square brackets
-Node[] readOpen(string v)(ref TokenArray tokens) if (v == "[]")
+Node readOpen(string v)(ref TokenArray tokens) if (v == "[]")
 {
-    Node[] args;
     tokens.nextIs(Token.Type.open, [v[0]]);
-    while (!tokens.first.isClose([v[1]]))
+    Node[] args;
+    while (!tokens.first.isClose("]"))
     {
-        args ~= tokens.readExprBase;
+        tokens.eat;
+        args ~= tokens.readExpr(1);
         if (tokens.first.isComma)
         {
             tokens.nextIs(Token.Type.comma);
+            continue;
+        }
+        else
+        {
+            break;
         }
     }
     tokens.nextIs(Token.Type.close, [v[1]]);
-    return args;
+    return new Call(new Ident("@array"), args);
 }
 
 /// reads open curly brackets
@@ -212,6 +219,10 @@ Node readPostExprImpl(ref TokenArray tokens)
         tokens.readSyntax;
         return new Value(Dynamic.nil);
     }
+    else if (tokens.first.isKeyword("match"))
+    {
+        last = tokens.readMatch();
+    }
     else if (tokens.first.isKeyword("magic"))
     {
         tokens.nextIs(Token.Type.keyword, "magic");
@@ -323,7 +334,7 @@ Node readPostExprImpl(ref TokenArray tokens)
     }
     else if (tokens.first.isOpen("["))
     {
-        throw new Exception("Square");
+        return tokens.readOpen!"[]";
     }
     else if (tokens.first.isOpen("{"))
     {
@@ -347,7 +358,25 @@ Node readPostExprImpl(ref TokenArray tokens)
             }
             else
             {
-                last = new Ident(tokens.first.value);
+                foreach (nameSub; nameSubs)
+                {
+                    if (Dynamic* ret = tokens.first.value.dynamic in nameSub)
+                    {
+                        last = getNode(*ret);
+                        goto after;
+                    }
+                }
+                if (nameSubs.length > 0)
+                {
+                    Node sym = genSym;
+                    nameSubs[$-1].set(tokens.first.value.dynamic, sym.astDynamic);
+                    last = sym;
+                }
+                else
+                {
+                    last = new Ident(tokens.first.value);
+                }
+                after:
                 tokens.nextIs(Token.Type.ident);
             }
             break;
@@ -433,6 +462,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
     if (level == prec.length)
     {
         Node ret = tokens.readPreExpr;
+        redo:
         outter: foreach_reverse (macros; syntaxMacros)
         {
             foreach (Dynamic[2] pair; macros)
@@ -441,7 +471,11 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
                 Dynamic astBody = pair[1];
                 if (Table reps = pattern.arr.matchMacro(ret))
                 {
-                    ret = astBody.getNode.macroLike(reps);
+                    nameSubs ~= reps;
+                    TokenArray toks = astBody.getTokens;
+                    ret = toks.readBlock;
+                    nameSubs.length--;
+                    goto redo;
                 }
             }
         }

@@ -21,8 +21,3 @@ Plugin thisPlugin()
     plugin.libs ~= FunctionPair!serialthaw("_serial_thaw");
     return plugin;
 }
-
-export extern (C) Plugin purr_get_library_plugin()
-{
-    return thisPlugin;
-}

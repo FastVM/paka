@@ -25,6 +25,7 @@ alias Array = Dynamic[];
 
 alias Delegate = Dynamic function(Args);
 alias Mapping = Dynamic[Dynamic];
+pragma(inline, true):
 Mapping emptyMapping()
 {
     return Mapping.init;
@@ -283,8 +284,8 @@ template native(alias func)
     Fun impl()
     {
         Fun fun = Fun(&func);
-        fun.names ~= func.mangleof.dynamic;
-        fun.mangled = __traits(identifier, func);
+        fun.names ~= __traits(identifier, func).dynamic;
+        fun.mangled = func.mangleof;
         return fun;
 
     }
@@ -311,6 +312,7 @@ Dynamic dynamic(T...)(T a)
 
 struct DynamicImpl
 {
+pragma(inline, true):
     enum Type : ubyte
     {
         nil,
@@ -414,8 +416,9 @@ struct DynamicImpl
 
     this(Dynamic other)
     {
-        value = other.value;
         type = other.type;
+        len = other.len;
+        value = other.value;
     }
 
     static Dynamic nil()
@@ -756,8 +759,10 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
     {
         return cmp(a.type, b.type);
     }
-    final switch (a.type)
+    switch (a.type)
     {
+    default:
+        assert(false);
     case Dynamic.Type.nil:
         return 0;
     case Dynamic.Type.log:

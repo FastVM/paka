@@ -8,14 +8,14 @@ import purr.io;
 import purr.srcloc;
 
 /// operator precidence
-string[][] prec = [["="], ["->"], ["<", ">", "<=", ">=", "=="] ,["+", "-"], ["*", "/", "%"], ["."]];
+string[][] prec = [["="], ["->"], ["|"], ["..", ":"], ["<", ">", "<=", ">=", "=="] ,["+", "-"], ["*", "/", "%"], ["."]];
 
 /// operators that dont work like binary operators sometimes
 string[] nops = [",", "'"];
 
 /// language keywords
 string[] keywords = [
-    "syntax", "magic"
+    "syntax", "magic", "match"
 ];
 
 /// gets the operators by length not precidence

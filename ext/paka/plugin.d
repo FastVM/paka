@@ -17,8 +17,3 @@ Plugin thisPlugin()
     plugin.parsers["paka"] = code => parse(code);
     return plugin;
 }
-
-extern (C) Plugin purr_get_library_plugin()
-{
-    return thisPlugin;
-}

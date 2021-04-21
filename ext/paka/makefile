@@ -3,4 +3,4 @@ $(LIB)/libpurr_paka.so: $(LIB)/libpurr_paka.o
 	$(RUN) $(LD_CMD) -shared $(LD_CMD_OUT_FLAG)$@ $^ $(LD_LINK_IN_LIBS) $(DFL_FLAG_LIBS)
 
 $(LIB)/libpurr_paka.o: dcomp $(LIB)
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) $(REALOCATON_MODE_TO_PIC) -c $(call dlangsrc,ext/paka,plugin.d) -Ipurr -Iext $(DC_CMD_OUT_FLAG)$@ 
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c $(call dlangsrc,ext/paka,plugin.d) -Ipurr -Iext $(DC_CMD_OUT_FLAG)$@ 

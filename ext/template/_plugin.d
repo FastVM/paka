@@ -18,8 +18,3 @@ Plugin thisPlugin()
     Plugin plugin = new Plugin;
     return plugin;
 }
-
-export extern (C) Plugin purr_get_library_plugin()
-{
-    return thisPlugin;
-}

@@ -26,7 +26,7 @@ struct VMInfo
     Dynamic* locals;
 }
 
-alias LocalCallback = void delegate(uint index, Dynamic* stack, Dynamic[] locals);
+alias LocalCallback = void delegate(uint index, Dynamic[] locals);
 
 enum string[2][] cmpMap()
 {
@@ -46,7 +46,7 @@ pragma(inline, true) T eat(T)(ubyte* bytes, ref ushort index)
     return ret;
 }
 
-pragma(inline, false)
+pragma(inline, true)
 Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
 {
     static foreach (I; T)
@@ -63,7 +63,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     }
     size_t stackAlloc = (func.stackSize + func.stab.length) * Dynamic.sizeof;
     Dynamic* stack = void;
-    if (func.flags & Function.Flags.isLocal)
+    if (func.flags & Function.Flags.isLocal || T.length != 0)
     {
         stack = cast(Dynamic*) GC.malloc(stackAlloc);
     }
@@ -77,7 +77,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     while (true)
     {
         // writeln(lstack[0..stack-lstack]);
-        Opcode cur = cast(Opcode) instrs[index++];
+        Opcode cur = instrs.eat!Opcode(index);
         // writeln(index, ": ", cur);
         // writeln;
         switch (cur)
@@ -257,8 +257,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 static if (is(typeof(callback) == LocalCallback))
                 {
                     {
-                        Dynamic[] lo = lstack[0 .. func.stab.length + 1].array;
-                        callback(index, stack, lo);
+                        callback(index, locals[0..func.stab.length]);
                     }
                 }
             }
@@ -269,8 +268,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 static if (is(typeof(callback) == LocalCallback))
                 {
                     {
-                        Dynamic[] lo = locals[0 .. func.stab.length + 1].array;
-                        callback(index, stack, lo);
+                        callback(index, locals[0..func.stab.length]);
                     }
                 }
             }

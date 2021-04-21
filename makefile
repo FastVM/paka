@@ -6,9 +6,9 @@ include $1
 endif
 endef
 
-BIN=./bin
-LIB=./lib
-TMP=./tmp
+BIN=bin
+LIB=lib
+TMP=tmp
 
 import=$(eval $(MAKEFILE_IMPORT_IMPL_BODY))
 runto=$(shell $2)$(shell echo $2 > $1)

@@ -36,10 +36,9 @@ string elems(string names, Arg)(Arg arg)
     return ret;
 }
 
-string serialize(char chr)
+string serialize(Num)(Num num) if (std.traits.isNumeric!Num)
 {
-    return chr.to!byte
-        .to!string;
+    return '"' ~ num.to!string ~ '"';
 }
 
 string serialize(Location location)
@@ -59,20 +58,7 @@ string serialize(Pair pair)
 
 string serialize(bool b)
 {
-    return b.to!string;
-}
-
-string serialize(Int)(Int i)
-        if (std.traits.isIntegral!Int && Int.sizeof < double.sizeof)
-{
-    return i.to!string;
-}
-
-string serialize(Int)(Int i)
-        if (std.traits.isIntegral!Int && Int.sizeof >= double.sizeof)
-{
-    return i.to!string
-        .to!string;
+    return '"' ~ b.to!string ~ '"';
 }
 
 string serialize(string str)
@@ -168,13 +154,17 @@ string serialize(T)(T* ptr)
 {
     if (ptr is null)
     {
-        return `null`;
+        return `{"null": "true"}`;
     }
-    return serialize(*ptr);
+    return `{"null": "false", "ptr": ` ~ serialize(*ptr) ~ `}`;
 }
 
 string serialize(Table tab)
 {
+    if (tab is null)
+    {
+        return `{"null": "true"}`;
+    }
     string pairs;
     size_t n = 0;
     foreach (key, value; tab)
@@ -187,15 +177,7 @@ string serialize(Table tab)
         n++;
     }
     string meta;
-    if (tab.meta.length == 0)
-    {
-        meta = "null";
-    }
-    else
-    {
-        meta = tab.meta.dynamic.serialize;
-    }
-    return `{"pairs": [` ~ pairs ~ `], "meta": ` ~ meta ~ `}`;
+    return `{"null": "false", "pairs": [` ~ pairs ~ `], "meta": ` ~ tab.metatable.serialize ~ `}`;
 }
 
 Dynamic[] alreadySerialized;
@@ -213,19 +195,16 @@ string serialize(Dynamic value)
     {
         alreadySerialized.length--;
     }
-    final switch (value.type)
+    switch (value.type)
     {
+    default:
+        throw new Exception (value.to!string);
     case Dynamic.Type.nil:
         return `{"type": "nil"}`;
     case Dynamic.Type.log:
-        return `{"type": "logical", "logical": ` ~ value.log.to!string ~ `}`;
+        return `{"type": "logical", "logical": "` ~ value.log.to!string ~ `"}`;
     case Dynamic.Type.sml:
-        double n = value.as!double;
-        if (isNaN(n) || isInfinity(n))
-        {
-            return `{"type": "number", "number": "nan"}`;
-        }
-        return `{"type": "number", "number": ` ~ n.to!string ~ `}`;
+        return `{"type": "number", "number": ` ~ value.as!double.serialize ~ `}`;
     case Dynamic.Type.sym:
         return `{"type": "symbol", "symbol": ` ~ value.str.serialize ~ `}`;
     case Dynamic.Type.str:

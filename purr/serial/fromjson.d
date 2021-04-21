@@ -44,46 +44,18 @@ Dynamic.Type dtype(Json json)
 
 bool deserialize(T)(Json json) if (is(T == bool))
 {
-    return json.boolean;
+    return json.str.to!bool;
 }
 
-double deserialize(T)(Json json) if (is(T == double) || is(T == double))
+Num deserialize(Num)(Json json) if (std.traits.isNumeric!Num)
 {
-    if (json.type == JSONType.float_)
-    {
-        return json.floating;
-    }
-    else if (json.type == JSONType.integer)
-    {
-        return cast(T) json.integer;
-    }
-    else if (json.type == JSONType.string && json.str == "nan")
-    {
-        return T.nan;
-    }
-    else
-    {
-        throw new Exception("bad json");
-    }
+    return json.str.to!Num;
 }
 
 string deserialize(T)(Json json) if (is(T == string))
 {
     return json.str;
 }
-
-Int deserialize(Int)(Json json)
-        if (is(Int == int) || is(Int == uint) || is(Int == short)
-            || is(Int == ushort) || is(Int == byte) || is(Int == ubyte))
-{
-    return cast(Int) json.integer;
-}
-
-Int deserialize(Int)(Json json) if (is(Int == long) || is(Int == ulong))
-{
-    return cast(Int) json.integer;
-}
-
 Array deserialize(Array)(Json json)
         if (isArray!Array && !isSomeChar!(ElementType!Array))
 {
@@ -109,33 +81,31 @@ AssocArray deserialize(AssocArray)(Json json) if (isAssociativeArray!AssocArray)
 Pointer deserialize(Pointer)(Json json)
         if (isPointer!Pointer && !is(Pointer == void*) && !std.traits.isFunctionPointer!Pointer)
 {
-    if (json.type == JSONType.null_)
+    bool isNull = json.object["null"].str.to!bool;
+    if (isNull)
     {
         return null;
     }
     else
     {
-        // return new PointerTarget!Pointer(json.deserialize!(PointerTarget!Pointer));
-        return new PointerTarget!Pointer(json.deserialize!(PointerTarget!Pointer));
+        return new PointerTarget!Pointer(json.object["ptr"].deserialize!(PointerTarget!Pointer));
     }
 }
 
 Table deserialize(T : Table)(Json json)
 {
-    if (json.type == JSONType.null_)
+    bool isNull = json["null"].str.to!bool;
+    if (isNull)
     {
-        return new Table(emptyMapping);
+        return null;
     }
-    else
+    Mapping mapping = emptyMapping;
+    Table meta = json["meta"].deserialize!Table;
+    foreach (kv; json["pairs"].array)
     {
-        Mapping mapping = emptyMapping;
-        Table meta = json["meta"].deserialize!Table;
-        foreach (kv; json["pairs"].array)
-        {
-            mapping[kv.array[0].deserialize!Dynamic] = kv.array[1].deserialize!Dynamic;
-        }
-        return new Table(mapping, meta);
+        mapping[kv.array[0].deserialize!Dynamic] = kv.array[1].deserialize!Dynamic;
     }
+    return new Table(mapping, meta);
 }
 
 T elem(string name, T)(Json json)

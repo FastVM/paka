@@ -33,7 +33,7 @@ void removeCount(T1, T2)(Function func, T1 index, T2 argc)
 void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
 {
     func.stackAt[func.instrs.length] = func.stackSizeCurrent;
-    func.instrs ~= cast(ubyte) op;
+    func.instrs ~= *cast(ubyte[2]*)&op;
     foreach (i; shorts)
     {
         func.instrs ~= *cast(ubyte[2]*)&i;
@@ -316,11 +316,7 @@ class BytecodeEmitter
 
     void emit(StoreInstruction store)
     {
-        if (uint* ius = store.var in func.captab.byName)
-        {
-            pushInstr(func, Opcode.cstore, [cast(ushort)*ius]);
-        }
-        else if (uint* ius = store.var in func.stab.byName)
+        if (uint* ius = store.var in func.stab.byName)
         {
             pushInstr(func, Opcode.store, [cast(ushort)*ius]);
         }

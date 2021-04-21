@@ -27,8 +27,8 @@ __gshared bool dumpir = false;
 /// vm callback that sets the locals defined into the root base 
 LocalCallback exportLocalsToBaseCallback(size_t ctx, Function func)
 {
-    LocalCallback ret = (uint index, Dynamic* stack, Dynamic[] locals) {
-        most: foreach (i, v; locals[0 .. func.stab.length])
+    LocalCallback ret = (uint index, Dynamic[] locals) {
+        most: foreach (i, v; locals)
         {
             foreach (ref rb; rootBases[ctx])
             {
