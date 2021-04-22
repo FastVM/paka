@@ -7,7 +7,6 @@ import purr.dynamic;
 import purr.base;
 import purr.inter;
 import purr.srcloc;
-import purr.error;
 import purr.fs.disk;
 import paka.lib.io;
 import paka.lib.sys;

@@ -1,7 +1,6 @@
 module purr.data.map;
 
 import core.memory;
-import purr.error;
 import std.algorithm;
 import purr.io;
 import std.conv;

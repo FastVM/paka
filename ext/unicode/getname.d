@@ -86,7 +86,7 @@ string getUnicode(string arg)
     if (bests.length == 1)
     {
         string msg = "unicode character not found: " ~ find ~ " did you mean: " ~ bests[0];
-        throw new UnicodeException(msg);
+        throw new Exception(msg);
     }
     else if (bests.length <= 5)
     {
@@ -96,7 +96,7 @@ string getUnicode(string arg)
             msg ~= " ";
             msg ~= best;
         }
-        throw new UnicodeException(msg);
+        throw new Exception(msg);
     }
     else {
         string msg = "unicode character not found: " ~ find ~ " did you mean one of:";
@@ -106,6 +106,6 @@ string getUnicode(string arg)
             msg ~= best;
         }
         msg ~= " # " ~ bests[$-3..$].length.to!string ~ " more not shown";
-        throw new UnicodeException(msg);
+        throw new Exception(msg);
     }
 }

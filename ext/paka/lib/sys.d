@@ -3,7 +3,6 @@ module paka.lib.sys;
 import purr.io;
 import purr.dynamic;
 import purr.base;
-import purr.error;
 import purr.ast.ast;
 import purr.parse;
 import purr.ir.walk;
@@ -41,7 +40,7 @@ Dynamic libassert(Args args)
 {
     if (args[0].type == Dynamic.Type.nil || (args[0].type == Dynamic.Type.log && !args[0].log))
     {
-        throw new AssertException("assert error: " ~ args[1].to!string);
+        throw new Exception("assert error: " ~ args[1].to!string);
     }
     return Dynamic.nil;
 }

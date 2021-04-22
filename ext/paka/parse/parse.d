@@ -115,7 +115,7 @@ Node readPostCallExtend(ref TokenArray tokens, Node last)
     Node[][] args = tokens.readOpen!"()";
     foreach (argList; args)
     {
-        last = new Call(last, argList);
+        last = new Call(last ~ argList);
     }
     return last;
 }
@@ -152,12 +152,16 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
         }
         else if (tokens.first.value[0].isDigit)
         {
-            ret = new Call(new Ident("@index"), [last, new Value(tokens.first.value.to!double)]);
+            ret = new Call(new Ident("@index"), [
+                    last, new Value(tokens.first.value.to!double)
+                    ]);
             tokens.nextIsAny;
         }
         else
         {
-            ret = new Call(new Ident("@index"), [last, new Value(tokens.first.value)]);
+            ret = new Call(new Ident("@index"), [
+                    last, new Value(tokens.first.value)
+                    ]);
             tokens.nextIsAny;
         }
     }
@@ -513,7 +517,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
     Ident last;
     foreach (i, v; opers)
     {
-        ret = parseBinaryOp(dotcount[i][0] ~ v ~ dotcount[i][1])(ret, subNodes[i+1]);
+        ret = parseBinaryOp(dotcount[i][0] ~ v ~ dotcount[i][1])(ret, subNodes[i + 1]);
     }
     return ret;
 }
@@ -547,8 +551,7 @@ Node readStmtImpl(ref TokenArray tokens)
     }
     if (tokens.first.isOpen("("))
     {
-        throw new Exception(
-                "parse error: cannot have open curly paren to start a statement");
+        throw new Exception("parse error: cannot have open curly paren to start a statement");
     }
     if (tokens.first.isKeyword("return"))
     {
@@ -594,7 +597,7 @@ Node readBlockImpl(ref TokenArray tokens)
     if (tokens.first.isOperator(":"))
     {
         tokens.nextIs(Token.Type.operator, ":");
-        return tokens.readStmt;  
+        return tokens.readStmt;
     }
     else
     {

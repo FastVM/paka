@@ -3,7 +3,7 @@ DEFAULT_DC=dmd
 ifdef DC
 DC_CMD=$(DC)
 else
-DC_CMD=$(DEFAULT_DC)
+DC_CMD=dmd
 endif
 
 ifeq ($(DC_TYPE),)
@@ -105,9 +105,6 @@ ifeq ($(LD_TYPE),ld)
 LFLAGS_EXTRA=-export-dynamic -l:libgcc_s.so.1 -l:crt1.o -l:crti.o -l:crtn.o -dynamic-linker -lc /lib64/ld-linux-x86-64.so.2
 endif
 
-# LFLAGS+=-l:libtcc.o -Ltinycc
-LFLAGS+=
-
 ifeq ($(LD_TYPE),d)
 LD_CMD_PRE=-L
 else
@@ -137,7 +134,7 @@ LD_LINK_IN_LIBS=$(LD_LINK_IN)
 LD_LINK_IN_PURR=$(LD_LINK_IN) $(LFLAGS_LD_PURR) 
 else
 ifeq ($(DC_TYPE),dmd)
-LD_LINK_IN_CORRECT_STD=-lphobos2
+LD_LINK_IN_CORRECT_STD=-lphobos2 
 endif
 ifeq ($(DC_TYPE),gdc)
 LD_LINK_IN_CORRECT_STD=-l:libgphobos.so.1 -l:libgdruntime.so.1 
@@ -145,7 +142,7 @@ endif
 ifeq ($(DC_TYPE),ldc)
 LD_LINK_IN_CORRECT_STD=-l:libdruntime-ldc-shared.so -l:libphobos2-ldc-shared.so
 endif
-LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_CORRECT_STD) -lpthread -lm -lrt $(LFLAGS_EXTRA) $(M32_M64_FLAG)
+LD_LINK_IN=$(LFLAGS) $(LD_LINK_IN_CORRECT_STD) -lpthread -lm -lc -lrt $(LFLAGS_EXTRA) $(M32_M64_FLAG)
 LD_LINK_IN_LIBS=$(LD_LINK_IN)
 LD_LINK_IN_PURR=$(LD_LINK_IN) -ldl
 endif
@@ -158,7 +155,7 @@ endif
 
 ifeq ($(LD_TYPE),d)
 ifeq ($(LD_DC_TYPE),gdc)
-LD_CMD_OUT_FLAG=-o
+LD_CMD_OUT_FLAG=-o 
 LD_CMD_LINK_FLAG=-l
 else
 LD_CMD_OUT_FLAG=-of=

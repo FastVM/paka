@@ -2,7 +2,6 @@ module paka.lib.math;
 
 import purr.dynamic;
 import purr.base;
-import purr.error;
 import purr.ast.ast;
 import purr.parse;
 import purr.ir.walk;

@@ -2,7 +2,6 @@ module purr.bytecode;
 
 import purr.dynamic;
 import purr.srcloc;
-import purr.error;
 import std.algorithm;
 import std.array;
 import purr.io;
@@ -158,7 +157,7 @@ class Function
         {
             if (parent.parent is null)
             {
-                throw new UndefinedException(name);
+                throw new Exception(name);
             }
             parent.doCapture(name);
             capture ~= Capture(parent.captab.byName[name], true, false);

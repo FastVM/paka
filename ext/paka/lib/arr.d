@@ -10,7 +10,6 @@ import std.conv;
 import std.random;
 import purr.base;
 import purr.dynamic;
-import purr.error;
 import purr.io;
 
 Pair[] libarr()
@@ -79,7 +78,7 @@ Dynamic librange(Args args)
         }
         return dynamic(ret);
     }
-    throw new TypeException("bad number of arguments to range");
+    throw new Exception("bad number of arguments to range");
 }
 
 /// returns an array where the function has been called on each element

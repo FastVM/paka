@@ -10,7 +10,6 @@ import core.atomic;
 import core.sync.mutex;
 import purr.bytecode;
 import purr.vm;
-import purr.error;
 import purr.data.map;
 import purr.data.rope;
 import purr.plugin.syms;
@@ -92,7 +91,7 @@ class TableImpl
         {
             return *d;
         }
-        throw new BoundsException("key not found: " ~ key.to!string);
+        throw new Exception("key not found: " ~ key.to!string);
     }
 
     void rawSet(Dynamic key, Dynamic value)
@@ -116,7 +115,7 @@ class TableImpl
         {
             return *val;
         }
-        throw new BoundsException("key not found: " ~ key.to!string);
+        throw new Exception("key not found: " ~ key.to!string);
     }
 
     Dynamic* opBinaryRight(string op : "in")(Dynamic other)
@@ -244,7 +243,7 @@ class TableImpl
             }
             if (res.type != Dynamic.Type.str)
             {
-                throw new TypeException("str must return a string");
+                throw new Exception("str must return a string");
             }
             return res.str;
         }
@@ -452,7 +451,7 @@ pragma(inline, true):
         case Dynamic.Type.tab:
             return value.tab(args);
         default:
-            throw new TypeException("error: not a function: " ~ this.to!string);
+            throw new Exception("error: not a function: " ~ this.to!string);
         }
     }
 
@@ -467,7 +466,7 @@ pragma(inline, true):
         switch (t)
         {
         default:
-            throw new TypeException(
+            throw new Exception(
                     "error: not comparable: " ~ this.to!string ~ " " ~ other.to!string);
         case Type.nil:
             return 0;
@@ -564,7 +563,7 @@ pragma(inline, true):
                 return dynamic(arr ~ other.arr);
             }
         }
-        throw new TypeException("invalid types: " ~ type.to!string ~ op ~ other.type.to!string);
+        throw new Exception("invalid types: " ~ type.to!string ~ op ~ other.type.to!string);
     }
 
     Dynamic opUnary(string op)()
@@ -578,7 +577,7 @@ pragma(inline, true):
         {
             if (type != Type.log)
             {
-                throw new TypeException("expected logical type");
+                throw new Exception("expected logical type");
             }
         }
         return value.log;
@@ -590,7 +589,7 @@ pragma(inline, true):
         {
             if (type != Type.str)
             {
-                throw new TypeException("expected string type");
+                throw new Exception("expected string type");
             }
         }
         return *value.str;
@@ -602,7 +601,7 @@ pragma(inline, true):
         {
             if (type != Type.arr)
             {
-                throw new TypeException("expected array type");
+                throw new Exception("expected array type");
             }
         }
         return value.arr[0 .. len];
@@ -614,7 +613,7 @@ pragma(inline, true):
         {
             if (type != Type.tab)
             {
-                throw new TypeException("expected table type");
+                throw new Exception("expected table type");
             }
         }
         return value.tab;
@@ -626,7 +625,7 @@ pragma(inline, true):
         {
             if (type != Type.str)
             {
-                throw new TypeException("expected string type");
+                throw new Exception("expected string type");
             }
         }
         return value.str;
@@ -638,7 +637,7 @@ pragma(inline, true):
         {
             if (type != Type.fun && type != Type.pro)
             {
-                throw new TypeException("expected callable type not " ~ type.to!string);
+                throw new Exception("expected callable type not " ~ type.to!string);
             }
         }
         return value.fun;
@@ -652,7 +651,7 @@ pragma(inline, true):
         }
         else
         {
-            throw new TypeException("expected numeric type");
+            throw new Exception("expected numeric type");
         }
     }
 
@@ -664,7 +663,7 @@ pragma(inline, true):
         }
         else
         {
-            throw new TypeException("expected numeric type");
+            throw new Exception("expected numeric type");
         }
     }
 

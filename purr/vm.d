@@ -9,7 +9,6 @@ import std.traits;
 import core.memory;
 import core.stdc.stdlib;
 import purr.srcloc;
-import purr.error;
 import purr.dynamic;
 import purr.bytecode;
 
@@ -139,7 +138,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 res = f.arr[(*stack).as!size_t];
                 break;
             default:
-                throw new TypeException("error: not a pro, fun, tab, or arr: " ~ f.to!string);
+                throw new Exception("error: not a pro, fun, tab, or arr: " ~ f.to!string);
             }
             (*(stack - 1)) = res;
             break;
@@ -195,7 +194,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 (*(stack - 1)) = (arr.tab)[(*stack)];
                 break;
             default:
-                throw new TypeException("error: cannot store at index on a " ~ arr.type.to!string);
+                throw new Exception("error: cannot store at index on a " ~ arr.type.to!string);
             }
             break;
         case Opcode.opneg:

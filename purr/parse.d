@@ -8,7 +8,6 @@ import purr.bytecode;
 import purr.base;
 import purr.dynamic;
 import purr.vm;
-import purr.error;
 import purr.srcloc;
 
 enum string bashLine = "#!";
@@ -41,6 +40,6 @@ Node parse(Location code, string langname = langNameDefault)
     }
     else
     {
-        throw new CompileException("language not found: " ~ langname);
+        throw new Exception("language not found: " ~ langname);
     }
 }
