@@ -1,4 +1,4 @@
-module paka.lib.sys;
+module ext.core.lib.sys;
 
 import purr.io;
 import purr.dynamic;
@@ -14,8 +14,7 @@ import purr.fs.memory;
 import purr.fs.har;
 import purr.fs.files;
 import purr.fs.disk;
-import paka.lib.sysenv;
-import paka.parse.parse;
+import ext.core.lib.sysenv;
 import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;

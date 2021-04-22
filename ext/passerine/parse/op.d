@@ -24,11 +24,20 @@ UnaryOp parseUnaryOp(string[] ops)
     }
 }
 
-Dynamic check(Dynamic[] args)
+Dynamic check2(Dynamic[] args)
 {
     if (args[0] != args[1])
     {
         throw new Exception("assign error: " ~ args[0].to!string ~ " = " ~ args[1].to!string);
+    }
+    return args[1];
+}
+
+Dynamic checkTrue(Dynamic[] args)
+{
+    if (!args[0].value.log)
+    {
+        throw new Exception("assign error: " ~ args[1].to!string);
     }
     return args[1];
 }
@@ -39,7 +48,23 @@ BinaryOp parseBinaryOp(string[] ops)
     switch (opName)
     {
     case "=":
-        return (rhs, lhs) => matcher(lhs, rhs);
+        return (Node lhs, Node rhs) {
+            if (Ident id = cast(Ident) lhs)
+            {
+                if (id.repr == "_")
+                {
+                    return rhs;
+                }
+                return new Call(new Ident("@set"), [id, rhs]);
+            }
+            else
+            {
+                Node sym = genSym;
+                Node assign = new Call(new Ident("@set"), [sym, rhs]);
+                Node check = new Call(new Value(native!checkTrue), [matcher(sym, lhs), sym]);
+                return new Call(new Ident("@do"), [assign, check]); 
+            }
+        };
     case "->":
         return (Node lhs, Node rhs) {
             Node[] args;
@@ -71,7 +96,7 @@ BinaryOp parseBinaryOp(string[] ops)
                 if (Value val = cast(Value) arg)
                 {
                     Node sym = genSym;
-                    Node okCheck = new Call(new Value(native!check), [arg, sym]);
+                    Node okCheck = new Call(new Value(native!check2), [arg, sym]);
                     Node func = new Call(new Ident("@do"), [okCheck, ret]);
                     ret = new Call(new Ident("@fun"), [new Call([sym]), func]);
                 }

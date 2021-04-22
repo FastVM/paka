@@ -1,14 +1,6 @@
-v1 = match 1 {
-    x | x % 2 == 0 -> 0
-    x | x % 2 == 1 -> 1
-}
-v2 = match [4, 9, 8, 4] {
-    [4, ..mid, 4] -> match mid {
-        [9, 4 + 4] -> 2
-    }
-}
-v3 = match 3 {
-    3 : r -> r - v2 + v1 + v1 
-}
-[one, ..[two], three] = [v1, v2, v3]
-(one, two, three)
+syntax 'foo v {
+    v -> bar
+} 
+
+cdr = foo (head, ..bar)
+cdr [1, 2, 3]

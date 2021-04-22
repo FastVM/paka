@@ -7,10 +7,15 @@ PURR_OBJS=$(patsubst %,$(LIB)/%.o,$(subst /,_,$(PURR_DIRS)))
 $(BIN)/purr: $(PURR_OBJS) $(LIBS_THIS) $(BIN)
 	$(RUN) $(LD_CMD) $(LD_CMD_OUT_FLAG)$(BIN)/purr $(LD_LINK_IN_PURR) $(DFL_FLAG_PURR) $(PURR_OBJS) $(LIBS_THIS)
 
+ifeq ($(PURR_OBJS), $(BIN)/purr.o)
+$(BIN)/purr.o: dcomp $(BIN)
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) -c $(call dlangsrc,purr) $(DC_CMD_OUT_FLAG)$(BIN)/purr.o -Ipurr $(FULL_DFLAGS)
+else
 $(PURR_OBJS): $(subst _,/,$(patsubst $(LIB)/%.o,%,$@)) $(LIB)
-	$(RUN) $(DC_CMD) $(OPT_FLAGS) $(FULL_DFLAGS) -c $(wildcard $(subst _,/,$(patsubst $(LIB)/%.o,%,$@))/*.d) $(DC_CMD_OUT_FLAG)$@
+	$(RUN) $(DC_CMD) $(OPT_FLAGS) -c $(wildcard $(subst _,/,$(patsubst $(LIB)/%.o,%,$@))/*.d) $(DC_CMD_OUT_FLAG)$@ $(FULL_DFLAGS)
+endif
 
-FILES=$(shell find ext/rt ext/passerine ext/paka ext/serial purr -type f | grep \\.d)
+FILES=$(shell find ext/rt ext/core ext/passerine ext/paka ext/serial purr -type f | grep \\.d)
 debug: $(BIN)
 	$(RUN) dmd -g -Iext $(FILES) -od=$(BIN) -of=$(BIN)/purr $(DFLAGS)
 

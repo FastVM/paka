@@ -1,4 +1,4 @@
-module paka.lib.math;
+module ext.core.lib.math;
 
 import purr.dynamic;
 import purr.base;
@@ -9,7 +9,6 @@ import purr.vm;
 import purr.inter;
 import purr.srcloc;
 import purr.bytecode;
-import paka.parse.parse;
 import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;

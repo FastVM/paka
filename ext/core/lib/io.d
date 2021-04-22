@@ -1,4 +1,4 @@
-module paka.lib.io;
+module ext.core.lib.io;
 
 import purr.dynamic;
 import purr.base;

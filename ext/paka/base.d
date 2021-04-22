@@ -8,12 +8,6 @@ import purr.base;
 import purr.inter;
 import purr.srcloc;
 import purr.fs.disk;
-import paka.lib.io;
-import paka.lib.sys;
-import paka.lib.str;
-import paka.lib.arr;
-import paka.lib.tab;
-import paka.lib.math;
 
 /// string concatenate for format strings and unicode literals
 Dynamic strconcat(Args args)
@@ -84,11 +78,5 @@ Pair[] pakaBaseLibs()
     // ret ~= FunctionPair!syslibrange("_paka_range");
     ret ~= FunctionPair!strconcat("_paka_str_concat");
     ret ~= FunctionPair!pakaimport("_paka_import");
-    ret.addLib("str", libstr);
-    ret.addLib("arr", libarr);
-    ret.addLib("tab", libtab);
-    ret.addLib("io", libio);
-    ret.addLib("sys", libsys);
-    ret.addLib("math", libmath);
     return ret;
 }

@@ -213,7 +213,7 @@ Node readPostExprImpl(ref TokenArray tokens)
 {
     tokens.eat;
     Node last = void;
-    redo:
+redo:
     if (tokens.first.isKeyword("syntax"))
     {
         tokens.readSyntax;
@@ -358,25 +358,21 @@ Node readPostExprImpl(ref TokenArray tokens)
             }
             else
             {
-                foreach (nameSub; nameSubs)
+                if (nameSubs.length == 0)
                 {
-                    if (Dynamic* ret = tokens.first.value.dynamic in nameSub)
-                    {
-                        last = getNode(*ret);
-                        goto after;
-                    }
+                    last = new Ident(tokens.first.value);
                 }
-                if (nameSubs.length > 0)
+                else if (Dynamic* ret = tokens.first.value.dynamic in nameSubs[$ - 1])
                 {
-                    Node sym = genSym;
-                    nameSubs[$-1].set(tokens.first.value.dynamic, sym.astDynamic);
-                    last = sym;
+                    last = getNode(*ret);
                 }
                 else
                 {
                     last = new Ident(tokens.first.value);
+                    // Node sym = genSym;
+                    // nameSubs[$ - 1].set(tokens.first.value.dynamic, sym.astDynamic);
+                    // last = sym;
                 }
-                after:
                 tokens.nextIs(Token.Type.ident);
             }
             break;
@@ -462,7 +458,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
     if (level == prec.length)
     {
         Node ret = tokens.readPreExpr;
-        redo:
+    redo:
         outter: foreach_reverse (macros; syntaxMacros)
         {
             foreach (Dynamic[2] pair; macros)

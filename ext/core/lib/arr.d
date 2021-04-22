@@ -1,4 +1,4 @@
-module paka.lib.arr;
+module ext.core.lib.arr;
 
 import core.memory;
 import std.array;

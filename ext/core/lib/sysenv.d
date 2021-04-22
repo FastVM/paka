@@ -1,4 +1,4 @@
-module paka.lib.sysenv;
+module ext.core.lib.sysenv;
 
 import purr.dynamic;
 import purr.base;
