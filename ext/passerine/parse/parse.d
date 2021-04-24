@@ -230,6 +230,39 @@ size_t escapeNumber(ref string input)
     }
 }
 
+Node readMatch(ref TokenArray tokens)
+{
+    tokens.nextIs(Token.Type.keyword, "match");
+    Node value = tokens.readPostExpr;
+    Node[2][] ret;
+    tokens.nextIs(Token.Type.open, "{");
+    while (tokens.length > 0 && !tokens.first.isClose("}"))
+    {
+        size_t lengthBefore = tokens.length;
+        Node cond = tokens.readExpr(2);
+        tokens.nextIs(Token.Type.operator, "->");
+        Node stmt = tokens.readStmt;
+        if (stmt !is null)
+        {
+            ret ~= [cond, stmt];
+        }
+        if (tokens.length == lengthBefore)
+        {
+            break;
+        }
+    }
+    tokens.nextIs(Token.Type.close, "}");
+    Node match = new Value(Dynamic.nil);
+    Node sym = genSym;
+    foreach_reverse (pair; ret)
+    {
+        Node cond = matcher(sym, pair[0]);
+        match = new Call(new Ident("@if"), [cond, pair[1], match]);
+    }
+    Node assign = new Call(new Ident("@set"), [sym, value]);
+    return new Call(new Ident("@do"), [assign, match]);
+}
+
 /// reads first element of postfix expression
 alias readPostExpr = Spanning!readPostExprImpl;
 Node readPostExprImpl(ref TokenArray tokens)
