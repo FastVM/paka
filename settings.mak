@@ -1,9 +1,21 @@
 DEFAULT_DC=dmd
+DEFAULT_CC=gcc
+DEFAULT_LD=ld.gold
 
 ifdef DC
 DC_CMD=$(DC)
 else
-DC_CMD=dmd
+DC_CMD=$(DEFAULT_DC)
+endif
+
+ifdef CC
+CC_CMD=$(CC)
+else
+CC_CMD=$(DEFAULT_CC)
+endif
+
+ifeq ($(LD),ld)
+LD=$(DEFAULT_LD)
 endif
 
 ifeq ($(DC_TYPE),)
@@ -40,12 +52,9 @@ ifeq ($(LD),)
 LD=$(DC_CMD)
 endif
 
-ifeq ($(LD),ld)
+ifeq ($(LD_TYPE),ld)
 LD=$(DC_CMD)
-endif
-
-ifeq ($(LD),ld.bfd)
-$(error cannot use LD=ld.bfd yet)
+LD_TYPE=c
 endif
 
 LD_TYPE_FOUND=
@@ -81,7 +90,11 @@ ifeq ($(LD_TYPE),)
 LD_TYPE=$(LD_TYPE_FOUND)
 endif
 
+ifeq ($(LD_TYPE),ld)
+LD_CMD=$(CC_CMD) -fuse-ld=$(subst ld.,,$(LD))
+else
 LD_CMD=$(LD)
+endif
 
 ifeq ($(LD_TYPE),d)
 ifeq ($(LD_DC_TYPE),)
@@ -99,10 +112,6 @@ endif
 
 ifeq ($(LD_TYPE),c)
 LFLAGS_EXTRA=-Wl,--export-dynamic
-endif
-
-ifeq ($(LD_TYPE),ld)
-LFLAGS_EXTRA=-export-dynamic -l:libgcc_s.so.1 -l:crt1.o -l:crti.o -l:crtn.o -dynamic-linker -lc /lib64/ld-linux-x86-64.so.2
 endif
 
 ifeq ($(LD_TYPE),d)

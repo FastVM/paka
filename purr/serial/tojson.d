@@ -105,37 +105,37 @@ string serialize(Function func)
 
 string serialize(T)(T[] arr)
 {
-    string str = `[`;
+    string str = `{"length": `;
+    str ~= arr.length.to!string.serialize;
     foreach (n, elem; arr)
     {
-        if (n != 0)
-        {
-            str ~= ", ";
-        }
+        str ~= ", ";
+        str ~= n.serialize;
+        str ~= ": ";
         str ~= elem.serialize;
     }
-    str ~= `]`;
+    str ~= `}`;
     return str;
 }
 
 string serialize(Array arr)
 {
-    string str = `[`;
+    string str = `{"length": `;
+    str ~= arr.length.to!string.serialize;
     foreach (n, elem; arr)
     {
-        if (n != 0)
-        {
-            str ~= ", ";
-        }
+        str ~= ", ";
+        str ~= n.serialize;
+        str ~= ": ";
         str ~= elem.serialize;
     }
-    str ~= `]`;
+    str ~= `}`;
     return str;
 }
 
 string serialize(T)(T assocArray) if (isAssociativeArray!T)
 {
-    string str = `[`;
+    string str = `{`;
     size_t n = 0;
     foreach (k, v; assocArray)
     {
@@ -143,10 +143,10 @@ string serialize(T)(T assocArray) if (isAssociativeArray!T)
         {
             str ~= ", ";
         }
-        str ~= `[` ~ k.serialize ~ `, ` ~ v.serialize ~ `]`;
+        str ~= `{"key": ` ~ k.serialize ~ `, "value": ` ~ v.serialize ~ `}`;
         n += 1;
     }
-    str ~= `]`;
+    str ~= `}`;
     return str;
 }
 
@@ -165,19 +165,19 @@ string serialize(Table tab)
     {
         return `{"null": "true"}`;
     }
-    string pairs;
+    string pairs = `"length": `;
+    pairs ~= tab.table.length.serialize;
     size_t n = 0;
     foreach (key, value; tab)
     {
-        if (n != 0)
-        {
-            pairs ~= `, `;
-        }
-        pairs ~= "[" ~ key.serialize ~ ", " ~ value.serialize ~ "]";
+        pairs ~= `, `;
+        pairs ~= n.serialize;
+        pairs ~= `: `;
+        pairs ~= `{"key": ` ~ key.serialize ~ `, "value": ` ~ value.serialize ~ `}`;
         n++;
     }
     string meta;
-    return `{"null": "false", "pairs": [` ~ pairs ~ `], "meta": ` ~ tab.metatable.serialize ~ `}`;
+    return `{"null": "false", "pairs": {` ~ pairs ~ `}, "meta": ` ~ tab.metatable.serialize ~ `}`;
 }
 
 Dynamic[] alreadySerialized;

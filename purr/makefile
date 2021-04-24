@@ -17,7 +17,13 @@ endif
 
 FILES=$(shell find ext/rt ext/core ext/passerine ext/paka ext/serial purr -type f | grep \\.d)
 debug: $(BIN)
-	$(RUN) dmd -g -Iext $(FILES) -od=$(BIN) -of=$(BIN)/purr $(DFLAGS)
+	$(RUN) $(DC_CMD) -g -Iext $(FILES) -od=$(BIN) $(DC_CMD_OUT_FLAG)$(BIN)/purr $(DFLAGS)
+
+ifeq ($(DC_TYPE),gdc)
+RELEASE_FLAG=-frelease
+else
+RELEASE_FLAG=-release
+endif
 
 release: $(BIN)
-	$(RUN) $(DC_CMD) -Iext $(FILES) -od=$(BIN) -of=$(BIN)/purr -O3 -release $(DFLAGS)
+	$(RUN) $(DC_CMD) -Iext $(FILES) -od=$(BIN) $(DC_CMD_OUT_FLAG)$(BIN)/purr -O $(RELEASE_FLAG) $(DFLAGS)

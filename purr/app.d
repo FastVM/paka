@@ -145,7 +145,8 @@ Thunk cliReplHandler()
         bases = [];
         if (serialFile !is null && serialFile.exists)
         {
-            bases = serialFile.readText.parseJSON.deserialize!(Dynamic[]);
+            string jsonText = serialFile.readText;
+            bases = jsonText.parseJSON.deserialize!(Dynamic[]);
             loadBaseObject(ctx, bases[$-1].tab.table);
         }
         else

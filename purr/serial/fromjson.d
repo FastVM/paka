@@ -59,10 +59,10 @@ string deserialize(T)(Json json) if (is(T == string))
 Array deserialize(Array)(Json json)
         if (isArray!Array && !isSomeChar!(ElementType!Array))
 {
-    Array ret;
-    foreach (elem; json.array)
+    Array ret = new Array(json["length"].deserialize!size_t);
+    foreach (key; 0..ret.length)
     {
-        ret ~= elem.deserialize!(ElementType!Array);
+        ret[key] = json[key.to!string].deserialize!(ElementType!Array);
     }
     return ret;
 }
@@ -70,10 +70,10 @@ Array deserialize(Array)(Json json)
 AssocArray deserialize(AssocArray)(Json json) if (isAssociativeArray!AssocArray)
 {
     AssocArray ret;
-    foreach (elem; json.array)
+    foreach (n; 0..json["pairs"]["length"].deserialize!size_t)
     {
-        ret[elem.array[0].deserialize!(KeyType!AssocArray)] = elem.array[1].deserialize!(
-                ValueType!AssocArray);
+        Json kv = json["pairs"][n.to!string];
+        ret[kv["key"].deserialize!(KeyType!AssocArray)] = kv["value"].deserialize!(ValueType!AssocArray);
     }
     return ret;
 }
@@ -101,9 +101,10 @@ Table deserialize(T : Table)(Json json)
     }
     Mapping mapping = emptyMapping;
     Table meta = json["meta"].deserialize!Table;
-    foreach (kv; json["pairs"].array)
+    foreach (n; 0..json["pairs"]["length"].deserialize!size_t)
     {
-        mapping[kv.array[0].deserialize!Dynamic] = kv.array[1].deserialize!Dynamic;
+        Json kv = json["pairs"][n.to!string];
+        mapping[kv["key"].deserialize!Dynamic] = kv["value"].deserialize!Dynamic;
     }
     return new Table(mapping, meta);
 }

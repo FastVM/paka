@@ -34,11 +34,11 @@ Node readParenBody(ref TokenArray tokens, size_t start)
 {
     Node[] args;
     bool hasComma = false;
-    while (!tokens.first.isClose(")"))
+    while (tokens.length != 0 && !tokens.first.isClose(")"))
     {
         tokens.eat;
         args ~= tokens.readExpr(start);
-        if (tokens.first.isComma)
+        if (tokens.length != 0 && tokens.first.isComma)
         {
             tokens.nextIs(Token.Type.comma);
             hasComma = true;
@@ -127,7 +127,30 @@ void stripNewlines(ref TokenArray tokens)
 alias readPostExtend = Spanning!(readPostExtendImpl, Node);
 Node readPostExtendImpl(ref TokenArray tokens, Node last)
 {
-    return last;
+    if (tokens.length != 0 && tokens.first.isOperator("::"))
+    {
+        Node ret = void;
+        tokens.nextIs(Token.Type.operator, "::");
+        if (tokens.first.value[0].isDigit)
+        {
+            ret = new Call(new Ident("@index"), [
+                    last, new Value(tokens.first.value.to!double)
+                    ]);
+            tokens.nextIsAny;
+        }
+        else
+        {
+            ret = new Call(new Ident("@index"), [
+                    last, new Value(tokens.first.value)
+                    ]);
+            tokens.nextIsAny;
+        }
+        return tokens.readPostExtend(ret);
+    }
+    else
+    {
+        return last;
+    }
 }
 
 void skip1(ref string str, ref Span span)
@@ -245,12 +268,13 @@ redo:
                 }
                 tokens.eat;
                 tokens.nextIs(Token.type.close, ")");
-                return new Call(new Ident("@if"), [cond, iftrue, iffalse]);
+                last = new Call(new Ident("@if"), [cond, iftrue, iffalse]);
             }
             else
             {
                 throw new Exception("Magic If");
             }
+            break;
         case "add":
             if (tokens.first.isOpen("("))
             {
@@ -263,12 +287,13 @@ redo:
                     tokens.nextIs(Token.Type.comma);
                 }
                 tokens.nextIs(Token.type.close, ")");
-                return new Call(new Ident("+"), [lhs, rhs]);
+                last = new Call(new Ident("+"), [lhs, rhs]);
             }
             else
             {
                 throw new Exception("Magic Add");
             }
+            break;
         case "sub":
             if (tokens.first.isOpen("("))
             {
@@ -281,12 +306,13 @@ redo:
                     tokens.nextIs(Token.Type.comma);
                 }
                 tokens.nextIs(Token.type.close, ")");
-                return new Call(new Ident("-"), [lhs, rhs]);
+                last = new Call(new Ident("-"), [lhs, rhs]);
             }
             else
             {
                 throw new Exception("Magic Sub");
             }
+            break;
         case "to_string":
             last = new Value(native!magictostring);
             break;
@@ -304,12 +330,13 @@ redo:
                 tokens.nextIs(Token.Type.comma);
                 Node rhs = tokens.readExpr(1);
                 tokens.nextIs(Token.type.close, ")");
-                return new Call(new Ident("=="), [lhs, rhs]);
+                last = new Call(new Ident("=="), [lhs, rhs]);
             }
             else
             {
                 throw new Exception("Magic Equals");
             }
+            break;
         case "greater":
             if (tokens.first.isOpen("("))
             {
@@ -318,23 +345,24 @@ redo:
                 tokens.nextIs(Token.Type.comma);
                 Node rhs = tokens.readExpr(1);
                 tokens.nextIs(Token.type.close, ")");
-                return new Call(new Ident(">"), [lhs, rhs]);
+                last = new Call(new Ident(">"), [lhs, rhs]);
             }
             else
             {
                 throw new Exception("Magic Greater");
             }
+            break;
         default:
             throw new Exception("not implemented: magic " ~ word);
         }
     }
     else if (tokens.first.isOpen("("))
     {
-        return tokens.readOpen!"()";
+        last = tokens.readOpen!"()";
     }
     else if (tokens.first.isOpen("["))
     {
-        return tokens.readOpen!"[]";
+        last = tokens.readOpen!"[]";
     }
     else if (tokens.first.isOpen("{"))
     {
@@ -391,14 +419,9 @@ redo:
         last = new Value(tokens.first.value);
         tokens.nextIs(Token.Type.string);
     }
-    // else if (tokens.first.isSemicolon)
-    // {
-    //     tokens.nextIsAny;
-    //     goto redo;
-    // }
     else
     {
-        return new Value(Dynamic.nil);
+        last = new Value(Dynamic.nil);
     }
     return tokens.readPostExtend(last);
 }

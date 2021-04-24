@@ -11,7 +11,7 @@ import purr.srcloc;
 string[][] prec = [["="], ["->"], ["|"], ["..", ":"], ["<", ">", "<=", ">=", "=="] ,["+", "-"], ["*", "/", "%"], ["."]];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [",", "'"];
+string[] nops = [",", "'", "::"];
 
 /// language keywords
 string[] keywords = [
