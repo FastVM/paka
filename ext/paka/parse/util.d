@@ -124,6 +124,11 @@ struct PushArray(T)
         {
             return tokens[0];
         }
+
+        Token second()
+        {
+            return tokens[1];
+        }
     }
     else
     {

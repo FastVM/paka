@@ -18,7 +18,7 @@ import purr.ir.opt;
 __gshared bool dumpast = false;
 
 enum string[] specialForms = [
-        "@def", "@set", "@while", "@array", "@table", "@return",
+        "@def", "@set", "@while", "@tuple", "@array", "@table", "@return",
         "@if", "@fun", "@do", "-", "+", "*", "/", "%", "<", ">", "<=", ">=",
         "==", "!=", "...", "@index", "@env", "&&", "||", "~",
         "@inspect", "@rcall", "@call"
@@ -134,19 +134,7 @@ class Walker
     void walkExact(Ident id)
     {
         string ident = id.repr;
-        if (ident == "@nil" || ident == "nil")
-        {
-            emit(new PushInstruction(Dynamic.nil));
-        }
-        else if (ident == "true")
-        {
-            emit(new PushInstruction(true.dynamic));
-        }
-        else if (ident == "false")
-        {
-            emit(new PushInstruction(false.dynamic));
-        }
-        else if (ident == "rec")
+        if (ident == "rec")
         {
             emit(new RecInstruction);
         }
@@ -376,6 +364,15 @@ class Walker
         emit(new OperatorInstruction("index"));
     }
 
+    void walkTuple(Node[] args)
+    {
+        foreach (i; args)
+        {
+            walk(i);
+        }
+        emit(new BuildTupleInstruction(args.length));
+    }
+
     void walkArray(Node[] args)
     {
         foreach (i; args)
@@ -434,6 +431,9 @@ class Walker
             break;
         case "@set":
             walkStore(args);
+            break;
+        case "@tuple":
+            walkTuple(args);
             break;
         case "@array":
             walkArray(args);

@@ -141,11 +141,15 @@ override:
         line("opneq");
     }
 
+    void tuple(ushort argCount)
+    {
+        line("tuple length=", argCount);
+    }
+
     void array(ushort argCount)
     {
         line("array length=", argCount);
     }
-
 
     void table(ushort argCount)
     {

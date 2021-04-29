@@ -9,7 +9,7 @@ syntax a 'lt b {
 fib = n -> if (n lt 2) { 
     n
 } else { 
-    fib (n - 2)) + fib (n - 1)
+    fib (n - 2) + fib (n - 1)
 }
 
-print (fib 30)
+print (fib 35)

@@ -1,6 +1,6 @@
 DEFAULT_DC=dmd
 DEFAULT_CC=gcc
-DEFAULT_LD=ld.gold
+DEFAULT_LD=ld.lld
 
 ifdef DC
 DC_CMD=$(DC)

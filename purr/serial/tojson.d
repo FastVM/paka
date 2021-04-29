@@ -135,16 +135,16 @@ string serialize(Array arr)
 
 string serialize(T)(T assocArray) if (isAssociativeArray!T)
 {
-    string str = `{`;
+    string str = `{"length": `;
+    str ~= assocArray.length.to!string.serialize;
     size_t n = 0;
     foreach (k, v; assocArray)
     {
-        if (n != 0)
-        {
-            str ~= ", ";
-        }
+        str ~= ", ";
+        str ~= n.serialize;
+        str ~= ": ";
         str ~= `{"key": ` ~ k.serialize ~ `, "value": ` ~ v.serialize ~ `}`;
-        n += 1;
+        n++;
     }
     str ~= `}`;
     return str;
@@ -209,6 +209,8 @@ string serialize(Dynamic value)
         return `{"type": "symbol", "symbol": ` ~ value.str.serialize ~ `}`;
     case Dynamic.Type.str:
         return `{"type": "string", "string": ` ~ value.str.serialize ~ `}`;
+    case Dynamic.Type.tup:
+        return `{"type": "tuple", "tuple": ` ~ value.arr.serialize ~ `}`;
     case Dynamic.Type.arr:
         return `{"type": "array", "array": ` ~ value.arr.serialize ~ `}`;
     case Dynamic.Type.tab:

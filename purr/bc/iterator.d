@@ -87,6 +87,9 @@ class OpcodeIterator
             case Opcode.opneq:
                 opneq;
                 break;
+            case Opcode.tuple:
+                tuple(get);
+                break;
             case Opcode.array:
                 array(get);
                 break;
@@ -214,6 +217,10 @@ class OpcodeIterator
     }
 
     void opneq()
+    {
+    }
+
+    void tuple(ushort argCount)
     {
     }
 

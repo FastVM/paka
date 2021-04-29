@@ -67,6 +67,8 @@ Dynamic libtypeof(Args args)
         return dynamic("symbol");
     case Dynamic.Type.str:
         return dynamic("string");
+    case Dynamic.Type.tup:
+        return dynamic("tuple");
     case Dynamic.Type.arr:
         return dynamic("array");
     case Dynamic.Type.tab:

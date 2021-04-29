@@ -7,7 +7,7 @@ def fib(n) {
 }
 
 def repeat(n, f) {
-    arr.map(0 -> (n+1), f)
+    arr.map(0 to (n+1), f)
 }
 
 repeat (32) {

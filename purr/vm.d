@@ -134,6 +134,9 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             case Dynamic.Type.tab:
                 res = f.tab()(stack[0 .. 0 + count]);
                 break;
+            case Dynamic.Type.tup:
+                res = f.arr[(*stack).as!size_t];
+                break;
             case Dynamic.Type.arr:
                 res = f.arr[(*stack).as!size_t];
                 break;
@@ -166,6 +169,12 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             stack -= 1;
             (*(stack - 1)) = dynamic((*(stack - 1)) != (*stack));
             break;
+        case Opcode.tuple:
+            ushort got = instrs.eat!ushort(index);
+            stack = stack - got;
+            (*stack) = Dynamic.tuple(stack[0 .. got].dup);
+            stack++;
+            break;
         case Opcode.array:
             ushort got = instrs.eat!ushort(index);
             stack = stack - got;
@@ -187,6 +196,9 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             Dynamic arr = (*(stack - 1));
             switch (arr.type)
             {
+            case Dynamic.Type.tup:
+                (*(stack - 1)) = (arr.arr)[(*stack).as!size_t];
+                break;
             case Dynamic.Type.arr:
                 (*(stack - 1)) = (arr.arr)[(*stack).as!size_t];
                 break;
@@ -275,7 +287,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.iftrue:
             Dynamic val = (*(--stack));
             ushort id = instrs.eat!ushort(index);
-            if (val.type != Dynamic.Type.nil && (val.type != Dynamic.Type.log || val.log))
+            if (val.type != Dynamic.Type.nil && val.log)
             {
                 index = id;
             }
@@ -283,7 +295,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.iffalse:
             Dynamic val = (*(--stack));
             ushort id = instrs.eat!ushort(index);
-            if (val.type == Dynamic.Type.nil || (val.type == Dynamic.Type.log && !val.log))
+            if (val.type == Dynamic.Type.nil || !val.log)
             {
                 index = id;
             }

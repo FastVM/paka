@@ -30,7 +30,7 @@ Dynamic astcall(Args args)
     Array nodes;
     foreach (k, arg; args)
     {
-        if (arg.type == Dynamic.Type.arr)
+        if (arg.isArr)
         {
             nodes ~= arg.arr;
         }

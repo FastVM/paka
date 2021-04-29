@@ -52,34 +52,36 @@ string[] readBinaryOp(ref string[] ops)
         if (ops[0] == ".")
         {
             ret ~= ops[0];
-            ops = ops[1..$];
+            ops = ops[1 .. $];
         }
         else if (ops[0] == "\\")
         {
             ret ~= ops[0];
-            ops = ops[1..$];
+            ops = ops[1 .. $];
             slash++;
         }
-        else {
+        else
+        {
             break;
         }
     }
     ret ~= ops[0];
-    ops = ops[1..$];
+    ops = ops[1 .. $];
     while (ops.length != 0)
     {
         if (ops[0] == ".")
         {
             ret ~= ops[0];
-            ops = ops[1..$];
+            ops = ops[1 .. $];
         }
         else if (ops[0] == "\\")
         {
-            if (slash == 0) {
+            if (slash == 0)
+            {
                 break;
             }
             ret ~= ops[0];
-            ops = ops[1..$];
+            ops = ops[1 .. $];
             slash--;
         }
         else
@@ -99,24 +101,21 @@ UnaryOp parseUnaryOp(string[] ops)
         UnaryOp curUnary = void;
         if (rest.length != 0 && rest[0] == "\\")
         {
-            ops = rest[1..$];
-            curUnary = (Node rhs) {
-                return unaryFold(lastBinary, rhs);
-            };
+            ops = rest[1 .. $];
+            curUnary = (Node rhs) { return unaryFold(lastBinary, rhs); };
         }
-        else {
+        else
+        {
             curUnary = parseUnaryOp([ops[0]]);
-            ops = ops[1..$];
+            ops = ops[1 .. $];
         }
         while (ops.length != 0)
         {
             if (ops[0] == ".")
             {
                 UnaryOp lastUnary = curUnary;
-                ops = ops[1..$];
-                curUnary = (Node rhs) {
-                    return unaryDotmap(lastUnary, rhs);
-                };
+                ops = ops[1 .. $];
+                curUnary = (Node rhs) { return unaryDotmap(lastUnary, rhs); };
             }
             else if (ops[0] == "\\")
             {
@@ -133,9 +132,7 @@ UnaryOp parseUnaryOp(string[] ops)
             if (rest.length == 0)
             {
                 UnaryOp next = ops.parseUnaryOp();
-                return (Node rhs) {
-                    return curUnary(next(rhs));
-                };
+                return (Node rhs) { return curUnary(next(rhs)); };
             }
             else
             {
@@ -153,15 +150,12 @@ UnaryOp parseUnaryOp(string[] ops)
     string opName = ops[0];
     if (opName == "#")
     {
-        return (Node rhs)
-        {
-            return new Call(new Value(native!lengthOp), [rhs]);
-        };
+        return (Node rhs) { return new Call(new Value(native!lengthOp), [rhs]); };
     }
     else if (opName == "-")
     {
-        throw new Exception(
-                "parse error: not a unary operator: " ~ opName ~ " (consider 0- instead)");
+        throw new Exception("parse error: not a unary operator: " ~ opName
+                ~ " (consider 0- instead)");
     }
     else
     {
@@ -222,7 +216,7 @@ BinaryOp parseBinaryOp(string[] ops)
                 return new Call(new Ident("@rcall"), [lhs, rhs]);
             };
         }
-        else if (opName == "->")
+        else if (opName == "to")
         {
             return (Node lhs, Node rhs) {
                 return new Call(new Value(native!rangeOp), [lhs, rhs]);
@@ -236,6 +230,14 @@ BinaryOp parseBinaryOp(string[] ops)
         }
         else
         {
+            if (opName == "or")
+            {
+                opName = "||";
+            }
+            else if (opName == "and")
+            {
+                opName = "&&";
+            }
             return (Node lhs, Node rhs) {
                 return new Call(new Ident(opName), [lhs, rhs]);
             };

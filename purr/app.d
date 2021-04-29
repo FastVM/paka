@@ -31,6 +31,8 @@ import std.getopt;
 import core.memory;
 import core.stdc.stdlib;
 
+extern(C) __gshared string[] rt_options = [ "gcopt=incPoolSize:16 incPoolSize:4" ];
+
 alias Thunk = void delegate();
 
 __gshared size_t ctx = size_t.max;

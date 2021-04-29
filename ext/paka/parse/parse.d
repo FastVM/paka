@@ -133,7 +133,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     {
         ret = tokens.readPostCallExtend(last);
     }
-    else if (tokens.length > 2 && tokens.first.isOperator("."))
+    else if (tokens.length >= 2 && tokens.first.isOperator(".") && !tokens.second.isOperator)
     {
         tokens.nextIs(Token.Type.operator, ".");
         if (tokens.first.isOpen("["))
@@ -165,10 +165,6 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
             tokens.nextIsAny;
         }
     }
-    else if (tokens.first.isOperator(".") && !tokens.first.isOperator)
-    {
-        tokens.nextIs(Token.Type.operator, ".");
-    }
     else
     {
         return last;
@@ -191,7 +187,7 @@ Node readIfImpl(ref TokenArray tokens)
     }
     else
     {
-        iffalse = new Ident("@nil");
+        iffalse = new Value(Dynamic.nil);
     }
     return new Call(new Ident("@if"), [cond, iftrue, iffalse]);
 }
@@ -383,7 +379,14 @@ Node readPostExprImpl(ref TokenArray tokens)
     }
     else if (tokens.first.isOpen("("))
     {
-        last = new Call(new Ident("@do"), tokens.readOpen1!"()");
+        Node[] nodes = tokens.readOpen1!"()";
+        if (nodes.length == 0) {
+            last = new Value(Dynamic.nil);
+        } else if (nodes.length == 1) {
+            last = nodes[0];
+        } else {
+            last = new Call(new Ident("@tuple"), nodes);
+        }
     }
     else if (tokens.first.isOpen("["))
     {
@@ -397,6 +400,21 @@ Node readPostExprImpl(ref TokenArray tokens)
     {
         tokens.nextIs(Token.Type.keyword, "if");
         last = tokens.readIf;
+    }
+    else if (tokens.first.isKeyword("true"))
+    {
+        tokens.nextIs(Token.Type.keyword, "true");
+        last = new Value(true);
+    }
+    else if (tokens.first.isKeyword("false"))
+    {
+        tokens.nextIs(Token.Type.keyword, "false");
+        last = new Value(false);
+    }
+    else if (tokens.first.isKeyword("nil"))
+    {
+        tokens.nextIs(Token.Type.keyword, "nil");
+        last = new Value(Dynamic.nil);
     }
     else if (tokens.first.isIdent)
     {

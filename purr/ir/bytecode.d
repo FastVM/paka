@@ -309,6 +309,11 @@ class BytecodeEmitter
         pushInstr(func, Opcode.array, [cast(ubyte) arr.argc], cast(int)(1 - arr.argc));
     }
 
+    void emit(BuildTupleInstruction arr)
+    {
+        pushInstr(func, Opcode.tuple, [cast(ubyte) arr.argc], cast(int)(1 - arr.argc));
+    }
+
     void emit(BuildTableInstruction table)
     {
         pushInstr(func, Opcode.table, [cast(ubyte) table.argc], cast(int)(1 - table.argc));

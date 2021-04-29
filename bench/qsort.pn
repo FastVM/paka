@@ -1,8 +1,6 @@
 sort = list -> match list {
-    -- base case
     [] -> []
 
-    -- pivot is head, tail is remaining
     [pivot, ..tail] -> {
         higher = filter { x -> x >= pivot } tail
         lower  = filter { x -> x <  pivot } tail

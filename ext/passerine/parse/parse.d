@@ -51,7 +51,7 @@ Node readParenBody(ref TokenArray tokens, size_t start)
     }
     if (args.length == 0)
     {
-        return new Call(new Ident("@array"), null);
+        return new Call(new Ident("@tuple"), null);
     }
     if (args.length == 1 && !hasComma)
     {
@@ -59,7 +59,7 @@ Node readParenBody(ref TokenArray tokens, size_t start)
     }
     else
     {
-        return new Call(new Ident("@array"), args);
+        return new Call(new Ident("@tuple"), args);
     }
 }
 
@@ -286,6 +286,24 @@ redo:
         tokens.nextIs(Token.Type.string, word);
         switch (word)
         {
+        case "call":
+            if (tokens.first.isOpen("("))
+            {
+                tokens.nextIs(Token.type.open, "(");
+                Node[] args = [tokens.readExpr(1)];
+                while (tokens.first.isComma)
+                {
+                    tokens.nextIs(Token.Type.comma);
+                    args ~= tokens.readExpr(1);
+                }
+                tokens.nextIs(Token.type.close, ")");
+                last = new Call(new Value(native!magiccall), args);
+            }
+            else
+            {
+                throw new Exception("Magic Call");
+            }
+            break;
         case "if":
             if (tokens.first.isOpen("("))
             {
@@ -410,7 +428,7 @@ redo:
             {
                 Node name = new Value(Dynamic.sym(tokens.first.value));
                 tokens.nextIsAny;
-                last = new Call(new Ident("@array"), [name, tokens.readPostExpr]);
+                last = new Call(new Ident("@tuple"), [name, tokens.readPostExpr]);
             }
             else if (tokens.first.value.isNumeric)
             {

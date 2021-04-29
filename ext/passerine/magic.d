@@ -33,3 +33,8 @@ Dynamic magictostring(Dynamic[] args)
 {
     return args[0].to!string.dynamic;
 }
+
+Dynamic magiccall(Dynamic[] args)
+{
+    return args[0](args[1..$]);
+}

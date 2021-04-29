@@ -204,6 +204,8 @@ enum Opcode : ushort
     opgte,
     opeq,
     opneq,
+    /// build tuple
+    tuple,
     /// build array
     array,
     /// built table

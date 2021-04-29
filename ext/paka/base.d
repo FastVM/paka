@@ -69,13 +69,6 @@ Dynamic pakaimport(Args args)
 Pair[] pakaBaseLibs()
 {
     Pair[] ret;
-    // ret ~= FunctionPair!syslibubothmap("_paka_map_both");
-    // ret ~= FunctionPair!syslibulhsmap("_paka_map_lhs");
-    // ret ~= FunctionPair!sysliburhsmap("_paka_map_rhs");
-    // ret ~= FunctionPair!syslibupremap("_paka_map_pre");
-    // ret ~= FunctionPair!syslibfoldbinary("_paka_fold_binary");
-    // ret ~= FunctionPair!syslibfoldunary("_paka_fold_unary");
-    // ret ~= FunctionPair!syslibrange("_paka_range");
     ret ~= FunctionPair!strconcat("_paka_str_concat");
     ret ~= FunctionPair!pakaimport("_paka_import");
     return ret;

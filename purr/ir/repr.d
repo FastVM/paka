@@ -15,7 +15,7 @@ import purr.ir.emit;
 import purr.ir.opt;
 
 alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, ReturnBranch,
-        BuildArrayInstruction, BuildTableInstruction, CallInstruction, PushInstruction,
+        BuildTupleInstruction,BuildArrayInstruction, BuildTableInstruction, CallInstruction, PushInstruction,
         OperatorInstruction, LambdaInstruction, PopInstruction,
         StoreInstruction, LoadInstruction, ArgsInstruction, RecInstruction);
 
@@ -142,6 +142,23 @@ class ReturnBranch : Branch
     {
         string ret;
         ret ~= "return\n";
+        return ret;
+    }
+}
+
+class BuildTupleInstruction : Instruction
+{
+    size_t argc;
+
+    this(size_t a)
+    {
+        argc = a;
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "array " ~ argc.to!string ~ "\n";
         return ret;
     }
 }

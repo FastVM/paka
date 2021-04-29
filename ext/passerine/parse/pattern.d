@@ -31,7 +31,6 @@ Dynamic slice(Args args)
 
 Node matcher(Node value, Node pattern)
 {
-    writeln("match ", value, " to ", pattern);
     if (Ident id = cast(Ident) pattern)
     {
         if (id.repr == "_")
@@ -53,6 +52,16 @@ Node matcher(Node value, Node pattern)
             {
             default:
                 return new Call(new Value(native!matchExact), [value, pattern]);
+            case ":":
+                Node c1 = matcher(value, call.args[1]);
+                Node c2 = matcher(value, call.args[2]);
+                return new Call(new Ident("&&"), [c1, c2]);
+            case "|":
+                Node c1 = matcher(value, call.args[1]);
+                Node c2 = call.args[2];
+                return new Call(new Ident("&&"), [c1, c2]);
+            case "@tuple":
+                goto case;
             case "@array":
                 Node[] pre;
                 Node[] post;

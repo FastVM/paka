@@ -150,7 +150,7 @@ class TableImpl
         {
             return null;
         }
-        if (metaget.type == Dynamic.Type.arr)
+        if (metaget.isArr)
         {
             foreach (getter; metaget.arr)
             {
@@ -311,7 +311,6 @@ Dynamic dynamic(T...)(T a)
 
 struct DynamicImpl
 {
-pragma(inline, true):
     enum Type : ubyte
     {
         nil,
@@ -319,6 +318,7 @@ pragma(inline, true):
         sml,
         sym,
         str,
+        tup,
         arr,
         tab,
         fun,
@@ -346,6 +346,7 @@ pragma(inline, true):
     uint len = void;
     Value value = void;
 
+pragma(inline, true):
     static Dynamic strToNum(string s)
     {
         return dynamic(s.to!double);
@@ -355,6 +356,13 @@ pragma(inline, true):
     {
         Dynamic ret = dynamic(s);
         ret.type = Type.sym;
+        return ret;
+    }
+
+    static Dynamic tuple(Array a)
+    {
+        Dynamic ret = dynamic(a);
+        ret.type = Type.tup;
         return ret;
     }
 
@@ -426,6 +434,11 @@ pragma(inline, true):
         ret.value = Dynamic.Value.init;
         ret.type = Dynamic.Type.nil;
         return ret;
+    }
+
+    bool isArr()
+    {
+        return type == Type.arr || type == Type.tup;
     }
 
     string toString()
@@ -517,10 +530,12 @@ pragma(inline, true):
             return (*value.str).hashOf;
         case Dynamic.Type.str:
             return (*value.str).hashOf;
+        case Dynamic.Type.tup:
+            return cast(size_t) len + 1 << 32;
         case Dynamic.Type.arr:
-            return cast(size_t) len + 2 << 52;
+            return cast(size_t) len + 1 << 33;
         case Dynamic.Type.tab:
-            return value.tab.table.length + 2 << 53;
+            return value.tab.table.length + 1 << 34;
         case Dynamic.Type.fun:
             return size_t.max - 3;
         case Dynamic.Type.pro:
@@ -599,7 +614,7 @@ pragma(inline, true):
     {
         version (safe)
         {
-            if (type != Type.arr)
+            if (!isArr)
             {
                 throw new Exception("expected array type");
             }
@@ -772,6 +787,34 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
         return cmp(*a.value.str, *b.value.str);
     case Dynamic.Type.sml:
         return cmp(a.value.sml, b.value.sml);
+    case Dynamic.Type.tup:
+        Dynamic[2] cur = [a, b];
+        foreach (i, p; above)
+        {
+            if (cur[0] is p[0] && cur[1] is p[1])
+            {
+                return 0;
+            }
+        }
+        above ~= cur;
+        scope (exit)
+        {
+            above.length--;
+        }
+        const Dynamic[] as = a.arr;
+        const Dynamic[] bs = b.arr;
+        if (int c = cmp(as.length, bs.length))
+        {
+            return c;
+        }
+        foreach (i; 0 .. as.length)
+        {
+            if (int res = cmpDynamic(as[i], bs[i]))
+            {
+                return res;
+            }
+        }
+        return 0;
     case Dynamic.Type.arr:
         Dynamic[2] cur = [a, b];
         foreach (i, p; above)
@@ -870,7 +913,7 @@ private string strFormat(Dynamic dyn)
         return ':' ~ *dyn.value.str;
     case Dynamic.Type.str:
         return '"' ~ dyn.str ~ '"';
-    case Dynamic.Type.arr:
+    case Dynamic.Type.tup:
         char[] ret;
         ret ~= "(";
         foreach (i, v; dyn.arr)
@@ -882,6 +925,19 @@ private string strFormat(Dynamic dyn)
             ret ~= v.to!string;
         }
         ret ~= ")";
+        return cast(string) ret;
+    case Dynamic.Type.arr:
+        char[] ret;
+        ret ~= "[";
+        foreach (i, v; dyn.arr)
+        {
+            if (i != 0)
+            {
+                ret ~= ", ";
+            }
+            ret ~= v.to!string;
+        }
+        ret ~= "]";
         return cast(string) ret;
     case Dynamic.Type.tab:
         return dyn.tab.toString;

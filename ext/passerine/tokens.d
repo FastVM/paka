@@ -8,7 +8,7 @@ import purr.io;
 import purr.srcloc;
 
 /// operator precidence
-string[][] prec = [["="], ["->"], ["|"], ["..", ":"], ["<", ">", "<=", ">=", "=="] ,["+", "-"], ["*", "/", "%"], ["."]];
+string[][] prec = [["="], ["->"], ["|"], ["..", ":"], ["and", "or"], ["<", ">", "<=", ">=", "==", "!="] ,["+", "-"], ["*", "/", "%"], ["."]];
 
 /// operators that dont work like binary operators sometimes
 string[] nops = [",", "'", "::"];

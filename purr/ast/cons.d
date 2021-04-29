@@ -86,7 +86,7 @@ Node getNode(Dynamic val)
     {
         return new Ident(val.as!double.to!string);
     }
-    if (val.type == Dynamic.Type.arr)
+    if (val.isArr)
     {
         return new Call(val.arr.map!getNode.array);
     }

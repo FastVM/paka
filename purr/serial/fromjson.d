@@ -31,6 +31,8 @@ Dynamic.Type dtype(Json json)
         return Dynamic.Type.sml;
     case "string":
         return Dynamic.Type.str;
+    case "tuple":
+        return Dynamic.Type.tup;
     case "array":
         return Dynamic.Type.arr;
     case "table":
@@ -70,9 +72,9 @@ Array deserialize(Array)(Json json)
 AssocArray deserialize(AssocArray)(Json json) if (isAssociativeArray!AssocArray)
 {
     AssocArray ret;
-    foreach (n; 0..json["pairs"]["length"].deserialize!size_t)
+    foreach (n; 0..json["length"].deserialize!size_t)
     {
-        Json kv = json["pairs"][n.to!string];
+        Json kv = json[n.to!string];
         ret[kv["key"].deserialize!(KeyType!AssocArray)] = kv["value"].deserialize!(ValueType!AssocArray);
     }
     return ret;
@@ -217,6 +219,16 @@ Dynamic deserialize(T : Dynamic)(Json json)
         return json["string"].deserialize!string.dynamic;
     case Dynamic.Type.sym:
         return Dynamic.sym(json["symbol"].deserialize!string);
+    case Dynamic.Type.tup:
+        above[$ - 1] = Array.init.dynamic;
+        Dynamic[] got = json["tuple"].deserialize!(Array);
+        foreach (elem; got)
+        {
+            got ~= elem;
+        }
+        above[$-1].value.arr = got.ptr;
+        above[$-1].len = cast(uint) got.length;
+        return above[$ - 1];
     case Dynamic.Type.arr:
         above[$ - 1] = Array.init.dynamic;
         Dynamic[] got = json["array"].deserialize!(Array);

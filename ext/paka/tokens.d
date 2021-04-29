@@ -10,17 +10,17 @@ import purr.srcloc;
 /// operator precidence
 string[][] prec = [
     ["+=", "~=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"],
-    ["||", "&&"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-", "~"],
-    ["*", "/", "%"], ["->"]
+    ["or", "and"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-", "~"],
+    ["*", "/", "%"], ["to"]
 ];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "!", ",", ":", "\\", "#", "<<", ">>"];
+string[] nops = [".", "!", ",", ":", "\\", "#"];
 
 /// language keywords
 string[] keywords = [
     "if", "else", "return", "def", "lambda", "use", "include",
-    "import", "macro",
+    "import", "macro", "true", "false", "nil"
 ];
 
 /// gets the operators by length not precidence

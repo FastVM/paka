@@ -37,7 +37,7 @@ Dynamic checkTrue(Dynamic[] args)
 {
     if (!args[0].value.log)
     {
-        throw new Exception("assign error: " ~ args[1].to!string);
+        throw new Exception("assign error: bad value: " ~ args[1].to!string);
     }
     return args[1];
 }
@@ -103,7 +103,8 @@ BinaryOp parseBinaryOp(string[] ops)
                 if (Call call = cast(Call) arg)
                 {
                     Node sym = genSym;
-                    Node func = new Call(new Ident("@do"), [matcher(sym, arg), ret]);
+                    Node check = new Call(new Value(native!checkTrue), [matcher(sym, arg), sym]);
+                    Node func = new Call(new Ident("@do"), [check, ret]);
                     ret = new Call(new Ident("@fun"), [new Call([sym]), func]);
                 }
             }
@@ -112,6 +113,14 @@ BinaryOp parseBinaryOp(string[] ops)
     case ".":
         return (Node lhs, Node rhs) {
             return new Call(new Ident("@call"), [rhs, lhs]);
+        };
+    case "and":
+        return (Node lhs, Node rhs) {
+            return new Call(new Ident("&&"), [rhs, lhs]);
+        };
+    case "or":
+        return (Node lhs, Node rhs) {
+            return new Call(new Ident("||"), [rhs, lhs]);
         };
     default:
         return (Node lhs, Node rhs) {
