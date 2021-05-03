@@ -197,6 +197,7 @@ enum Opcode : ushort
     sub,
     /// call without spread
     call,
+    scall,
     /// cmp
     oplt,
     opgt,

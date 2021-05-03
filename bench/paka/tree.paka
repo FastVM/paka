@@ -10,14 +10,14 @@ def bottom_up_tree(item, depth) {
 }
 
 def item_check(tree) {
-    if #tree > 2 {
+    if #tree == 3 {
         return tree.0 + rec(tree.1) - rec(tree.2)
     } else {
         return tree.0
     }
 }
 
-N = 12
+N = 16
 mindepth = 4
 maxdepth = mindepth + 2
 if maxdepth < N {

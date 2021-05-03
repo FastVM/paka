@@ -1,14 +1,12 @@
-module ext.ffi.plugin;
+module ext.bind.plugin;
 
 import purr.io;
-import std.typecons;
+import core.stdc.math;
 import purr.base;
 import purr.dynamic;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
-import ext.ffi.bind;
-import ext.ffi.unbind;
-import core.stdc.math;
+import ext.bind.bind;
 
 shared static this()
 {
@@ -18,7 +16,6 @@ shared static this()
 Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
-    Dynamic test = arr(bind!atan2).bind;
-    plugin.libs ~= Pair("atan2", test);
+    plugin.libs.addLib("ffi", ffilib);
     return plugin;
 }

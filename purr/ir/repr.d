@@ -15,7 +15,7 @@ import purr.ir.emit;
 import purr.ir.opt;
 
 alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, ReturnBranch,
-        BuildTupleInstruction,BuildArrayInstruction, BuildTableInstruction, CallInstruction, PushInstruction,
+        BuildTupleInstruction,BuildArrayInstruction, BuildTableInstruction, CallInstruction, StaticCallInstruction, PushInstruction,
         OperatorInstruction, LambdaInstruction, PopInstruction,
         StoreInstruction, LoadInstruction, ArgsInstruction, RecInstruction);
 
@@ -210,6 +210,26 @@ class CallInstruction : Instruction
     {
         string ret;
         ret ~= "call " ~ argc.to!string ~ "\n";
+        return ret;
+    }
+}
+
+
+class StaticCallInstruction : Instruction
+{
+    Dynamic func;
+    size_t argc;
+
+    this(Dynamic fn, size_t ac)
+    {
+        func = fn;
+        argc = ac;
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "static-call func=(?) " ~ argc.to!string ~ "\n";
         return ret;
     }
 }

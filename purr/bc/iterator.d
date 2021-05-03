@@ -24,7 +24,8 @@ class OpcodeIterator
         size_t i = 0;
         Opcode readop()
         {
-            Opcode v = cast(Opcode) func.instrs[i++];
+            Opcode v = cast(Opcode) func.instrs[i];
+            i += 2;
             return v;
         }
 
@@ -68,6 +69,9 @@ class OpcodeIterator
                 break;
             case Opcode.call:
                 call(get);
+                break;
+            case Opcode.scall:
+                scall(get, get);
                 break;
             case Opcode.oplt:
                 oplt;
@@ -193,6 +197,10 @@ class OpcodeIterator
     }
 
     void call(ushort argCount)
+    {
+    }
+
+    void scall(ushort constIndex, ushort argCount)
     {
     }
 

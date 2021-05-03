@@ -11,10 +11,9 @@ import std.string;
 import std.algorithm;
 import purr.vm;
 import purr.inter;
-import purr.base;
 import purr.dynamic;
 import purr.srcloc;
-import purr.inter;
+import purr.base;
 import purr.fs.disk;
 import purr.fs.har;
 import purr.fs.memory;
@@ -26,6 +25,7 @@ import paka.tokens;
 import paka.macros;
 import paka.parse.util;
 import paka.parse.op;
+import paka.built;
 
 /// reads open parens
 Node[][] readOpen(string v)(ref TokenArray tokens) if (v == "()")
@@ -115,7 +115,7 @@ Node readPostCallExtend(ref TokenArray tokens, Node last)
     Node[][] args = tokens.readOpen!"()";
     foreach (argList; args)
     {
-        last = new Call(last ~ argList);
+        last = new Call(new Ident("@call"), last ~ argList);
     }
     return last;
 }
@@ -319,7 +319,7 @@ Node readStringPart(ref string str, ref Span span)
             string input = ret[3 .. $ - 1].strip;
             node = Location(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
                 .parsePakaAs!readExprBase;
-            node = new Call(new Ident("_unicode_ctrl"), [node]);
+            node = new Call(new Ident("@call"), [new Ident("_unicode_ctrl"), node]);
         }
         else if (ret[0] == 'f')
         {
@@ -330,7 +330,7 @@ Node readStringPart(ref string str, ref Span span)
         else if (ret[0] == 'u')
         {
             string input = ret[2 .. $ - 1].strip;
-            node = new Call(new Ident("_unicode_ctrl"), [new Value(input)]);
+            node = new Call(new Ident("@call"), [new Ident("_unicode_ctrl"), new Value(input)]);
         }
         else
         {
@@ -453,7 +453,7 @@ Node readPostExprImpl(ref TokenArray tokens)
             {
                 args ~= value.readStringPart(span);
             }
-            last = new Call(new Ident("_paka_str_concat"), args);
+            last = new Call(new Value(native!strConcat), args);
         }
         tokens.nextIs(Token.Type.string);
     }
@@ -569,7 +569,7 @@ Node readStmtImpl(ref TokenArray tokens)
     }
     if (tokens.first.isOpen("("))
     {
-        throw new Exception("parse error: cannot have open curly paren to start a statement");
+        throw new Exception("parse error: cannot have open paren to start a statement");
     }
     if (tokens.first.isKeyword("return"))
     {

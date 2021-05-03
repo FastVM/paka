@@ -239,11 +239,6 @@ ALL_DO_OPT=TRUE
 OPT_LEVEL=3
 OPT_FULL_FOR_DMD=TRUE
 endif
-ifeq ($(OPT),dcomp)
-ALL_DO_OPT=TRUE
-OPT_LEVEL=3
-OPT_FULL_FOR_DMD=TRUE
-endif
 
 ifeq ($(OPT),s)
 ALL_DO_OPT=TRUE
@@ -301,17 +296,17 @@ rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(su
 dlangsrc=$(call rwildcard,$1,*.d)
 
 
-$(BIN): dummy
+$(BIN): 
 ifeq ($(wildcard $(BIN)),)
 	$(RUN) mkdir -p $@
 endif
 
-$(LIB): dummy
+$(LIB): 
 ifeq ($(wildcard $(LIB)),)
 	$(RUN) mkdir -p $@
 endif
 
-$(TMP): dummy
+$(TMP): 
 ifeq ($(wildcard $(TMP)),)
 	$(RUN) mkdir -p $@
 endif

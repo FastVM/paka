@@ -1,1 +1,0 @@
-ldc2 -O3 -i .\purr\app.d -i .\ext\paka\plugin.d -Ipurr -Iext -of=.\bin\purr.exe

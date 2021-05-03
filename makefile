@@ -1,3 +1,5 @@
+all: purr $(LIBS_SO)
+
 MAKEFILE_INCLUDES:=
 define MAKEFILE_IMPORT_IMPL_BODY
 ifeq ($(findstring $1,$(MAKEFILE_INCLUDES)),)
@@ -9,6 +11,10 @@ endef
 BIN=bin
 LIB=lib
 TMP=tmp
+
+BIN:=$(abspath $(BIN))
+LIB:=$(abspath $(LIB))
+TMP:=$(abspath $(TMP))
 
 import=$(eval $(MAKEFILE_IMPORT_IMPL_BODY))
 runto=$(shell $2)$(shell echo $2 > $1)
@@ -23,13 +29,9 @@ $(call import,ext/makefile)
 $(call import,purr/makefile)
 
 .DEFAULT_GOAL := all
-all: $(BIN)/purr $(LIBS_SO)
 
 clean: dummy
 	$(RUN) rm -rf $(BIN) $(LIB) *.so *.o
 
-cleans: dummy
-	$(RUN) rm -rf $(BIN) $(LIB) $(TMP) 
-
-cleanuni: dummy
-	$(RUN) rm -rf $(BIN) $(LIB) $(TMP) 
+deepclean: clean
+	$(RUN) rm -rf $(TMP) 

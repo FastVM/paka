@@ -152,6 +152,12 @@ UnaryOp parseUnaryOp(string[] ops)
     {
         return (Node rhs) { return new Call(new Value(native!lengthOp), [rhs]); };
     }
+    else if (opName == "not")
+    {
+        return (Node rhs) {
+            return new Call(new Ident("!="), [rhs, new Value(true)]);
+        };
+    }
     else if (opName == "-")
     {
         throw new Exception("parse error: not a unary operator: " ~ opName

@@ -77,7 +77,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
     {
         // writeln(lstack[0..stack-lstack]);
         Opcode cur = instrs.eat!Opcode(index);
-        // writeln(index, ": ", cur);
+        // writeln(index - Opcode.sizeof, ": ", cur);
         // writeln;
         switch (cur)
         {
@@ -144,6 +144,34 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 throw new Exception("error: not a pro, fun, tab, or arr: " ~ f.to!string);
             }
             (*(stack - 1)) = res;
+            break;
+        case Opcode.scall:
+            ushort constIndex = instrs.eat!ushort(index);
+            Dynamic f = func.constants[constIndex];
+            ushort count = instrs.eat!ushort(index);
+            stack -= count;
+            Dynamic res = void;
+            switch (f.type)
+            {
+            case Dynamic.Type.fun:
+                res = f.fun.fun.value(stack[0 .. 0 + count]);
+                break;
+            case Dynamic.Type.pro:
+                res = run(f.fun.pro, stack[0 .. 0 + count]);
+                break;
+            case Dynamic.Type.tab:
+                res = f.tab()(stack[0 .. 0 + count]);
+                break;
+            case Dynamic.Type.tup:
+                res = f.arr[(*stack).as!size_t];
+                break;
+            case Dynamic.Type.arr:
+                res = f.arr[(*stack).as!size_t];
+                break;
+            default:
+                throw new Exception("error: not a pro, fun, tab, or arr: " ~ f.to!string);
+            }
+            (*(stack++)) = res;
             break;
         case Opcode.oplt:
             stack -= 1;

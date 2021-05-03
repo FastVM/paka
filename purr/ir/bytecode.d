@@ -370,6 +370,12 @@ class BytecodeEmitter
         pushInstr(func, Opcode.call, [cast(ushort) call.argc], cast(int)-call.argc);
     }
 
+    void emit(StaticCallInstruction call)
+    {
+        pushInstr(func, Opcode.scall, [cast(ushort) func.constants.length, cast(ushort) call.argc], cast(int)(1-call.argc));
+        func.constants ~= call.func;
+    }
+
     void emit(PushInstruction push)
     {
         pushInstr(func, Opcode.push, [cast(ushort) func.constants.length]);

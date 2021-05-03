@@ -20,8 +20,8 @@ __gshared bool dumpast = false;
 enum string[] specialForms = [
         "@def", "@set", "@while", "@tuple", "@array", "@table", "@return",
         "@if", "@fun", "@do", "-", "+", "*", "/", "%", "<", ">", "<=", ">=",
-        "==", "!=", "...", "@index", "@env", "&&", "||", "~",
-        "@inspect", "@rcall", "@call"
+        "==", "!=", "...", "@index", "@env", "&&", "||", "~", "@inspect", "@rcall",
+        "@call"
     ];
 
 class Walker
@@ -243,12 +243,12 @@ class Walker
         }
     }
 
-    void walkStoreDef(Call lhs, Node rhs)
+    void walkStoreDef(Node[] lhs, Node rhs)
     {
         Node funCall = new Call(new Ident("@fun"), [
-                new Call(lhs.args[1 .. $]), rhs
+                new Call(lhs[1 .. $]), rhs
                 ]);
-        Node setCall = new Call(new Ident("@set"), [lhs.args[0], funCall]);
+        Node setCall = new Call(new Ident("@set"), [lhs[0], funCall]);
         walk(setCall);
     }
 
@@ -263,11 +263,14 @@ class Walker
         {
             if (Ident id = cast(Ident) call.args[0])
             {
-                walkStoreDef(call, args[1]);
+                if (id.repr == "@call")
+                {
+                    walkStoreDef(call.args[1..$], args[1]);
+                }
             }
             else
             {
-                walkStoreDef(call, args[1]);
+                assert(false);
             }
         }
         else
@@ -401,11 +404,13 @@ class Walker
         walk(args[0]);
     }
 
-    void walkCall2(Node fun, Node arg)
+    void walkCall(Node fun, Node[] args)
     {
         walk(fun);
-        walk(arg);
-        emit(new CallInstruction(1));
+        foreach (arg; args) {
+            walk(arg);
+        }
+        emit(new CallInstruction(args.length));
     }
 
     void walkSpecialCall(string special, Node[] args)
@@ -448,10 +453,10 @@ class Walker
             walkAssert(args);
             break;
         case "@rcall":
-            walkCall2(args[1], args[0]);
+            walkCall(args[$-1], args[0..$-1]);
             break;
         case "@call":
-            walkCall2(args[0], args[1]);
+            walkCall(args[0], args[1..$]);
             break;
         case "@def":
             walkDef(args);
@@ -508,30 +513,32 @@ class Walker
         }
     }
 
-    void walkActualCall(Call call)
-    {
-        foreach (i; call.args)
-        {
-            walk(i);
-        }
-        emit(new CallInstruction(call.args.length - 1));
-    }
-
     void walkExact(Call call)
     {
         assert(call.args.length != 0);
-        bool special = false;
         if (Ident id = cast(Ident) call.args[0])
         {
             if ((id.repr.length != 0 && id.repr[0] == '@') || specialForms.canFind(id.repr))
             {
                 walkSpecialCall(id.repr, call.args[1 .. $]);
-                special = true;
+                return;
+            }
+            else
+            {
+                throw new Exception("internal error: consider @call (for: " ~ call.to!string ~ ")");
             }
         }
-        if (!special)
+        else if (Value val = cast(Value) call.args[0])
         {
-            walkActualCall(call);
+            foreach (i; call.args[1 .. $])
+            {
+                walk(i);
+            }
+            emit(new StaticCallInstruction(val.value, call.args.length - 1));
+        }
+        else
+        {
+            throw new Exception("internal error: consider @call (for: " ~ call.to!string ~ ")");
         }
     }
 

@@ -111,6 +111,11 @@ override:
         line("call argc=", argCount);
     }
 
+    void scall(ushort constIndex, ushort argCount)
+    {
+        line("scall index=", constIndex, " argc=", argCount);
+    }
+
     void opgt()
     {
         line("opgt");

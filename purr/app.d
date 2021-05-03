@@ -31,7 +31,7 @@ import std.getopt;
 import core.memory;
 import core.stdc.stdlib;
 
-extern(C) __gshared string[] rt_options = [ "gcopt=incPoolSize:16 incPoolSize:4" ];
+extern(C) __gshared string[] rt_options = [ "gcopt=incPoolSize:16 heapSizeFactor:8" ];
 
 alias Thunk = void delegate();
 
@@ -223,7 +223,7 @@ void domain(string[] args)
     args = args[1 .. $];
     string[] extargs;
     Thunk[] todo;
-    langNameDefault = "passerine";
+    langNameDefault = "paka";
     ctx = enterCtx;
     scope (exit)
     {
