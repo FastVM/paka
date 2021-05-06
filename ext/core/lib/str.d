@@ -19,7 +19,7 @@ Pair[] libstr()
         FunctionPair!libtonumber("to_number"), FunctionPair!libslice("slice"),
         FunctionPair!libstrip("strip"), FunctionPair!libchar("char"),
         FunctionPair!libascii("ascii"), FunctionPair!libfrom("from"),
-        FunctionPair!libfroms("froms"),
+        FunctionPair!libfroms("froms"), 
     ];
     return ret;
 }

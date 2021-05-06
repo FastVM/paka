@@ -113,6 +113,12 @@ void stripNewlines(ref TokenArray tokens)
 Node readPostCallExtend(ref TokenArray tokens, Node last)
 {
     Node[][] args = tokens.readOpen!"()";
+    while (tokens.length != 0 && (tokens.first.isOpen("{") || tokens.first.isOperator(":")))
+    {
+        args[$ - 1] ~= new Call(new Ident("@fun"), [
+                new Call([]), tokens.readBlock
+                ]);
+    }
     foreach (argList; args)
     {
         last = new Call(new Ident("@call"), last ~ argList);
@@ -190,6 +196,23 @@ Node readIfImpl(ref TokenArray tokens)
         iffalse = new Value(Dynamic.nil);
     }
     return new Call(new Ident("@if"), [cond, iftrue, iffalse]);
+}
+/// read an if statement
+alias readWhile = Spanning!readWhileImpl;
+Node readWhileImpl(ref TokenArray tokens)
+{
+    Node cond = tokens.readExprBase;
+    Node block = tokens.readBlock;
+    return new Call(new Ident("@while"), [cond, block]);
+}
+
+alias readTable = Spanning!readTableImpl;
+Node readTableImpl(ref TokenArray tokens)
+{
+    Node var = new Ident("_paka_table");
+    Node set = new Call(new Ident("@set"), [var, new Call([new Ident("@table")])]);
+    Node build = tokens.readBlock;
+    return new Call(new Ident("@do"), [set, build, var]);
 }
 
 void skip1(ref string str, ref Span span)
@@ -319,7 +342,9 @@ Node readStringPart(ref string str, ref Span span)
             string input = ret[3 .. $ - 1].strip;
             node = Location(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
                 .parsePakaAs!readExprBase;
-            node = new Call(new Ident("@call"), [new Ident("_unicode_ctrl"), node]);
+            node = new Call(new Ident("@call"), [
+                    new Ident("_unicode_ctrl"), node
+                    ]);
         }
         else if (ret[0] == 'f')
         {
@@ -330,7 +355,9 @@ Node readStringPart(ref string str, ref Span span)
         else if (ret[0] == 'u')
         {
             string input = ret[2 .. $ - 1].strip;
-            node = new Call(new Ident("@call"), [new Ident("_unicode_ctrl"), new Value(input)]);
+            node = new Call(new Ident("@call"), [
+                    new Ident("_unicode_ctrl"), new Value(input)
+                    ]);
         }
         else
         {
@@ -355,36 +382,24 @@ Node readPostExprImpl(ref TokenArray tokens)
                     new Call(tokens.readOpen1!"()"), tokens.readBlock
                     ]);
         }
-        else if (tokens.first.isOpen("{"))
+        else if (tokens.first.isOpen("{") || tokens.first.isOperator(":"))
         {
             last = new Call(new Ident("@fun"), [new Call([]), tokens.readBlock]);
         }
     }
-    else if (tokens.first.isKeyword("macro"))
-    {
-        tokens.nextIs(Token.Type.keyword, "macro");
-        string name = tokens.first.value;
-        tokens.nextIs(Token.type.ident, name);
-        Node node = tokens.readBlock;
-        Walker walker = new Walker;
-        Function func = walker.walkProgram(node, staticCtx[$ - 1]);
-        Dynamic ctx = genCtx;
-        Dynamic val = run(func, [ctx], staticCtx[$ - 1].exportLocalsToBaseCallback(func));
-        Mapping macros = ctx.tab.table;
-        foreach (key, value; macros)
-        {
-            prefixMacros[$ - 1][key] = value;
-        }
-        return new Value(val);
-    }
     else if (tokens.first.isOpen("("))
     {
         Node[] nodes = tokens.readOpen1!"()";
-        if (nodes.length == 0) {
+        if (nodes.length == 0)
+        {
             last = new Value(Dynamic.nil);
-        } else if (nodes.length == 1) {
+        }
+        else if (nodes.length == 1)
+        {
             last = nodes[0];
-        } else {
+        }
+        else
+        {
             last = new Call(new Ident("@tuple"), nodes);
         }
     }
@@ -392,14 +407,20 @@ Node readPostExprImpl(ref TokenArray tokens)
     {
         last = new Call(new Ident("@array"), tokens.readOpen!"[]");
     }
-    else if (tokens.first.isOpen("{"))
+    else if (tokens.first.isKeyword("table"))
     {
-        last = new Call(new Ident("@table"), tokens.readOpen!"{}");
+        tokens.nextIs(Token.Type.keyword, "table");
+        last = tokens.readTable;
     }
     else if (tokens.first.isKeyword("if"))
     {
         tokens.nextIs(Token.Type.keyword, "if");
         last = tokens.readIf;
+    }
+    else if (tokens.first.isKeyword("while"))
+    {
+        tokens.nextIs(Token.Type.keyword, "while");
+        last = tokens.readWhile;
     }
     else if (tokens.first.isKeyword("true"))
     {
@@ -434,8 +455,17 @@ Node readPostExprImpl(ref TokenArray tokens)
         }
         if (!wasMacro)
         {
-            last = new Ident(tokens.first.value);
-            tokens.nextIs(Token.Type.ident);
+            if (tokens.first.value[0] == '@')
+            {
+                Node var = new Ident("_paka_table");
+                Node index = new Value(tokens.first.value[1..$]);
+                tokens.nextIs(Token.Type.ident);
+                last = new Call(new Ident("@index"), [var, index]);
+            }
+            else {
+                last = new Ident(tokens.first.value);
+                tokens.nextIs(Token.Type.ident);
+            }
         }
     }
     else if (tokens.first.isString)
@@ -567,10 +597,6 @@ Node readStmtImpl(ref TokenArray tokens)
     {
         return null;
     }
-    if (tokens.first.isOpen("("))
-    {
-        throw new Exception("parse error: cannot have open paren to start a statement");
-    }
     if (tokens.first.isKeyword("return"))
     {
         tokens.nextIs(Token.Type.keyword, "return");
@@ -579,8 +605,13 @@ Node readStmtImpl(ref TokenArray tokens)
     if (tokens.first.isKeyword("def"))
     {
         tokens.nextIs(Token.Type.keyword, "def");
-        Node name = tokens.readExprBase;
-        Node dobody = tokens.readBlock;
+        Call call = cast(Call) tokens.readExprBase;
+        assert(call);
+        Node name = new Call(call.args[0..$-1]);
+        Call fun = cast(Call) call.args[$-1];
+        assert(fun);
+        Node dobody = fun.args[$-1];
+        // Node dobody = tokens.readBlock;
         return new Call(new Ident("@set"), [name, dobody]);
     }
     return tokens.readExprBase;

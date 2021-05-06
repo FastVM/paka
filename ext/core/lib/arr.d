@@ -26,8 +26,21 @@ Pair[] libarr()
     ret ~= FunctionPair!libzip("zip");
     ret ~= FunctionPair!libfrom("from");
     ret ~= FunctionPair!libshuffle("shuffle");
+    ret ~= FunctionPair!libcontains("contains");
     return ret;
 } /// returns a list
+
+Dynamic libcontains(Args args)
+{
+    foreach (val; args[0].arr)
+    {
+        if (val == args[1])
+        {
+            return true.dynamic;
+        }
+    }
+    return false.dynamic;
+}
 
 Dynamic libshuffle(Dynamic[] args)
 {

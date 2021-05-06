@@ -91,7 +91,7 @@ class Function
     int[size_t] stackAt = null;
     size_t stackSize = 0;
     Function parent = null;
-    int stackSizeCurrent;
+    int stackSizeCurrent = 1;
     Lookup stab;
     Lookup captab;
     Flags flags = Flags.none;
@@ -157,7 +157,7 @@ class Function
         {
             if (parent.parent is null)
             {
-                throw new Exception(name);
+                throw new Exception("not defined: " ~ name);
             }
             parent.doCapture(name);
             capture ~= Capture(parent.captab.byName[name], true, false);
@@ -227,6 +227,7 @@ enum Opcode : ushort
     loadc,
     /// stores
     store,
+    istore,
     cstore,
     /// return a value
     retval,

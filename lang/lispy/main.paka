@@ -1,0 +1,5 @@
+parser = sys.import("./parser.paka")
+
+return table {
+    @parse(code) = parser.parse(code)
+}

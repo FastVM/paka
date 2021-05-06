@@ -18,6 +18,8 @@ import ext.core.lib.sysenv;
 import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;
+import std.file;
+import std.path;
 import std.array;
 import std.process;
 import std.conv;
@@ -27,7 +29,7 @@ Pair[] libsys()
 {
     Pair[] ret = [
         FunctionPair!libleave("leave"), FunctionPair!libargs("args"),
-        FunctionPair!libtypeof("typeof"),
+        FunctionPair!libtypeof("typeof"), FunctionPair!libimport("import"),
         FunctionPair!libassert("enforce"), FunctionPair!libeval("eval"),
     ];
     ret.addLib("env", libsysenv);
@@ -42,6 +44,25 @@ Dynamic libassert(Args args)
         throw new Exception("assert error: " ~ args[1].to!string);
     }
     return Dynamic.nil;
+}
+
+/// imports value returning what it returned
+Dynamic libimport(Args args) {
+    size_t ctx = enterCtx;
+    scope (exit)
+    {
+        exitCtx;
+    }
+    string cdir = getcwd;
+    scope (exit)
+    {
+        cdir.chdir;
+    }
+    string filename = args[0].str;
+    filename.dirName.chdir;
+    Location data = filename.readFile;
+    Dynamic val = ctx.eval(data);
+    return val;
 }
 
 /// imports value returning what it returned

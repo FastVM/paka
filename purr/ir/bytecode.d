@@ -331,6 +331,11 @@ class BytecodeEmitter
         }
     }
 
+    void emit(StoreIndexInstruction store)
+    {
+        pushInstr(func, Opcode.istore, []);
+    }
+
     void emit(LoadInstruction load)
     {
         bool unfound = true;

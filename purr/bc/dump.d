@@ -216,6 +216,11 @@ override:
         line("store offset=", localIndex, " identifier=", func.stab[localIndex]);
     }
 
+    void istore()
+    {
+        line("istore");
+    }
+
     void cstore(ushort captureIndex)
     {
         line("store offset=", captureIndex, " identifier=", func.captab[captureIndex]);

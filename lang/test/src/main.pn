@@ -1,6 +1,0 @@
-syntax 'foo v {
-    v -> bar
-} 
-
-cdr = foo (head, ..bar)
-cdr [1, 2, 3]

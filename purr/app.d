@@ -6,6 +6,7 @@ import purr.ir.repr;
 import purr.ir.walk;
 import purr.ir.emit;
 import purr.vm;
+import purr.bugs;
 import purr.srcloc;
 import purr.base;
 import purr.ast.ast;
@@ -31,7 +32,9 @@ import std.getopt;
 import core.memory;
 import core.stdc.stdlib;
 
-extern(C) __gshared string[] rt_options = [ "gcopt=incPoolSize:16 heapSizeFactor:8" ];
+extern (C) __gshared string[] rt_options = [
+    "gcopt=incPoolSize:16 heapSizeFactor:8"
+];
 
 alias Thunk = void delegate();
 
@@ -42,7 +45,7 @@ Thunk cliFileHandler(immutable string filename)
 {
     return {
         string oldLang = langNameDefault;
-        scope(exit)
+        scope (exit)
         {
             langNameDefault = oldLang;
         }
@@ -107,7 +110,6 @@ Thunk cliEvalHandler(immutable string code)
     };
 }
 
-
 Thunk cliLangHandler(immutable string langname)
 {
     return { langNameDefault = langname; };
@@ -130,7 +132,33 @@ Thunk cliIrHandler()
 
 Thunk cliEchoHandler()
 {
-    return { writeln(dynamics[$ - 1]); dynamics.length--; };
+    return {
+        if (dynamics[$ - 1].type == Dynamic.Type.str)
+        {
+            writeln(dynamics[$ - 1].str);
+        }
+        else
+        {
+            writeln(dynamics[$ - 1].to!string);
+        }
+        dynamics.length--;
+    };
+}
+
+Thunk cliIntoHandler(string filename)
+{
+    return {
+        File file = File(filename, "w");
+        if (dynamics[$ - 1].type == Dynamic.Type.str)
+        {
+            file.write(dynamics[$ - 1].str);
+        }
+        else
+        {
+            file.write(dynamics[$ - 1].to!string);
+        }
+        dynamics.length--;
+    };
 }
 
 Thunk cliSerialHandler(string filename)
@@ -149,7 +177,7 @@ Thunk cliReplHandler()
         {
             string jsonText = serialFile.readText;
             bases = jsonText.parseJSON.deserialize!(Dynamic[]);
-            loadBaseObject(ctx, bases[$-1].tab.table);
+            loadBaseObject(ctx, bases[$ - 1].tab.table);
         }
         else
         {
@@ -157,8 +185,7 @@ Thunk cliReplHandler()
         }
         while (true)
         {
-            bases ~= ctx.baseObject().dynamic;
-            before:
+        before:
             if (serialFile !is null)
             {
                 File outFile = File(serialFile, "w");
@@ -180,15 +207,15 @@ Thunk cliReplHandler()
                 {
                     reader.history.length--;
                     bases.length--;
-                    loadBaseObject(ctx, bases[$-1].tab.table);
+                    loadBaseObject(ctx, bases[$ - 1].tab.table);
                     reader.output.write("\x1B[K\x1B[1F\x1B[1B");
                     goto before;
                 }
                 else
                 {
                     throw ee;
-                }                
-            } 
+                }
+            }
             while (line.length > 0)
             {
                 if (line[0].isWhite)
@@ -214,6 +241,7 @@ Thunk cliReplHandler()
             {
                 writeln(res);
             }
+            bases ~= ctx.baseObject().dynamic;
         }
     };
 }
@@ -274,6 +302,11 @@ void domain(string[] args)
             extargs.length--;
             todo ~= langname.cliLangHandler;
             break;
+        case "--into":
+            string filename = extargs[$ - 1];
+            extargs.length--;
+            todo ~= filename.cliIntoHandler;
+            break;
         case "--bytecode":
             todo ~= cliBytecodeHandler;
             break;
@@ -305,18 +338,19 @@ void thrown(Err)(Err e)
     size_t[] times;
     string[] files;
     size_t ml = 0;
-    foreach (i; spans)
+    foreach (df; debugFrames)
     {
-        if (nums.length != 0 && nums[$ - 1] == i.first.line)
+        Span span = df.span;
+        if (nums.length != 0 && nums[$ - 1] == span.first.line)
         {
             times[$ - 1]++;
         }
         else
         {
-            nums ~= i.first.line;
-            files ~= i.first.file;
+            nums ~= span.first.line;
+            files ~= span.first.file;
             times ~= 1;
-            ml = max(ml, i.first.line.to!string.length);
+            ml = max(ml, span.first.line.to!string.length);
         }
     }
     string trace;
@@ -347,7 +381,7 @@ void thrown(Err)(Err e)
         }
         trace ~= "\n";
     }
-    spans.length = 0;
+    debugFrames.length = 0;
     writeln(trace);
     writeln(e.msg);
     writeln;

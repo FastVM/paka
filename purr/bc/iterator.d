@@ -133,6 +133,9 @@ class OpcodeIterator
             case Opcode.store:
                 store(get);
                 break;
+            case Opcode.istore:
+                istore;
+                break;
             case Opcode.cstore:
                 cstore(get);
                 break;
@@ -281,6 +284,10 @@ class OpcodeIterator
     }
 
     void store(ushort localIndex)
+    {
+    }
+
+    void istore()
     {
     }
 

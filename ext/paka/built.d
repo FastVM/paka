@@ -129,3 +129,8 @@ Dynamic lengthOp(Args args)
 {
     return args[0].arr.length.dynamic;
 }
+
+Dynamic newEmptyTable(Args args)
+{
+    return emptyMapping.dynamic;
+}

@@ -18,7 +18,7 @@ import purr.ir.opt;
 __gshared bool dumpast = false;
 
 enum string[] specialForms = [
-        "@def", "@set", "@while", "@tuple", "@array", "@table", "@return",
+        "@set", "@while", "@tuple", "@array", "@table", "@return",
         "@if", "@fun", "@do", "-", "+", "*", "/", "%", "<", ">", "<=", ">=",
         "==", "!=", "...", "@index", "@env", "&&", "||", "~", "@inspect", "@rcall",
         "@call"
@@ -251,6 +251,14 @@ class Walker
         Node setCall = new Call(new Ident("@set"), [lhs[0], funCall]);
         walk(setCall);
     }
+    
+    void walkStoreIndex(Node on, Node ind, Node val)
+    {
+        walk(on);
+        walk(ind);
+        walk(val);
+        emit(new StoreIndexInstruction);
+    }
 
     void walkStore(Node[] args)
     {
@@ -267,6 +275,10 @@ class Walker
                 {
                     walkStoreDef(call.args[1..$], args[1]);
                 }
+                else if (id.repr == "@index")
+                {
+                    walkStoreIndex(call.args[1], call.args[2], args[1]);
+                }
             }
             else
             {
@@ -276,25 +288,6 @@ class Walker
         else
         {
             assert(false);
-        }
-    }
-
-    void walkDef(Node[] args)
-    {
-        if (args[0].id == NodeKind.ident)
-        {
-            Ident ident = cast(Ident) args[0];
-            walk(args[1]);
-            emit(new StoreInstruction(ident.repr));
-        }
-        else
-        {
-            Call callArgs = cast(Call) args[0];
-            Node name = callArgs.args[0];
-            Call funArgs = new Call(callArgs.args[1 .. $]);
-            Call funCall = new Call(new Ident("@fun"), funArgs ~ args[1 .. $]);
-            Call newDef = new Call(new Ident("@def"), [name, funCall]);
-            walk(newDef);
         }
     }
 
@@ -425,14 +418,14 @@ class Walker
         case "@if":
             walkIf(args);
             break;
+        case "@while":
+            walkWhile(args);
+            break;
         case "&&":
             walkAnd(args);
             break;
         case "||":
             walkOr(args);
-            break;
-        case "@while":
-            walkWhile(args);
             break;
         case "@set":
             walkStore(args);
@@ -457,9 +450,6 @@ class Walker
             break;
         case "@call":
             walkCall(args[0], args[1..$]);
-            break;
-        case "@def":
-            walkDef(args);
             break;
         case "@return":
             walkReturn(args);

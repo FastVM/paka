@@ -1,0 +1,2 @@
+sdl = sys.import("../lispy/main.paka")
+sdl.parse("(node 10)")

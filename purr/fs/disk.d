@@ -34,12 +34,12 @@ bool fsexists(string path)
 
 Location readFile(string path)
 {
-    if (MemoryFile* file = path in fileSystem)
-    {
-        if (MemoryTextFile textFile = cast(MemoryTextFile)*file)
-        {
-            return path.readMemFile.location;
-        }
-    }
+    // if (MemoryFile* file = path in fileSystem)
+    // {
+    //     if (MemoryTextFile textFile = cast(MemoryTextFile)*file)
+    //     {
+    //         return path.readMemFile.location;
+    //     }
+    // }
     return Location(1, 1, path, path.readText);
 }

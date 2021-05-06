@@ -232,10 +232,6 @@ Dynamic deserialize(T : Dynamic)(Json json)
     case Dynamic.Type.arr:
         above[$ - 1] = Array.init.dynamic;
         Dynamic[] got = json["array"].deserialize!(Array);
-        foreach (elem; got)
-        {
-            got ~= elem;
-        }
         above[$-1].value.arr = got.ptr;
         above[$-1].len = cast(uint) got.length;
         return above[$ - 1];

@@ -19,8 +19,9 @@ string[] nops = [".", "not", ",", ":", "\\", "#"];
 
 /// language keywords
 string[] keywords = [
-    "if", "else", "return", "def", "lambda", "use", "include",
-    "import", "macro", "true", "false", "nil"
+    "if", "else", "return", "def", "lambda",
+    "import", "true", "false", "nil", "table",
+    "while",
 ];
 
 /// gets the operators by length not precidence
@@ -28,6 +29,8 @@ string[] levels()
 {
     return join(prec ~ nops).sort!"a.length > b.length".array;
 }
+
+version = nanorc;
 
 Token.Type[] noFollow = [Token.Type.ident, Token.Type.string, Token.Type.format];
 
@@ -207,7 +210,7 @@ Token readToken(ref string code, ref Location location)
     }
     foreach (i; levels)
     {
-        if (code.startsWith(i))
+        if (code.startsWith(i) && !i[$-1].isAlphaNum)
         {
             foreach (_; 0 .. i.length)
             {
@@ -224,15 +227,7 @@ Token readToken(ref string code, ref Location location)
                 || peek == '?' || (isNumber && peek == '.'))
         {
             isNumber = isNumber && (peek.isDigit || peek == '.');
-            if (peek != '@')
-            {
-                ret ~= read;
-            }
-            else
-            {
-                consume;
-                ret ~= '.';
-            }
+            ret ~= read;
         }
         if (levels.canFind(ret))
         {
