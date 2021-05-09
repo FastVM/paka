@@ -1,4 +1,4 @@
-module passerine.parse.syntax;
+module ext.passerine.parse.syntax;
 
 import purr.io;
 import std.algorithm;
@@ -9,9 +9,9 @@ import purr.dynamic;
 import purr.ir.walk;
 import purr.ast.ast;
 import purr.ast.cons;
-import passerine.tokens;
-import passerine.parse.parse;
-import passerine.parse.util;
+import ext.passerine.tokens;
+import ext.passerine.parse.parse;
+import ext.passerine.parse.util;
 
 Dynamic[2][][] syntaxMacros = [null];
 Table[] nameSubs;

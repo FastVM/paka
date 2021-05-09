@@ -1,7 +1,7 @@
-module paka.plugin;
+module ext.paka.plugin;
 
-import paka.base;
-import paka.parse.parse;
+import ext.paka.base;
+import ext.paka.parse.parse;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
 

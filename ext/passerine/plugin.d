@@ -1,7 +1,7 @@
-module passerine.plugin;
+module ext.passerine.plugin;
 
-import passerine.base;
-import passerine.parse.parse;
+import ext.passerine.base;
+import ext.passerine.parse.parse;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
 

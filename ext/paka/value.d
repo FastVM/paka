@@ -1,4 +1,4 @@
-module paka.value;
+module ext.paka.value;
 
 import purr.dynamic;
 import std.conv;

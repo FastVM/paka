@@ -1,4 +1,4 @@
-module paka.macros;
+module ext.paka.macros;
 
 import purr.io;
 import std.array;
@@ -6,9 +6,9 @@ import std.algorithm;
 import purr.dynamic;
 import purr.ast.cons;
 import purr.ast.ast;
-import paka.parse.parse;
-import paka.parse.util;
-import paka.tokens;
+import ext.paka.parse.parse;
+import ext.paka.parse.util;
+import ext.paka.tokens;
 
 Dynamic genCtx()
 {

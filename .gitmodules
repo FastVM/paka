@@ -1,3 +1,0 @@
-[submodule "ext/bind/chibicc"]
-	path = ext/bind/chibicc
-	url = https://github.com/shawsumma/chibicc

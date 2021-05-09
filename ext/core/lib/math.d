@@ -237,7 +237,7 @@ Dynamic libapprox(Args args)
     }
     double v1 = args[0].as!double;
     double v2 = args[1].as!double;
-    return approxEqual(v1, v2, rel, abs).dynamic;
+    return isClose(v1, v2, rel, abs).dynamic;
 }
 
 Dynamic libcmp(Args args)
@@ -260,7 +260,7 @@ Dynamic libcmp(Args args)
     }
     double v1 = args[0].as!double;
     double v2 = args[1].as!double;
-    bool same = approxEqual(v1, v2, rel, abs);
+    bool same = isClose(v1, v2, rel, abs);
     if (same)
     {
         return dynamic(0);
@@ -292,7 +292,7 @@ Dynamic liblte(Args args)
     }
     double v1 = args[0].as!double;
     double v2 = args[1].as!double;
-    bool same = approxEqual(v1, v2, rel, abs);
+    bool same = isClose(v1, v2, rel, abs);
     if (same || v1 < v2)
     {
         return true.dynamic;
@@ -320,7 +320,7 @@ Dynamic libgte(Args args)
     }
     double v1 = args[0].as!double;
     double v2 = args[1].as!double;
-    bool same = approxEqual(v1, v2, rel, abs);
+    bool same = isClose(v1, v2, rel, abs);
     if (same || v1 > v2)
     {
         return true.dynamic;

@@ -35,7 +35,7 @@ end
 
 local longlivedtree = BottomUpTree(0, maxdepth)
 
-for depth=mindepth,maxdepth do
+for depth=mindepth,maxdepth,2 do
   local iterations = 2 ^ (maxdepth - depth + mindepth)
   local check = 0
   for i=1,iterations do

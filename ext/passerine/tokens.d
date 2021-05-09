@@ -1,4 +1,4 @@
-module passerine.tokens;
+module ext.passerine.tokens;
 
 import std.ascii;
 import std.conv;

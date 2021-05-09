@@ -1,4 +1,4 @@
-module passerine.magic;
+module ext.passerine.magic;
 
 import purr.io;
 import std.conv;

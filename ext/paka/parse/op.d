@@ -1,11 +1,11 @@
-module paka.parse.op;
+module ext.paka.parse.op;
 
 import purr.io;
 import std.conv;
 import purr.dynamic;
 import purr.ast.ast;
-import paka.built;
-import paka.parse.util;
+import ext.paka.built;
+import ext.paka.parse.util;
 
 Node binaryFold(BinaryOp op, Node lhs, Node rhs)
 {

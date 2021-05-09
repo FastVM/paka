@@ -24,7 +24,8 @@ __gshared size_t nameCount;
 string genName(string prefix)()
 {
     size_t ret = void;
-    synchronized{
+    synchronized
+    {
         ret = nameCount++;
     }
     return prefix ~ ret.to!string;

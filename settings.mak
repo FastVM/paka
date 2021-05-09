@@ -91,7 +91,7 @@ LD_TYPE=$(LD_TYPE_FOUND)
 endif
 
 ifeq ($(LD_TYPE),ld)
-LD_CMD=$(CC_CMD) -fuse-ld=$(subst ld.,,$(LD))
+LD_CMD=$(CC_CMD) -fuse-ld=$(subst ,,$(LD))
 else
 LD_CMD=$(LD)
 endif
@@ -183,7 +183,7 @@ endif
 
 ifeq ($(shell which $(DC_CMD)),)
 ifneq ($(LD_CMD),$(DC_CMD))
-$(error Cannot specify linker when using $(DC_CMD) from local path)
+# $(error Cannot specify linker when using $(DC_CMD) from local path)
 endif
 ifeq ($(DC_TYPE),dmd)
 DC_CMD_PRE=dmd

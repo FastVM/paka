@@ -1,4 +1,4 @@
-module serial.cons;
+module ext.serial.cons;
 
 import purr.io;
 import std.json;

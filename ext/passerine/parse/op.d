@@ -1,11 +1,11 @@
-module passerine.parse.op;
+module ext.passerine.parse.op;
 
 import purr.io;
 import std.conv;
 import purr.dynamic;
 import purr.ast.ast;
-import passerine.parse.pattern;
-import passerine.parse.util;
+import ext.passerine.parse.pattern;
+import ext.passerine.parse.util;
 
 UnaryOp parseUnaryOp(string[] ops)
 {

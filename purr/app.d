@@ -29,12 +29,12 @@ import std.process;
 import std.conv;
 import std.string;
 import std.getopt;
+import std.datetime.stopwatch;
 import core.memory;
+import core.time;
 import core.stdc.stdlib;
 
-extern (C) __gshared string[] rt_options = [
-    "gcopt=incPoolSize:16 heapSizeFactor:8"
-];
+extern (C) __gshared string[] rt_options = [];
 
 alias Thunk = void delegate();
 
@@ -246,10 +246,46 @@ Thunk cliReplHandler()
     };
 }
 
+Thunk cliTimeHandler(Thunk next)
+{
+    return {
+        StopWatch watch = StopWatch(AutoStart.no);
+        watch.start();
+        next();
+        watch.stop();
+        writeln(watch.peek);
+    };
+}
+
+Thunk cliBenchHandler(size_t n, Thunk next)
+{
+    return {
+        Duration all;
+        foreach (_; 0..n)
+        {
+            StopWatch watch = StopWatch(AutoStart.no);
+            watch.start();
+            next();
+            watch.stop();
+            all += watch.peek;
+        }
+        writeln("per run: ", all / n);
+    };
+}
+
+Thunk cliRepeatHandler(size_t n, Thunk next)
+{
+    return {
+        foreach (_; 0..n)
+        {
+            next();
+        }
+    };
+}
+
 void domain(string[] args)
 {
     args = args[1 .. $];
-    string[] extargs;
     Thunk[] todo;
     langNameDefault = "paka";
     ctx = enterCtx;
@@ -259,53 +295,55 @@ void domain(string[] args)
     }
     foreach_reverse (arg; args)
     {
-        switch (arg)
+        string[] parts = arg.split("=").array;
+        string part1()
+        {
+            assert(parts.length != 0);
+            if (parts.length == 1)
+            {
+                throw new Exception(parts[0] ~ " takes an argument using " ~ parts[0]  ~"=argument");
+            }
+            return parts[1..$].join("=");
+        }
+        switch (parts[0])
         {
         default:
-            extargs ~= arg;
+            throw new Exception("use --file=" ~ parts[0]);
+        case "--time":
+            todo[$-1] = todo[$-1].cliTimeHandler;
+            break;
+        case "--repeat":
+            todo[$-1] = cliRepeatHandler(part1.to!size_t, todo[$-1]);
+            break;
+        case "--bench":
+            todo[$-1] = cliBenchHandler(part1.to!size_t, todo[$-1]);
             break;
         case "--repl":
             todo ~= cliReplHandler;
             break;
         case "--serial":
-            string filename = extargs[$ - 1];
-            extargs.length--;
-            todo ~= filename.cliSerialHandler;
+            todo ~= part1.cliSerialHandler;
             break;
         case "--file":
-            string filename = extargs[$ - 1];
-            extargs.length--;
-            todo ~= filename.cliFileHandler;
+            todo ~= part1.cliFileHandler;
             break;
         case "--arg":
-            string filearg = extargs[$ - 1];
-            extargs.length--;
-            todo ~= filearg.cliArgHandler;
+            todo ~= part1.cliArgHandler;
             break;
         case "--chain":
-            string code = extargs[$ - 1];
-            extargs.length--;
-            todo ~= code.cliChainHandler;
+            todo ~= part1.cliChainHandler;
             break;
         case "--call":
-            string code = extargs[$ - 1];
-            extargs.length--;
-            todo ~= code.cliCallHandler;
+            todo ~= part1.cliCallHandler;
             break;
         case "--eval":
-            string code = extargs[$ - 1];
-            extargs.length--;
-            todo ~= code.cliEvalHandler;
+            todo ~= part1.cliEvalHandler;
             break;
         case "--lang":
-            string langname = extargs[$ - 1];
-            extargs.length--;
-            todo ~= langname.cliLangHandler;
+            todo ~= part1.cliLangHandler;
             break;
         case "--into":
-            string filename = extargs[$ - 1];
-            extargs.length--;
-            todo ~= filename.cliIntoHandler;
+            todo ~= part1.cliIntoHandler;
             break;
         case "--bytecode":
             todo ~= cliBytecodeHandler;
@@ -324,11 +362,6 @@ void domain(string[] args)
     foreach_reverse (fun; todo)
     {
         fun();
-    }
-    foreach (arg; extargs)
-    {
-        Thunk th = arg.cliFileHandler;
-        th();
     }
 }
 

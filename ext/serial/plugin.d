@@ -1,11 +1,11 @@
-module serial.plugin;
+module ext.serial.plugin;
 
 import purr.io;
 import purr.base;
 import purr.dynamic;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
-import serial.cons;
+import ext.serial.cons;
 
 shared static this()
 {

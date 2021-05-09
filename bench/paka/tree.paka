@@ -17,7 +17,7 @@ def item_check(tree) {
     }
 }
 
-N = 12
+N = 16
 mindepth = 4
 maxdepth = mindepth + 2
 if maxdepth < N {
@@ -30,7 +30,10 @@ io.print("stretch tree of depth ", stretchdepth, " check: ", item_check(stretcht
 
 longlivedtree = bottom_up_tree(0, maxdepth)
 
-ress =mindepth to (maxdepth + 1) .|> lambda(depth) {
+ress = mindepth to (maxdepth + 1) .|> lambda(depth) {
+    if (depth % 2 != 0) {
+        return ""
+    }
     iters = math.pow(2, maxdepth - depth + mindepth)
     check = 0
     checks = 0 to iters .|> lambda() {

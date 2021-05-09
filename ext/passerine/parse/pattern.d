@@ -1,4 +1,4 @@
-module passerine.parse.pattern;
+module ext.passerine.parse.pattern;
 
 import purr.io;
 import purr.ast.ast;

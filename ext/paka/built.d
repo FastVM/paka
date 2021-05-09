@@ -1,4 +1,4 @@
-module paka.built;
+module ext.paka.built;
 
 import core.memory;
 import std.conv;

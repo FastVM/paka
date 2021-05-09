@@ -1,4 +1,4 @@
-module paka.base;
+module ext.paka.base;
 
 import std.file;
 import std.algorithm;
@@ -10,7 +10,7 @@ import purr.base;
 import purr.inter;
 import purr.srcloc;
 import purr.fs.disk;
-import paka.tokens;
+import ext.paka.tokens;
 
 string line(Args...)(Args args)
 {

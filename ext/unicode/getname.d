@@ -1,4 +1,4 @@
-module unicode.getname;
+module ext.unicode.getname;
 
 import std.algorithm;
 import std.array;

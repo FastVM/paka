@@ -1,4 +1,4 @@
-module passerine.parse.parse;
+module ext.passerine.parse.parse;
 
 import purr.io;
 import std.conv;
@@ -23,12 +23,12 @@ import purr.fs.files;
 import purr.bytecode;
 import purr.ir.walk;
 import purr.ast.ast;
-import passerine.magic;
-import passerine.tokens;
-import passerine.parse.util;
-import passerine.parse.pattern;
-import passerine.parse.op;
-import passerine.parse.syntax;
+import ext.passerine.magic;
+import ext.passerine.tokens;
+import ext.passerine.parse.util;
+import ext.passerine.parse.pattern;
+import ext.passerine.parse.op;
+import ext.passerine.parse.syntax;
 
 Node readParenBody(ref TokenArray tokens, size_t start)
 {

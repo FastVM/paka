@@ -1,4 +1,4 @@
-module passerine.base;
+module ext.passerine.base;
 
 import std.file;
 import std.conv;

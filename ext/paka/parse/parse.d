@@ -1,4 +1,4 @@
-module paka.parse.parse;
+module ext.paka.parse.parse;
 
 import purr.io;
 import std.conv;
@@ -21,11 +21,11 @@ import purr.fs.files;
 import purr.bytecode;
 import purr.ir.walk;
 import purr.ast.ast;
-import paka.tokens;
-import paka.macros;
-import paka.parse.util;
-import paka.parse.op;
-import paka.built;
+import ext.paka.tokens;
+import ext.paka.macros;
+import ext.paka.parse.util;
+import ext.paka.parse.op;
+import ext.paka.built;
 
 /// reads open parens
 Node[][] readOpen(string v)(ref TokenArray tokens) if (v == "()")
@@ -658,7 +658,7 @@ Node readBlockImpl(ref TokenArray tokens)
 }
 
 alias parsePakaValue = parsePakaAs!readBlockBodyImpl;
-alias parsePaka = memoize!parsePakaValue;
+alias parsePaka = parsePakaValue;
 /// parses code as the paka programming language
 Node parsePakaAs(alias parser)(Location loc)
 {

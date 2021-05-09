@@ -1,4 +1,4 @@
-module unicode.plugin;
+module ext.unicode.plugin;
 
 import std.utf;
 import std.conv;
@@ -7,7 +7,7 @@ import purr.base;
 import purr.dynamic;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
-import unicode.getname;
+import ext.unicode.getname;
 
 shared static this()
 {
