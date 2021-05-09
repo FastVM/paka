@@ -31,7 +31,7 @@ Table matchMacro(Dynamic[] pattern, Node ast)
             flat ~= call.args[$ - 1];
             if (Ident id = cast(Ident) call.args[0])
             {
-                if (id.repr == "@call")
+                if (id.repr == "call")
                 {
                     if (Call nextCall = cast(Call) call.args[1])
                     {
@@ -99,10 +99,6 @@ Node macroLike(Node node, Table pattern)
         if (Dynamic* dyn = id.repr.dynamic in pattern)
         {
             return getNode(*dyn);
-        }
-        else if (specialForms.canFind(id.repr))
-        {
-            return id;
         }
         else
         {

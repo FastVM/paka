@@ -12,11 +12,11 @@ UnaryOp parseUnaryOp(string[] ops)
     string opName = ops[0];
     if (opName == "-")
     {
-        return (Node rhs) { return new Call(new Ident("-"), [new Value(0), rhs]); };
+        return (Node rhs) { return new Call("-", [new Value(0), rhs]); };
     }
     if (opName == "..")
     {
-        return (Node rhs) { return new Call(new Ident(".."), [rhs]); };
+        return (Node rhs) { return new Call("..", [rhs]); };
     }
     else
     {
@@ -55,14 +55,14 @@ BinaryOp parseBinaryOp(string[] ops)
                 {
                     return rhs;
                 }
-                return new Call(new Ident("@set"), [id, rhs]);
+                return new Call("set", [id, rhs]);
             }
             else
             {
                 Node sym = genSym;
-                Node assign = new Call(new Ident("@set"), [sym, rhs]);
+                Node assign = new Call("set", [sym, rhs]);
                 Node check = new Call(new Value(native!checkTrue), [matcher(sym, lhs), sym]);
-                return new Call(new Ident("@do"), [assign, check]); 
+                return new Call("do", [assign, check]); 
             }
         };
     case "->":
@@ -75,7 +75,7 @@ BinaryOp parseBinaryOp(string[] ops)
                 {
                     if (Ident id = cast(Ident) call.args[0])
                     {
-                        if (id.repr == "@call")
+                        if (id.repr == "call")
                         {
                             args ~= call.args[2];
                             cur = call.args[1];
@@ -91,40 +91,40 @@ BinaryOp parseBinaryOp(string[] ops)
             {
                 if (Ident id = cast(Ident) arg)
                 {
-                    ret = new Call(new Ident("@fun"), [new Call([id]), ret]);
+                    ret = new Call("fun", [new Call(id.repr), ret]);
                 }
                 if (Value val = cast(Value) arg)
                 {
-                    Node sym = genSym;
+                    Ident sym = genSym;
                     Node okCheck = new Call(new Value(native!check2), [arg, sym]);
-                    Node func = new Call(new Ident("@do"), [okCheck, ret]);
-                    ret = new Call(new Ident("@fun"), [new Call([sym]), func]);
+                    Node func = new Call("do", [okCheck, ret]);
+                    ret = new Call("fun", [new Call(sym.repr), func]);
                 }
                 if (Call call = cast(Call) arg)
                 {
-                    Node sym = genSym;
+                    Ident sym = genSym;
                     Node check = new Call(new Value(native!checkTrue), [matcher(sym, arg), sym]);
-                    Node func = new Call(new Ident("@do"), [check, ret]);
-                    ret = new Call(new Ident("@fun"), [new Call([sym]), func]);
+                    Node func = new Call("do", [check, ret]);
+                    ret = new Call("fun", [new Call(sym.repr), func]);
                 }
             }
             return ret;
         };
     case ".":
         return (Node lhs, Node rhs) {
-            return new Call(new Ident("@call"), [rhs, lhs]);
+            return new Call("call", [rhs, lhs]);
         };
     case "and":
         return (Node lhs, Node rhs) {
-            return new Call(new Ident("&&"), [rhs, lhs]);
+            return new Call("&&", [rhs, lhs]);
         };
     case "or":
         return (Node lhs, Node rhs) {
-            return new Call(new Ident("||"), [rhs, lhs]);
+            return new Call("||", [rhs, lhs]);
         };
     default:
         return (Node lhs, Node rhs) {
-            return new Call(new Ident(opName), [lhs, rhs]);
+            return new Call(opName, [lhs, rhs]);
         };
     }
 }

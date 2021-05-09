@@ -113,7 +113,7 @@ Function baseFunction(size_t ctx = rootBases.length-1)
 version(unittest)
 {
     enum string[] libnames = ["varunit", "unttest", "_unit_test", "_purr.unittest.lib", "", "123", "\x04\x09\x08\x04", "\"\""];
-    enum string[] varnames = ["i have spaces", "\0", "()", "nil", ".", "args", "@if"];
+    enum string[] varnames = ["i have spaces", "\0", "()", "nil", ".", "args", "if"];
     enum string voidname = "void";
 
     Dynamic libunitvoid(Args args)

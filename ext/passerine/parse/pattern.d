@@ -35,10 +35,10 @@ Node matcher(Node value, Node pattern)
     {
         if (id.repr == "_")
         {
-            return new Call(new Ident("@do"), [value, new Value(true)]);
+            return new Call("do", [value, new Value(true)]);
         }
-        Node setter = new Call(new Ident("@set"), [id, value]);
-        return new Call(new Ident("@do"), [setter, new Value(true)]);
+        Node setter = new Call("set", [id, value]);
+        return new Call("do", [setter, new Value(true)]);
     }
     else if (Value val = cast(Value) pattern)
     {
@@ -55,14 +55,14 @@ Node matcher(Node value, Node pattern)
             case ":":
                 Node c1 = matcher(value, call.args[1]);
                 Node c2 = matcher(value, call.args[2]);
-                return new Call(new Ident("&&"), [c1, c2]);
+                return new Call("&&", [c1, c2]);
             case "|":
                 Node c1 = matcher(value, call.args[1]);
                 Node c2 = call.args[2];
-                return new Call(new Ident("&&"), [c1, c2]);
-            case "@tuple":
+                return new Call("&&", [c1, c2]);
+            case "tuple":
                 goto case;
-            case "@array":
+            case "array":
                 Node[] pre;
                 Node[] post;
                 foreach (val; call.args[1 .. $])
@@ -93,10 +93,10 @@ Node matcher(Node value, Node pattern)
                             [value, new Value(pre.length)]);
                     foreach (index, term; pre)
                     {
-                        Node indexed = new Call(new Ident("@index"), [
+                        Node indexed = new Call("index", [
                                 value, new Value(index)
                                 ]);
-                        ret = new Call(new Ident("&&"), [
+                        ret = new Call("&&", [
                                 ret, matcher(indexed, term)
                                 ]);
                     }
@@ -108,10 +108,10 @@ Node matcher(Node value, Node pattern)
                             [value, new Value(pre.length + post.length - 1)]);
                     foreach (index, term; pre)
                     {
-                        Node indexed = new Call(new Ident("@index"), [
+                        Node indexed = new Call("index", [
                                 value, new Value(index)
                                 ]);
-                        ret = new Call(new Ident("&&"), [
+                        ret = new Call("&&", [
                                 ret, matcher(indexed, term)
                                 ]);
                     }
@@ -120,14 +120,14 @@ Node matcher(Node value, Node pattern)
                             ]);
                     Call term0 = cast(Call) post[0];
                     assert(term0);
-                    ret = new Call(new Ident("&&"), [
+                    ret = new Call("&&", [
                             ret, matcher(sliced, term0.args[1])
                             ]);
                     foreach (index, term; post[1 .. $])
                     {
                         Node indexed = new Call(new Value(native!rindex),
                                 [value, new Value(index + 1)]);
-                        ret = new Call(new Ident("&&"), [
+                        ret = new Call("&&", [
                                 ret, matcher(indexed, term)
                                 ]);
                     }

@@ -11,7 +11,7 @@ Node binaryFold(BinaryOp op, Node lhs, Node rhs)
 {
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
-    Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
+    Call lambda = new Call("fun", [new Call(xy), lambdaBody]);
     Call domap = new Call(new Value(native!metaFoldBinary), [lambda, lhs, rhs]);
     return domap;
 }
@@ -20,7 +20,7 @@ Node unaryFold(BinaryOp op, Node rhs)
 {
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
-    Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
+    Call lambda = new Call("fun", [new Call(xy), lambdaBody]);
     Call domap = new Call(new Value(native!metaFoldUnary), [lambda, rhs]);
     return domap;
 }
@@ -29,7 +29,7 @@ Node unaryDotmap(UnaryOp op, Node rhs)
 {
     Node[] xy = [new Ident("_rhs")];
     Node lambdaBody = op(xy[0]);
-    Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
+    Call lambda = new Call("fun", [new Call(xy), lambdaBody]);
     Call domap = new Call(new Value(native!metaMapPreParallel), [lambda, rhs]);
     return domap;
 }
@@ -38,7 +38,7 @@ Node binaryDotmap(alias func)(BinaryOp op, Node lhs, Node rhs)
 {
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
-    Call lambda = new Call(new Ident("@fun"), [new Call(xy), lambdaBody]);
+    Call lambda = new Call("fun", [new Call(xy), lambdaBody]);
     Call domap = new Call(new Value(native!func), [lambda, lhs, rhs]);
     return domap;
 }
@@ -139,9 +139,9 @@ UnaryOp parseUnaryOp(string[] ops)
                 BinaryOp curBinary = rest.parseBinaryOp;
                 UnaryOp nextUnary = ops.parseUnaryOp();
                 return (Node rhs) {
-                    Node tmp = new Call(new Ident("@set"), [genSym, rhs]);
+                    Node tmp = new Call("set", [genSym, rhs]);
                     Node res = curBinary(curUnary(tmp), nextUnary(tmp));
-                    return new Call(new Ident("@do"), [tmp, res]);
+                    return new Call("do", [tmp, res]);
                 };
             }
         }
@@ -155,7 +155,7 @@ UnaryOp parseUnaryOp(string[] ops)
     else if (opName == "not")
     {
         return (Node rhs) {
-            return new Call(new Ident("!="), [rhs, new Value(true)]);
+            return new Call("!=", [rhs, new Value(true)]);
         };
     }
     else if (opName == "-")
@@ -206,7 +206,7 @@ BinaryOp parseBinaryOp(string[] ops)
     {
     case "=":
         return (Node lhs, Node rhs) {
-            return new Call(new Ident("@set"), [lhs, rhs]);
+            return new Call("set", [lhs, rhs]);
         };
     case "+=":
     case "~=":
@@ -219,7 +219,7 @@ BinaryOp parseBinaryOp(string[] ops)
         if (opName == "|>")
         {
             return (Node lhs, Node rhs) {
-                return new Call(new Ident("@rcall"), [lhs, rhs]);
+                return new Call("rcall", [lhs, rhs]);
             };
         }
         else if (opName == "to")
@@ -231,7 +231,7 @@ BinaryOp parseBinaryOp(string[] ops)
         else if (opName == "<|")
         {
             return (Node lhs, Node rhs) {
-                return new Call(new Ident("@call"), [lhs, rhs]);
+                return new Call("call", [lhs, rhs]);
             };
         }
         else
@@ -245,7 +245,7 @@ BinaryOp parseBinaryOp(string[] ops)
                 opName = "&&";
             }
             return (Node lhs, Node rhs) {
-                return new Call(new Ident(opName), [lhs, rhs]);
+                return new Call(opName, [lhs, rhs]);
             };
         }
     }

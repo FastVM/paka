@@ -32,14 +32,20 @@ class Node
 class Call : Node
 {
     Node[] args;
-    this(Node[] c)
+
+    this(Node[] a=null)
     {
-        args = c;
+        args = a;
     }
 
-    this(Node f, Node[] a)
+    this(Value f, Node[] a=null)
     {
-        args = [f] ~ a;
+        args = f ~ a;
+    }
+
+    this(string f, Node[] a=null)
+    {
+        args = new Ident(f) ~ a;
     }
 
     override string toString()
@@ -70,6 +76,19 @@ Ident genSym()
 {
     usedSyms++;
     return new Ident("_purr_" ~ to!string(usedSyms - 1));
+}
+
+template ident(string name){
+    Ident value;
+
+    shared static this()
+    {
+        value = new Ident(name);
+    }
+
+    Ident ident() {
+        return value;
+    }
 }
 
 /// ident or number, detects at runtime

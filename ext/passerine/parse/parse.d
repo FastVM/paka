@@ -51,7 +51,7 @@ Node readParenBody(ref TokenArray tokens, size_t start)
     }
     if (args.length == 0)
     {
-        return new Call(new Ident("@tuple"), null);
+        return new Call("tuple", null);
     }
     if (args.length == 1 && !hasComma)
     {
@@ -59,7 +59,7 @@ Node readParenBody(ref TokenArray tokens, size_t start)
     }
     else
     {
-        return new Call(new Ident("@tuple"), args);
+        return new Call("tuple", args);
     }
 }
 
@@ -92,7 +92,7 @@ Node readOpen(string v)(ref TokenArray tokens) if (v == "[]")
         }
     }
     tokens.nextIs(Token.Type.close, [v[1]]);
-    return new Call(new Ident("@array"), args);
+    return new Call("array", args);
 }
 
 /// reads open curly brackets
@@ -133,14 +133,14 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
         tokens.nextIs(Token.Type.operator, "::");
         if (tokens.first.value[0].isDigit)
         {
-            ret = new Call(new Ident("@index"), [
+            ret = new Call("index", [
                     last, new Value(tokens.first.value.to!double)
                     ]);
             tokens.nextIsAny;
         }
         else
         {
-            ret = new Call(new Ident("@index"), [
+            ret = new Call("index", [
                     last, new Value(tokens.first.value)
                     ]);
             tokens.nextIsAny;
@@ -257,10 +257,10 @@ Node readMatch(ref TokenArray tokens)
     foreach_reverse (pair; ret)
     {
         Node cond = matcher(sym, pair[0]);
-        match = new Call(new Ident("@if"), [cond, pair[1], match]);
+        match = new Call("if", [cond, pair[1], match]);
     }
-    Node assign = new Call(new Ident("@set"), [sym, value]);
-    return new Call(new Ident("@do"), [assign, match]);
+    Node assign = new Call("set", [sym, value]);
+    return new Call("do", [assign, match]);
 }
 
 /// reads first element of postfix expression
@@ -319,7 +319,7 @@ redo:
                 }
                 tokens.eat;
                 tokens.nextIs(Token.type.close, ")");
-                last = new Call(new Ident("@if"), [cond, iftrue, iffalse]);
+                last = new Call("if", [cond, iftrue, iffalse]);
             }
             else
             {
@@ -338,7 +338,7 @@ redo:
                     tokens.nextIs(Token.Type.comma);
                 }
                 tokens.nextIs(Token.type.close, ")");
-                last = new Call(new Ident("+"), [lhs, rhs]);
+                last = new Call("+", [lhs, rhs]);
             }
             else
             {
@@ -357,7 +357,7 @@ redo:
                     tokens.nextIs(Token.Type.comma);
                 }
                 tokens.nextIs(Token.type.close, ")");
-                last = new Call(new Ident("-"), [lhs, rhs]);
+                last = new Call("-", [lhs, rhs]);
             }
             else
             {
@@ -381,7 +381,7 @@ redo:
                 tokens.nextIs(Token.Type.comma);
                 Node rhs = tokens.readExpr(1);
                 tokens.nextIs(Token.type.close, ")");
-                last = new Call(new Ident("=="), [lhs, rhs]);
+                last = new Call("==", [lhs, rhs]);
             }
             else
             {
@@ -396,7 +396,7 @@ redo:
                 tokens.nextIs(Token.Type.comma);
                 Node rhs = tokens.readExpr(1);
                 tokens.nextIs(Token.type.close, ")");
-                last = new Call(new Ident(">"), [lhs, rhs]);
+                last = new Call(">", [lhs, rhs]);
             }
             else
             {
@@ -428,7 +428,7 @@ redo:
             {
                 Node name = new Value(Dynamic.sym(tokens.first.value));
                 tokens.nextIsAny;
-                last = new Call(new Ident("@tuple"), [name, tokens.readPostExpr]);
+                last = new Call("tuple", [name, tokens.readPostExpr]);
             }
             else if (tokens.first.value.isNumeric)
             {
@@ -497,7 +497,7 @@ Node readPreExprImpl(ref TokenArray tokens)
             && !tokens.first.isClose && !tokens.first.isComma && !tokens.first.isOperator)
     {
         size_t llen = tokens.length;
-        ret = new Call(new Ident("@call"), [ret, tokens.readPostExpr]);
+        ret = new Call("call", [ret, tokens.readPostExpr]);
         if (llen == tokens.length)
         {
             break;
@@ -632,7 +632,7 @@ Node readBlockBodyImpl(ref TokenArray tokens)
             break;
         }
     }
-    return new Call(new Ident("@do"), ret);
+    return new Call("do", ret);
 }
 
 /// wraps the readblock and consumes curly braces
