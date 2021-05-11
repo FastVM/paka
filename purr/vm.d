@@ -17,7 +17,7 @@ version = PurrErrors;
 
 DebugFrame[] debugFrames;
 
-alias LocalCallback = void delegate(uint index, Dynamic[] locals);
+alias LocalFormback = void delegate(uint index, Dynamic[] locals);
 
 enum string[2][] cmpMap()
 {
@@ -29,19 +29,23 @@ enum string[2][] mutMap()
     return [["+", "add"], ["-", "sub"], ["*", "mul"], ["/", "div"], ["%", "mod"], ["~", "cat"]];
 }
 
-
 pragma(inline, true) T eat(T)(ubyte* bytes, ref ushort index)
 {
-    T ret = *cast(T*)(bytes + (index));
+    T ret = *cast(T*)(bytes + index);
     index += T.sizeof;
     return ret;
+}
+
+pragma(inline, true) T peek(T)(ubyte* bytes, ref ushort index)
+{
+    return *cast(T*)(bytes + index);
 }
 
 Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
 {
     static foreach (I; T)
     {
-        static assert(is(I == LocalCallback));
+        static assert(is(I == LocalFormback));
     }
     ushort index = 0;
     size_t stackAlloc = (func.stackSize + func.stab.length) * Dynamic.sizeof;
@@ -275,7 +279,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             Dynamic ind = *stack;
             stack--;
             Dynamic arr = *stack;
-            
             switch (arr.type)
             {
             case Dynamic.Type.tup:
@@ -285,7 +288,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 arr.arr[ind.as!size_t] = val;
                 break;
             case Dynamic.Type.tab:
-                (arr.tab).set(ind, val);
+                arr.tab.set(ind, val);
                 break;
             default:
                 throw new Exception("error: cannot store at index on a " ~ arr.type.to!string);
@@ -300,7 +303,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             Dynamic v = *(stack--);
             static foreach (callback; rest)
             {
-                static if (is(typeof(callback) == LocalCallback))
+                static if (is(typeof(callback) == LocalFormback))
                 {
                     {
                         callback(index, locals[0..func.stab.length]);
@@ -311,7 +314,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.retnone:
             static foreach (callback; rest)
             {
-                static if (is(typeof(callback) == LocalCallback))
+                static if (is(typeof(callback) == LocalFormback))
                 {
                     {
                         callback(index, locals[0..func.stab.length]);
@@ -325,6 +328,17 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             if (val.type != Dynamic.Type.nil && val.log)
             {
                 index = id;
+            }
+            break;
+        case Opcode.branch:
+            Dynamic val = *(stack--);
+            ushort tb = instrs.eat!ushort(index);
+            if (val.type != Dynamic.Type.nil && val.log)
+            {
+                index = tb;
+            }
+            else {
+                index = instrs.peek!ushort(index);
             }
             break;
         case Opcode.iffalse:

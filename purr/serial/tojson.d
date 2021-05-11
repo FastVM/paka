@@ -161,10 +161,6 @@ string serialize(T)(T* ptr)
 
 string serialize(Table tab)
 {
-    if (tab is null)
-    {
-        return `{"null": "true"}`;
-    }
     string pairs = `"length": `;
     pairs ~= tab.table.length.serialize;
     size_t n = 0;
@@ -177,7 +173,7 @@ string serialize(Table tab)
         n++;
     }
     string meta;
-    return `{"null": "false", "pairs": {` ~ pairs ~ `}, "meta": ` ~ tab.metatable.serialize ~ `}`;
+    return `{` ~ pairs ~ `}`;
 }
 
 Dynamic[] alreadySerialized;

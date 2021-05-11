@@ -87,7 +87,7 @@ Thunk cliChainHandler(immutable string code)
     };
 }
 
-Thunk cliCallHandler(immutable string code)
+Thunk cliFormHandler(immutable string code)
 {
     return {
         Dynamic got = dynamics[$ - 1]([
@@ -334,7 +334,7 @@ void domain(string[] args)
             todo ~= part1.cliChainHandler;
             break;
         case "--call":
-            todo ~= part1.cliCallHandler;
+            todo ~= part1.cliFormHandler;
             break;
         case "--eval":
             todo ~= part1.cliEvalHandler;

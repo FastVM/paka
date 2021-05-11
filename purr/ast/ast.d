@@ -7,7 +7,7 @@ import purr.dynamic;
 import purr.srcloc;
 
 /// all possible node types
-alias NodeTypes = AliasSeq!(Call, Value, Ident);
+alias NodeTypes = AliasSeq!(Form, Value, Ident);
 
 enum NodeKind
 {
@@ -29,35 +29,28 @@ class Node
 }
 
 /// call of function or operator call
-class Call : Node
+class Form : Node
 {
+    string form;
     Node[] args;
 
-    this(Node[] a=null)
+    this(Args...)(string f, Args as)
     {
-        args = a;
-    }
-
-    this(Value f, Node[] a=null)
-    {
-        args = f ~ a;
-    }
-
-    this(string f, Node[] a=null)
-    {
-        args = new Ident(f) ~ a;
+        static foreach (a; as)
+        {
+            args ~= a;
+        }
+        form = f;
     }
 
     override string toString()
     {
         char[] ret;
         ret ~= "(";
+        ret ~= form;
         foreach (i, v; args)
         {
-            if (i != 0)
-            {
-                ret ~= " ";
-            }
+            ret ~= " ";
             ret ~= v.to!string;
         }
         ret ~= ")";

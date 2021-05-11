@@ -151,6 +151,9 @@ class OpcodeIterator
             case Opcode.iffalse:
                 iffalse(get);
                 break;
+            case Opcode.branch:
+                branch(get, get);
+                break;
             case Opcode.jump:
                 jump(get);
                 break;
@@ -308,6 +311,10 @@ class OpcodeIterator
     }
 
     void iffalse(ushort jumpIndex)
+    {
+    }
+
+    void branch(ushort ifture, ushort iffalse)
     {
     }
 

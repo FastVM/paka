@@ -17,7 +17,7 @@ class Value
     }
 }
 
-class Call : Value
+class Form : Value
 {
     Value fun;
     Value[] args;

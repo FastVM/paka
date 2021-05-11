@@ -96,19 +96,13 @@ Pointer deserialize(Pointer)(Json json)
 
 Table deserialize(T : Table)(Json json)
 {
-    bool isNull = json["null"].str.to!bool;
-    if (isNull)
-    {
-        return null;
-    }
     Mapping mapping = emptyMapping;
-    Table meta = json["meta"].deserialize!Table;
-    foreach (n; 0..json["pairs"]["length"].deserialize!size_t)
+    foreach (n; 0..json["length"].deserialize!size_t)
     {
-        Json kv = json["pairs"][n.to!string];
+        Json kv = json[n.to!string];
         mapping[kv["key"].deserialize!Dynamic] = kv["value"].deserialize!Dynamic;
     }
-    return new Table(mapping, meta);
+    return new Table(mapping);
 }
 
 T elem(string name, T)(Json json)
@@ -236,11 +230,10 @@ Dynamic deserialize(T : Dynamic)(Json json)
         above[$-1].len = cast(uint) got.length;
         return above[$ - 1];
     case Dynamic.Type.tab:
-        Table child = new Table;
+        Table child = Table.empty;
         above[$ - 1] = child.dynamic;
         Table got = json["table"].deserialize!(Table);
         child.table = got.table;
-        child.metatable = got.metatable;
         return child.dynamic;
     case Dynamic.Type.fun:
         Dynamic function(Args) res = json["function"].deserialize!(Dynamic function(Args));

@@ -7,7 +7,6 @@ import std.traits;
 import purr.io;
 import core.memory;
 import core.atomic;
-import core.sync.mutex;
 import purr.bytecode;
 import purr.vm;
 import purr.data.map;
@@ -45,15 +44,9 @@ void*[] lookingFor;
 class TableImpl
 {
     Mapping table = emptyMapping;
-    Table metatable;
-    Mutex mutex;
     alias table this;
 
-    Table init()
-    {
-        return Table.empty;
-    }
-
+pragma(inline, true):
     static Table empty()
     {
         return new Table;
@@ -67,22 +60,11 @@ class TableImpl
     this(typeof(table) t)
     {
         table = t;
-        metatable = null;
     }
 
     this(typeof(table) t, Table m)
     {
         table = t;
-        metatable = m;
-    }
-
-    ref Table meta()
-    {
-        if (metatable is null)
-        {
-            metatable = new Table;
-        }
-        return metatable;
     }
 
     Dynamic rawIndex(Dynamic key)
@@ -101,7 +83,7 @@ class TableImpl
 
     void set(Dynamic key, Dynamic value)
     {
-        Dynamic* metaset = dynamic("set") in meta;
+        Dynamic* metaset = dynamic("set") in table;
         if (metaset !is null)
         {
             (*metaset)([dynamic(this), key, value]);
@@ -137,15 +119,7 @@ class TableImpl
         {
             return ret;
         }
-        if (metatable is null)
-        {
-            return null;
-        }
-        if (meta.length == 0)
-        {
-            return null;
-        }
-        Dynamic* metaget = "get".dynamic in metatable;
+        Dynamic* metaget = "get".dynamic in table;
         if (metaget is null)
         {
             return null;
@@ -186,18 +160,18 @@ class TableImpl
             case "%" : return "mod";
             }
         }
-        return meta[dynamic(opname!op)]([dynamic(this), other]);
+        return table[dynamic(opname!op)]([dynamic(this), other]);
     }
 
     Dynamic opCall(Args args)
     {
-        if (Dynamic* index = "index".dynamic in meta)
+        if (Dynamic* index = "index".dynamic in table)
         {
-            if (Dynamic* dyn = "self".dynamic in meta)
+            if (Dynamic* dyn = "self".dynamic in table)
             {
-                return meta[dynamic("index")](dyn.arr ~ args);
+                return table[dynamic("index")](dyn.arr ~ args);
             }
-            return meta[dynamic("index")](args);
+            return table[dynamic("index")](args);
         }
         if (Dynamic* ret = args[0] in table)
         {
@@ -216,7 +190,7 @@ class TableImpl
             case "-" : return "neg";
             }
         }
-        return meta[dynamic(opname!op)]([this]);
+        return table[dynamic(opname!op)]([this]);
     }
 
     override string toString()
@@ -233,7 +207,7 @@ class TableImpl
         {
             beforeTables.length--;
         }
-        Dynamic* str = "str".dynamic in meta;
+        Dynamic* str = "str".dynamic in table;
         if (str !is null)
         {
             Dynamic res = *str;
@@ -332,14 +306,14 @@ struct DynamicImpl
         string* str;
         Dynamic* arr;
         Table tab;
-        alias Callable = CallableUnion;
-        union CallableUnion
+        alias Formable = FormableUnion;
+        union FormableUnion
         {
             Fun* fun;
             Function pro;
         }
 
-        Callable fun;
+        Formable fun;
     }
 
     Type type = void;
@@ -646,7 +620,7 @@ pragma(inline, true):
         return value.str;
     }
 
-    Value.Callable fun()
+    Value.Formable fun()
     {
         version (safe)
         {
@@ -729,13 +703,6 @@ int cmpTable(Table at, Table bt)
     {
         tableAbove.length--;
     }
-    if (at.metatable !is null)
-    {
-        if (Dynamic* mcmp = "cmp".dynamic in at.metatable)
-        {
-            return cast(int)(*mcmp)([at.dynamic, bt.dynamic]).value.sml;
-        }
-    }
     if (int c = cmp(at.table.length, bt.table.length))
     {
         return c;
@@ -759,11 +726,7 @@ int cmpTable(Table at, Table bt)
             return res;
         }
     }
-    if (at.meta.length == 0 && at.meta.length == 0)
-    {
-        return 0;
-    }
-    return cmpTable(at.meta, bt.meta);
+    return 0;
 }
 
 Dynamic[2][] above;

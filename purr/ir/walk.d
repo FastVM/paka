@@ -75,7 +75,7 @@ class Walker
         switch (node.id)
         {
         case NodeKind.call:
-            walkExact(cast(Call) node);
+            walkExact(cast(Form) node);
             break;
         case NodeKind.ident:
             walkExact(cast(Ident) node);
@@ -236,13 +236,13 @@ class Walker
         }
     }
 
-    void walkStoreDef(Node[] lhs, Node rhs)
+    void walkStoreDef(Node lhs, Node[] args, Node rhs)
     {
-        Node funCall = new Call("fun", [
-                new Call(lhs[1 .. $]), rhs
+        Node funForm = new Form("fun", [
+                new Form("args", args), rhs
                 ]);
-        Node setCall = new Call("set", [lhs[0], funCall]);
-        walk(setCall);
+        Node setForm = new Form("set", lhs, funForm);
+        walk(setForm);
     }
     
     void walkStoreIndex(Node on, Node ind, Node val)
@@ -260,18 +260,19 @@ class Walker
             walk(args[1]);
             emit(new StoreInstruction(id.repr));
         }
-        else if (Call call = cast(Call) args[0])
+        else if (Form call = cast(Form) args[0])
         {
-            if (Ident id = cast(Ident) call.args[0])
+            if (call.form == "call")
             {
-                if (id.repr == "call")
-                {
-                    walkStoreDef(call.args[1..$], args[1]);
-                }
-                else if (id.repr == "index")
-                {
-                    walkStoreIndex(call.args[1], call.args[2], args[1]);
-                }
+                walkStoreDef(call.args[0], call.args[1..$], args[1]);
+            }
+            else if (call.form == "args")
+            {
+                walkStoreDef(call.args[0], call.args[1..$], args[1]);
+            }
+            else if (call.form == "index")
+            {
+                walkStoreIndex(call.args[0], call.args[1], args[1]);
             }
             else
             {
@@ -286,7 +287,7 @@ class Walker
 
     void walkFun(Node[] args)
     {
-        Call argl = cast(Call) args[0];
+        Form argl = cast(Form) args[0];
         Dynamic[] argNames;
         foreach (i, v; argl.args)
         {
@@ -390,16 +391,16 @@ class Walker
         walk(args[0]);
     }
 
-    void walkCall(Node fun, Node[] args)
+    void walkForm(Node fun, Node[] args)
     {
         walk(fun);
         foreach (arg; args) {
             walk(arg);
         }
-        emit(new CallInstruction(args.length));
+        emit(new FormInstruction(args.length));
     }
 
-    void walkSpecialCall(string special, Node[] args)
+    void walkSpecialForm(string special, Node[] args)
     {
         switch (special)
         {
@@ -439,10 +440,10 @@ class Walker
             walkAssert(args);
             break;
         case "rcall":
-            walkCall(args[$-1], args[0..$-1]);
+            walkForm(args[$-1], args[0..$-1]);
             break;
         case "call":
-            walkCall(args[0], args[1..$]);
+            walkForm(args[0], args[1..$]);
             break;
         case "return":
             walkReturn(args);
@@ -496,25 +497,9 @@ class Walker
         }
     }
 
-    void walkExact(Call call)
+    void walkExact(Form call)
     {
-        assert(call.args.length != 0);
-        if (Ident id = cast(Ident) call.args[0])
-        {
-            walkSpecialCall(id.repr, call.args[1 .. $]);
-        }
-        else if (Value val = cast(Value) call.args[0])
-        {
-            foreach (i; call.args[1 .. $])
-            {
-                walk(i);
-            }
-            emit(new StaticCallInstruction(val.value, call.args.length - 1));
-        }
-        else
-        {
-            throw new Exception("internal error: consider @call (for: " ~ call.to!string ~ ")");
-        }
+        walkSpecialForm(call.form, call.args);
     }
 
     void walkExact(Value val)

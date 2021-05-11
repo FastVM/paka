@@ -237,6 +237,8 @@ enum Opcode : ushort
     iftrue,
     /// jump if false
     iffalse,
+    // jump to if true or false
+    branch,
     /// jump to index
     jump,
     /// arg number
@@ -256,6 +258,6 @@ enum int[Opcode] opSizes = [
         : -1, Opcode.opmul : -1, Opcode.opdiv : -1, Opcode.opmod : -1,
         Opcode.load : 1, Opcode.loadc : 1,
         Opcode.retval : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
-        Opcode.iffalse : -1, Opcode.jump : 0, Opcode.argno : 1, Opcode.args
+        Opcode.iffalse : -1, Opcode.branch : -1,Opcode.jump : 0, Opcode.argno : 1, Opcode.args
         : 1, Opcode.inspect : 0,
     ];

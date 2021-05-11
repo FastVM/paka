@@ -11,8 +11,8 @@ Node binaryFold(BinaryOp op, Node lhs, Node rhs)
 {
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
-    Call lambda = new Call("fun", [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Value(native!metaFoldBinary), [lambda, lhs, rhs]);
+    Form lambda = new Form("fun", new Form("args", xy), lambdaBody);
+    Form domap = new Form("call", new Value(native!metaFoldBinary), [lambda, lhs, rhs]);
     return domap;
 }
 
@@ -20,8 +20,8 @@ Node unaryFold(BinaryOp op, Node rhs)
 {
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
-    Call lambda = new Call("fun", [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Value(native!metaFoldUnary), [lambda, rhs]);
+    Form lambda = new Form("fun", new Form("args", xy), lambdaBody);
+    Form domap = new Form("call", new Value(native!metaFoldUnary), [lambda, rhs]);
     return domap;
 }
 
@@ -29,8 +29,8 @@ Node unaryDotmap(UnaryOp op, Node rhs)
 {
     Node[] xy = [new Ident("_rhs")];
     Node lambdaBody = op(xy[0]);
-    Call lambda = new Call("fun", [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Value(native!metaMapPreParallel), [lambda, rhs]);
+    Form lambda = new Form("fun", new Form("args", xy), lambdaBody);
+    Form domap = new Form("call", new Value(native!metaMapPreParallel), [lambda, rhs]);
     return domap;
 }
 
@@ -38,8 +38,8 @@ Node binaryDotmap(alias func)(BinaryOp op, Node lhs, Node rhs)
 {
     Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
     Node lambdaBody = op(xy[0], xy[1]);
-    Call lambda = new Call("fun", [new Call(xy), lambdaBody]);
-    Call domap = new Call(new Value(native!func), [lambda, lhs, rhs]);
+    Form lambda = new Form("fun", new Form("args", xy), lambdaBody);
+    Form domap = new Form("call", new Value(native!func), [lambda, lhs, rhs]);
     return domap;
 }
 
@@ -139,9 +139,9 @@ UnaryOp parseUnaryOp(string[] ops)
                 BinaryOp curBinary = rest.parseBinaryOp;
                 UnaryOp nextUnary = ops.parseUnaryOp();
                 return (Node rhs) {
-                    Node tmp = new Call("set", [genSym, rhs]);
+                    Node tmp = new Form("set", genSym, rhs);
                     Node res = curBinary(curUnary(tmp), nextUnary(tmp));
-                    return new Call("do", [tmp, res]);
+                    return new Form("do", tmp, res);
                 };
             }
         }
@@ -150,12 +150,12 @@ UnaryOp parseUnaryOp(string[] ops)
     string opName = ops[0];
     if (opName == "#")
     {
-        return (Node rhs) { return new Call(new Value(native!lengthOp), [rhs]); };
+        return (Node rhs) { return new Form("call", new Value(native!lengthOp), [rhs]); };
     }
     else if (opName == "not")
     {
         return (Node rhs) {
-            return new Call("!=", [rhs, new Value(true)]);
+            return new Form("!=", rhs, new Value(true));
         };
     }
     else if (opName == "-")
@@ -206,7 +206,7 @@ BinaryOp parseBinaryOp(string[] ops)
     {
     case "=":
         return (Node lhs, Node rhs) {
-            return new Call("set", [lhs, rhs]);
+            return new Form("set", lhs, rhs);
         };
     case "+=":
     case "~=":
@@ -219,19 +219,19 @@ BinaryOp parseBinaryOp(string[] ops)
         if (opName == "|>")
         {
             return (Node lhs, Node rhs) {
-                return new Call("rcall", [lhs, rhs]);
+                return new Form("rcall", lhs, rhs);
             };
         }
         else if (opName == "to")
         {
             return (Node lhs, Node rhs) {
-                return new Call(new Value(native!rangeOp), [lhs, rhs]);
+                return new Form("call", new Value(native!rangeOp), [lhs, rhs]);
             };
         }
         else if (opName == "<|")
         {
             return (Node lhs, Node rhs) {
-                return new Call("call", [lhs, rhs]);
+                return new Form("call", lhs, rhs);
             };
         }
         else
@@ -245,7 +245,7 @@ BinaryOp parseBinaryOp(string[] ops)
                 opName = "&&";
             }
             return (Node lhs, Node rhs) {
-                return new Call(opName, [lhs, rhs]);
+                return new Form(opName, [lhs, rhs]);
             };
         }
     }

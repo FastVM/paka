@@ -12,20 +12,6 @@ Pair[] libtab()
         FunctionPair!libfiltervalues("filter_values"),
         FunctionPair!liblen("len"), 
     ];
-    ret.addLib("meta", libmeta);
-    ret.addLib("raw", libraw);
-    return ret;
-}
-
-Pair[] libmeta()
-{
-    Pair[] ret = [FunctionPair!libmetaget("get"), FunctionPair!libmetaset("set"),];
-    return ret;
-}
-
-Pair[] libraw()
-{
-    Pair[] ret = [FunctionPair!librawset("get"), FunctionPair!librawget("set"),];
     return ret;
 }
 
@@ -36,7 +22,7 @@ Dynamic libmap(Args args)
     {
         ret[key] = args[1]([key, value]);
     }
-    Table tab = new Table(ret, args[0].tab.meta);
+    Table tab = new Table(ret);
     return dynamic(tab);
 }
 
@@ -95,30 +81,8 @@ Dynamic libfilter(Args args)
             ret[key] =  value;
         }
     }
-    Table tab = new Table(ret, args[0].tab.meta);
+    Table tab = new Table(ret);
     return dynamic(tab);
-}
-
-Dynamic libmetaset(Args args)
-{
-    args[0].tab.meta = args[1].tab;
-    return args[0];
-}
-
-Dynamic libmetaget(Args args)
-{
-    return dynamic(args[0].tab.meta);
-}
-
-Dynamic librawget(Args args)
-{
-    return dynamic(args[0].tab.rawIndex(args[1]));
-}
-
-Dynamic librawset(Args args)
-{
-    args[0].tab.table[args[1]] = args[2];
-    return Dynamic.nil;
 }
 
 Dynamic liblen(Args args)

@@ -38,6 +38,10 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     {
         func.instrs ~= *cast(ubyte[2]*)&i;
     }
+    if (func.spans.length == 0)
+    {
+        func.spans.length++;
+    }
     while (func.spans.length < func.instrs.length)
     {
         func.spans ~= func.spans[$ - 1];
@@ -262,30 +266,26 @@ class BytecodeEmitter
 
     void emit(LogicalBranch branch)
     {
-        pushInstr(func, Opcode.iftrue, [cast(ushort) ushort.max]);
-        size_t j0 = func.instrs.length;
-        pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
+        // pushInstr(func, Opcode.iftrue, [cast(ushort) ushort.max]);
+        // size_t j0 = func.instrs.length;
+        // pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
+        // size_t j1 = func.instrs.length;
+        // Function cfunc = func;
+        // entry(branch.target[0], func, (t0) {
+        //     cfunc.modifyInstr(j0, t0);
+        // });
+        // entry(branch.target[1], func, (t1) {
+        //     cfunc.modifyInstr(j1, t1);
+        // });
+        pushInstr(func, Opcode.branch, [cast(ushort) ushort.max, cast(ushort) ushort.max]);
+        size_t j0 = func.instrs.length - ushort.sizeof;
         size_t j1 = func.instrs.length;
         Function cfunc = func;
-        long remaining = 0;
-        void afterLogicalTargets()
-        {
-            remaining--;
-            // if (remaining == 0)
-            // {
-            //     enable(branch.post);
-            // }
-        }
-        // disable(branch.post);
-        remaining++;
         entry(branch.target[0], func, (t0) {
             cfunc.modifyInstr(j0, t0);
-            afterLogicalTargets;
         });
-        remaining++;
         entry(branch.target[1], func, (t1) {
             cfunc.modifyInstr(j1, t1);
-            afterLogicalTargets;
         });
     }
 
@@ -370,12 +370,12 @@ class BytecodeEmitter
         }
     }
 
-    void emit(CallInstruction call)
+    void emit(FormInstruction call)
     {
         pushInstr(func, Opcode.call, [cast(ushort) call.argc], cast(int)-call.argc);
     }
 
-    void emit(StaticCallInstruction call)
+    void emit(StaticFormInstruction call)
     {
         pushInstr(func, Opcode.scall, [cast(ushort) func.constants.length, cast(ushort) call.argc], cast(int)(1-call.argc));
         func.constants ~= call.func;

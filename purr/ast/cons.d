@@ -38,8 +38,9 @@ Dynamic astDynamic(Node node, bool useSpan=false)
     case NodeKind.base:
         assert(false);
     case NodeKind.call:
-        Call call = cast(Call) node;
+        Form call = cast(Form) node;
         Dynamic[] args;
+        args ~= call.form.dynamic;
         foreach (arg; call.args)
         {
             args ~= arg.astDynamic(useSpan);
@@ -88,7 +89,7 @@ Node getNode(Dynamic val)
     }
     if (val.isArr)
     {
-        return new Call(val.arr.map!getNode.array);
+        return new Form(val.arr[0].str, val.arr[1..$].map!getNode.array);
     }
     Mapping map = val.tab.table;
     NodeKind id = map["id".dynamic].str.to!NodeKind;
@@ -97,11 +98,12 @@ Node getNode(Dynamic val)
         assert(false);
     case NodeKind.call:
         Node[] args;
-        foreach (arg; map["args".dynamic].arr)
+        string form = map["args".dynamic].arr[0].str;
+        foreach (arg; map["args".dynamic].arr[1..$])
         {
             args ~= arg.getNode;
         }
-        return new Call(args);
+        return new Form(form, args);
     case NodeKind.ident:
         return new Ident(map["repr".dynamic].str);
     case NodeKind.value:

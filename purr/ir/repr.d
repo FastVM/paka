@@ -15,7 +15,7 @@ import purr.ir.emit;
 import purr.ir.opt;
 
 alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, ReturnBranch,
-        BuildTupleInstruction,BuildArrayInstruction, BuildTableInstruction, CallInstruction, StaticCallInstruction, PushInstruction,
+        BuildTupleInstruction,BuildArrayInstruction, BuildTableInstruction, FormInstruction, StaticFormInstruction, PushInstruction,
         OperatorInstruction, LambdaInstruction, PopInstruction,
         StoreInstruction, StoreIndexInstruction, LoadInstruction, ArgsInstruction, RecInstruction);
 
@@ -198,7 +198,7 @@ class BuildTableInstruction : Instruction
     }
 }
 
-class CallInstruction : Instruction
+class FormInstruction : Instruction
 {
     size_t argc;
 
@@ -216,7 +216,7 @@ class CallInstruction : Instruction
 }
 
 
-class StaticCallInstruction : Instruction
+class StaticFormInstruction : Instruction
 {
     Dynamic func;
     size_t argc;

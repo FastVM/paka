@@ -17,7 +17,7 @@ def item_check(tree) {
     }
 }
 
-N = 16
+N = 12
 mindepth = 4
 maxdepth = mindepth + 2
 if maxdepth < N {

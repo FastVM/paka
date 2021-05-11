@@ -52,7 +52,7 @@ Dynamic libshuffle(Dynamic[] args)
 
 Dynamic libfrom(Args args)
 {
-    return args[0].tab.meta["arr".dynamic](args);
+    return args[0].tab["arr".dynamic](args);
 }
 
 /// with one arg it returns 0..$0

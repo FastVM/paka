@@ -19,7 +19,7 @@ Table[] nameSubs;
 Table matchMacro(Dynamic[] pattern, Node ast)
 {
     Node[] flat;
-    Call call = cast(Call) ast;
+    Form call = cast(Form) ast;
     if (call is null)
     {
         flat ~= ast;
@@ -33,9 +33,9 @@ Table matchMacro(Dynamic[] pattern, Node ast)
             {
                 if (id.repr == "call")
                 {
-                    if (Call nextCall = cast(Call) call.args[1])
+                    if (Form nextForm = cast(Form) call.args[1])
                     {
-                        call = nextCall;
+                        call = nextForm;
                         continue;
                     }
                     else
@@ -49,9 +49,9 @@ Table matchMacro(Dynamic[] pattern, Node ast)
     }
     if (flat.length < pattern.length)
     {
-        return null;
+        return Table.empty;
     }
-    Table ret = new Table;
+    Table ret = Table.empty;
     foreach (index, value; pattern)
     {
         Node cur = flat[$ - 1 - index];
@@ -64,7 +64,7 @@ Table matchMacro(Dynamic[] pattern, Node ast)
                     continue;
                 }
             }
-            return null;
+            return Table.empty;
         }
         else if (value.arr[0].str == "arg")
         {
@@ -81,14 +81,14 @@ Table matchMacro(Dynamic[] pattern, Node ast)
 
 Node macroLike(Node node, Table pattern)
 {
-    if (Call call = cast(Call) node)
+    if (Form call = cast(Form) node)
     {
         Node[] args;
         foreach (arg; call.args)
         {
             args ~= arg.macroLike(pattern);
         }
-        return new Call(args);
+        return new Form("call", args);
     }
     else if (Value val = cast(Value) node)
     {

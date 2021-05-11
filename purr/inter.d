@@ -25,9 +25,9 @@ __gshared bool dumpbytecode = false;
 __gshared bool dumpir = false;
 
 /// vm callback that sets the locals defined into the root base 
-LocalCallback exportLocalsToBaseCallback(size_t ctx, Function func)
+LocalFormback exportLocalsToBaseFormback(size_t ctx, Function func)
 {
-    LocalCallback ret = (uint index, Dynamic[] locals) {
+    LocalFormback ret = (uint index, Dynamic[] locals) {
         most: foreach (i, v; locals)
         {
             foreach (ref rb; rootBases[ctx])
@@ -55,7 +55,7 @@ Dynamic evalImpl(Walker)(size_t ctx, Location code, Args args)
         oppr.walk(func);
         writeln(oppr.ret);
     }
-    return run(func, args, ctx.exportLocalsToBaseCallback(func));
+    return run(func, args, ctx.exportLocalsToBaseFormback(func));
 }
 
 Dynamic eval(size_t ctx, Location code, Args args=Args.init)

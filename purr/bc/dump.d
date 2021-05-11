@@ -236,6 +236,11 @@ override:
         line("iftrue index=", jumpIndex);
     }
 
+    void branch(ushort iftrue, ushort iffalse)
+    {
+        line("branch iftrue=", iftrue, " iffalse=", iffalse);
+    }
+
     void iffalse(ushort jumpIndex)
     {
         line("iffalse index=", jumpIndex);

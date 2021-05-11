@@ -4,7 +4,7 @@ TMP=tmp
 UNICODE=$(TMP)/UnicodeData.txt
 
 all: $(BIN)
-	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT) $(DFLAGS) -of=$(BIN)/purr -Jtmp
+	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT) -of=$(BIN)/purr -Jtmp $(DFLAGS) 
 
 $(TMP):
 	mkdir -p $(TMP)

@@ -110,18 +110,18 @@ void stripNewlines(ref TokenArray tokens)
     }
 }
 
-Node readPostCallExtend(ref TokenArray tokens, Node last)
+Node readPostFormExtend(ref TokenArray tokens, Node last)
 {
     Node[][] args = tokens.readOpen!"()";
     while (tokens.length != 0 && (tokens.first.isOpen("{") || tokens.first.isOperator(":")))
     {
-        args[$ - 1] ~= new Call("fun", [
-                new Call(), tokens.readBlock
+        args[$ - 1] ~= new Form("fun", [
+                new Form("args"), tokens.readBlock
                 ]);
     }
     foreach (argList; args)
     {
-        last = new Call("call", last ~ argList);
+        last = new Form("call", last ~ argList);
     }
     return last;
 }
@@ -137,7 +137,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     Node ret = void;
     if (tokens.first.isOpen("("))
     {
-        ret = tokens.readPostCallExtend(last);
+        ret = tokens.readPostFormExtend(last);
     }
     else if (tokens.length >= 2 && tokens.first.isOperator(".") && !tokens.second.isOperator)
     {
@@ -145,27 +145,27 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
         if (tokens.first.isOpen("["))
         {
             Node[] arr = tokens.readOpen!"[]";
-            ret = new Call("index", [
-                    last, new Call("do", arr)
+            ret = new Form("index", [
+                    last, new Form("do", arr)
                     ]);
         }
         else if (tokens.first.isOpen("("))
         {
             Node[][] arr = tokens.readOpen!"()";
-            Node dov = new Call("do",
-                    arr.map!(s => cast(Node) new Call("do", s)).array);
-            ret = new Call("index", [last, dov]);
+            Node dov = new Form("do",
+                    arr.map!(s => cast(Node) new Form("do", s)).array);
+            ret = new Form("index", last, dov);
         }
         else if (tokens.first.value[0].isDigit)
         {
-            ret = new Call("index", [
+            ret = new Form("index", [
                     last, new Value(tokens.first.value.to!double)
                     ]);
             tokens.nextIsAny;
         }
         else
         {
-            ret = new Call("index", [
+            ret = new Form("index", [
                     last, new Value(tokens.first.value)
                     ]);
             tokens.nextIsAny;
@@ -195,7 +195,7 @@ Node readIfImpl(ref TokenArray tokens)
     {
         iffalse = new Value(Dynamic.nil);
     }
-    return new Call("if", [cond, iftrue, iffalse]);
+    return new Form("if", cond, iftrue, iffalse);
 }
 /// read an if statement
 alias readWhile = Spanning!readWhileImpl;
@@ -203,16 +203,16 @@ Node readWhileImpl(ref TokenArray tokens)
 {
     Node cond = tokens.readExprBase;
     Node block = tokens.readBlock;
-    return new Call("while", [cond, block]);
+    return new Form("while", cond, block);
 }
 
 alias readTable = Spanning!readTableImpl;
 Node readTableImpl(ref TokenArray tokens)
 {
-    Node var = new Ident("_paka_table");
-    Node set = new Call("set", [var, new Call("table")]);
+    Node var = new Ident("this");
+    Node set = new Form("set", var, new Form("table"));
     Node build = tokens.readBlock;
-    return new Call("do", [set, build, var]);
+    return new Form("do", set, build, var);
 }
 
 void skip1(ref string str, ref Span span)
@@ -342,7 +342,7 @@ Node readStringPart(ref string str, ref Span span)
             string input = ret[3 .. $ - 1].strip;
             node = Location(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
                 .parsePakaAs!readExprBase;
-            node = new Call("call", [
+            node = new Form("call", [
                     new Ident("_unicode_ctrl"), node
                     ]);
         }
@@ -355,7 +355,7 @@ Node readStringPart(ref string str, ref Span span)
         else if (ret[0] == 'u')
         {
             string input = ret[2 .. $ - 1].strip;
-            node = new Call("call", [
+            node = new Form("call", [
                     new Ident("_unicode_ctrl"), new Value(input)
                     ]);
         }
@@ -378,13 +378,13 @@ Node readPostExprImpl(ref TokenArray tokens)
         tokens.nextIs(Token.Type.keyword, "lambda");
         if (tokens.first.isOpen("("))
         {
-            last = new Call("fun", [
-                    new Call(tokens.readOpen1!"()"), tokens.readBlock
+            last = new Form("fun", [
+                    new Form("args", tokens.readOpen1!"()"), tokens.readBlock
                     ]);
         }
         else if (tokens.first.isOpen("{") || tokens.first.isOperator(":"))
         {
-            last = new Call("fun", [new Call(), tokens.readBlock]);
+            last = new Form("fun", new Form("args"), tokens.readBlock);
         }
     }
     else if (tokens.first.isOpen("("))
@@ -400,12 +400,12 @@ Node readPostExprImpl(ref TokenArray tokens)
         }
         else
         {
-            last = new Call("tuple", nodes);
+            last = new Form("tuple", nodes);
         }
     }
     else if (tokens.first.isOpen("["))
     {
-        last = new Call("array", tokens.readOpen!"[]");
+        last = new Form("array", tokens.readOpen!"[]");
     }
     else if (tokens.first.isKeyword("table"))
     {
@@ -457,10 +457,10 @@ Node readPostExprImpl(ref TokenArray tokens)
         {
             if (tokens.first.value[0] == '@')
             {
-                Node var = new Ident("_paka_table");
+                Node var = new Ident("this");
                 Node index = new Value(tokens.first.value[1..$]);
                 tokens.nextIs(Token.Type.ident);
-                last = new Call("index", [var, index]);
+                last = new Form("index", var, index);
             }
             else {
                 last = new Ident(tokens.first.value);
@@ -483,7 +483,7 @@ Node readPostExprImpl(ref TokenArray tokens)
             {
                 args ~= value.readStringPart(span);
             }
-            last = new Call(new Value(native!strConcat), args);
+            last = new Form("call", new Value(native!strConcat), args);
         }
         tokens.nextIs(Token.Type.string);
     }
@@ -600,19 +600,19 @@ Node readStmtImpl(ref TokenArray tokens)
     if (tokens.first.isKeyword("return"))
     {
         tokens.nextIs(Token.Type.keyword, "return");
-        return new Call("return", [tokens.readExprBase]);
+        return new Form("return", tokens.readExprBase);
     }
     if (tokens.first.isKeyword("def"))
     {
         tokens.nextIs(Token.Type.keyword, "def");
-        Call call = cast(Call) tokens.readExprBase;
+        Form call = cast(Form) tokens.readExprBase;
         assert(call);
-        Node name = new Call(call.args[0..$-1]);
-        Call fun = cast(Call) call.args[$-1];
+        Node name = new Form("args", call.args[0..$-1]);
+        Form fun = cast(Form) call.args[$-1];
         assert(fun);
         Node dobody = fun.args[$-1];
         // Node dobody = tokens.readBlock;
-        return new Call("set", [name, dobody]);
+        return new Form("set", name, dobody);
     }
     return tokens.readExprBase;
 }
@@ -636,7 +636,7 @@ Node readBlockBodyImpl(ref TokenArray tokens)
             break;
         }
     }
-    return new Call("do", ret);
+    return new Form("do", ret);
 }
 
 /// wraps the readblock and consumes curly braces
