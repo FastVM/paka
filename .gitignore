@@ -37,3 +37,5 @@ Aspen.toml
 .repl
 gwion-benchmark
 .DS_Store
+profile.raw
+profile.data

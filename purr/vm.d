@@ -261,17 +261,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             *(++stack) = *func.captured[capIndex];
             break;
         case Opcode.store:
-            Dynamic rhs = *stack;
-            ushort local = instrs.eat!ushort(index);
-            if (rhs.type == Dynamic.Type.pro)
-            {
-                Dynamic name = func.stab[local].dynamic;
-                if (!rhs.value.fun.pro.names.canFind(name))
-                {
-                    rhs.value.fun.pro.names ~= name;
-                }
-            }
-            locals[local] = rhs;
+            locals[instrs.eat!ushort(index)] = *stack;
             break;
         case Opcode.istore:
             Dynamic val = *stack;

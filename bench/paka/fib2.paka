@@ -1,9 +1,0 @@
-def fib(n) {
-    return if (n < 2) {
-        n
-    } else {
-        rec(n-2) + rec(n-1)
-    }
-}
-
-io.print(fib(35))
