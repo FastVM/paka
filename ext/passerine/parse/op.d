@@ -73,14 +73,11 @@ BinaryOp parseBinaryOp(string[] ops)
             {
                 if (Form call = cast(Form) cur)
                 {
-                    if (Ident id = cast(Ident) call.args[0])
+                    if (call.form == "call")
                     {
-                        if (id.repr == "call")
-                        {
-                            args ~= call.args[2];
-                            cur = call.args[1];
-                            continue;
-                        }
+                        args ~= call.args[1];
+                        cur = call.args[0];
+                        continue;
                     }
                 }
                 args ~= cur;
@@ -121,6 +118,10 @@ BinaryOp parseBinaryOp(string[] ops)
     case "or":
         return (Node lhs, Node rhs) {
             return new Form("||", rhs, lhs);
+        };
+    case "++":
+        return (Node lhs, Node rhs) {
+            return new Form("~", rhs, lhs);
         };
     default:
         return (Node lhs, Node rhs) {

@@ -7,7 +7,7 @@ all: build
 pgo: pgo-build
 
 build: $(BIN)
-	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT) -of=$(BIN)/purr -Jtmp $(DFLAGS) 
+	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT) -of=$(BIN)/purr -Jtmp $(DFLAGS)
 
 pgo-gen: $(BIN)
 	$(MAKE) -f macos.mak OPT=3 DFLAGS+="-release --stack-protector-guard=none --frame-pointer=none --fp-contract=off -flto=full -fprofile-instr-generate=profile.raw"
