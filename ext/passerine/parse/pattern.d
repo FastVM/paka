@@ -46,93 +46,87 @@ Node matcher(Node value, Node pattern)
     }
     else if (Form call = cast(Form) pattern)
     {
-        if (Ident id = cast(Ident) call.args[0])
+        switch (call.form)
         {
-            switch (id.repr)
+        default:
+            return new Form("call", new Value(native!matchExact), [value, pattern]);
+        case ":":
+            Node c1 = matcher(value, call.args[0]);
+            Node c2 = matcher(value, call.args[1]);
+            return new Form("&&", c1, c2);
+        case "|":
+            Node c1 = matcher(value, call.args[0]);
+            Node c2 = call.args[1];
+            return new Form("&&", c1, c2);
+        case "tuple":
+            goto case;
+        case "array":
+            Node[] pre;
+            Node[] post;
+            foreach (val; call.args)
             {
-            default:
-                return new Form("call", new Value(native!matchExact), [value, pattern]);
-            case ":":
-                Node c1 = matcher(value, call.args[1]);
-                Node c2 = matcher(value, call.args[2]);
-                return new Form("&&", c1, c2);
-            case "|":
-                Node c1 = matcher(value, call.args[1]);
-                Node c2 = call.args[2];
-                return new Form("&&", c1, c2);
-            case "tuple":
-                goto case;
-            case "array":
-                Node[] pre;
-                Node[] post;
-                foreach (val; call.args[1 .. $])
+                if (Form call2 = cast(Form) val)
                 {
-                    if (Form call2 = cast(Form) val)
-                    {
-                        if (Ident id2 = cast(Ident) call2.args[0])
-                        {
-                            if (id2.repr == "..")
-                            {
-                                post ~= val;
-                                continue;
-                            }
-                        }
-                    }
-                    if (post.length != 0)
+                    if (call2.form == "..")
                     {
                         post ~= val;
-                    }
-                    else
-                    {
-                        pre ~= val;
+                        continue;
                     }
                 }
-                if (post.length == 0)
+                if (post.length != 0)
                 {
-                    Node ret = new Form("call", new Value(native!matchExactLength),
-                            [value, new Value(pre.length)]);
-                    foreach (index, term; pre)
-                    {
-                        Node indexed = new Form("index", [
-                                value, new Value(index)
-                                ]);
-                        ret = new Form("&&", [
-                                ret, matcher(indexed, term)
-                                ]);
-                    }
-                    return ret;
+                    post ~= val;
                 }
                 else
                 {
-                    Node ret = new Form("call", new Value(native!matchNoLessLength),
-                            [value, new Value(pre.length + post.length - 1)]);
-                    foreach (index, term; pre)
-                    {
-                        Node indexed = new Form("index", [
-                                value, new Value(index)
-                                ]);
-                        ret = new Form("&&", [
-                                ret, matcher(indexed, term)
-                                ]);
-                    }
-                    Node sliced = new Form("call", new Value(native!slice), [
-                            value, new Value(pre.length), new Value(post.length-1)
-                            ]);
-                    Form term0 = cast(Form) post[0];
-                    assert(term0);
-                    ret = new Form("&&", [
-                            ret, matcher(sliced, term0.args[1])
-                            ]);
-                    foreach (index, term; post[1 .. $])
-                    {
-                        Node indexed = new Form("call", new Value(native!rindex),
-                                [value, new Value(index + 1)]);
-                        ret = new Form("&&", [
-                                ret, matcher(indexed, term)
-                                ]);
-                    }
-                    return ret;
+                    pre ~= val;
                 }
+            }
+            if (post.length == 0)
+            {
+                Node ret = new Form("call", new Value(native!matchExactLength),
+                        [value, new Value(pre.length)]);
+                foreach (index, term; pre)
+                {
+                    Node indexed = new Form("index", [
+                            value, new Value(index)
+                            ]);
+                    ret = new Form("&&", [
+                            ret, matcher(indexed, term)
+                            ]);
+                }
+                return ret;
+            }
+            else
+            {
+                Node ret = new Form("call", new Value(native!matchNoLessLength),
+                        [value, new Value(pre.length + post.length - 1)]);
+                foreach (index, term; pre)
+                {
+                    Node indexed = new Form("index", [
+                            value, new Value(index)
+                            ]);
+                    ret = new Form("&&", [
+                            ret, matcher(indexed, term)
+                            ]);
+                }
+                Node sliced = new Form("call", new Value(native!slice), [
+                        value, new Value(pre.length), new Value(post.length-1)
+                        ]);
+                Form term0 = cast(Form) post[0];
+                assert(term0);
+                ret = new Form("&&", [
+                        ret, matcher(sliced, term0.args[0])
+                        ]);
+                foreach (index, term; post[1 .. $])
+                {
+                    Node indexed = new Form("call", new Value(native!rindex),
+                            [value, new Value(index + 1)]);
+                    ret = new Form("&&", [
+                            ret, matcher(indexed, term)
+                            ]);
+                }
+                return ret;
             }
         }
         return new Form("call", new Value(native!matchExact), [pattern, call]);
