@@ -1,37 +1,36 @@
-all: purr $(LIBS_SO)
-
-MAKEFILE_INCLUDES:=
-define MAKEFILE_IMPORT_IMPL_BODY
-ifeq ($(findstring $1,$(MAKEFILE_INCLUDES)),)
-MAKEFILE_INCLUDES+=$1
-include $1
-endif
-endef
-
+OPT=0
 BIN=bin
-LIB=lib
 TMP=tmp
+UNICODE=$(TMP)/UnicodeData.txt
 
-BIN:=$(abspath $(BIN))
-LIB:=$(abspath $(LIB))
-TMP:=$(abspath $(TMP))
+all: build
+pgo: pgo-build
 
-import=$(eval $(MAKEFILE_IMPORT_IMPL_BODY))
-runto=$(shell $2)$(shell echo $2 > $1)
-mkdir=$(shell mkdir -p $1)$1
-tmpdir=$(eval $1:=$(shell mktemp --tmpdir=$(call mkdir,$(TMP)) --suffix= --directory XXXXXXXX))
-tmpfile=$(call tmpdir,DIR_$1)$(eval DIR_$1:=$1/tmpfile$)
-delsym=$(call tmpfile,TMPFILE)$(shell objcopy --strip-symbol=$1 $2 $(TMPFILE))$(TMPFILE)
+build: $(BIN)
+	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT) -of=$(BIN)/purr -Jtmp $(DFLAGS)
 
-$(call import,settings.mak)
-$(call import,conv.mak)
-$(call import,ext/makefile)
-$(call import,purr/makefile)
+pgo-gen: $(BIN)
+	$(MAKE) -f macos.mak OPT=3 DFLAGS+="-release --stack-protector-guard=none --frame-pointer=none --fp-contract=off -flto=full -fprofile-instr-generate=profile.raw"
+	./bin/purr --file=bench/paka/{fib40,table,tree,while}.paka
+	ldc-profdata merge -output=profile.data profile.raw
+	
+pgo-build: pgo-gen
+	$(MAKE) -f macos.mak OPT=3 DFLAGS+="-release --stack-protector-guard=none --frame-pointer=none --fp-contract=off -flto=full -fprofile-instr-use=profile.data"
 
-.DEFAULT_GOAL := all
+$(TMP):
+	mkdir -p $(TMP)
 
-clean: dummy
-	$(RUN) rm -rf $(BIN) $(LIB) *.so *.o
-
-deepclean: clean
-	$(RUN) rm -rf $(TMP) 
+$(BIN):
+	mkdir -p $(BIN)
+	
+$(UNICODE): dummy
+ifeq ($(wildcard $(UNICODE)),)
+	$(RUN) mkdir -p $(dir $(UNICODE))
+	$(RUN) curl https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt > $@
+else
+ifeq ($(BOOL_RECURL),TRUE)
+	$(RUN) mkdir -p $(dir $(UNICODE))
+	$(RUN) curl https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt > $@
+else
+endif
+endif
