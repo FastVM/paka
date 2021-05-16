@@ -9,7 +9,7 @@ import ext.paka.parse.util;
 
 Node binaryFold(BinaryOp op, Node lhs, Node rhs)
 {
-    Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
+    Node[] xy = [genSym, genSym];
     Node lambdaBody = op(xy[0], xy[1]);
     Form lambda = new Form("fun", new Form("args", xy), lambdaBody);
     Form domap = new Form("call", new Value(native!metaFoldBinary), [lambda, lhs, rhs]);
@@ -18,7 +18,7 @@ Node binaryFold(BinaryOp op, Node lhs, Node rhs)
 
 Node unaryFold(BinaryOp op, Node rhs)
 {
-    Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
+    Node[] xy = [genSym, genSym];
     Node lambdaBody = op(xy[0], xy[1]);
     Form lambda = new Form("fun", new Form("args", xy), lambdaBody);
     Form domap = new Form("call", new Value(native!metaFoldUnary), [lambda, rhs]);
@@ -27,7 +27,7 @@ Node unaryFold(BinaryOp op, Node rhs)
 
 Node unaryDotmap(UnaryOp op, Node rhs)
 {
-    Node[] xy = [new Ident("_rhs")];
+    Node[] xy = [genSym];
     Node lambdaBody = op(xy[0]);
     Form lambda = new Form("fun", new Form("args", xy), lambdaBody);
     Form domap = new Form("call", new Value(native!metaMapPreParallel), [lambda, rhs]);
@@ -36,7 +36,7 @@ Node unaryDotmap(UnaryOp op, Node rhs)
 
 Node binaryDotmap(alias func)(BinaryOp op, Node lhs, Node rhs)
 {
-    Node[] xy = [new Ident("_lhs"), new Ident("_rhs")];
+    Node[] xy = [genSym, genSym];
     Node lambdaBody = op(xy[0], xy[1]);
     Form lambda = new Form("fun", new Form("args", xy), lambdaBody);
     Form domap = new Form("call", new Value(native!func), [lambda, lhs, rhs]);
@@ -128,22 +128,8 @@ UnaryOp parseUnaryOp(string[] ops)
         }
         if (ops.length != 0)
         {
-            rest = ops.readBinaryOp;
-            if (rest.length == 0)
-            {
-                UnaryOp next = ops.parseUnaryOp();
-                return (Node rhs) { return curUnary(next(rhs)); };
-            }
-            else
-            {
-                BinaryOp curBinary = rest.parseBinaryOp;
-                UnaryOp nextUnary = ops.parseUnaryOp();
-                return (Node rhs) {
-                    Node tmp = new Form("set", genSym, rhs);
-                    Node res = curBinary(curUnary(tmp), nextUnary(tmp));
-                    return new Form("do", tmp, res);
-                };
-            }
+            UnaryOp next = ops.parseUnaryOp();
+            return (Node rhs) { return curUnary(next(rhs)); };
         }
         return curUnary;
     }
