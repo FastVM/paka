@@ -1,6 +1,6 @@
 #! Ported from the Wren version.
 
-class Tree {
+class final Tree {
   var int item;
   late Tree left, right;
 
