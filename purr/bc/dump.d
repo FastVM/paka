@@ -5,7 +5,7 @@ import purr.io;
 import purr.bytecode;
 import purr.bc.iterator;
 
-class OpcodePrinter : OpcodeIterator
+final class OpcodePrinter : OpcodeIterator
 {
     string ret;
     size_t depth = 0;

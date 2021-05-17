@@ -29,7 +29,7 @@ class Node
 }
 
 /// call of function or operator call
-class Form : Node
+final class Form : Node
 {
     string form;
     Node[] args;
@@ -85,7 +85,7 @@ template ident(string name){
 }
 
 /// ident or number, detects at runtime
-class Ident : Node
+final class Ident : Node
 {
     string repr;
 
@@ -106,7 +106,7 @@ class Ident : Node
 }
 
 /// dynamic value literal
-class Value : Node
+final class Value : Node
 {
     Dynamic value;
 

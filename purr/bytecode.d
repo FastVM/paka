@@ -7,7 +7,7 @@ import std.array;
 import purr.io;
 import std.conv;
 
-class Function
+final class Function
 {
     struct Lookup
     {
@@ -87,7 +87,7 @@ class Function
     Function[] funcs = null;
     Dynamic*[] captured = null;
     Dynamic[] self = null;
-    Dynamic[] args = null;
+    string[] args = null;
     int[size_t] stackAt = null;
     size_t stackSize = 0;
     Function parent = null;
@@ -95,7 +95,6 @@ class Function
     Lookup stab;
     Lookup captab;
     Flags flags = Flags.none;
-    Dynamic[] names;
 
     this()
     {
@@ -123,7 +122,6 @@ class Function
         flags = other.flags;
         stackSizeCurrent = other.stackSizeCurrent;
         stackAt = other.stackAt;
-        names = other.names;
     }
 
     uint doCapture(string name)
@@ -135,7 +133,7 @@ class Function
         }
         foreach (argno, argname; parent.args)
         {
-            if (argname == name.dynamic)
+            if (argname == name)
             {
                 uint ret = captab.define(name);
                 capture ~= Capture(cast(uint) argno, false, true);
@@ -170,7 +168,7 @@ class Function
 
     override string toString()
     {
-        return callableFormat(names, args);
+        return callableFormat(args);
     }
 }
 

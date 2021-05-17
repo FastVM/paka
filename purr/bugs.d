@@ -4,7 +4,7 @@ import purr.dynamic;
 import purr.srcloc;
 import purr.bytecode;
 
-class DebugFrame
+final class DebugFrame
 {
     ushort index;
     Dynamic* locals;    

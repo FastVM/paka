@@ -5,7 +5,6 @@ import std.conv;
 import std.file;
 import std.array;
 import std.utf;
-import std.functional;
 import std.ascii;
 import std.string;
 import std.algorithm;
@@ -21,14 +20,13 @@ import purr.fs.files;
 import purr.bytecode;
 import purr.ir.walk;
 import purr.ast.ast;
-import ext.paka.tokens;
-import ext.paka.macros;
+import ext.paka.built;
+import ext.paka.parse.tokens;
 import ext.paka.parse.util;
 import ext.paka.parse.op;
-import ext.paka.built;
 
 /// reads open parens
-Node[][] readOpen(string v)(ref TokenArray tokens) if (v == "()")
+Node[][] readOpen(string v)(TokenArray tokens) if (v == "()")
 {
     Node[][] ret;
     Node[] args;
@@ -55,7 +53,7 @@ Node[][] readOpen(string v)(ref TokenArray tokens) if (v == "()")
     return ret;
 }
 
-Node[] readOpen1(string v)(ref TokenArray tokens) if (v == "()")
+Node[] readOpen1(string v)(TokenArray tokens) if (v == "()")
 {
     Node[][] ret = tokens.readOpen!"()";
     if (ret.length > 1)
@@ -66,7 +64,7 @@ Node[] readOpen1(string v)(ref TokenArray tokens) if (v == "()")
 }
 
 /// reads square brackets
-Node[] readOpen(string v)(ref TokenArray tokens) if (v == "[]")
+Node[] readOpen(string v)(TokenArray tokens) if (v == "[]")
 {
     Node[] args;
     tokens.nextIs(Token.Type.open, [v[0]]);
@@ -83,7 +81,7 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v == "[]")
 }
 
 /// reads open curly brackets
-Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
+Node[] readOpen(string v)(TokenArray tokens) if (v == "{}")
 {
     Node[] args;
     tokens.nextIs(Token.Type.open, [v[0]]);
@@ -102,7 +100,7 @@ Node[] readOpen(string v)(ref TokenArray tokens) if (v == "{}")
 }
 
 // /// strips newlines and changes the input
-void stripNewlines(ref TokenArray tokens)
+void stripNewlines(TokenArray tokens)
 {
     while (tokens.first.isSemicolon)
     {
@@ -110,10 +108,10 @@ void stripNewlines(ref TokenArray tokens)
     }
 }
 
-Node readPostFormExtend(ref TokenArray tokens, Node last)
+Node readPostFormExtend(TokenArray tokens, Node last)
 {
     Node[][] args = tokens.readOpen!"()";
-    while (tokens.length != 0 && (tokens.first.isOpen("{") || tokens.first.isOperator(":")))
+    while (tokens.first.exists && (tokens.first.isOpen("{") || tokens.first.isOperator(":")))
     {
         args[$ - 1] ~= new Form("fun", [
                 new Form("args"), tokens.readBlock
@@ -128,9 +126,9 @@ Node readPostFormExtend(ref TokenArray tokens, Node last)
 
 /// after reading a small expression, read a postfix expression
 alias readPostExtend = Spanning!(readPostExtendImpl, Node);
-Node readPostExtendImpl(ref TokenArray tokens, Node last)
+Node readPostExtendImpl(TokenArray tokens, Node last)
 {
-    if (tokens.length == 0)
+    if (tokens.first.exists == 0)
     {
         return last;
     }
@@ -138,38 +136,6 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
     if (tokens.first.isOpen("("))
     {
         ret = tokens.readPostFormExtend(last);
-    }
-    else if (tokens.length >= 2 && tokens.first.isOperator(".") && !tokens.second.isOperator)
-    {
-        tokens.nextIs(Token.Type.operator, ".");
-        if (tokens.first.isOpen("["))
-        {
-            Node[] arr = tokens.readOpen!"[]";
-            ret = new Form("index", [
-                    last, new Form("do", arr)
-                    ]);
-        }
-        else if (tokens.first.isOpen("("))
-        {
-            Node[][] arr = tokens.readOpen!"()";
-            Node dov = new Form("do",
-                    arr.map!(s => cast(Node) new Form("do", s)).array);
-            ret = new Form("index", last, dov);
-        }
-        else if (tokens.first.value[0].isDigit)
-        {
-            ret = new Form("index", [
-                    last, new Value(tokens.first.value.to!double)
-                    ]);
-            tokens.nextIsAny;
-        }
-        else
-        {
-            ret = new Form("index", [
-                    last, new Value(tokens.first.value)
-                    ]);
-            tokens.nextIsAny;
-        }
     }
     else
     {
@@ -181,12 +147,12 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
 
 /// read an if statement
 alias readIf = Spanning!readIfImpl;
-Node readIfImpl(ref TokenArray tokens)
+Node readIfImpl(TokenArray tokens)
 {
     Node cond = tokens.readExprBase;
     Node iftrue = tokens.readBlock;
     Node iffalse;
-    if (tokens.length > 0 && tokens.first.isKeyword("else"))
+    if (tokens.first.isKeyword("else"))
     {
         tokens.nextIs(Token.Type.keyword, "else");
         iffalse = tokens.readBlock;
@@ -199,7 +165,7 @@ Node readIfImpl(ref TokenArray tokens)
 }
 /// read an if statement
 alias readWhile = Spanning!readWhileImpl;
-Node readWhileImpl(ref TokenArray tokens)
+Node readWhileImpl(TokenArray tokens)
 {
     Node cond = tokens.readExprBase;
     Node block = tokens.readBlock;
@@ -207,12 +173,17 @@ Node readWhileImpl(ref TokenArray tokens)
 }
 
 alias readTable = Spanning!readTableImpl;
-Node readTableImpl(ref TokenArray tokens)
+Node readTableImpl(TokenArray tokens)
 {
-    Node var = new Ident("this");
-    Node set = new Form("set", var, new Form("table"));
+    Ident thisSaveSym = genSym;
+    Ident thisSym = new Ident("this");
+    Ident result = genSym;
+    Node savethis = new Form("set", thisSaveSym, thisSym);
+    Node set = new Form("set", thisSym, new Form("table", new Value("get"), thisSaveSym));
     Node build = tokens.readBlock;
-    return new Form("do", set, build, var);
+    Node saveresult = new Form("set", result, thisSym);
+    Node loadthis = new Form("set", thisSym, thisSaveSym);
+    return new Form("do", savethis, set, build, saveresult, loadthis, result);
 }
 
 void skip1(ref string str, ref Span span)
@@ -370,7 +341,7 @@ Node readStringPart(ref string str, ref Span span)
 
 /// reads first element of postfix expression
 alias readPostExpr = Spanning!readPostExprImpl;
-Node readPostExprImpl(ref TokenArray tokens)
+Node readPostExprImpl(TokenArray tokens)
 {
     Node last = void;
     if (tokens.first.isKeyword("lambda"))
@@ -439,33 +410,16 @@ Node readPostExprImpl(ref TokenArray tokens)
     }
     else if (tokens.first.isIdent)
     {
-        bool wasMacro = false;
-        outter: foreach_reverse (macros; prefixMacros)
+        if (tokens.first.value[0] == '@')
         {
-            foreach (key, value; macros)
-            {
-                if (key.str == tokens.first.value)
-                {
-                    tokens.nextIs(Token.Type.ident);
-                    last = readFromMacro(value, tokens);
-                    wasMacro = true;
-                    break outter;
-                }
-            }
+            Node var = new Ident("this");
+            Node index = new Value(tokens.first.value[1..$]);
+            tokens.nextIs(Token.Type.ident);
+            last = new Form("index", var, index);
         }
-        if (!wasMacro)
-        {
-            if (tokens.first.value[0] == '@')
-            {
-                Node var = new Ident("this");
-                Node index = new Value(tokens.first.value[1..$]);
-                tokens.nextIs(Token.Type.ident);
-                last = new Form("index", var, index);
-            }
-            else {
-                last = new Ident(tokens.first.value);
-                tokens.nextIs(Token.Type.ident);
-            }
+        else {
+            last = new Ident(tokens.first.value);
+            tokens.nextIs(Token.Type.ident);
         }
     }
     else if (tokens.first.isString)
@@ -492,7 +446,7 @@ Node readPostExprImpl(ref TokenArray tokens)
 
 /// read prefix before postfix expression.
 alias readPreExpr = Spanning!readPreExprImpl;
-Node readPreExprImpl(ref TokenArray tokens)
+Node readPreExprImpl(TokenArray tokens)
 {
     if (tokens.first.isOperator)
     {
@@ -514,7 +468,7 @@ bool isDotOperator(Token tok)
 
 alias readExprBase = Spanning!(readExprBaseImpl);
 /// reads any expresssion with precedence of zero
-Node readExprBaseImpl(ref TokenArray tokens)
+Node readExprBaseImpl(TokenArray tokens)
 {
     return tokens.readExpr(0);
 }
@@ -533,7 +487,7 @@ bool isAnyOperator(Token tok, string[] ops)
 
 alias readExpr = Spanning!(readExprImpl, size_t);
 /// reads any expresssion
-Node readExprImpl(ref TokenArray tokens, size_t level)
+Node readExprImpl(TokenArray tokens, size_t level)
 {
     if (level == prec.length)
     {
@@ -542,21 +496,21 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
     string[] opers;
     string[][2][] dotcount;
     Node[] subNodes = [tokens.readExpr(level + 1)];
-    while (tokens.length != 0 && tokens.first.isAnyOperator([".", "\\"] ~ prec[level]))
+    while (tokens.first.isAnyOperator([".", "\\"] ~ prec[level]))
     {
         string[] pre;
         string[] post;
-        while (tokens.length != 0 && tokens.first.isDotOperator)
+        while (tokens.first.isDotOperator)
         {
             pre ~= tokens.first.value;
-            tokens.nextIsAny;
+            tokens.nextIs(Token.Type.operator, ".");
         }
         opers ~= tokens.first.value;
-        tokens.nextIsAny;
-        while (tokens.length != 0 && tokens.first.isDotOperator)
+        tokens.nextIs(Token.Type.operator);
+        while (tokens.first.isDotOperator)
         {
             post ~= tokens.first.value;
-            tokens.nextIsAny;
+            tokens.nextIs(Token.Type.operator, ".");
         }
         subNodes ~= tokens.readExpr(level + 1);
         dotcount ~= [pre, post];
@@ -572,30 +526,14 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
 
 /// reads any statement ending in a semicolon
 alias readStmt = Spanning!readStmtImpl;
-Node readStmtImpl(ref TokenArray tokens)
+Node readStmtImpl(TokenArray tokens)
 {
-    if (tokens.length == 0)
-    {
-        return null;
-    }
-    while (tokens.length > 0 && tokens.first.isSemicolon)
-    {
-        tokens.nextIs(Token.Type.semicolon);
-        if (tokens.length == 0)
-        {
-            return null;
-        }
-    }
     scope (exit)
     {
-        while (tokens.length > 0 && tokens.first.isSemicolon)
+        while (tokens.first.isSemicolon)
         {
             tokens.nextIs(Token.Type.semicolon);
         }
-    }
-    if (tokens.length == 0)
-    {
-        return null;
     }
     if (tokens.first.isKeyword("return"))
     {
@@ -620,18 +558,14 @@ Node readStmtImpl(ref TokenArray tokens)
 /// reads many staments statement, each ending in a semicolon
 /// does not read brackets surrounding
 alias readBlockBody = Spanning!readBlockBodyImpl;
-Node readBlockBodyImpl(ref TokenArray tokens)
+Node readBlockBodyImpl(TokenArray tokens)
 {
     Node[] ret;
-    while (tokens.length > 0 && !tokens.first.isClose("}") && !tokens.first.isKeyword("else"))
+    while (tokens.first.exists && !tokens.first.isClose("}") && !tokens.first.isKeyword("else"))
     {
-        size_t lengthBefore = tokens.length;
-        Node stmt = tokens.readStmt;
-        if (stmt !is null)
-        {
-            ret ~= stmt;
-        }
-        if (tokens.length == lengthBefore)
+        Location loc = tokens.position;
+        ret ~= tokens.readStmt;
+        if (tokens.position.isAt(loc)) 
         {
             break;
         }
@@ -641,7 +575,7 @@ Node readBlockBodyImpl(ref TokenArray tokens)
 
 /// wraps the readblock and consumes curly braces
 alias readBlock = Spanning!readBlockImpl;
-Node readBlockImpl(ref TokenArray tokens)
+Node readBlockImpl(TokenArray tokens)
 {
     if (tokens.first.isOperator(":"))
     {
@@ -662,7 +596,7 @@ alias parsePaka = parsePakaValue;
 /// parses code as the paka programming language
 Node parsePakaAs(alias parser)(Location loc)
 {
-    TokenArray tokens = newTokenArray(loc.tokenize);
+    TokenArray tokens = new TokenArray(loc);
     try
     {
         Node node = parser(tokens);
@@ -705,12 +639,10 @@ Node parse(Location loc)
     Location[] olocs = locs;
     locs = null;
     staticCtx ~= enterCtx;
-    prefixMacros ~= emptyMapping;
     scope (exit)
     {
         locs = olocs;
         staticCtx.length--;
-        prefixMacros.length--;
     }
     fileSystem ~= parseHar(loc, fileSystem);
     MemoryTextFile main = "main.paka".readMemFile;

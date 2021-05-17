@@ -89,7 +89,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.sub:
             Function built = new Function(func.funcs[instrs.eat!ushort(index)]);
             built.parent = func;
-            built.names = null;
             built.captured = new Dynamic*[built.capture.length];
             foreach (i, v; built.capture)
             {

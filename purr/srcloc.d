@@ -22,6 +22,11 @@ struct Location
         loc.src = src;
         return loc;
     }
+
+    bool isAt(Location other)
+    {
+        return line == other.line && column == other.column;
+    }
 }
 
 struct Span

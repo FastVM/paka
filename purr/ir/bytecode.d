@@ -62,134 +62,15 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
     assert(func.stackSizeCurrent >= 0);
 }
 
-TodoBlock[] todoBlocks = void;
-size_t[BasicBlock] disabled = void;
-size_t delayed = void;
-
-struct TodoBlock
-{
-    BytecodeEmitter emitter;
-    BasicBlock block;
-    Function newFunc;
-    void delegate(ushort) cb;
-
-    this(BytecodeEmitter e, BasicBlock b, Function f, void delegate(ushort) c)
-    {
-        emitter = e;
-        block = b;
-        newFunc = f;
-        cb = c;
-        
-    }
-
-    void opCall()
-    {
-        size_t delayCount = 0;
-        if (size_t* delayCountPtr = block in disabled)
-        {
-            delayCount = *delayCountPtr;
-        }
-        if (delayCount != 0)
-        {
-            foreach (key, ref value; disabled)
-            {
-                value--;
-            }
-            delayed++;
-            todoBlocks ~= this;
-        }
-        else
-        {
-            delayed = 0;
-            emitter.entryNew(block, newFunc);
-            cb(emitter.counts[block][newFunc]);
-        }
-    }
-}
-
-void enable(BasicBlock bb)
-{
-    disabled[bb]--;
-}
-
-void disable(BasicBlock bb)
-{
-    if (size_t* ptr = bb in disabled)
-    {
-        *ptr += 1;
-    }
-    else
-    {
-        disabled[bb] = 1;
-    }
-}
-
-class BytecodeEmitter
+final class BytecodeEmitter
 {
     BasicBlock[] bbchecked;
     Function func;
-    ushort[Function][BasicBlock] counts;
-    bool isFirst = true;
 
     this()
     {
-        todoBlocks = null;
-        disabled = null;
-        delayed = 0;
     }
-
-    bool within(BasicBlock block, Function func)
-    {
-        if (ushort[Function]* tab = block in counts)
-        {
-            if (func in *tab)
-            {
-                return true;
-            }
-            return false;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    void entryFunc(BasicBlock block, Function func, string[] args = null)
-    {
-        bool isBlockFirst = isFirst;
-        isFirst = false;
-        if (isBlockFirst)
-        {
-            disabled = null;
-        }
-        entryNew(block, func);
-    }
-
-    void entryNew(BasicBlock block, Function newFunc)
-    {
-        Function oldFunc = func;
-        TodoBlock[] oldTodoBlocks = todoBlocks;
-        scope (exit)
-        {
-            func = oldFunc;
-            todoBlocks = oldTodoBlocks;
-        }
-        func = newFunc;
-        todoBlocks = null;
-        emit(block);
-        while (todoBlocks.length != 0)
-        {
-            TodoBlock cur = todoBlocks[0];
-            todoBlocks = todoBlocks[1 .. $];
-            cur();
-        }
-    }
-
-    void entry(BasicBlock block, Function newFunc, void delegate(ushort) cb)
-    {
-        todoBlocks ~= TodoBlock(this, block, newFunc, cb);
-    }
-
+    
     string[] predef(BasicBlock block, string[] checked = null)
     {
         assert(block.exit !is null, this.to!string);
@@ -222,33 +103,38 @@ class BytecodeEmitter
         return checked;
     }
 
-    void emit(BasicBlock block)
+    void emitInFunc(Function newFunc, BasicBlock block)
     {
-        if (block !in counts)
+        Function oldFunc = func;
+        scope (exit)
         {
-            counts[block] = null;
+            func = oldFunc;
         }
-        if (!within(block, func))
+        func = newFunc;
+        emit(block);
+    }
+
+    ushort emit(BasicBlock block)
+    {
+        if (dumpir)
         {
-            if (dumpir)
-            {
-                writeln(block);
-            }
-            counts[block][func] = cast(ushort) func.instrs.length;
-            foreach (sym; predef(block))
-            {
-                if (sym !in func.stab.byName)
-                {
-                    func.stab.define(sym);
-                }
-            }
-            foreach (instr; block.instrs)
-            {
-                func.spans ~= instr.span;
-                emit(instr);
-            }
-            emit(block.exit);
+            writeln(block);
         }
+        ushort ret = cast(ushort) func.instrs.length;
+        foreach (sym; predef(block))
+        {
+            if (sym !in func.stab.byName)
+            {
+                func.stab.define(sym);
+            }
+        }
+        foreach (instr; block.instrs)
+        {
+            func.spans ~= instr.span;
+            emit(instr);
+        }
+        emit(block.exit);
+        return ret;
     }
 
     void emit(Emittable em)
@@ -266,37 +152,21 @@ class BytecodeEmitter
 
     void emit(LogicalBranch branch)
     {
-        // pushInstr(func, Opcode.iftrue, [cast(ushort) ushort.max]);
-        // size_t j0 = func.instrs.length;
-        // pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
-        // size_t j1 = func.instrs.length;
-        // Function cfunc = func;
-        // entry(branch.target[0], func, (t0) {
-        //     cfunc.modifyInstr(j0, t0);
-        // });
-        // entry(branch.target[1], func, (t1) {
-        //     cfunc.modifyInstr(j1, t1);
-        // });
         pushInstr(func, Opcode.branch, [cast(ushort) ushort.max, cast(ushort) ushort.max]);
         size_t j0 = func.instrs.length - ushort.sizeof;
         size_t j1 = func.instrs.length;
-        Function cfunc = func;
-        entry(branch.target[0], func, (t0) {
-            cfunc.modifyInstr(j0, t0);
-        });
-        entry(branch.target[1], func, (t1) {
-            cfunc.modifyInstr(j1, t1);
-        });
+        ushort t0 = emit(branch.target[0]);
+        ushort t1 = emit(branch.target[1]);
+        func.modifyInstr(j1, t1);
+        func.modifyInstr(j0, t0);
     }
 
     void emit(GotoBranch branch)
     {
         pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
         size_t j0 = func.instrs.length;
-        Function cfunc = func;
-        entry(branch.target[0], func, (t0) {
-            cfunc.modifyInstr(j0, cast(ushort) t0);
-        });
+        ushort t0 = emit(branch.target[0]);
+        func.modifyInstr(j0, t0);
     }
 
     void emit(ReturnBranch branch)
@@ -341,7 +211,7 @@ class BytecodeEmitter
         bool unfound = true;
         foreach (argno, argname; func.args)
         {
-            if (argname.str == load.var)
+            if (argname == load.var)
             {
                 pushInstr(func, Opcode.argno, [cast(ushort) argno]);
                 unfound = false;
@@ -421,7 +291,7 @@ class BytecodeEmitter
         newFunc.parent = func;
         newFunc.args = lambda.argNames;
         func.pushInstr(Opcode.sub, [cast(ushort) func.funcs.length]);
-        entryFunc(lambda.entry, newFunc, lambda.argNames.map!(x => x.str).array);
+        emitInFunc(newFunc, lambda.entry);
         func.funcs ~= newFunc;
     }
 

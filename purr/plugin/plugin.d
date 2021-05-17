@@ -5,7 +5,7 @@ import purr.base;
 import std.conv;
 import purr.srcloc;
 
-class Plugin
+final class Plugin
 {
     Pair[] libs;
     Node delegate(Location code)[string] parsers;

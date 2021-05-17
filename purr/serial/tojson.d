@@ -100,7 +100,7 @@ string serialize(Function.Flags flags)
 string serialize(Function func)
 {
     return func
-        .elems!"capture instrs constants funcs captured self args stackSize stab captab flags names";
+        .elems!"capture instrs constants funcs captured self args stackSize stab captab flags";
 }
 
 string serialize(T)(T[] arr)

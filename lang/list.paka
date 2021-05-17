@@ -1,0 +1,15 @@
+list = table {
+    from(vals) = table {
+        @length = #vals
+        if (#vals == 0) {
+            @str = "()"
+            @null?() = true
+        } else {
+            @null?() = false
+            @val = vals.0
+            @next = from(arr.slice(vals, 1, #vals))
+            @str = "(" ~ str.from(@val) ~ ", " ~ str.from(@next) ~ ")"
+        }
+    }
+    @cons() = from(args)
+}

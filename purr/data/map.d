@@ -23,7 +23,7 @@ int compare(T1, T2)(T1 a, T2 b)
 
 alias Map(K, V) = MapImpl!(K, V);
 
-class MapImpl(Key, Value)
+final class MapImpl(Key, Value)
 {
     alias This = Map!(Key, Value);
     This leftv;

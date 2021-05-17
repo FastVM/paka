@@ -5,7 +5,7 @@ import std.conv;
 import purr.io;
 import std.algorithm;
 
-class Generator
+final class Generator
 {
     BasicBlock[] emitted;
 

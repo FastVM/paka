@@ -168,7 +168,7 @@ Function.Flags deserialize(T : Function.Flags)(Json json)
 Function deserialize(T : Function)(Json json)
 {
     Function retn = json.elems!(
-            "capture instrs constants funcs captured self args stackSize stab captab flags names",
+            "capture instrs constants funcs captured self args stackSize stab captab flags",
             T);
     return retn;
 }

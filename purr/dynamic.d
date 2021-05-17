@@ -41,7 +41,7 @@ Dynamic gensym()
 void*[] beforeTables;
 
 void*[] lookingFor;
-class TableImpl
+final class TableImpl
 {
     Mapping table = emptyMapping;
     alias table this;
@@ -257,7 +257,6 @@ template native(alias func)
     Fun impl()
     {
         Fun fun = Fun(&func);
-        fun.names ~= __traits(identifier, func).dynamic;
         fun.mangled = func.mangleof;
         return fun;
 
@@ -270,11 +269,10 @@ struct FunStruct
 {
     Dynamic function(Args) value;
     string mangled;
-    Dynamic[] names;
-    Dynamic[] args;
+    string[] args;
     string toString()
     {
-        return callableFormat(names, args);
+        return callableFormat(args);
     }
 }
 
@@ -437,6 +435,10 @@ pragma(inline, true):
             }
         case Dynamic.Type.tab:
             return value.tab(args);
+        case Dynamic.Type.tup:
+            return arr[args[0].as!size_t](args[1..$]);
+        case Dynamic.Type.arr:
+            return arr[args[0].as!size_t](args[1..$]);
         default:
             throw new Exception("error: not a function: " ~ this.to!string);
         }
@@ -828,19 +830,14 @@ private int cmpDynamicImpl(Dynamic a, Dynamic b)
     }
 }
 
-string callableFormat(Dynamic[] names, Dynamic[] args)
+string callableFormat(string[] args)
 {
     string argsRepr;
     if (args.length != 0)
     {
-        argsRepr = "(" ~ args.map!(x => x.str).joiner(",").array.to!string ~ ") ";
+        argsRepr = "(" ~ args.join(",") ~ ") ";
     }
-    string namesRepr;
-    if (names.length >= 1)
-    {
-        namesRepr = names[0].str;
-    }
-    return "fun " ~ namesRepr ~ argsRepr ~ "{...}";
+    return "lambda" ~ argsRepr ~ "{...}";
 }
 
 Dynamic[] before = null;

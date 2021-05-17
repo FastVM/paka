@@ -12,7 +12,6 @@ import purr.plugin.plugins;
 Pair FunctionPair(alias func)(string name)
 {
     Fun fun = native!func;
-    fun.names = [name.dynamic];
     return Pair(name, fun);
 }
 

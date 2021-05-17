@@ -1,4 +1,4 @@
-module ext.paka.tokens;
+module ext.pakaparse.tokens;
 
 import std.ascii;
 import std.conv;
@@ -80,6 +80,11 @@ struct Token
         return span.pretty ~ " -> \"" ~ value ~ "\"";
     }
 
+    bool exists()
+    {
+        return type != Type.none;
+    }
+
     bool isIdent()
     {
         return type == Type.ident;
@@ -142,8 +147,13 @@ struct Token
 }
 
 /// reads a single token from a string
-Token readToken(ref string code, ref Location location)
+Token readToken(ref Location location)
 {
+    ref string code()
+    {
+        return location.src;   
+    }
+
     char peek()
     {
         if (code.length == 0)
@@ -187,18 +197,19 @@ Token readToken(ref string code, ref Location location)
         return Token(span, t, v);
     }
 
+redo:
     if (peek == '#' && code.length >= 2 && code[1] == '#')
     {
         while (code.length != 0 && peek != '\n')
         {
             consume;
         }
-        return code.readToken(location);
+        goto redo;
     }
     if (peek.isWhite)
     {
         consume;
-        return consToken(Token.Type.none, " ");
+        goto redo;
     }
     if (peek == ';')
     {
@@ -305,22 +316,9 @@ Token readToken(ref string code, ref Location location)
         consume;
         return consToken(Token.Type.string, ret);
     }
-    throw new Exception("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
-}
-
-/// repeatedly calls a readToken until its empty
-Token[] tokenize(Location location)
-{
-    string code = location.src;
-    Token[] tokens;
-    while (code.length > 0)
+    if (peek == '\0')
     {
-        Token token = code.readToken(location);
-        if (token.type == Token.Type.none)
-        {
-            continue;
-        }
-        tokens ~= token;
+        return consToken(Token.Type.none, "");
     }
-    return tokens;
+    throw new Exception("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
 }

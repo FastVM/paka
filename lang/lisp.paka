@@ -1,0 +1,32 @@
+
+Stream(array) = table {
+    index = 0
+    def peek() {
+        return array.(index)
+    }
+    def skip() {
+        if index < #array {
+            index = index + 1
+        }
+    }
+    def read() {
+        res = peek()
+        skip()
+        return res
+    }
+    def str() {
+        return str.join("", arr.slice(array, index, #array))
+    }
+    @peek = peek
+    @skip = skip
+    @read = read
+    @str = str
+}
+
+StringStream(string) = Stream(str.chars(string))
+
+ss = StringStream("hello")
+
+ss.read()
+
+io.print(ss)

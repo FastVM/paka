@@ -17,7 +17,7 @@ import purr.ir.opt;
 
 __gshared bool dumpast = false;
 
-class Walker
+final class Walker
 {
     Span[] nodes = [Span.init];
     BasicBlock block;
@@ -25,6 +25,21 @@ class Walker
 
     BasicBlock bbwalk(Node node)
     {
+        BasicBlock entry = new BasicBlock;
+        block = entry;
+        funcblk = block;
+        walk(node);
+        emitDefault(new ReturnBranch);
+        return entry;
+    }
+
+    BasicBlock walkBasicBlock(Node node, size_t ctx)
+    {
+        if (dumpast)
+        {
+            writeln(node);
+            writeln;
+        }
         BasicBlock entry = new BasicBlock;
         block = entry;
         funcblk = block;
@@ -55,7 +70,7 @@ class Walker
         Opt opt = new Opt;
         BasicBlock bb = opt.opt(entry);
         BytecodeEmitter emitter = new BytecodeEmitter;
-        emitter.entryFunc(bb, func);
+        emitter.emitInFunc(func, bb);
         return func;
     }
 
@@ -288,12 +303,12 @@ class Walker
     void walkFun(Node[] args)
     {
         Form argl = cast(Form) args[0];
-        Dynamic[] argNames;
+        string[] argNames;
         foreach (i, v; argl.args)
         {
             Ident id = cast(Ident) v;
             assert(id, v.to!string);
-            argNames ~= id.repr.dynamic;
+            argNames ~= id.repr;
         }
         BasicBlock lambda = new BasicBlock;
         emit(new LambdaInstruction(lambda, argNames));
@@ -413,8 +428,9 @@ class Walker
             walkIf(args);
             break;
         case "while":
-            walkWhile(args);
-            break;
+            assert(false, "depricated");
+            // walkWhile(args);
+            // break;
         case "&&":
             walkAnd(args);
             break;

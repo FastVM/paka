@@ -18,6 +18,8 @@ import purr.serial.fromjson;
 import purr.serial.tojson;
 import purr.fs.files;
 import purr.fs.disk;
+import purr.bytecode;
+import purr.ir.walk;
 import std.uuid;
 import std.path;
 import std.array;
@@ -76,17 +78,6 @@ Thunk cliArgHandler(immutable string arg)
     return { fileArgs ~= arg.dynamic; };
 }
 
-Thunk cliChainHandler(immutable string code)
-{
-    return {
-        Dynamic got = ctx.eval(Location(1, 1, "__main__", code))([
-                dynamics[$ - 1]
-                ]);
-        dynamics.length--;
-        dynamics ~= got;
-    };
-}
-
 Thunk cliFormHandler(immutable string code)
 {
     return {
@@ -107,6 +98,34 @@ Thunk cliEvalHandler(immutable string code)
         }
         Dynamic got = ctx.eval(Location(1, 1, "__main__", code), fileArgs);
         dynamics ~= got;
+    };
+}
+
+Thunk cliParseHandler(immutable string code)
+{
+    return {
+        Location loc = Location(1, 1, "__main__", code);
+        Node res = loc.parse;
+    };
+}
+
+Thunk cliValidateHandler(immutable string code)
+{
+    return {
+        Location loc = Location(1, 1, "__main__", code);
+        Node node = loc.parse;
+        Walker walker = new Walker;
+        BasicBlock func = walker.walkBasicBlock(node, ctx);
+    };
+}
+
+Thunk cliCompileHandler(immutable string code)
+{
+    return {
+        Location loc = Location(1, 1, "__main__", code);
+        Node node = loc.parse;
+        Walker walker = new Walker;
+        Function func = walker.walkProgram(node, ctx);
     };
 }
 
@@ -186,7 +205,7 @@ Thunk cliReplHandler()
         while (true)
         {
         before:
-            if (serialFile !is null)
+            if (serialFile !is null && bases.length != 0)
             {
                 File outFile = File(serialFile, "w");
                 scope (exit)
@@ -195,7 +214,7 @@ Thunk cliReplHandler()
                 }
                 outFile.write(bases.serialize);
             }
-            string prompt = "(" ~ bases.length.to!string ~ ")> ";
+            string prompt = "(" ~ to!string(bases.length + 1) ~ ")> ";
             string line = null;
             try
             {
@@ -330,11 +349,11 @@ void domain(string[] args)
         case "--arg":
             todo ~= part1.cliArgHandler;
             break;
-        case "--chain":
-            todo ~= part1.cliChainHandler;
+        case "--parse":
+            todo ~= part1.cliParseHandler;
             break;
-        case "--call":
-            todo ~= part1.cliFormHandler;
+        case "--compile":
+            todo ~= part1.cliCompileHandler;
             break;
         case "--eval":
             todo ~= part1.cliEvalHandler;

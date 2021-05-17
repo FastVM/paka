@@ -49,7 +49,7 @@ string indent(alias rule = x => true)(string input)
     return ret;
 }
 
-class BasicBlock
+final class BasicBlock
 {
     Span span;
     string name;
@@ -306,9 +306,9 @@ class OperatorInstruction : Instruction
 class LambdaInstruction : Instruction
 {
     BasicBlock entry;
-    Dynamic[] argNames;
+    string[] argNames;
 
-    this(BasicBlock bb, Dynamic[] args)
+    this(BasicBlock bb, string[] args)
     {
         entry = bb;
         argNames = args;
@@ -317,8 +317,7 @@ class LambdaInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "lambda " ~ entry.name ~ " (" ~ cast(string) argNames.map!(x => x.str)
-            .joiner(", ").array ~ ")" ~ "\n";
+        ret ~= "lambda " ~ entry.name ~ " (" ~ argNames.join(", ").to!string ~ ")" ~ "\n";
         return ret;
     }
 }
