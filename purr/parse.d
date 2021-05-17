@@ -15,7 +15,7 @@ enum string langLine = "#?";
 
 __gshared string langNameDefault = "paka";
 
-__gshared Node delegate(Location code)[string] parsers;
+__gshared Node function(Location code)[string] parsers;
 
 string readLine(ref string code)
 {

@@ -14,6 +14,8 @@ Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
     plugin.libs ~= pakaBaseLibs;
-    plugin.parsers["paka"] = code => parse(code);
+    plugin.parsers["paka"] = &parseUncached;
+    plugin.parsers["paka.cached"] = &parseCached;
+    plugin.parsers["paka.uncached"] = &parseUncached;
     return plugin;
 }

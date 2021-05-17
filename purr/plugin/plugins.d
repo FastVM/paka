@@ -21,7 +21,7 @@ Pair[] pluginLib()
     return ret;
 }
 
-void pushPlugin(ref Node delegate(Location code)[string] par, Node delegate(Location code)[string] vals)
+void pushPlugin(ref Node function(Location code)[string] par, Node function(Location code)[string] vals)
 {
     foreach (key, value; vals)
     {
@@ -29,7 +29,7 @@ void pushPlugin(ref Node delegate(Location code)[string] par, Node delegate(Loca
     }
 }
 
-void pushPlugin(ref Node delegate(Node[])[string] tf, Node delegate(Node[])[string] vals)
+void pushPlugin(ref Node function(Node[])[string] tf, Node function(Node[])[string] vals)
 {
     foreach (key, value; vals)
     {

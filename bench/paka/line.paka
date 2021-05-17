@@ -1,0 +1,1 @@
+add(x; y) = x + y sub(x; y) = x - y lt(x; y) = x <y fib(n) = if (lt(n;2)) {n} else { add(fib(sub(n;1)); fib(sub(n;2))) } return fib(10)

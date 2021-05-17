@@ -49,7 +49,7 @@ string[] readBinaryOp(ref string[] ops)
     string[] ret;
     while (ops.length >= 2)
     {
-        if (ops[0] == ".")
+        if (ops[0] == "!")
         {
             ret ~= ops[0];
             ops = ops[1 .. $];
@@ -69,7 +69,7 @@ string[] readBinaryOp(ref string[] ops)
     ops = ops[1 .. $];
     while (ops.length != 0)
     {
-        if (ops[0] == ".")
+        if (ops[0] == "!")
         {
             ret ~= ops[0];
             ops = ops[1 .. $];
@@ -111,7 +111,7 @@ UnaryOp parseUnaryOp(string[] ops)
         }
         while (ops.length != 0)
         {
-            if (ops[0] == ".")
+            if (ops[0] == "!")
             {
                 UnaryOp lastUnary = curUnary;
                 ops = ops[1 .. $];
@@ -159,7 +159,7 @@ BinaryOp parseBinaryOp(string[] ops)
 {
     if (ops.length > 1)
     {
-        if (ops[0] == "." && ops[$ - 1] == ".")
+        if (ops[0] == "!")
         {
             BinaryOp next = parseBinaryOp(ops[1 .. $ - 1]);
             return (Node lhs, Node rhs) {
@@ -171,14 +171,14 @@ BinaryOp parseBinaryOp(string[] ops)
             BinaryOp next = parseBinaryOp(ops[1 .. $ - 1]);
             return (Node lhs, Node rhs) { return binaryFold(next, lhs, rhs); };
         }
-        if (ops[0] == ".")
+        if (ops[0] == "!")
         {
             BinaryOp next = parseBinaryOp(ops[1 .. $]);
             return (Node lhs, Node rhs) {
                 return binaryDotmap!metaMapLhsParallel(next, lhs, rhs);
             };
         }
-        if (ops[$ - 1] == ".")
+        if (ops[$ - 1] == "!")
         {
             BinaryOp next = parseBinaryOp(ops[0 .. $ - 1]);
             return (Node lhs, Node rhs) {

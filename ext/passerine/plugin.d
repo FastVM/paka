@@ -14,7 +14,7 @@ Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
     plugin.libs ~= passerineBaseLibs;
-    plugin.parsers["passerine"] = code => parse(code);
+    plugin.parsers["passerine"] = &parse;
     return plugin;
 }
 

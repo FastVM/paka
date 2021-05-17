@@ -47,6 +47,7 @@ template Spanning(alias F, T...)
 /// token reader.
 class TokenArray
 {
+pragma(inline, true):
     version(tokenize_at_once)
     {
         size_t index;

@@ -15,7 +15,7 @@ string[][] prec = [
 ];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "not", ",", ":", "\\", "#"];
+string[] nops = [".", "not", ",", ":", "\\", "!"];
 
 /// language keywords
 string[] keywords = [
@@ -67,12 +67,14 @@ struct Token
     /// where is the token
     Span span;
     /// only constructor
+pragma(inline, true):
     this(T)(Span s, Type t, T v = null)
     {
         type = t;
         value = cast(string) v;
         span = s;
     }
+
 
     /// shows token along with location
     string toString()

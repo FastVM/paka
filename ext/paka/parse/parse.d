@@ -8,6 +8,7 @@ import std.utf;
 import std.ascii;
 import std.string;
 import std.algorithm;
+import std.functional;
 import purr.vm;
 import purr.inter;
 import purr.dynamic;
@@ -111,7 +112,7 @@ void stripNewlines(TokenArray tokens)
 Node readPostFormExtend(TokenArray tokens, Node last)
 {
     Node[][] args = tokens.readOpen!"()";
-    while (tokens.first.exists && (tokens.first.isOpen("{") || tokens.first.isOperator(":")))
+    while (tokens.first.isOpen("{") || tokens.first.isOperator(":"))
     {
         args[$ - 1] ~= new Form("fun", [
                 new Form("args"), tokens.readBlock
@@ -128,7 +129,7 @@ Node readPostFormExtend(TokenArray tokens, Node last)
 alias readPostExtend = Spanning!(readPostExtendImpl, Node);
 Node readPostExtendImpl(TokenArray tokens, Node last)
 {
-    if (tokens.first.exists == 0)
+    if (!tokens.first.exists)
     {
         return last;
     }
@@ -136,6 +137,38 @@ Node readPostExtendImpl(TokenArray tokens, Node last)
     if (tokens.first.isOpen("("))
     {
         ret = tokens.readPostFormExtend(last);
+    }
+    else if (tokens.first.isOperator("."))
+    {
+        tokens.nextIs(Token.Type.operator, ".");
+        if (tokens.first.isOpen("["))
+        {
+            Node[] arr = tokens.readOpen!"[]";
+            ret = new Form("index", [
+                    last, new Form("do", arr)
+                    ]);
+        }
+        else if (tokens.first.isOpen("("))
+        {
+            Node[][] arr = tokens.readOpen!"()";
+            Node dov = new Form("do",
+                    arr.map!(s => cast(Node) new Form("do", s)).array);
+            ret = new Form("index", last, dov);
+        }
+        else if (tokens.first.value[0].isDigit)
+        {
+            ret = new Form("index", [
+                    last, new Value(tokens.first.value.to!double)
+                    ]);
+            tokens.nextIs(Token.Type.ident);
+        }
+        else
+        {
+            ret = new Form("index", [
+                    last, new Value(tokens.first.value)
+                    ]);
+            tokens.nextIs(Token.Type.ident);
+        }
     }
     else
     {
@@ -463,7 +496,7 @@ Node readPreExprImpl(TokenArray tokens)
 
 bool isDotOperator(Token tok)
 {
-    return tok.isOperator(".") || tok.isOperator("\\");
+    return tok.isOperator("!") || tok.isOperator("\\");
 }
 
 alias readExprBase = Spanning!(readExprBaseImpl);
@@ -496,21 +529,21 @@ Node readExprImpl(TokenArray tokens, size_t level)
     string[] opers;
     string[][2][] dotcount;
     Node[] subNodes = [tokens.readExpr(level + 1)];
-    while (tokens.first.isAnyOperator([".", "\\"] ~ prec[level]))
+    while (tokens.first.isAnyOperator(prec[level]) || tokens.first.isDotOperator)
     {
         string[] pre;
         string[] post;
         while (tokens.first.isDotOperator)
         {
             pre ~= tokens.first.value;
-            tokens.nextIs(Token.Type.operator, ".");
+            tokens.nextIs(Token.Type.operator);
         }
         opers ~= tokens.first.value;
         tokens.nextIs(Token.Type.operator);
         while (tokens.first.isDotOperator)
         {
             post ~= tokens.first.value;
-            tokens.nextIs(Token.Type.operator, ".");
+            tokens.nextIs(Token.Type.operator);
         }
         subNodes ~= tokens.readExpr(level + 1);
         dotcount ~= [pre, post];
@@ -633,8 +666,10 @@ Node parsePakaAs(alias parser)(Location loc)
     }
 }
 
+alias parseCached = memoize!parseUncached;
+
 /// parses code as archive of the paka programming language
-Node parse(Location loc)
+Node parseUncached(Location loc)
 {
     Location[] olocs = locs;
     locs = null;
