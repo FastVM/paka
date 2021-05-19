@@ -216,25 +216,7 @@ Thunk cliReplHandler()
             }
             string prompt = "(" ~ to!string(bases.length + 1) ~ ")> ";
             string line = null;
-            try
-            {
-                line = readln(prompt);
-            }
-            catch (ExitException ee)
-            {
-                if (ee.letter == 'Z' && bases.length > 1)
-                {
-                    reader.history.length--;
-                    bases.length--;
-                    loadBaseObject(ctx, bases[$ - 1].tab.table);
-                    reader.output.write("\x1B[K\x1B[1F\x1B[1B");
-                    goto before;
-                }
-                else
-                {
-                    throw ee;
-                }
-            }
+            line = readln(prompt);
             while (line.length > 0)
             {
                 if (line[0].isWhite)
@@ -437,8 +419,6 @@ void thrown(Err)(Err e)
     writeln(trace);
     writeln(e.msg);
     writeln;
-    purr_disable_smart_reader();
-    makeReader(false);
     throw e;
     exit(1);
 }
