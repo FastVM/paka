@@ -15,7 +15,7 @@ string[][] prec = [
 ];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "not", ",", ":", "\\", "!"];
+string[] nops = [".", "not", ",", ":", "\\", "!", "#"];
 
 /// language keywords
 string[] keywords = [

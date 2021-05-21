@@ -526,33 +526,31 @@ Node readExprImpl(TokenArray tokens, size_t level)
     {
         return tokens.readPreExpr;
     }
-    string[] opers;
-    string[][2][] dotcount;
+    string[][] opers;
     Node[] subNodes = [tokens.readExpr(level + 1)];
     while (tokens.first.isAnyOperator(prec[level]) || tokens.first.isDotOperator)
     {
-        string[] pre;
-        string[] post;
+        string[] oper;
         while (tokens.first.isDotOperator)
         {
-            pre ~= tokens.first.value;
+            oper ~= tokens.first.value;
             tokens.nextIs(Token.Type.operator);
         }
-        opers ~= tokens.first.value;
+        oper ~= tokens.first.value;
         tokens.nextIs(Token.Type.operator);
         while (tokens.first.isDotOperator)
         {
-            post ~= tokens.first.value;
+            oper ~= tokens.first.value;
             tokens.nextIs(Token.Type.operator);
         }
         subNodes ~= tokens.readExpr(level + 1);
-        dotcount ~= [pre, post];
+        opers ~= oper;
     }
     Node ret = subNodes[0];
     Ident last;
-    foreach (i, v; opers)
+    foreach (i, oper; opers)
     {
-        ret = parseBinaryOp(dotcount[i][0] ~ v ~ dotcount[i][1])(ret, subNodes[i + 1]);
+        ret = parseBinaryOp(oper)(ret, subNodes[i + 1]);
     }
     return ret;
 }

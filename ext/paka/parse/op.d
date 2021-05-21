@@ -159,7 +159,7 @@ BinaryOp parseBinaryOp(string[] ops)
 {
     if (ops.length > 1)
     {
-        if (ops[0] == "!")
+        if (ops[0] == "!" && ops[$ - 1] == "!")
         {
             BinaryOp next = parseBinaryOp(ops[1 .. $ - 1]);
             return (Node lhs, Node rhs) {
