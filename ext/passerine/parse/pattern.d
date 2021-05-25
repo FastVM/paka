@@ -1,6 +1,7 @@
 module ext.passerine.parse.pattern;
 
 import purr.io;
+import std.conv;
 import purr.ast.ast;
 import purr.dynamic;
 
@@ -12,6 +13,11 @@ Dynamic matchExact(Args args)
 Dynamic matchExactLength(Args args)
 {
     return dynamic(args[0].arr.length == args[1].as!size_t);
+}
+
+Dynamic matchNoLength(Args args)
+{
+    return dynamic(args[0].arr.length == 0);
 }
 
 Dynamic matchNoLessLength(Args args)
@@ -29,8 +35,9 @@ Dynamic slice(Args args)
     return args[0].arr[args[1].as!size_t .. $-args[2].as!size_t].dynamic;
 }
 
-Node matcher(Node value, Node pattern)
+Node matcher(Node value, Node pattern, size_t line = __LINE__)
 {
+    assert(pattern !is null, "null pattern at: " ~ line.to!string);
     if (Ident id = cast(Ident) pattern)
     {
         if (id.repr == "_")
@@ -61,7 +68,12 @@ Node matcher(Node value, Node pattern)
         case "tuple":
             goto case;
         case "array":
+            if (call.args.length == 0)
+            {
+                return new Form("call", new Value(native!matchNoLength), value);   
+            }
             Node[] pre;
+            Node mid = null;
             Node[] post;
             foreach (val; call.args)
             {
@@ -69,11 +81,11 @@ Node matcher(Node value, Node pattern)
                 {
                     if (call2.form == "..")
                     {
-                        post ~= val;
+                        mid = val;
                         continue;
                     }
                 }
-                if (post.length != 0)
+                if (mid !is null)
                 {
                     post ~= val;
                 }
@@ -82,7 +94,7 @@ Node matcher(Node value, Node pattern)
                     pre ~= val;
                 }
             }
-            if (post.length == 0)
+            if (mid is null)
             {
                 Node ret = new Form("call", new Value(native!matchExactLength),
                         [value, new Value(pre.length)]);
@@ -100,7 +112,7 @@ Node matcher(Node value, Node pattern)
             else
             {
                 Node ret = new Form("call", new Value(native!matchNoLessLength),
-                        [value, new Value(pre.length + post.length - 1)]);
+                        [value, new Value(pre.length + post.length)]);
                 foreach (index, term; pre)
                 {
                     Node indexed = new Form("index", [
@@ -111,14 +123,14 @@ Node matcher(Node value, Node pattern)
                             ]);
                 }
                 Node sliced = new Form("call", new Value(native!slice), [
-                        value, new Value(pre.length), new Value(post.length-1)
+                        value, new Value(pre.length), new Value(post.length)
                         ]);
-                Form term0 = cast(Form) post[0];
+                Form term0 = cast(Form) mid;
                 assert(term0);
                 ret = new Form("&&", [
                         ret, matcher(sliced, term0.args[0])
                         ]);
-                foreach (index, term; post[1 .. $])
+                foreach (index, term; post)
                 {
                     Node indexed = new Form("call", new Value(native!rindex),
                             [value, new Value(index + 1)]);

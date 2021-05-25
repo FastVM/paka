@@ -51,7 +51,7 @@ Node readParenBody(ref TokenArray tokens, size_t start)
     }
     if (args.length == 0)
     {
-        return new Form("tuple", null);
+        return new Form("tuple");
     }
     if (args.length == 1 && !hasComma)
     {
@@ -477,6 +477,30 @@ redo:
     return tokens.readPostExtend(last);
 }
 
+Node checkMacro(Node[] flatlike)
+{
+    foreach_reverse (macros; syntaxMacros)
+    {
+        foreach (Dynamic[2] pair; macros)
+        {
+            Dynamic pattern = pair[0];
+            Dynamic astBody = pair[1];
+            Table reps = pattern.arr.matchMacro(flatlike);
+            if (reps.length != 0)
+            {
+                nameSubs ~= reps;
+                scope(exit)
+                {
+                    nameSubs.length--;
+                }
+                TokenArray toks = astBody.getTokens;
+                return toks.readBlock;
+            }
+        }
+    }
+    return null;
+}
+
 /// read prefix before postfix expression.
 alias readPreExpr = Spanning!readPreExprImpl;
 Node readPreExprImpl(ref TokenArray tokens)
@@ -492,18 +516,29 @@ Node readPreExprImpl(ref TokenArray tokens)
         }
         return parseUnaryOp(vals)(tokens.readPostExpr);
     }
-    Node ret = tokens.readPostExpr;
+    Node callChain = tokens.readPostExpr;
+    Node[] flatlike = [callChain];
+
     while (tokens.length != 0 && !tokens.first.isSemicolon
             && !tokens.first.isClose && !tokens.first.isComma && !tokens.first.isOperator)
     {
         size_t llen = tokens.length;
-        ret = new Form("call", ret, tokens.readPostExpr);
+        Node arg = tokens.readPostExpr;
+        flatlike ~= arg;
+        callChain = new Form("call", callChain, arg);
         if (llen == tokens.length)
         {
             break;
         }
     }
-    return ret;
+    if (Node ranMacro = flatlike.checkMacro)
+    {
+        return ranMacro;
+    }
+    else
+    {
+        return callChain;
+    }
 }
 
 alias readExprBase = Spanning!(readExprBaseImpl);
@@ -531,26 +566,7 @@ Node readExprImpl(ref TokenArray tokens, size_t level)
 {
     if (level == prec.length)
     {
-        Node ret = tokens.readPreExpr;
-    redo:
-        outter: foreach_reverse (macros; syntaxMacros)
-        {
-            foreach (Dynamic[2] pair; macros)
-            {
-                Dynamic pattern = pair[0];
-                Dynamic astBody = pair[1];
-                Table reps = pattern.arr.matchMacro(ret);
-                if (reps.length != 0)
-                {
-                    nameSubs ~= reps;
-                    TokenArray toks = astBody.getTokens;
-                    ret = toks.readBlock;
-                    nameSubs.length--;
-                    goto redo;
-                }
-            }
-        }
-        return ret;
+        return tokens.readPreExpr;
     }
     string[] opers;
     Node[] subNodes;

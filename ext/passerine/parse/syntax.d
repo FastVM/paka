@@ -16,45 +16,16 @@ import ext.passerine.parse.util;
 Dynamic[2][][] syntaxMacros = [null];
 Table[] nameSubs;
 
-Table matchMacro(Dynamic[] pattern, Node ast)
+Table matchMacro(Dynamic[] pattern, Node[] flatlike)
 {
-    Node[] flat;
-    Form call = cast(Form) ast;
-    if (call is null)
-    {
-        flat ~= ast;
-    }
-    else
-    {
-        while (true)
-        {
-            flat ~= call.args[$ - 1];
-            if (Ident id = cast(Ident) call.args[0])
-            {
-                if (id.repr == "call")
-                {
-                    if (Form nextForm = cast(Form) call.args[1])
-                    {
-                        call = nextForm;
-                        continue;
-                    }
-                    else
-                    {
-                        flat ~= call.args[1];
-                    }
-                }
-            }
-            break;
-        }
-    }
-    if (flat.length < pattern.length)
+    if (flatlike.length < pattern.length)
     {
         return Table.empty;
     }
     Table ret = Table.empty;
     foreach (index, value; pattern)
     {
-        Node cur = flat[$ - 1 - index];
+        Node cur = flatlike[index];
         if (value.arr[0].str == "keyword")
         {
             if (Ident id = cast(Ident) cur)
