@@ -16,7 +16,7 @@ alias TokenArray = PushArray!Token;
 string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 
 /// locations for error handling
-Location[] locs;
+SrcLoc[] locs;
 
 /// context for static expressions
 size_t[] staticCtx;

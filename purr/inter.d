@@ -20,6 +20,7 @@ import purr.srcloc;
 import purr.ir.repr;
 import purr.ir.walk;
 import purr.ir.emit;
+import purr.wasm.gen;
 
 __gshared bool dumpbytecode = false;
 __gshared bool dumpir = false;
@@ -44,7 +45,7 @@ LocalFormback exportLocalsToBaseFormback(size_t ctx, Function func)
     return ret;
 } 
 
-Dynamic evalImpl(Walker)(size_t ctx, Location code, Args args)
+Dynamic evalImpl(Walker)(size_t ctx, SrcLoc code, Args args)
 {
     Node node = code.parse;
     Walker walker = new Walker;
@@ -58,7 +59,7 @@ Dynamic evalImpl(Walker)(size_t ctx, Location code, Args args)
     return run(func, args, ctx.exportLocalsToBaseFormback(func));
 }
 
-Dynamic eval(size_t ctx, Location code, Args args=Args.init)
+Dynamic eval(size_t ctx, SrcLoc code, Args args=Args.init)
 {
     return evalImpl!(purr.ir.walk.Walker)(ctx, code, args);
 }

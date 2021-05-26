@@ -517,7 +517,6 @@ pragma(inline, true):
         case Dynamic.Type.pro:
             return size_t.max - 2;
         }
-        return cast(size_t) type;
     }
 
     bool opEquals(const Dynamic other) const
@@ -568,7 +567,7 @@ pragma(inline, true):
         {
             if (type != Type.log)
             {
-                throw new Exception("expected logical type");
+                throw new Exception("expected logical type (not: " ~ this.to!string ~ ")");
             }
         }
         return value.log;
@@ -580,7 +579,7 @@ pragma(inline, true):
         {
             if (type != Type.str)
             {
-                throw new Exception("expected string type");
+                throw new Exception("expected string type (not: " ~ this.to!string ~ ")");
             }
         }
         return *value.str;
@@ -592,7 +591,7 @@ pragma(inline, true):
         {
             if (!isArr)
             {
-                throw new Exception("expected array type");
+                throw new Exception("expected array type (not: " ~ this.to!string ~ ")");
             }
         }
         return value.arr[0 .. len];
@@ -604,7 +603,7 @@ pragma(inline, true):
         {
             if (type != Type.tab)
             {
-                throw new Exception("expected table type");
+                throw new Exception("expected table type (not: " ~ this.to!string ~ ")");
             }
         }
         return value.tab;
@@ -616,7 +615,7 @@ pragma(inline, true):
         {
             if (type != Type.str)
             {
-                throw new Exception("expected string type");
+                throw new Exception("expected string type (not: " ~ this.to!string ~ ")");
             }
         }
         return value.str;
@@ -642,7 +641,7 @@ pragma(inline, true):
         }
         else
         {
-            throw new Exception("expected numeric type");
+            throw new Exception("expected numeric type (not: " ~ this.to!string ~ ")");
         }
     }
 
@@ -654,7 +653,7 @@ pragma(inline, true):
         }
         else
         {
-            throw new Exception("expected numeric type");
+            throw new Exception("expected numeric type (not: " ~ this.to!string ~ ")");
         }
     }
 

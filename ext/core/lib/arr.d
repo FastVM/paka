@@ -198,6 +198,10 @@ Dynamic libslice(Args args)
     {
         return dynamic(args[0].arr[args[1].as!size_t .. args[2].as!size_t].dup);
     }
+    else if (args.length == 2)
+    {
+        return dynamic(args[0].arr[0..$-args[1].as!size_t].dup);
+    }
     else
     {
         throw new Exception("arr.slice takes 3 arguments");

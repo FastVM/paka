@@ -2,7 +2,7 @@ module purr.srcloc;
 
 import std.conv;
 
-struct Location
+struct SrcLoc
 {
     size_t line = 0;
     size_t column = 1;
@@ -13,9 +13,9 @@ struct Location
         return line.to!string ~ ":" ~ column.to!string;
     }
 
-    Location dup()
+    SrcLoc dup()
     {
-        Location loc;
+        SrcLoc loc;
         loc.line = line;
         loc.column = column;
         loc.file = file;
@@ -23,7 +23,7 @@ struct Location
         return loc;
     }
 
-    bool isAt(Location other)
+    bool isAt(SrcLoc other)
     {
         return line == other.line && column == other.column;
     }
@@ -31,8 +31,8 @@ struct Location
 
 struct Span
 {
-    Location first;
-    Location last;
+    SrcLoc first;
+    SrcLoc last;
 
     string pretty() {
         return "from " ~ first.pretty ~ " to " ~ last.pretty;

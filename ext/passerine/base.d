@@ -11,13 +11,23 @@ import purr.fs.disk;
 
 Dynamic libprint(Dynamic[] args)
 {
-    writeln(args[0]);
-    return args[0];
+    foreach (arg; args) 
+    {
+        write(arg);
+    }
+    writeln;
+    return args[$-1];
+}
+
+Dynamic libapply(Dynamic[] args)
+{
+    return args[0](args[1].arr);
 }
 
 Pair[] passerineBaseLibs()
 {
     Pair[] ret;
+    ret ~= FunctionPair!libapply("_pn_ffi_apply");
     ret ~= FunctionPair!libprint("print");
     return ret;
 }

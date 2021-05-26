@@ -665,7 +665,7 @@ Node readBlockImpl(ref TokenArray tokens)
 alias parsePasserineValue = parsePasserineAs!readBlockBodyImpl;
 alias parsePasserine = memoize!parsePasserineValue;
 /// parses code as the passerine programming language
-Node parsePasserineAs(alias parser)(Location loc)
+Node parsePasserineAs(alias parser)(SrcLoc loc)
 {
     TokenArray tokens = newTokenArray(loc.tokenize);
     try
@@ -705,9 +705,9 @@ Node parsePasserineAs(alias parser)(Location loc)
 }
 
 /// parses code as archive of the passerine programming language
-Node parse(Location loc)
+Node parse(SrcLoc loc)
 {
-    Location[] olocs = locs;
+    SrcLoc[] olocs = locs;
     locs = null;
     staticCtx ~= enterCtx;
     scope (exit)
@@ -725,7 +725,7 @@ Node parse(Location loc)
     {
         throw new Exception("input error: missing __main__");
     }
-    Location location = main.location;
+    SrcLoc location = main.location;
     Node ret = location.parsePasserine;
     return ret;
 }

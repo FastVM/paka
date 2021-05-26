@@ -135,7 +135,7 @@ T deserialize(T)(Json json) if (is(T == Dynamic function(Args)))
     return json.str.getNative;
 }
 
-Location deserialize(T : Location)(Json json)
+SrcLoc deserialize(T : SrcLoc)(Json json)
 {
     return json.elems!("line column file", T);
 }

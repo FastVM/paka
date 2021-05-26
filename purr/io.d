@@ -42,7 +42,7 @@ void write1s(string str)
 {
 	foreach (chr; str)
 	{
-		std.stdio.write(chr);
+		stdout.write(chr);
 	}
 }
 

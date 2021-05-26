@@ -59,7 +59,7 @@ Thunk cliFileHandler(immutable string filename)
         {
             langNameDefault = "passerine";
         }
-        Location code = Location(1, 1, filename, filename.readText);
+        SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
         string cdir = getcwd;
         Dynamic retval;
         scope (exit)
@@ -82,7 +82,7 @@ Thunk cliFormHandler(immutable string code)
 {
     return {
         Dynamic got = dynamics[$ - 1]([
-                ctx.eval(Location(1, 1, "__main__", code))
+                ctx.eval(SrcLoc(1, 1, "__main__", code))
                 ]);
         dynamics.length--;
         dynamics ~= got;
@@ -96,7 +96,7 @@ Thunk cliEvalHandler(immutable string code)
         {
             fileArgs = null;
         }
-        Dynamic got = ctx.eval(Location(1, 1, "__main__", code), fileArgs);
+        Dynamic got = ctx.eval(SrcLoc(1, 1, "__main__", code), fileArgs);
         dynamics ~= got;
     };
 }
@@ -104,7 +104,7 @@ Thunk cliEvalHandler(immutable string code)
 Thunk cliParseHandler(immutable string code)
 {
     return {
-        Location loc = Location(1, 1, "__main__", code);
+        SrcLoc loc = SrcLoc(1, 1, "__main__", code);
         Node res = loc.parse;
     };
 }
@@ -112,7 +112,7 @@ Thunk cliParseHandler(immutable string code)
 Thunk cliValidateHandler(immutable string code)
 {
     return {
-        Location loc = Location(1, 1, "__main__", code);
+        SrcLoc loc = SrcLoc(1, 1, "__main__", code);
         Node node = loc.parse;
         Walker walker = new Walker;
         BasicBlock func = walker.walkBasicBlock(node, ctx);
@@ -122,7 +122,7 @@ Thunk cliValidateHandler(immutable string code)
 Thunk cliCompileHandler(immutable string code)
 {
     return {
-        Location loc = Location(1, 1, "__main__", code);
+        SrcLoc loc = SrcLoc(1, 1, "__main__", code);
         Node node = loc.parse;
         Walker walker = new Walker;
         Function func = walker.walkProgram(node, ctx);
@@ -232,7 +232,7 @@ Thunk cliReplHandler()
                     break;
                 }
             }
-            Location code = Location(bases.length, 1, "__main__", line);
+            SrcLoc code = SrcLoc(bases.length, 1, "__main__", line);
             if (code.src.length == 0)
             {
                 break;

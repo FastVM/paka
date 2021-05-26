@@ -65,7 +65,7 @@ Pair[] lib2rand()
     rnd = MinstdRand0(unpredictableSeed);
     Pair[] ret = [];
     ret ~= FunctionPair!libseed("seed");
-    ret ~= FunctionPair!librandom("range");
+    ret ~= FunctionPair!librandom("random");
     return ret;
 }
 

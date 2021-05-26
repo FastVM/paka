@@ -8,7 +8,7 @@ import purr.srcloc;
 final class Plugin
 {
     Pair[] libs;
-    Node function(Location code)[string] parsers;
+    Node function(SrcLoc code)[string] parsers;
 
     override string toString()
     {

@@ -120,11 +120,11 @@ class MemorySymbolicLink : MemoryFile
 
 class MemoryTextFile : MemoryFile
 {
-    immutable Location location;
+    immutable SrcLoc location;
     bool isSync;
     SysTime syncTime;
 
-    this(Location loc, bool sync=false, SysTime st=SysTime.min)
+    this(SrcLoc loc, bool sync=false, SysTime st=SysTime.min)
     {
         location = loc;
         isSync = sync;

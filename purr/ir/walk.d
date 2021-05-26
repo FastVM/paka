@@ -291,7 +291,7 @@ final class Walker
             }
             else
             {
-                assert(false);
+                assert(false, call.form);
             }
         }
         else

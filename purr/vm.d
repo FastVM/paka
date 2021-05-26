@@ -73,7 +73,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         switch (cur)
         {
         default:
-            assert(false);
+            assert(false, cur.to!string);
         case Opcode.nop:
             break;
         case Opcode.push:

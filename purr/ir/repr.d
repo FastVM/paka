@@ -55,7 +55,7 @@ final class BasicBlock
     string name;
     Instruction[] instrs;
     Branch exit;
-    ushort[Function] counts;
+    int place = -1;
 
     this(string n = genName!"bb_")
     {

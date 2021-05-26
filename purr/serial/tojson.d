@@ -41,7 +41,7 @@ string serialize(Num)(Num num) if (std.traits.isNumeric!Num)
     return '"' ~ num.to!string ~ '"';
 }
 
-string serialize(Location location)
+string serialize(SrcLoc location)
 {
     return location.elems!"line column file";
 }

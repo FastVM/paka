@@ -1,5 +1,6 @@
 module ext.paka.plugin;
 
+import purr.io;
 import ext.paka.base;
 import ext.paka.parse.parse;
 import purr.plugin.plugin;

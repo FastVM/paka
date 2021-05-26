@@ -131,7 +131,7 @@ struct Token
 }
 
 /// reads a single token from a string
-Token readToken(ref string code, ref Location location)
+Token readToken(ref string code, ref SrcLoc location)
 {
     char peek()
     {
@@ -167,11 +167,11 @@ Token readToken(ref string code, ref Location location)
         return ret;
     }
 
-    Location begin = location;
+    SrcLoc begin = location;
 
     Token consToken(T)(Token.Type t, T v)
     {
-        Location end = location.dup;
+        SrcLoc end = location.dup;
         Span span = Span(begin, end);
         return Token(span, t, v);
     }
@@ -299,7 +299,7 @@ Token readToken(ref string code, ref Location location)
 }
 
 /// repeatedly calls a readToken until its empty
-Token[] tokenize(Location location)
+Token[] tokenize(SrcLoc location)
 {
     string code = location.src;
     Token[] tokens;

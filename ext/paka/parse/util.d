@@ -5,7 +5,7 @@ import std.conv;
 import purr.srcloc;
 import purr.dynamic;
 import purr.ast.ast;
-import ext.pakaparse.tokens;
+import ext.paka.parse.tokens;
 
 alias UnaryOp = Node delegate(Node rhs);
 alias BinaryOp = Node delegate(Node lhs, Node rhs);
@@ -14,7 +14,7 @@ alias BinaryOp = Node delegate(Node lhs, Node rhs);
 string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 
 /// locations for error handling
-Location[] locs;
+SrcLoc[] locs;
 
 /// context for static expressions
 size_t[] staticCtx;
@@ -25,7 +25,7 @@ template Spanning(alias F, T...)
 {
     Node spanning(TokenArray tokens, T a)
     {
-        Location origPos = tokens.position;
+        SrcLoc origPos = tokens.position;
         locs ~= origPos;
         scope (success)
         {
@@ -53,7 +53,7 @@ pragma(inline, true):
         size_t index;
         Token[] tokens;
 
-        this(Location pos)
+        this(SrcLoc pos)
         {
             tokens ~= pos.readToken;
             while (tokens[$-1].exists)
@@ -67,7 +67,7 @@ pragma(inline, true):
             return tokens[index];
         }
 
-        Location position()
+        SrcLoc position()
         {
             return first.span.first;
         }
@@ -80,8 +80,8 @@ pragma(inline, true):
     else
     {
         Token first;
-        Location position;
-        this(Location pos)
+        SrcLoc position;
+        this(SrcLoc pos)
         {
             position = pos;
             skip;

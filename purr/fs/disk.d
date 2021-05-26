@@ -32,7 +32,7 @@ bool fsexists(string path)
     return !(path !in fileSystem) || exists(path);
 }
 
-Location readFile(string path)
+SrcLoc readFile(string path)
 {
     // if (MemoryFile* file = path in fileSystem)
     // {
@@ -41,5 +41,5 @@ Location readFile(string path)
     //         return path.readMemFile.location;
     //     }
     // }
-    return Location(1, 1, path, path.readText);
+    return SrcLoc(1, 1, path, path.readText);
 }

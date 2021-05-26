@@ -21,7 +21,7 @@ Pair[] pluginLib()
     return ret;
 }
 
-void pushPlugin(ref Node function(Location code)[string] par, Node function(Location code)[string] vals)
+void pushPlugin(ref Node function(SrcLoc code)[string] par, Node function(SrcLoc code)[string] vals)
 {
     foreach (key, value; vals)
     {

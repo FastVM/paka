@@ -344,7 +344,7 @@ Node readStringPart(ref string str, ref Span span)
         if ((ret[0] == 'u' && ret[1] == 'f') || (ret[0] == 'f' && ret[1] == 'u'))
         {
             string input = ret[3 .. $ - 1].strip;
-            node = Location(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
+            node = SrcLoc(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
                 .parsePakaAs!readExprBase;
             node = new Form("call", [
                     new Ident("_unicode_ctrl"), node
@@ -353,7 +353,7 @@ Node readStringPart(ref string str, ref Span span)
         else if (ret[0] == 'f')
         {
             string input = ret[2 .. $ - 1].strip;
-            node = Location(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
+            node = SrcLoc(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
                 .parsePakaAs!readExprBase;
         }
         else if (ret[0] == 'u')
@@ -594,7 +594,7 @@ Node readBlockBodyImpl(TokenArray tokens)
     Node[] ret;
     while (tokens.first.exists && !tokens.first.isClose("}") && !tokens.first.isKeyword("else"))
     {
-        Location loc = tokens.position;
+        SrcLoc loc = tokens.position;
         ret ~= tokens.readStmt;
         if (tokens.position.isAt(loc)) 
         {
@@ -625,7 +625,7 @@ Node readBlockImpl(TokenArray tokens)
 alias parsePakaValue = parsePakaAs!readBlockBodyImpl;
 alias parsePaka = parsePakaValue;
 /// parses code as the paka programming language
-Node parsePakaAs(alias parser)(Location loc)
+Node parsePakaAs(alias parser)(SrcLoc loc)
 {
     TokenArray tokens = new TokenArray(loc);
     try
@@ -667,9 +667,9 @@ Node parsePakaAs(alias parser)(Location loc)
 alias parseCached = memoize!parseUncached;
 
 /// parses code as archive of the paka programming language
-Node parseUncached(Location loc)
+Node parseUncached(SrcLoc loc)
 {
-    Location[] olocs = locs;
+    SrcLoc[] olocs = locs;
     locs = null;
     staticCtx ~= enterCtx;
     scope (exit)
@@ -687,7 +687,7 @@ Node parseUncached(Location loc)
     {
         throw new Exception("input error: missing __main__");
     }
-    Location location = main.location;
+    SrcLoc location = main.location;
     Node ret = location.parsePaka;
     return ret;
 }

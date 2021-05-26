@@ -2,12 +2,13 @@ OPT=0
 BIN=bin
 TMP=tmp
 UNICODE=$(TMP)/UnicodeData.txt
+1LFLAGS=-L-lwasmer -L-lffi
 
 all: build
 pgo: pgo-build
 
 build: $(BIN) $(UNICODE)
-	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT) -of=$(BIN)/purr -Jtmp $(DFLAGS)
+	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT) -of=$(BIN)/purr -Jtmp $(1LFLAGS) $(LFLAGS) $(DFLAGS)
 
 pgo-gen: $(BIN)
 	$(MAKE) OPT=3 DFLAGS+="-release --stack-protector-guard=none --frame-pointer=none --fp-contract=off -flto=full -fprofile-instr-generate=profile.raw"

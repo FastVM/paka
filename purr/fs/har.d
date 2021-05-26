@@ -8,7 +8,7 @@ import purr.fs.memory;
 import purr.fs.files;
 import purr.srcloc;
 
-MemoryDirectory parseHar(Location loc, MemoryDirectory dir)
+MemoryDirectory parseHar(SrcLoc loc, MemoryDirectory dir)
 {
     string[] names = [];
     string file;
@@ -23,11 +23,11 @@ MemoryDirectory parseHar(Location loc, MemoryDirectory dir)
             MemoryTextFile mfile = void;
             if (name == "__main__")
             {
-                mfile = new MemoryTextFile(Location(ilno, 1, loc.file, file));
+                mfile = new MemoryTextFile(SrcLoc(ilno, 1, loc.file, file));
             }
             else
             {
-                mfile = new MemoryTextFile(Location(ilno, 1, name, file));
+                mfile = new MemoryTextFile(SrcLoc(ilno, 1, name, file));
             }
             dir[name] = mfile;
         }

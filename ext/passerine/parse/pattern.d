@@ -10,19 +10,24 @@ Dynamic matchExact(Args args)
     return dynamic(args[0] == args[1]);
 }
 
+bool isIndexable(Dynamic arg)
+{
+    return arg.type == Dynamic.Type.arr || arg.type == Dynamic.Type.tup;
+}
+
 Dynamic matchExactLength(Args args)
 {
-    return dynamic(args[0].arr.length == args[1].as!size_t);
+    return dynamic(args[0].isIndexable && args[0].arr.length == args[1].as!size_t);
 }
 
 Dynamic matchNoLength(Args args)
 {
-    return dynamic(args[0].arr.length == 0);
+    return dynamic(args[0].isIndexable && args[0].arr.length == 0);
 }
 
 Dynamic matchNoLessLength(Args args)
 {
-    return dynamic(args[0].arr.length >= args[1].as!size_t);
+    return dynamic(args[0].isIndexable && args[0].arr.length >= args[1].as!size_t);
 }
 
 Dynamic rindex(Args args)
@@ -140,11 +145,9 @@ Node matcher(Node value, Node pattern, size_t line = __LINE__)
                 }
                 return ret;
             }
+            case "call":
+                return new Form("call", new Value(native!matchExact), [pattern, call]);
         }
-        return new Form("call", new Value(native!matchExact), [pattern, call]);
     }
-    else
-    {
-        assert(false);
-    }
+    assert(false);
 }

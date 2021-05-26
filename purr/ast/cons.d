@@ -7,7 +7,7 @@ import purr.srcloc;
 import purr.dynamic;
 import purr.ast.ast;
 
-Dynamic astDynamic(Location loc)
+Dynamic astDynamic(SrcLoc loc)
 {
     Mapping ret;
     ret["line".dynamic] = loc.line.dynamic;

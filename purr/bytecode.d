@@ -124,7 +124,7 @@ final class Function
         stackAt = other.stackAt;
     }
 
-    uint doCapture(string name)
+    int doCapture(string name)
     {
         uint* got = name in captab.byName;
         if (got !is null)
@@ -135,7 +135,7 @@ final class Function
         {
             if (argname == name)
             {
-                uint ret = captab.define(name);
+                int ret = captab.define(name);
                 capture ~= Capture(cast(uint) argno, false, true);
                 return ret;
             }
@@ -155,13 +155,17 @@ final class Function
         {
             if (parent.parent is null)
             {
-                throw new Exception("not defined: " ~ name);
+                return -1;
             }
-            parent.doCapture(name);
+            int ret = parent.doCapture(name);
+            if (ret == -1)
+            {
+                return -1;
+            }
             capture ~= Capture(parent.captab.byName[name], true, false);
             flags = parent.captab.flags(name);
         }
-        uint ret = captab.define(name, flags);
+        int ret = captab.define(name, flags);
         capture[$ - 1].offset = ret;
         return ret;
     }
@@ -233,10 +237,10 @@ enum Opcode : ushort
     retnone,
     /// jump if true
     iftrue,
-    /// jump if false
-    iffalse,
     // jump to if true or false
     branch,
+    /// jump if false
+    iffalse,
     /// jump to index
     jump,
     /// arg number

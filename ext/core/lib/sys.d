@@ -60,7 +60,7 @@ Dynamic libimport(Args args) {
     }
     string filename = args[0].str;
     filename.dirName.chdir;
-    Location data = filename.readFile;
+    SrcLoc data = filename.readFile;
     Dynamic val = ctx.eval(data);
     return val;
 }
@@ -68,7 +68,7 @@ Dynamic libimport(Args args) {
 /// imports value returning what it returned
 Dynamic libeval(Args args)
 {
-    Location data = Location(1, 1, "__eval__", args[0].str);
+    SrcLoc data = SrcLoc(1, 1, "__eval__", args[0].str);
     Dynamic val = eval(rootBases.length - 1, data);
     return val;
 }

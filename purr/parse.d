@@ -15,7 +15,7 @@ enum string langLine = "#?";
 
 __gshared string langNameDefault = "paka";
 
-__gshared Node function(Location code)[string] parsers;
+__gshared Node function(SrcLoc code)[string] parsers;
 
 string readLine(ref string code)
 {
@@ -32,7 +32,7 @@ string readLine(ref string code)
     return ret;
 }
 
-Node parse(Location code, string langname = langNameDefault)
+Node parse(SrcLoc code, string langname = langNameDefault)
 {
     if (auto i = langname in parsers)
     {

@@ -5,8 +5,6 @@ import std.conv;
 import purr.io;
 import purr.dynamic;
 
-import std.parallelism : parallel;
-
 Dynamic metaMapBothParallel(Args args)
 {
     if (args[1].arr.length != args[2].arr.length)
@@ -15,7 +13,7 @@ Dynamic metaMapBothParallel(Args args)
     }
     Array ret = (cast(Dynamic*) GC.calloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[1].arr.length];
-    foreach (i, v; args[1].arr.parallel)
+    foreach (i, v; args[1].arr)
     {
         ret[i] = args[0]([v, args[2].arr[i]]);
     }
@@ -26,7 +24,7 @@ Dynamic metaMapLhsParallel(Args args)
 {
     Array ret = (cast(Dynamic*) GC.calloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[1].arr.length];
-    foreach (k, i; args[1].arr.parallel)
+    foreach (k, i; args[1].arr)
     {
         ret[k] = args[0]([i, args[2]]);
     }
@@ -37,7 +35,7 @@ Dynamic metaMapRhsParallel(Args args)
 {
     Array ret = (cast(Dynamic*) GC.calloc(args[2].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[2].arr.length];
-    foreach (k, i; args[2].arr.parallel)
+    foreach (k, i; args[2].arr)
     {
         ret[k] = args[0]([args[1], i]);
     }
@@ -48,7 +46,7 @@ Dynamic metaMapPreParallel(Args args)
 {
     Array ret = (cast(Dynamic*) GC.calloc(args[1].arr.length * Dynamic.sizeof, 0, typeid(Dynamic)))[0
         .. args[1].arr.length];
-    foreach (k, i; args[1].arr.parallel)
+    foreach (k, i; args[1].arr)
     {
         ret[k] = args[0]([i]);
     }

@@ -108,7 +108,7 @@ void readSyntax(ref TokenArray tokens)
     syntaxMacros[$ - 1] ~= [pattern.dynamic, bodyTokens.map!tokDynamic.array.dynamic];
 }
 
-Dynamic locDynamic(Location loc)
+Dynamic locDynamic(SrcLoc loc)
 {
     return [loc.line.dynamic, loc.column.dynamic, loc.file.dynamic].dynamic;
 }
@@ -127,9 +127,9 @@ Dynamic tokDynamic(Token tok)
     return new Table(ret).dynamic;
 }
 
-Location getLoc(Dynamic dyn)
+SrcLoc getLoc(Dynamic dyn)
 {
-    return Location(dyn.arr[0].as!size_t, dyn.arr[1].as!size_t, dyn.arr[2].str);
+    return SrcLoc(dyn.arr[0].as!size_t, dyn.arr[1].as!size_t, dyn.arr[2].str);
 }
 
 Span getSpan(Dynamic dyn)

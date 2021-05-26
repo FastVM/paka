@@ -1,4 +1,4 @@
-module ext.pakaparse.tokens;
+module ext.paka.parse.tokens;
 
 import std.ascii;
 import std.conv;
@@ -149,7 +149,7 @@ pragma(inline, true):
 }
 
 /// reads a single token from a string
-Token readToken(ref Location location)
+Token readToken(ref SrcLoc location)
 {
     ref string code()
     {
@@ -190,11 +190,11 @@ Token readToken(ref Location location)
         return ret;
     }
 
-    Location begin = location;
+    SrcLoc begin = location;
 
     Token consToken(T)(Token.Type t, T v)
     {
-        Location end = location.dup;
+        SrcLoc end = location.dup;
         Span span = Span(begin, end);
         return Token(span, t, v);
     }

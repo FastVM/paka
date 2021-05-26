@@ -84,7 +84,7 @@ Dynamic aststring(Args args)
 Dynamic astparse(Args args)
 {
     Args orig = args;
-    Location loc = Location(1, 1, "__parse__", args[0].str); 
+    SrcLoc loc = SrcLoc(1, 1, "__parse__", args[0].str); 
     args = args[1..$];
     string lang = langNameDefault;
     if (args.length == 1)

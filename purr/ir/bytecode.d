@@ -71,37 +71,37 @@ final class BytecodeEmitter
     {
     }
     
-    string[] predef(BasicBlock block, string[] checked = null)
-    {
-        assert(block.exit !is null, this.to!string);
-        foreach (i; bbchecked)
-        {
-            if (i is block)
-            {
-                return checked;
-            }
-        }
-        bbchecked ~= block;
-        scope (exit)
-        {
-            bbchecked.length--;
-        }
-        foreach (instr; block.instrs)
-        {
-            if (StoreInstruction si = cast(StoreInstruction) instr)
-            {
-                if (!checked.canFind(si.var))
-                {
-                    checked ~= si.var;
-                }
-            }
-        }
-        foreach (blk; block.exit.target)
-        {
-            checked = predef(blk, checked);
-        }
-        return checked;
-    }
+    // string[] predef(BasicBlock block, string[] checked = null)
+    // {
+    //     assert(block.exit !is null, this.to!string);
+    //     foreach (i; bbchecked)
+    //     {
+    //         if (i is block)
+    //         {
+    //             return checked;
+    //         }
+    //     }
+    //     bbchecked ~= block;
+    //     scope (exit)
+    //     {
+    //         bbchecked.length--;
+    //     }
+    //     foreach (instr; block.instrs)
+    //     {
+    //         if (StoreInstruction si = cast(StoreInstruction) instr)
+    //         {
+    //             if (!checked.canFind(si.var))
+    //             {
+    //                 checked ~= si.var;
+    //             }
+    //         }
+    //     }
+    //     foreach (blk; block.exit.target)
+    //     {
+    //         checked = predef(blk, checked);
+    //     }
+    //     return checked;
+    // }
 
     void emitInFunc(Function newFunc, BasicBlock block)
     {
@@ -116,25 +116,21 @@ final class BytecodeEmitter
 
     ushort emit(BasicBlock block)
     {
-        if (dumpir)
+        if (block.place < 0)
         {
-            writeln(block);
-        }
-        ushort ret = cast(ushort) func.instrs.length;
-        foreach (sym; predef(block))
-        {
-            if (sym !in func.stab.byName)
+            if (dumpir)
             {
-                func.stab.define(sym);
+                writeln(block);
             }
+            block.place = cast(int) func.instrs.length;
+            foreach (instr; block.instrs)
+            {
+                func.spans ~= instr.span;
+                emit(instr);
+            }
+            emit(block.exit);
         }
-        foreach (instr; block.instrs)
-        {
-            func.spans ~= instr.span;
-            emit(instr);
-        }
-        emit(block.exit);
-        return ret;
+        return cast(ushort) block.place;
     }
 
     void emit(Emittable em)
@@ -197,7 +193,16 @@ final class BytecodeEmitter
         }
         else
         {
-            throw new Exception("not mutable: " ~ store.var);
+            int us = func.doCapture(store.var);
+            if (us == -1)
+            {
+                pushInstr(func, Opcode.store, [cast(ushort)func.stab.define(store.var)]);
+            }
+            else
+            {
+                pushInstr(func, Opcode.cstore, [cast(ushort) us]);
+            }
+            // throw new Exception("not mutable: " ~ store.var);
         }
     }
 
@@ -231,9 +236,12 @@ final class BytecodeEmitter
             }
             else
             {
-                uint v = func.doCapture(load.var);
+                int v = func.doCapture(load.var);
+                if (v == -1) {
+                    throw new Exception("variable not found: " ~ load.var);
+                }
                 pushInstr(func, Opcode.loadc, [cast(ushort) v]);
-                flags = func.captab.flags(load.var);
+                flags = func.captab.flags(v);
                 unfound = false;
                 load.capture = LoadInstruction.Capture.cap;
             }
