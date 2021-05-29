@@ -117,6 +117,6 @@ Dynamic astcompile(Args args)
         throw new Exception("wrong arguments to function: " ~ args.to!string[1..$-1]);
     }
     Walker walker = new Walker;
-    Function func = walker.walkProgram(node, rootBases.length-1);
+    Bytecode func = walker.walkProgram(node, rootBases.length-1);
     return func.dynamic;
 }

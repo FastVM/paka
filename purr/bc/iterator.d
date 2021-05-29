@@ -6,17 +6,21 @@ import purr.bytecode;
 
 class OpcodeIterator
 {
-    Function func;
+    Bytecode func;
 
     size_t bytepos = 0;
 
-    this() {}
-    void walk(Function funcArg)
+    this()
     {
-        Function last = func;
+    }
+
+    void walk(Bytecode funcArg)
+    {
+        Bytecode last = func;
         func = funcArg;
         enter(func);
-        scope(exit) {
+        scope (exit)
+        {
             exit(func);
             func = last;
         }
@@ -73,6 +77,9 @@ class OpcodeIterator
             case Opcode.scall:
                 scall(get, get);
                 break;
+            case Opcode.tcall:
+                tcall(get);
+                break;
             case Opcode.oplt:
                 oplt;
                 break;
@@ -100,8 +107,17 @@ class OpcodeIterator
             case Opcode.table:
                 table(get);
                 break;
-            case Opcode.index:
-                index;
+            case Opcode.opindex:
+                opindex;
+                break;
+            case Opcode.opindexc:
+                opindexc(get);
+                break;
+            case Opcode.gocache:
+                gocache(get, get);
+                break;
+            case Opcode.cbranch:
+                cbranch(get, get, get, get);
                 break;
             case Opcode.opneg:
                 opneg;
@@ -115,6 +131,12 @@ class OpcodeIterator
             case Opcode.opsub:
                 opsub;
                 break;
+            case Opcode.opinc:
+                opinc(get);
+                break;
+            case Opcode.opdec:
+                opdec(get);
+                break;
             case Opcode.opmul:
                 opmul;
                 break;
@@ -127,8 +149,8 @@ class OpcodeIterator
             case Opcode.load:
                 load(get);
                 break;
-            case Opcode.loadc:
-                loadc(get);
+            case Opcode.loadcap:
+                loadcap(get);
                 break;
             case Opcode.store:
                 store(get);
@@ -141,6 +163,9 @@ class OpcodeIterator
                 break;
             case Opcode.retval:
                 retval;
+                break;
+            case Opcode.retconst:
+                retconst(get);
                 break;
             case Opcode.retnone:
                 retnone;
@@ -160,9 +185,6 @@ class OpcodeIterator
             case Opcode.argno:
                 argno(get);
                 break;
-            case Opcode.args:
-                args;
-                break;
             case Opcode.inspect:
                 inspect;
                 break;
@@ -170,11 +192,11 @@ class OpcodeIterator
         }
     }
 
-    void enter(Function func)
+    void enter(Bytecode func)
     {
     }
 
-    void exit(Function func)
+    void exit(Bytecode func)
     {
     }
 
@@ -210,6 +232,10 @@ class OpcodeIterator
     {
     }
 
+    void tcall(ushort argCount)
+    {
+    }
+    
     void opgt()
     {
     }
@@ -246,7 +272,19 @@ class OpcodeIterator
     {
     }
 
-    void index()
+    void opindex()
+    {
+    }
+
+    void opindexc(ushort constIndex)
+    {
+    }
+
+    void gocache(ushort base, ushort goto_)
+    {
+    }
+
+    void cbranch(ushort ndeps, ushort base, ushort ifeval, ushort ifcache)
     {
     }
 
@@ -266,6 +304,14 @@ class OpcodeIterator
     {
     }
 
+    void opinc(ushort n)
+    {
+    }
+
+    void opdec(ushort n)
+    {
+    }
+
     void opmul()
     {
     }
@@ -282,7 +328,7 @@ class OpcodeIterator
     {
     }
 
-    void loadc(ushort captureIndex)
+    void loadcap(ushort captureIndex)
     {
     }
 
@@ -299,6 +345,10 @@ class OpcodeIterator
     }
 
     void retval()
+    {
+    }
+
+    void retconst(ushort constIndex)
     {
     }
 

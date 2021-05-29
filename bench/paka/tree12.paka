@@ -30,19 +30,19 @@ io.print("stretch tree of depth ", stretchdepth, " check: ", item_check(stretcht
 
 longlivedtree = bottom_up_tree(0, maxdepth)
 
-ress = mindepth to (maxdepth + 1) !|> lambda(depth) {
+ress = mindepth to (maxdepth + 1) foreach |> lambda(depth) {
     if (depth % 2 != 0) {
         return ""
     }
     iters = math.pow(2, maxdepth - depth + mindepth)
     check = 0
-    checks = 0 to iters !|> lambda() {
+    checks = 0 to iters foreach |> lambda() {
         item_check(bottom_up_tree(1, depth)) + item_check(bottom_up_tree(0-1, depth))
     }
-    check = +\ checks
+    check = + fold checks
     str.froms(iters * 2, " trees of depth ", depth, " check: ", check, "\n")
 }
 
-io.put(~\ ress)
+io.put(~ fold ress)
 
 io.print("long lived tree of depth: ", maxdepth, " check: ", item_check(longlivedtree))

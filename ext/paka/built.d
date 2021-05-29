@@ -75,7 +75,7 @@ Dynamic metaFoldUnary(Args args)
     return ret;
 }
 
-Dynamic rangeOp(Args args)
+Dynamic toOp(Args args)
 {
     long start = args[0].as!long;
     long stop = args[1].as!long;
@@ -92,6 +92,37 @@ Dynamic rangeOp(Args args)
     else if (start > stop)
     {
         long dist = start - stop;
+        Array ret = (cast(Dynamic*) GC.calloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0 .. dist];
+        foreach (k, ref v; ret)
+        {
+            v = dynamic(start - k);
+        }
+        return dynamic(ret);
+    }
+    else
+    {
+        Array ret = null;
+        return ret.dynamic;
+    }
+}
+
+Dynamic thruOp(Args args)
+{
+    long start = args[0].as!long;
+    long stop = args[1].as!long;
+    if (start < stop)
+    {
+        long dist = stop - start + 1;
+        Array ret = (cast(Dynamic*) GC.calloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0 .. dist];
+        foreach (k, ref v; ret)
+        {
+            v = dynamic(k + start);
+        }
+        return dynamic(ret);
+    }
+    else if (start > stop)
+    {
+        long dist = start - stop + 1;
         Array ret = (cast(Dynamic*) GC.calloc(dist * Dynamic.sizeof, 0, typeid(Dynamic)))[0 .. dist];
         foreach (k, ref v; ret)
         {

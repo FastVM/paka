@@ -26,5 +26,5 @@ pow3(a; x; y) =
         pow3(mul(a; x); x; sub(y; 1))
 pow = pow3(1)
 
-
-pow("2"; 21)
+## pow(2; 10)
+pow(2; 4)

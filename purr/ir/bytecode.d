@@ -15,22 +15,22 @@ import purr.ir.emit;
 import purr.ir.opt;
 import purr.ir.repr;
 
-void modifyInstr(T)(Function func, T index, ushort v)
+void modifyInstr(T)(Bytecode func, T index, ushort v)
 {
     func.instrs[index - 2 .. index] = *cast(ubyte[2]*)&v;
 }
 
-void modifyInstrAhead(T)(Function func, T index, Opcode replacement)
+void modifyInstrAhead(T)(Bytecode func, T index, Opcode replacement)
 {
     func.instrs[index] = replacement;
 }
 
-void removeCount(T1, T2)(Function func, T1 index, T2 argc)
+void removeCount(T1, T2)(Bytecode func, T1 index, T2 argc)
 {
     func.instrs = func.instrs[0 .. index] ~ func.instrs[index + 2 * argc + 1 .. $];
 }
 
-void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
+void pushInstr(Bytecode func, Opcode op, ushort[] shorts = null, int size = 0)
 {
     func.stackAt[func.instrs.length] = func.stackSizeCurrent;
     func.instrs ~= *cast(ubyte[2]*)&op;
@@ -65,47 +65,56 @@ void pushInstr(Function func, Opcode op, ushort[] shorts = null, int size = 0)
 final class BytecodeEmitter
 {
     BasicBlock[] bbchecked;
-    Function func;
+    Bytecode func;
+    Opt opt;
 
     this()
     {
+        opt = new Opt;
     }
     
-    // string[] predef(BasicBlock block, string[] checked = null)
-    // {
-    //     assert(block.exit !is null, this.to!string);
-    //     foreach (i; bbchecked)
-    //     {
-    //         if (i is block)
-    //         {
-    //             return checked;
-    //         }
-    //     }
-    //     bbchecked ~= block;
-    //     scope (exit)
-    //     {
-    //         bbchecked.length--;
-    //     }
-    //     foreach (instr; block.instrs)
-    //     {
-    //         if (StoreInstruction si = cast(StoreInstruction) instr)
-    //         {
-    //             if (!checked.canFind(si.var))
-    //             {
-    //                 checked ~= si.var;
-    //             }
-    //         }
-    //     }
-    //     foreach (blk; block.exit.target)
-    //     {
-    //         checked = predef(blk, checked);
-    //     }
-    //     return checked;
-    // }
-
-    void emitInFunc(Function newFunc, BasicBlock block)
+    string[] predef(BasicBlock block, string[] checked = null, string[] nodef=null)
     {
-        Function oldFunc = func;
+        assert(block.exit !is null, this.to!string);
+        foreach (i; bbchecked)
+        {
+            if (i is block)
+            {
+                return checked;
+            }
+        }
+        bbchecked ~= block;
+        scope (exit)
+        {
+            bbchecked.length--;
+        }
+        foreach (instr; block.instrs)
+        {
+            if (LoadInstruction li = cast(LoadInstruction) instr)
+            {
+                if (!checked.canFind(li.var))
+                {
+                    nodef ~= li.var;
+                }
+            }
+            if (StoreInstruction si = cast(StoreInstruction) instr)
+            {
+                if (!checked.canFind(si.var) && !nodef.canFind(si.var))
+                {
+                    checked ~= si.var;
+                }
+            }
+        }
+        foreach (blk; block.exit.target)
+        {
+            checked = predef(blk, checked, nodef);
+        }
+        return checked;
+    }
+
+    void emitInFunc(Bytecode newFunc, BasicBlock block)
+    {
+        Bytecode oldFunc = func;
         scope (exit)
         {
             func = oldFunc;
@@ -118,6 +127,11 @@ final class BytecodeEmitter
     {
         if (block.place < 0)
         {
+            // opt.opt(block);
+            foreach (pre; predef(block))
+            {
+                func.stab.define(pre);
+            }
             if (dumpir)
             {
                 writeln(block);
@@ -153,21 +167,59 @@ final class BytecodeEmitter
         size_t j1 = func.instrs.length;
         ushort t0 = emit(branch.target[0]);
         ushort t1 = emit(branch.target[1]);
-        func.modifyInstr(j1, t1);
         func.modifyInstr(j0, t0);
+        func.modifyInstr(j1, t1);
     }
 
     void emit(GotoBranch branch)
     {
-        pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
-        size_t j0 = func.instrs.length;
-        ushort t0 = emit(branch.target[0]);
-        func.modifyInstr(j0, t0);
+        if (branch.target.length != 0)
+        {
+            if (branch.target[0].instrs.length != 0)
+            {
+                pushInstr(func, Opcode.jump, [cast(ushort) ushort.max]);
+                size_t j0 = func.instrs.length;
+                ushort t0 = emit(branch.target[0]);
+                func.modifyInstr(j0, t0);
+            }
+            else
+            {
+                emit(branch.target[0].exit);
+            }
+        }
     }
 
     void emit(ReturnBranch branch)
     {
         pushInstr(func, Opcode.retval);
+    }
+
+    void emit(ConstReturnBranch branch)
+    {
+        pushInstr(func, Opcode.retconst, [cast(ushort) func.constants.length]);
+        func.constants ~= branch.value;
+    }
+
+    void emit(ConstBranch branch)
+    {
+        ushort cacheno = cast(ushort) func.cached.length;
+        pushInstr(func, Opcode.cbranch, [branch.ndeps, cacheno, cast(ushort) ushort.max, cast(ushort) ushort.max]);
+        func.cached.length++;
+        Dynamic[] newCheck = new Dynamic[branch.ndeps];
+        foreach (ref value; newCheck)
+        {
+            value = gensym;
+        }
+        func.cacheCheck ~= newCheck;
+        size_t j0 = func.instrs.length - ushort.sizeof;
+        size_t j1 = func.instrs.length;
+        ushort t0 = emit(branch.target[0]);
+        pushInstr(func, Opcode.gocache, [cacheno, cast(ushort) ushort.max]);
+        size_t jc = func.instrs.length;
+        ushort t1 = emit(branch.target[1]);
+        func.modifyInstr(j0, t0);
+        func.modifyInstr(j1, t1);
+        func.modifyInstr(jc, t1);
     }
 
     void emit(BuildArrayInstruction arr)
@@ -226,7 +278,7 @@ final class BytecodeEmitter
         if (unfound)
         {
             uint* us = load.var in func.stab.byName;
-            Function.Lookup.Flags flags;
+            Bytecode.Lookup.Flags flags;
             if (us !is null)
             {
                 pushInstr(func, Opcode.load, [cast(ushort)*us]);
@@ -240,7 +292,7 @@ final class BytecodeEmitter
                 if (v == -1) {
                     throw new Exception("variable not found: " ~ load.var);
                 }
-                pushInstr(func, Opcode.loadc, [cast(ushort) v]);
+                pushInstr(func, Opcode.loadcap, [cast(ushort) v]);
                 flags = func.captab.flags(v);
                 unfound = false;
                 load.capture = LoadInstruction.Capture.cap;
@@ -248,12 +300,17 @@ final class BytecodeEmitter
         }
     }
 
-    void emit(FormInstruction call)
+    void emit(CallInstruction call)
     {
         pushInstr(func, Opcode.call, [cast(ushort) call.argc], cast(int)-call.argc);
     }
 
-    void emit(StaticFormInstruction call)
+    void emit(TailCallBranch call)
+    {
+        pushInstr(func, Opcode.tcall, [cast(ushort) call.argc], cast(int)-call.argc);
+    }
+
+    void emit(StaticCallInstruction call)
     {
         pushInstr(func, Opcode.scall, [cast(ushort) func.constants.length, cast(ushort) call.argc], cast(int)(1-call.argc));
         func.constants ~= call.func;
@@ -270,6 +327,11 @@ final class BytecodeEmitter
         pushInstr(func, Opcode.rec, []);
     }
 
+    void emit(ArgNumberInstruction argno)
+    {
+        pushInstr(func, Opcode.argno, [cast(ushort) argno.argno]);
+    }
+
     void emit(InspectInstruction inspect)
     {
         func.pushInstr(Opcode.inspect, null);
@@ -281,7 +343,7 @@ final class BytecodeEmitter
         final switch (op.op)
         {
         case "index":
-            func.pushInstr(Opcode.index);
+            func.pushInstr(Opcode.opindex);
             break;
             static foreach (i; operators)
             {
@@ -292,13 +354,66 @@ final class BytecodeEmitter
         }
     }
 
+    void emit(ConstOperatorInstruction op)
+    {
+        void emitDefault()
+        {
+            func.pushInstr(Opcode.push, [cast(ushort) func.constants.length]);
+            func.constants ~= op.rhs;
+            if (op.op == "index")
+            {
+                func.pushInstr(Opcode.opindex);
+            }
+            static foreach (i; operators)
+            {
+                if (op.op == i)
+                {
+                    func.pushInstr(mixin("Opcode.op" ~ i));
+                }
+            }
+        }
+
+        switch (op.op)
+        {
+        case "index":
+            func.pushInstr(Opcode.opindexc, [cast(ushort) func.constants.length]);   
+            func.constants ~= op.rhs;
+            break;
+        case "add":
+            double n = op.rhs.as!double;
+            if (n % 1 == 0 && n < ushort.max)
+            {
+                func.pushInstr(Opcode.opinc, [cast(ushort) n]);
+            }
+            else 
+            {
+                emitDefault();
+            }
+            break;
+        case "sub":
+            double n = op.rhs.as!double;
+            if (n % 1 == 0 && n <= ushort.max)
+            {
+                func.pushInstr(Opcode.opdec, [cast(ushort) n]);
+            }
+            else 
+            {
+                emitDefault();
+            }
+            break;
+        default:
+            emitDefault();
+        }
+    }
+
     void emit(LambdaInstruction lambda)
     {
-        func.flags |= Function.flags.isLocal;
-        Function newFunc = new Function;
+        func.flags |= Bytecode.flags.isLocal;
+        Bytecode newFunc = new Bytecode;
         newFunc.parent = func;
         newFunc.args = lambda.argNames;
         func.pushInstr(Opcode.sub, [cast(ushort) func.funcs.length]);
+        opt.opt(lambda.entry);
         emitInFunc(newFunc, lambda.entry);
         func.funcs ~= newFunc;
     }
@@ -306,10 +421,5 @@ final class BytecodeEmitter
     void emit(PopInstruction pop)
     {
         func.pushInstr(Opcode.pop);
-    }
-
-    void emit(ArgsInstruction args)
-    {
-        func.pushInstr(Opcode.args, null);
     }
 }

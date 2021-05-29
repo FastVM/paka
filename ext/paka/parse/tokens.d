@@ -11,17 +11,17 @@ import purr.srcloc;
 string[][] prec = [
     ["+=", "~=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"],
     ["or", "and"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-", "~"],
-    ["*", "/", "%"], ["to"]
+    ["*", "/", "%"], ["to", "thru"]
 ];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "not", ",", ":", "\\", "!", "#"];
+string[] nops = [".", "not", ",", ":", "fold", "foreach", "#"];
 
 /// language keywords
 string[] keywords = [
     "if", "else", "return", "def", "lambda",
     "import", "true", "false", "nil", "table",
-    "while",
+    "while", "cache"
 ];
 
 /// gets the operators by length not precidence

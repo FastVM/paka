@@ -147,5 +147,6 @@ Pair[] pakaBaseLibs()
 {
     Pair[] ret;
     ret.addLib("paka", pakalib);
+    ret ~= Pair("this", new Table);
     return ret;
 }

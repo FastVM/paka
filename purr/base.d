@@ -80,10 +80,10 @@ Table addLib(ref Pair[] pairs, string name, Pair[] lib)
     return ret;
 }
 
-// TODO: return Function.Lookup instead of empty function
-Function.Lookup baseFunctionLookup(size_t ctx)
+// TODO: return Bytecode.Lookup instead of empty function
+Bytecode.Lookup baseFunctionLookup(size_t ctx)
 {
-    Function.Lookup stab = Function.Lookup(null, null);
+    Bytecode.Lookup stab = Bytecode.Lookup(null, null);
     foreach (name; ctx.rootBase)
     {
         stab.define(name.name);
@@ -101,9 +101,9 @@ Dynamic*[] loadBase(size_t ctx)
     return ret;
 }
 
-Function baseFunction(size_t ctx = rootBases.length-1)
+Bytecode baseFunction(size_t ctx = rootBases.length-1)
 {
-    Function func = new Function;
+    Bytecode func = new Bytecode;
     func.stab = ctx.baseFunctionLookup;
     func.captured = ctx.loadBase;
     return func;

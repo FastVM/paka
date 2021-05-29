@@ -7,7 +7,7 @@ Pair[] libtab()
 {
     Pair[] ret = [
         FunctionPair!libmaparr("map_arr"), FunctionPair!libmap("map"),
-        FunctionPair!libeach("each"), FunctionPair!libfilter("filter"),
+        FunctionPair!libeach("foreach"), FunctionPair!libfilter("filter"),
         FunctionPair!libfilterkeys("filter_keys"),
         FunctionPair!libfiltervalues("filter_values"),
         FunctionPair!liblen("len"), 

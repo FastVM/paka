@@ -32,7 +32,7 @@ final class OpcodePrinter : OpcodeIterator
     }
 
 override:
-    void enter(Function func)
+    void enter(Bytecode func)
     {
         if (func.stab.length != 0)
         {
@@ -83,7 +83,12 @@ override:
 
     void push(ushort constIndex)
     {
-        line("push index=", constIndex, " value=", func.constants[constIndex]);
+        line("push num=", constIndex, " value=", func.constants[constIndex]);
+    }
+
+    void retconst(ushort constIndex)
+    {
+        line("retconst num=", constIndex, " value=", func.constants[constIndex]);
     }
 
     void pop()
@@ -98,7 +103,7 @@ override:
 
     void sub(ushort funcIndex)
     {
-        line("sub index=", funcIndex, " func={");
+        line("sub num=", funcIndex, " func={");
         depth++;
         walk(func.funcs[funcIndex]);
         depth--;
@@ -113,7 +118,12 @@ override:
 
     void scall(ushort constIndex, ushort argCount)
     {
-        line("scall index=", constIndex, " argc=", argCount);
+        line("scall num=", constIndex, " argc=", argCount);
+    }
+
+    void tcall(ushort argCount)
+    {
+        line("tcall argc=", argCount);
     }
 
     void opgt()
@@ -161,9 +171,24 @@ override:
         line("table length=", argCount);
     }
 
-    void index()
+    void opindex()
     {
-        line("index");
+        line("opindex");
+    }
+
+    void opindexc(ushort constIndex)
+    {
+        line("opindexc at=", constIndex, " value=", func.constants[constIndex]);
+    }
+
+    void gocache(ushort base, ushort goto_)
+    {
+        line("gocache base=", base, " goto=", goto_);
+    }
+
+    void cbranch(ushort ndeps, ushort base, ushort ifeval, ushort ifcache)
+    {
+        line("cbranch ndeps=", ndeps, " base=", base, " ifeval=", ifeval, " ifcache=", ifcache);
     }
 
     void opneg()
@@ -186,6 +211,16 @@ override:
         line("opsub");
     }
 
+    void opinc(ushort n)
+    {
+        line("opinc by=", n);
+    }
+
+    void opdec(ushort n)
+    {
+        line("opdec by=", n);
+    }
+
     void opmul()
     {
         line("opmul");
@@ -206,9 +241,9 @@ override:
         line("load offset=", localIndex, " identifier=", func.stab[localIndex]);
     }
 
-    void loadc(ushort captureIndex)
+    void loadcap(ushort captureIndex)
     {
-        line("loadc offset=", captureIndex, " capture=", func.captab[captureIndex]);
+        line("loadcap offset=", captureIndex, " capture=", func.captab[captureIndex]);
     }
 
     void store(ushort localIndex)
@@ -233,7 +268,7 @@ override:
 
     void iftrue(ushort jumpIndex)
     {
-        line("iftrue index=", jumpIndex);
+        line("iftrue goto=", jumpIndex);
     }
 
     void branch(ushort iftrue, ushort iffalse)
@@ -243,12 +278,12 @@ override:
 
     void iffalse(ushort jumpIndex)
     {
-        line("iffalse index=", jumpIndex);
+        line("iffalse goto=", jumpIndex);
     }
 
     void jump(ushort jumpIndex)
     {
-        line("jump index=", jumpIndex);
+        line("jump goto=", jumpIndex);
     }
 
     void argno(ushort argIndex)

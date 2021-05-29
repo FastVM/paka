@@ -3,6 +3,7 @@ module purr.app;
 import purr.io;
 import purr.repl;
 import purr.ir.repr;
+import purr.ir.opt;
 import purr.ir.walk;
 import purr.ir.emit;
 import purr.vm;
@@ -125,7 +126,7 @@ Thunk cliCompileHandler(immutable string code)
         SrcLoc loc = SrcLoc(1, 1, "__main__", code);
         Node node = loc.parse;
         Walker walker = new Walker;
-        Function func = walker.walkProgram(node, ctx);
+        Bytecode func = walker.walkProgram(node, ctx);
     };
 }
 
@@ -284,6 +285,13 @@ Thunk cliRepeatHandler(size_t n, Thunk next)
     };
 }
 
+Thunk cliOptHandler(size_t n)
+{
+    return {
+        defaultOptLevel = n;
+    };
+}
+
 void domain(string[] args)
 {
     args = args[1 .. $];
@@ -305,6 +313,20 @@ void domain(string[] args)
                 throw new Exception(parts[0] ~ " takes an argument using " ~ parts[0]  ~"=argument");
             }
             return parts[1..$].join("=");
+        }
+        bool runNow = parts[0][$-1] == ':';
+        scope(exit)
+        {
+            if (runNow)
+            {
+                Thunk last = todo[$-1];
+                todo.length--;
+                last();
+            }
+        }
+        if (runNow)
+        {
+            parts[0].length--;
         }
         switch (parts[0])
         {
@@ -348,6 +370,9 @@ void domain(string[] args)
             break;
         case "--bytecode":
             todo ~= cliBytecodeHandler;
+            break;
+        case "--opt":
+            todo ~= cliOptHandler(part1.to!size_t);
             break;
         case "--ast":
             todo ~= cliAstHandler;

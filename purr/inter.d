@@ -20,13 +20,12 @@ import purr.srcloc;
 import purr.ir.repr;
 import purr.ir.walk;
 import purr.ir.emit;
-import purr.wasm.gen;
 
 __gshared bool dumpbytecode = false;
 __gshared bool dumpir = false;
 
 /// vm callback that sets the locals defined into the root base 
-LocalFormback exportLocalsToBaseFormback(size_t ctx, Function func)
+LocalFormback exportLocalsToBaseFormback(size_t ctx, Bytecode func)
 {
     LocalFormback ret = (uint index, Dynamic[] locals) {
         most: foreach (i, v; locals)
@@ -49,14 +48,14 @@ Dynamic evalImpl(Walker)(size_t ctx, SrcLoc code, Args args)
 {
     Node node = code.parse;
     Walker walker = new Walker;
-    Function func = walker.walkProgram(node, ctx);
+    Bytecode func = walker.walkProgram(node, ctx);
     if (dumpbytecode)
     {
         OpcodePrinter oppr = new OpcodePrinter;
         oppr.walk(func);
         writeln(oppr.ret);
     }
-    return run(func, args, ctx.exportLocalsToBaseFormback(func));
+    return run(func, args.ptr, ctx.exportLocalsToBaseFormback(func));
 }
 
 Dynamic eval(size_t ctx, SrcLoc code, Args args=Args.init)

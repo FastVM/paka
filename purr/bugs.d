@@ -8,8 +8,8 @@ final class DebugFrame
 {
     ushort index;
     Dynamic* locals;    
-    Function func;
-    this(Function f, ushort i, Dynamic* l)
+    Bytecode func;
+    this(Bytecode f, ushort i, Dynamic* l)
     {
         func = f;
         index = i;

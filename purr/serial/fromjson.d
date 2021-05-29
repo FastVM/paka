@@ -145,29 +145,29 @@ Span deserialize(T : Span)(Json json)
     return json.elems!("first last", T);
 }
 
-Function.Capture deserialize(T : Function.Capture)(Json json)
+Bytecode.Capture deserialize(T : Bytecode.Capture)(Json json)
 {
     return json.elems!("from is2 isArg offset", T);
 }
 
-Function.Lookup.Flags deserialize(T : Function.Lookup.Flags)(Json json)
+Bytecode.Lookup.Flags deserialize(T : Bytecode.Lookup.Flags)(Json json)
 {
     return json.str.to!T;
 }
 
-Function.Lookup deserialize(T : Function.Lookup)(Json json)
+Bytecode.Lookup deserialize(T : Bytecode.Lookup)(Json json)
 {
     return json.elems!("byName byPlace flagsByPlace", T);
 }
 
-Function.Flags deserialize(T : Function.Flags)(Json json)
+Bytecode.Flags deserialize(T : Bytecode.Flags)(Json json)
 {
     return json.str.to!T;
 }
 
-Function deserialize(T : Function)(Json json)
+Bytecode deserialize(T : Bytecode)(Json json)
 {
-    Function retn = json.elems!(
+    Bytecode retn = json.elems!(
             "capture instrs constants funcs captured self args stackSize stab captab flags",
             T);
     return retn;
@@ -239,9 +239,9 @@ Dynamic deserialize(T : Dynamic)(Json json)
         Dynamic function(Args) res = json["function"].deserialize!(Dynamic function(Args));
         return Fun(res, json["function"].deserialize!string).dynamic;
     case Dynamic.Type.pro:
-        Function child = new Function;
+        Bytecode child = new Bytecode;
         above[$ - 1] = child.dynamic;
-        Function got = json["program"].deserialize!(Function);
+        Bytecode got = json["program"].deserialize!(Bytecode);
         child.copy(got);
         return child.dynamic;
     }

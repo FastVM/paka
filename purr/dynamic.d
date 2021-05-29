@@ -1,12 +1,13 @@
 module purr.dynamic;
 
+import core.sync.mutex;
+import core.memory;
+import core.atomic;
 import std.algorithm;
 import std.conv;
 import std.array;
 import std.traits;
 import purr.io;
-import core.memory;
-import core.atomic;
 import purr.bytecode;
 import purr.vm;
 import purr.data.map;
@@ -41,8 +42,12 @@ Dynamic gensym()
 void*[] beforeTables;
 
 void*[] lookingFor;
+
+shared size_t tableVersion;
+
 final class TableImpl
 {
+    size_t ver = void;
     Mapping table = emptyMapping;
     alias table this;
 
@@ -54,16 +59,19 @@ pragma(inline, true):
 
     this()
     {
+        ver = core.atomic.atomicOp!"+="(tableVersion, 1);
         table = emptyMapping;
     }
 
     this(typeof(table) t)
     {
+        ver = core.atomic.atomicOp!"+="(tableVersion, 1);
         table = t;
     }
 
     this(typeof(table) t, Table m)
     {
+        ver = core.atomic.atomicOp!"+="(tableVersion, 1);
         table = t;
     }
 
@@ -78,6 +86,7 @@ pragma(inline, true):
 
     void rawSet(Dynamic key, Dynamic value)
     {
+        ver = core.atomic.atomicOp!"+="(tableVersion, 1);
         table[key] = value;
     }
 
@@ -91,7 +100,7 @@ pragma(inline, true):
         rawSet(key, value);
     }
 
-    ref Dynamic opIndex(Dynamic key)
+    Dynamic opIndex(Dynamic key)
     {
         if (Dynamic* val = key in this)
         {
@@ -177,7 +186,7 @@ pragma(inline, true):
         {
             return *ret;
         }
-        throw new Exception("");
+        throw new Exception("cannot call or index table");
     }
 
     Dynamic opUnary(string op)()
@@ -308,7 +317,7 @@ struct DynamicImpl
         union FormableUnion
         {
             Fun* fun;
-            Function pro;
+            Bytecode pro;
         }
 
         Formable fun;
@@ -387,7 +396,7 @@ pragma(inline, true):
         type = Type.fun;
     }
 
-    this(Function pro)
+    this(Bytecode pro)
     {
         value.fun.pro = pro;
         type = Type.pro;
@@ -427,18 +436,18 @@ pragma(inline, true):
         case Dynamic.Type.pro:
             if (fun.pro.self.length == 0)
             {
-                return run(fun.pro, args);
+                return run(fun.pro, args.ptr);
             }
             else
             {
-                return run(fun.pro, fun.pro.self ~ args);
+                return run(fun.pro, (fun.pro.self ~ args).ptr);
             }
         case Dynamic.Type.tab:
             return value.tab(args);
         case Dynamic.Type.tup:
-            return arr[args[0].as!size_t](args[1..$]);
+            return arr[args[0].as!size_t](args[1 .. $]);
         case Dynamic.Type.arr:
-            return arr[args[0].as!size_t](args[1..$]);
+            return arr[args[0].as!size_t](args[1 .. $]);
         default:
             throw new Exception("error: not a function: " ~ this.to!string);
         }
@@ -455,8 +464,7 @@ pragma(inline, true):
         switch (t)
         {
         default:
-            throw new Exception(
-                    "error: not comparable: " ~ this.to!string ~ " " ~ other.to!string);
+            throw new Exception("error: not comparable: " ~ this.to!string ~ " " ~ other.to!string);
         case Type.nil:
             return 0;
         case Type.log:
@@ -522,6 +530,39 @@ pragma(inline, true):
     bool opEquals(const Dynamic other) const
     {
         return cmpDynamic(cast(Dynamic) this, cast(Dynamic) other) == 0;
+    }
+
+    bool isSameObject(const Dynamic other) const
+    {
+        if (other.type != type)
+        {
+            return false;
+        }
+        switch (type)
+        {
+            default:
+                assert(false);
+            case Type.nil:
+                return true;
+            case Type.log:
+                return value.log == other.value.log;
+            case Type.sml:
+                return value.sml == other.value.sml;
+            case Type.sym:
+                return cast(void*) value.str == cast(void*) other.value.str;
+            case Type.str:
+                return cast(void*) value.str == cast(void*) other.value.str;
+            case Type.tup:
+                return cast(void*) value.arr == cast(void*) other.value.arr;
+            case Type.arr:
+                return cast(void*) value.arr == cast(void*) other.value.arr;
+            case Type.tab:
+                return value.tab.ver == other.value.tab.ver;
+            case Type.fun:
+                return cast(void*) value.fun.fun == cast(void*) other.value.fun.fun;
+            case Type.pro:
+                return cast(void*) value.fun.pro == cast(void*) other.value.fun.pro;
+        }
     }
 
     bool opEquals(Dynamic other)
@@ -663,7 +704,7 @@ pragma(inline, true):
     }
 }
 
-private int cmp(T)(T a, T b) if (!is(T == Function) && !is(T == Dynamic))
+private int cmp(T)(T a, T b) if (!is(T == Bytecode) && !is(T == Dynamic))
 {
     if (a == b)
     {
@@ -676,7 +717,7 @@ private int cmp(T)(T a, T b) if (!is(T == Function) && !is(T == Dynamic))
     return 1;
 }
 
-private int cmpFunction(const Function a, const Function b)
+private int cmpFunction(const Bytecode a, const Bytecode b)
 {
     return cmp(cast(void*) a, cast(void*) b);
 }

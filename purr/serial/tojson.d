@@ -77,27 +77,27 @@ string serialize(string str)
     return ret;
 }
 
-string serialize(Function.Capture cap)
+string serialize(Bytecode.Capture cap)
 {
     return cap.elems!"from is2 isArg offset";
 }
 
-string serialize(Function.Lookup.Flags flags)
+string serialize(Bytecode.Lookup.Flags flags)
 {
     return flags.to!string.serialize;
 }
 
-string serialize(Function.Lookup lookup)
+string serialize(Bytecode.Lookup lookup)
 {
     return lookup.elems!"byName byPlace flagsByPlace";
 }
 
-string serialize(Function.Flags flags)
+string serialize(Bytecode.Flags flags)
 {
     return flags.to!string.serialize;
 }
 
-string serialize(Function func)
+string serialize(Bytecode func)
 {
     return func
         .elems!"capture instrs constants funcs captured self args stackSize stab captab flags";

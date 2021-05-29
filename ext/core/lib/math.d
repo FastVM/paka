@@ -22,7 +22,6 @@ typeof(MinstdRand0(0)) rnd;
 
 Pair[] libmath()
 {
-    FloatingPointControl fpctrl;
     Pair[] ret;
     ret ~= FunctionPair!libabs("abs");
     ret ~= FunctionPair!libmin("min");

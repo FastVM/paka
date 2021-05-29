@@ -1,13 +1,13 @@
 module purr.bytecode;
 
-import purr.dynamic;
-import purr.srcloc;
+import purr.io;
 import std.algorithm;
 import std.array;
-import purr.io;
 import std.conv;
+import purr.dynamic;
+import purr.srcloc;
 
-final class Function
+final class Bytecode
 {
     struct Lookup
     {
@@ -80,17 +80,19 @@ final class Function
         isLocal = 1,
     }
 
-    Capture[] capture = null;
-    ubyte[] instrs = null;
-    Span[] spans = null;
-    Dynamic[] constants = null;
-    Function[] funcs = null;
-    Dynamic*[] captured = null;
-    Dynamic[] self = null;
-    string[] args = null;
-    int[size_t] stackAt = null;
+    Capture[] capture;
+    ubyte[] instrs;
+    Span[] spans;
+    Dynamic[] constants;
+    Bytecode[] funcs;
+    Dynamic*[] captured;
+    Dynamic*[] cached;
+    Dynamic[][] cacheCheck;
+    Dynamic[] self;
+    string[] args;
+    int[size_t] stackAt;
     size_t stackSize = 0;
-    Function parent = null;
+    Bytecode parent;
     int stackSizeCurrent = 1;
     Lookup stab;
     Lookup captab;
@@ -100,12 +102,12 @@ final class Function
     {
     }
 
-    this(Function other)
+    this(Bytecode other)
     {
         copy(other);
     }
 
-    void copy(Function other)
+    void copy(Bytecode other)
     {
         capture = other.capture;
         instrs = other.instrs;
@@ -114,6 +116,8 @@ final class Function
         funcs = other.funcs;
         parent = other.parent;
         captured = other.captured;
+        cached = other.cached;
+        cacheCheck = other.cacheCheck;
         stackSize = other.stackSize;
         self = other.self;
         args = other.args.dup;
@@ -200,6 +204,7 @@ enum Opcode : ushort
     /// call without spread
     call,
     scall,
+    tcall,
     /// cmp
     oplt,
     opgt,
@@ -214,23 +219,31 @@ enum Opcode : ushort
     /// built table
     table,
     /// index table or array
-    index,
+    opindex,
+    opindexc,
+    /// if there is a constant go to and push
+    gocache,
+    cbranch,
     /// math ops (arithmatic)
     opneg,
     opcat,
     opadd,
+    opinc,
     opsub,
+    opdec,
     opmul,
     opdiv,
     opmod,
     /// load from locals
     load,
     /// load from captured
-    loadc,
+    loadcap,
     /// stores
     store,
     istore,
     cstore,
+    /// return a constant
+    retconst,
     /// return a value
     retval,
     /// return no value
@@ -245,8 +258,6 @@ enum Opcode : ushort
     jump,
     /// arg number
     argno,
-    /// all args as list
-    args,
     /// run inspect functions
     inspect,
 }
@@ -255,11 +266,11 @@ enum Opcode : ushort
 enum int[Opcode] opSizes = [
         Opcode.nop : 0, Opcode.push : 1, Opcode.rec : 1, Opcode.pop : -1, Opcode.sub : 1,
         Opcode.oplt : -1, Opcode.opgt : -1, Opcode.oplte : -1, Opcode.opgte
-        : -1, Opcode.opeq : -1, Opcode.opneq : -1, Opcode.index : -1,
+        : -1, Opcode.opeq : -1, Opcode.opneq : -1, Opcode.opindex : -1, Opcode.opindexc : 0,
         Opcode.opneg : 0, Opcode.opcat : -1, Opcode.opadd : -1, Opcode.opsub
-        : -1, Opcode.opmul : -1, Opcode.opdiv : -1, Opcode.opmod : -1,
-        Opcode.load : 1, Opcode.loadc : 1,
-        Opcode.retval : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
-        Opcode.iffalse : -1, Opcode.branch : -1,Opcode.jump : 0, Opcode.argno : 1, Opcode.args
-        : 1, Opcode.inspect : 0,
+        : -1, Opcode.opinc : 0, Opcode.opdec
+        : 0, Opcode.opmul : -1, Opcode.opdiv : -1, Opcode.opmod : -1,
+        Opcode.load : 1, Opcode.loadcap : 1,
+        Opcode.retval : 0, Opcode.retconst : 0, Opcode.retnone : 0, Opcode.iftrue : -1,
+        Opcode.iffalse : -1, Opcode.branch : -1, Opcode.cbranch : 0, Opcode.gocache : 0, Opcode.jump : 0, Opcode.argno : 1
     ];

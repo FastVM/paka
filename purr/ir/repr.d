@@ -14,10 +14,10 @@ import purr.inter;
 import purr.ir.emit;
 import purr.ir.opt;
 
-alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, ReturnBranch,
-        BuildTupleInstruction,BuildArrayInstruction, BuildTableInstruction, FormInstruction, StaticFormInstruction, PushInstruction,
-        OperatorInstruction, LambdaInstruction, PopInstruction,
-        StoreInstruction, StoreIndexInstruction, LoadInstruction, ArgsInstruction, RecInstruction);
+alias InstrTypes = AliasSeq!(LogicalBranch, TailCallBranch, GotoBranch, ReturnBranch, ConstReturnBranch, ConstBranch, 
+        BuildTupleInstruction,BuildArrayInstruction, BuildTableInstruction, CallInstruction, StaticCallInstruction, PushInstruction,
+        OperatorInstruction, ConstOperatorInstruction, LambdaInstruction, PopInstruction,
+        StoreInstruction, StoreIndexInstruction, LoadInstruction, RecInstruction, ArgNumberInstruction);
 
 __gshared size_t nameCount;
 
@@ -105,25 +105,46 @@ class Branch : Emittable
 class LogicalBranch : Branch
 {
     BasicBlock post;
-    bool hasValue;
 
-    this(BasicBlock ift, BasicBlock iff, BasicBlock post_, bool hasValue_)
+    this(BasicBlock ift, BasicBlock iff)
     {
         target = [ift, iff];
-        post = post_;
-        hasValue = hasValue_;
     }
 
     override string toString()
     {
         string ret;
-        ret ~= "if " ~ target[0].name ~ " " ~ target[1].name ~ " \n";
+        ret ~= "branch " ~ target[0].name ~ " " ~ target[1].name ~ " \n";
+        return ret;
+    }
+}
+
+
+class ConstBranch : Branch
+{
+    ushort ndeps;
+
+    this(T)(BasicBlock ifeval, BasicBlock ifconst, T depCount)
+    {
+        target = [ifeval, ifconst];
+        ndeps = cast(ushort) depCount;
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "const-branch " ~ target[0].name ~ " " ~ target[1].name ~ " \n";
         return ret;
     }
 }
 
 class GotoBranch : Branch
 {
+    this()
+    {
+        target = [];
+    }
+
     this(BasicBlock t)
     {
         target = [t];
@@ -143,6 +164,24 @@ class ReturnBranch : Branch
     {
         string ret;
         ret ~= "return\n";
+        return ret;
+    }
+}
+
+class ConstReturnBranch : Branch
+{
+    Dynamic value;
+    this(Dynamic val)
+    {
+        value = val;
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "const-return value=";
+        ret ~= value.to!string;
+        ret ~= '\n';
         return ret;
     }
 }
@@ -198,7 +237,7 @@ class BuildTableInstruction : Instruction
     }
 }
 
-class FormInstruction : Instruction
+class CallInstruction : Instruction
 {
     size_t argc;
 
@@ -215,8 +254,24 @@ class FormInstruction : Instruction
     }
 }
 
+class TailCallBranch : Branch
+{
+    size_t argc;
 
-class StaticFormInstruction : Instruction
+    this(size_t ac)
+    {
+        argc = ac;
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "tail-call " ~ argc.to!string ~ "\n";
+        return ret;
+    }
+}
+
+class StaticCallInstruction : Instruction
 {
     Dynamic func;
     size_t argc;
@@ -287,18 +342,42 @@ enum string[] operators = [
 
 class OperatorInstruction : Instruction
 {
+    string[] attrs;
     string op;
 
-    this(string oper)
+    this(string oper, string[] ats=null)
     {
         op = oper;
+        attrs = ats;
         assert(operators.canFind(oper) || oper == "index");
     }
 
     override string toString()
     {
         string ret;
-        ret ~= "operator " ~ op ~ "\n";
+        ret ~= "operator " ~ op ~ " " ~ attrs.map!(x => "@" ~ x).join(" ") ~ "\n";
+        return ret;
+    }
+}
+
+class ConstOperatorInstruction : Instruction
+{
+    string[] attrs;
+    string op;
+    Dynamic rhs;
+
+    this(string oper, Dynamic r, string[] ats=null)
+    {
+        op = oper;
+        attrs = ats;
+        rhs = r;
+        assert(operators.canFind(oper) || oper == "index");
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "const-operator " ~ op ~ " rhs=" ~ rhs.to!string ~ " " ~ attrs.map!(x => "@" ~ x).join(" ") ~ "\n";
         return ret;
     }
 }
@@ -388,13 +467,21 @@ class LoadInstruction : Instruction
         return ret;
     }
 }
-
-class ArgsInstruction : Instruction
+class ArgNumberInstruction : Instruction
 {
+    size_t argno;
+
+    this(size_t arg)
+    {
+        argno = arg;
+    }
+    
     override string toString()
     {
         string ret;
-        ret ~= "args\n";
+        ret ~= "arg num=";
+        ret ~= argno.to!string;
+        ret ~= "\n";
         return ret;
     }
 }

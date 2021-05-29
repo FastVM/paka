@@ -10,6 +10,6 @@ def repeat(n, f) {
     arr.map(0 to (n+1), f)
 }
 
-0 \+\ repeat (35) {
+0 fold + fold repeat (35) {
     fib($0)
 } |> io.print

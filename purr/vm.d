@@ -29,37 +29,35 @@ enum string[2][] mutMap()
     return [["+", "add"], ["-", "sub"], ["*", "mul"], ["/", "div"], ["%", "mod"], ["~", "cat"]];
 }
 
-pragma(inline, true) T eat(T)(ubyte* bytes, ref ushort index)
+pragma(inline, true) T eat(T, A)(ubyte* bytes, ref A index)
 {
     T ret = *cast(T*)(bytes + index);
     index += T.sizeof;
     return ret;
 }
 
-pragma(inline, true) T peek(T)(ubyte* bytes, ref ushort index)
+pragma(inline, true) T peek(T, A)(ubyte* bytes, A index)
 {
     return *cast(T*)(bytes + index);
 }
 
-Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
+Dynamic run(T...)(Bytecode func, Dynamic* args = null, T rest = T.init)
 {
     static foreach (I; T)
     {
         static assert(is(I == LocalFormback));
     }
-    ushort index = 0;
-    size_t stackAlloc = (func.stackSize + func.stab.length) * Dynamic.sizeof;
     Dynamic* stack = void;
-    if (func.flags & Function.Flags.isLocal || T.length != 0)
+    if (func.flags & Bytecode.Flags.isLocal || T.length != 0)
     {
-        stack = cast(Dynamic*) GC.malloc(stackAlloc);
+        stack = cast(Dynamic*) GC.malloc((func.stackSize + func.stab.length) * Dynamic.sizeof);
     }
     else
     {
-        stack = cast(Dynamic*) alloca(stackAlloc);
+        stack = cast(Dynamic*) alloca((func.stackSize + func.stab.length) * Dynamic.sizeof);
     }
-    Dynamic* locals = stack + func.stackSize;
-    ubyte* instrs = func.instrs.ptr;
+    ushort index;
+    Dynamic* locals;
     version (PurrErrors)
     {
         scope (failure)
@@ -67,6 +65,12 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             debugFrames ~= new DebugFrame(func, index, locals);
         }
     }
+redoStack:
+    Dynamic* rstack = stack;
+    locals = stack + func.stackSize;
+redoSame:
+    index = 0;
+    ubyte* instrs = func.instrs.ptr;
     while (true)
     {
         Opcode cur = instrs.eat!Opcode(index);
@@ -87,12 +91,12 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             *(++stack) = func.dynamic;
             break;
         case Opcode.sub:
-            Function built = new Function(func.funcs[instrs.eat!ushort(index)]);
+            Bytecode built = new Bytecode(func.funcs[instrs.eat!ushort(index)]);
             built.parent = func;
             built.captured = new Dynamic*[built.capture.length];
             foreach (i, v; built.capture)
             {
-                Function.Capture cap = built.capture[i];
+                Bytecode.Capture cap = built.capture[i];
                 if (cap.is2)
                 {
                     built.captured[i] = func.captured[cap.from];
@@ -118,7 +122,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 *stack = f.fun.fun.value(stack[1 .. 1 + count]);
                 break;
             case Dynamic.Type.pro:
-                *stack = run(f.fun.pro, stack[1 .. 1 + count]);
+                *stack = run(f.fun.pro, stack + 1);
                 break;
             case Dynamic.Type.tab:
                 *stack = f.tab()(stack[1 .. 1 + count]);
@@ -130,7 +134,8 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 *stack = f.arr[(*stack).as!size_t];
                 break;
             default:
-                throw new Exception("error: not a pro, fun, tab, or arr: " ~ f.to!string);
+                throw new Exception(
+                        "error in dynamic call: not a pro, fun, tab, or arr: " ~ f.to!string);
             }
             break;
         case Opcode.scall:
@@ -146,7 +151,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 res = f.fun.fun.value(stack[0 .. 0 + count]);
                 break;
             case Dynamic.Type.pro:
-                res = run(f.fun.pro, stack[0 .. 0 + count]);
+                res = run(f.fun.pro, stack);
                 break;
             case Dynamic.Type.tab:
                 res = f.tab()(stack[0 .. 0 + count]);
@@ -158,10 +163,43 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 res = f.arr[(*stack).as!size_t];
                 break;
             default:
-                throw new Exception("error: not a pro, fun, tab, or arr: " ~ f.to!string);
+                throw new Exception(
+                        "error in static call: not a pro, fun, tab, or arr: " ~ f.to!string);
             }
             *stack = res;
             break;
+        case Opcode.tcall:
+            ushort count = instrs.eat!ushort(index);
+            stack -= count;
+            Dynamic f = *stack;
+            switch (f.type)
+            {
+            case Dynamic.Type.fun:
+                return f.fun.fun.value(stack[1 .. 1 + count]);
+            case Dynamic.Type.pro:
+                if (f.fun.pro == func)
+                {
+                    args = stack[1 .. 1 + count].dup.ptr;
+                    stack = rstack;
+                    goto redoSame;
+                }
+                else
+                {
+                    func = f.fun.pro;
+                    args = stack[1 .. 1 + count].dup.ptr;
+                    stack = cast(Dynamic*) GC.malloc((func.stackSize + func.stab.length) * Dynamic.sizeof);
+                    goto redoStack;
+                }
+            case Dynamic.Type.tab:
+                return f.tab()(stack[1 .. 1 + count]);
+            case Dynamic.Type.tup:
+                return f.arr[(*stack).as!size_t];
+            case Dynamic.Type.arr:
+                return f.arr[(*stack).as!size_t];
+            default:
+                throw new Exception(
+                        "error in tail call: not a pro, fun, tab, or arr: " ~ f.to!string);
+            }
         case Opcode.oplt:
             stack -= 1;
             *stack = dynamic(*stack < *(stack + 1));
@@ -194,19 +232,19 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.array:
             ushort got = instrs.eat!ushort(index);
             stack -= got;
-            *(++stack ) = stack[0 .. got].dup.dynamic;
+            *(++stack) = stack[0 .. got].dup.dynamic;
             break;
         case Opcode.table:
             ushort count = instrs.eat!ushort(index);
             Mapping table = emptyMapping;
             foreach (i; 0 .. count)
             {
-                table[*(stack-1)] = *stack;
+                table[*(stack - 1)] = *stack;
                 stack -= 2;
             }
             *(++stack) = dynamic(table);
             break;
-        case Opcode.index:
+        case Opcode.opindex:
             Dynamic ind = *stack;
             stack--;
             Dynamic arr = *stack;
@@ -225,37 +263,93 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 throw new Exception("error: cannot index a " ~ arr.type.to!string);
             }
             break;
+        case Opcode.opindexc:
+            ushort constIndex = instrs.eat!ushort(index);
+            Dynamic ind = func.constants[constIndex];
+            Dynamic arr = *stack;
+            switch (arr.type)
+            {
+            case Dynamic.Type.tup:
+                *stack = arr.arr[ind.as!size_t];
+                break;
+            case Dynamic.Type.arr:
+                *stack = arr.arr[ind.as!size_t];
+                break;
+            case Dynamic.Type.tab:
+                *stack = (arr.tab)[ind];
+                break;
+            default:
+                assert(false, "invalid opindexc arg");
+            }
+            break;
+        case Opcode.gocache:
+            ushort cacheNumber = instrs.peek!ushort(index);
+            func.cached[cacheNumber] = new Dynamic(*stack);
+            index = instrs.peek!ushort(index + 2);
+            break;
+        case Opcode.cbranch:
+            ushort ndeps = instrs.peek!ushort(index);
+            stack -= ndeps;
+            stack++;
+            ushort cacheNumber = instrs.peek!ushort(index + 2);
+            assert(func.cacheCheck[cacheNumber].length == ndeps);
+            foreach (key, value; func.cacheCheck[cacheNumber])
+            {
+                if (!stack[key].isSameObject(value))
+                {
+                    func.cached[cacheNumber] = null;
+                    break;
+                }
+            }
+            if (Dynamic* dyn = func.cached[cacheNumber])
+            {
+                *(stack) = *dyn;
+                index = instrs.peek!ushort(index + 6);
+            }
+            else
+            {
+                func.cacheCheck[cacheNumber] = stack[0 .. ndeps].dup;
+                stack--;
+                index = instrs.peek!ushort(index + 4);
+            }
+            break;
         case Opcode.opneg:
             *stack = -(*stack);
             break;
         case Opcode.opcat:
             stack--;
-            *stack = *stack ~ *(stack+1);
+            *stack = *stack ~ *(stack + 1);
             break;
         case Opcode.opadd:
             stack--;
-            *stack = *stack + *(stack+1);
+            *stack = *stack + *(stack + 1);
+            break;
+        case Opcode.opinc:
+            *stack = Dynamic(stack.as!double + instrs.eat!ushort(index));
             break;
         case Opcode.opsub:
             stack--;
-            *stack = *stack - *(stack+1);
+            *stack = *stack - *(stack + 1);
+            break;
+        case Opcode.opdec:
+            *stack = Dynamic(stack.as!double - instrs.eat!ushort(index));
             break;
         case Opcode.opmul:
             stack--;
-            *stack = *stack * *(stack+1);
+            *stack = *stack * *(stack + 1);
             break;
         case Opcode.opdiv:
             stack--;
-            *stack = *stack / *(stack+1);
+            *stack = *stack / *(stack + 1);
             break;
         case Opcode.opmod:
             stack--;
-            *stack = *stack % *(stack+1);
+            *stack = *stack % *(stack + 1);
             break;
         case Opcode.load:
             *(++stack) = locals[instrs.eat!ushort(index)];
             break;
-        case Opcode.loadc:
+        case Opcode.loadcap:
             ushort capIndex = instrs.eat!ushort(index);
             *(++stack) = *func.captured[capIndex];
             break;
@@ -286,7 +380,7 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
         case Opcode.cstore:
             Dynamic rhs = *stack;
             ushort local = instrs.eat!ushort(index);
-            *func.captured[local] = rhs; 
+            *func.captured[local] = rhs;
             break;
         case Opcode.retval:
             Dynamic v = *(stack--);
@@ -295,18 +389,21 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
                 static if (is(typeof(callback) == LocalFormback))
                 {
                     {
-                        callback(index, locals[0..func.stab.length]);
+                        callback(index, locals[0 .. func.stab.length]);
                     }
                 }
             }
             return v;
+        case Opcode.retconst:
+            ushort constIndex = instrs.peek!ushort(index);
+            return func.constants[constIndex];
         case Opcode.retnone:
             static foreach (callback; rest)
             {
                 static if (is(typeof(callback) == LocalFormback))
                 {
                     {
-                        callback(index, locals[0..func.stab.length]);
+                        callback(index, locals[0 .. func.stab.length]);
                     }
                 }
             }
@@ -326,7 +423,8 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             {
                 index = tb;
             }
-            else {
+            else
+            {
                 index = instrs.peek!ushort(index);
             }
             break;
@@ -344,9 +442,6 @@ Dynamic run(T...)(Function func, Dynamic[] args = null, T rest = T.init)
             break;
         case Opcode.argno:
             *(++stack) = args[instrs.eat!ushort(index)];
-            break;
-        case Opcode.args:
-            *(++stack) = dynamic(args);
             break;
         case Opcode.inspect:
             assert(false);

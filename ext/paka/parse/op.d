@@ -49,12 +49,12 @@ string[] readBinaryOp(ref string[] ops)
     string[] ret;
     while (ops.length >= 2)
     {
-        if (ops[0] == "!")
+        if (ops[0] == "foreach")
         {
             ret ~= ops[0];
             ops = ops[1 .. $];
         }
-        else if (ops[0] == "\\")
+        else if (ops[0] == "fold")
         {
             ret ~= ops[0];
             ops = ops[1 .. $];
@@ -69,12 +69,12 @@ string[] readBinaryOp(ref string[] ops)
     ops = ops[1 .. $];
     while (ops.length != 0)
     {
-        if (ops[0] == "!")
+        if (ops[0] == "foreach")
         {
             ret ~= ops[0];
             ops = ops[1 .. $];
         }
-        else if (ops[0] == "\\")
+        else if (ops[0] == "fold")
         {
             if (slash == 0)
             {
@@ -99,7 +99,7 @@ UnaryOp parseUnaryOp(string[] ops)
         string[] rest = ops;
         BinaryOp lastBinary = parseBinaryOp(rest.readBinaryOp);
         UnaryOp curUnary = void;
-        if (rest.length != 0 && rest[0] == "\\")
+        if (rest.length != 0 && rest[0] == "fold")
         {
             ops = rest[1 .. $];
             curUnary = (Node rhs) { return unaryFold(lastBinary, rhs); };
@@ -111,7 +111,7 @@ UnaryOp parseUnaryOp(string[] ops)
         }
         while (ops.length != 0)
         {
-            if (ops[0] == "!")
+            if (ops[0] == "foreach")
             {
                 UnaryOp lastUnary = curUnary;
                 ops = ops[1 .. $];
@@ -159,26 +159,26 @@ BinaryOp parseBinaryOp(string[] ops)
 {
     if (ops.length > 1)
     {
-        if (ops[0] == "!" && ops[$ - 1] == "!")
+        if (ops[0] == "foreach" && ops[$ - 1] == "foreach")
         {
             BinaryOp next = parseBinaryOp(ops[1 .. $ - 1]);
             return (Node lhs, Node rhs) {
                 return binaryDotmap!metaMapBothParallel(next, lhs, rhs);
             };
         }
-        if (ops[0] == "\\" && ops[$ - 1] == "\\")
+        if (ops[$ - 1] == "fold")
         {
-            BinaryOp next = parseBinaryOp(ops[1 .. $ - 1]);
+            BinaryOp next = parseBinaryOp(ops[0 .. $ - 1]);
             return (Node lhs, Node rhs) { return binaryFold(next, lhs, rhs); };
         }
-        if (ops[0] == "!")
+        if (ops[0] == "foreach")
         {
             BinaryOp next = parseBinaryOp(ops[1 .. $]);
             return (Node lhs, Node rhs) {
                 return binaryDotmap!metaMapLhsParallel(next, lhs, rhs);
             };
         }
-        if (ops[$ - 1] == "!")
+        if (ops[$ - 1] == "foreach")
         {
             BinaryOp next = parseBinaryOp(ops[0 .. $ - 1]);
             return (Node lhs, Node rhs) {
@@ -208,10 +208,16 @@ BinaryOp parseBinaryOp(string[] ops)
                 return new Form("rcall", lhs, rhs);
             };
         }
+        else if (opName == "thru")
+        {
+            return (Node lhs, Node rhs) {
+                return new Form("call", new Value(native!thruOp), [lhs, rhs]);
+            };
+        }
         else if (opName == "to")
         {
             return (Node lhs, Node rhs) {
-                return new Form("call", new Value(native!rangeOp), [lhs, rhs]);
+                return new Form("call", new Value(native!toOp), [lhs, rhs]);
             };
         }
         else if (opName == "<|")

@@ -1,0 +1,43 @@
+
+syntax 'if cond then 'else else {
+    magic "if" (cond, then, else)
+}
+
+syntax 'if cond then {
+    magic "if" (cond, then, ())
+}
+
+is_prime = num -> {
+    next = arg -> if (num % arg == 0) {
+            false
+        } else {
+            if (num < arg * arg) {
+                true
+            } else {
+                next (arg + 1)
+            }
+        }
+    next 2
+}
+
+prime = cb max -> {
+    next = n -> if (n < max) {
+        if (is_prime n) {
+            cb n
+        }
+        next (n + 2)
+    }
+    next 3
+}
+
+counter = init -> {
+    x = init
+    _ -> {
+        x = x + 1
+        x
+    }
+}
+
+count = counter 0
+prime count 1000000
+print (count ())

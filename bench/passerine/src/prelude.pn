@@ -1,0 +1,42 @@
+
+map = f list -> {
+    next = (part, last) -> match (part) {
+        [] -> last
+        [x, ..xs] -> next (xs, last + [f x]) 
+    }
+    next (list, [])
+}
+
+fold = first f list -> {
+    next = (part, last) -> match (part) {
+        [] -> last
+        [x, ..xs] -> next (xs, f x last)
+    }
+    next (list, first)
+}
+
+filter = f list -> {
+    ff = arg last -> if (f arg) {
+        last + [arg]
+    } else {
+        last
+    }
+    fold [] ff list
+}
+
+range = low high -> {
+    next = (cur, last) -> if (cur >= high) {
+        last
+    } else {
+        next (cur + 1, last + [cur])
+    }
+    next (low, [])
+}
+
+len = list -> {
+    next = (arg, n) -> match (arg) {
+        [] -> n
+        [_, ..xs] -> next (xs, n + 1)
+    }
+    next (list, 0)
+}

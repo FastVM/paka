@@ -23,16 +23,6 @@ final class Walker
     BasicBlock block;
     BasicBlock funcblk;
 
-    BasicBlock bbwalk(Node node)
-    {
-        BasicBlock entry = new BasicBlock;
-        block = entry;
-        funcblk = block;
-        walk(node);
-        emitDefault(new ReturnBranch);
-        return entry;
-    }
-
     BasicBlock walkBasicBlock(Node node, size_t ctx)
     {
         if (dumpast)
@@ -44,11 +34,10 @@ final class Walker
         block = entry;
         funcblk = block;
         walk(node);
-        emitDefault(new ReturnBranch);
         return entry;
     }
 
-    Function walkProgram(Node node, size_t ctx)
+    Bytecode walkProgram(Node node, size_t ctx)
     {
         if (dumpast)
         {
@@ -59,8 +48,11 @@ final class Walker
         block = entry;
         funcblk = block;
         walk(node);
-        emitDefault(new ReturnBranch);
-        Function func = new Function;
+        if (block.exit is null)
+        {
+            emitDefault(new ReturnBranch);
+        }
+        Bytecode func = new Bytecode;
         func.parent = ctx.baseFunction;
         func.captured = func.parent.captured;
         foreach (i; ctx.rootBase)
@@ -68,9 +60,9 @@ final class Walker
             func.captab.define(i.name);
         }
         Opt opt = new Opt;
-        BasicBlock bb = opt.opt(entry);
+        opt.opt(entry);
         BytecodeEmitter emitter = new BytecodeEmitter;
-        emitter.emitInFunc(func, bb);
+        emitter.emitInFunc(func, entry);
         return func;
     }
 
@@ -146,15 +138,9 @@ final class Walker
         {
             emit(new RecInstruction);
         }
-        else if (ident == "args")
-        {
-            emit(new ArgsInstruction);
-        }
         else if (ident.length != 0 && ident[0] == '$' && ident[1 .. $].isNumeric)
         {
-            emit(new ArgsInstruction);
-            emit(new PushInstruction(ident[1 .. $].to!size_t.dynamic));
-            emit(new OperatorInstruction("index"));
+            emit(new ArgNumberInstruction(ident[1 .. $].to!size_t));
         }
         else if (ident.isNumeric)
         {
@@ -172,7 +158,7 @@ final class Walker
         BasicBlock iffalse = new BasicBlock;
         BasicBlock after = new BasicBlock;
         walk(args[0]);
-        emit(new LogicalBranch(iftrue, iffalse, after, true));
+        emit(new LogicalBranch(iftrue, iffalse));
         block = iftrue;
         walk(args[1]);
         emitDefault(new GotoBranch(after));
@@ -188,7 +174,7 @@ final class Walker
         BasicBlock iffalse = new BasicBlock;
         BasicBlock after = new BasicBlock;
         walk(args[0]);
-        emit(new LogicalBranch(iftrue, iffalse, after, true));
+        emit(new LogicalBranch(iftrue, iffalse));
         block = iftrue;
         walk(args[1]);
         emitDefault(new GotoBranch(after));
@@ -204,7 +190,7 @@ final class Walker
         BasicBlock iffalse = new BasicBlock;
         BasicBlock after = new BasicBlock;
         walk(args[0]);
-        emit(new LogicalBranch(iftrue, iffalse, after, true));
+        emit(new LogicalBranch(iftrue, iffalse));
         block = iftrue;
         emit(new PushInstruction(true.dynamic));
         emitDefault(new GotoBranch(after));
@@ -226,7 +212,7 @@ final class Walker
         emit(new PopInstruction);
         block = cond;
         walk(args[0]);
-        emit(new LogicalBranch(loop, after1, after1, false));
+        emit(new LogicalBranch(loop, after1));
         block = after1;
         emit(new PushInstruction(Dynamic.nil));
     }
@@ -289,6 +275,16 @@ final class Walker
             {
                 walkStoreIndex(call.args[0], call.args[1], args[1]);
             }
+            else if (call.form == "cache")
+            {
+                walkStore([call.args[0], args[1]]);
+            }
+            else if (call.form == "do")
+            {
+                walkDo(call.args[0..$-1]);
+                emit(new PopInstruction);
+                walkStore([call.args[$-1], args[1]]);
+            }
             else
             {
                 assert(false, call.form);
@@ -325,11 +321,14 @@ final class Walker
         }
         if (block.exit is null)
         {
-            if (args.length == 1)
+            if (args.length == 0)
             {
-                emit(new PushInstruction(Dynamic.nil));
+                emitDefault(new ConstReturnBranch(Dynamic.nil));
             }
-            emit(new ReturnBranch);
+            else
+            {
+                emitDefault(new ReturnBranch);
+            }
         }
         block = outter;
         funcblk = outterfunc;
@@ -339,21 +338,27 @@ final class Walker
     {
         if (args.length == 0)
         {
-            emit(new PushInstruction(Dynamic.nil));
-            emit(new ReturnBranch);
+            // emit(new ConstReturnBranch(Dynamic.nil));
+            assert(false);
         }
-        else
-        {
-            walk(args[0]);
-            emit(new ReturnBranch);
-        }
+        walk(args[0]);
+        emit(new ReturnBranch);
     }
+
+    alias walkIndex = walkBinary!"index";
 
     void walkBinary(string op)(Node[] args)
     {
         walk(args[0]);
-        walk(args[1]);
-        emit(new OperatorInstruction(op));
+        if (Value val = cast(Value) args[1])
+        {
+            emit(new ConstOperatorInstruction(op, val.value));
+        }
+        else
+        {
+            walk(args[1]);
+            emit(new OperatorInstruction(op));
+        }
     }
 
     void walkUnary(string op)(Node[] args)
@@ -362,12 +367,25 @@ final class Walker
         emit(new OperatorInstruction(op));
     }
 
-    void walkIndex(Node[] args)
+    void walkConst(Node[] args)
     {
+        BasicBlock oper = new BasicBlock;
+        BasicBlock after = new BasicBlock;
+        foreach (check; args[1..$])
+        {
+            walk(check);
+        }
+        emitDefault(new ConstBranch(oper, after, args.length - 1));
+        block = oper;
         walk(args[0]);
-        walk(args[1]);
-        emit(new OperatorInstruction("index"));
+        emitDefault(new GotoBranch());
+        block = after;
     }
+
+    // void walkConst(Node[] args)
+    // {
+    //     walk(args[0]);
+    // }
 
     void walkTuple(Node[] args)
     {
@@ -412,7 +430,7 @@ final class Walker
         foreach (arg; args) {
             walk(arg);
         }
-        emit(new FormInstruction(args.length));
+        emit(new CallInstruction(args.length));
     }
 
     void walkSpecialForm(string special, Node[] args)
@@ -428,9 +446,8 @@ final class Walker
             walkIf(args);
             break;
         case "while":
-            assert(false, "depricated");
-            // walkWhile(args);
-            // break;
+            walkWhile(args);
+            break;
         case "&&":
             walkAnd(args);
             break;
@@ -466,6 +483,9 @@ final class Walker
             break;
         case "index":
             walkIndex(args);
+            break;
+        case "cache":
+            walkConst(args);
             break;
         case "~":
             walkBinary!"cat"(args);
