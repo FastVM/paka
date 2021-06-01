@@ -23,7 +23,7 @@ Dynamic unictrl(Args args)
     }
     if (args.length == 1)
     {
-        if (args[0].type == Dynamic.Type.sml)
+        if (args[0].isNumber)
         {
             return [cast(dchar) args[0].as!int].toUTF8.dynamic;
         }

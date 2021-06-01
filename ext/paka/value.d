@@ -69,7 +69,7 @@ class Index : BaseBinary
 
     override string toString()
     {
-        if (rhs.value.type == Dynamic.Type.str)
+        if (rhs.value.isString)
         {
             return lhs.to!string ~ "." ~ rhs.value.str;
         }

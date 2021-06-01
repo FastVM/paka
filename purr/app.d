@@ -5,7 +5,6 @@ import purr.repl;
 import purr.ir.repr;
 import purr.ir.opt;
 import purr.ir.walk;
-import purr.ir.emit;
 import purr.vm;
 import purr.bugs;
 import purr.srcloc;
@@ -153,7 +152,7 @@ Thunk cliIrHandler()
 Thunk cliEchoHandler()
 {
     return {
-        if (dynamics[$ - 1].type == Dynamic.Type.str)
+        if (dynamics[$ - 1].isString)
         {
             writeln(dynamics[$ - 1].str);
         }
@@ -169,7 +168,7 @@ Thunk cliIntoHandler(string filename)
 {
     return {
         File file = File(filename, "w");
-        if (dynamics[$ - 1].type == Dynamic.Type.str)
+        if (dynamics[$ - 1].isString)
         {
             file.write(dynamics[$ - 1].str);
         }
@@ -239,7 +238,7 @@ Thunk cliReplHandler()
                 break;
             }
             Dynamic res = ctx.eval(code);
-            if (res.type != Dynamic.Type.nil)
+            if (res.isNil)
             {
                 writeln(res);
             }

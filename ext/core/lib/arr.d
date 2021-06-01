@@ -122,7 +122,7 @@ Dynamic libfilter(Args args)
         {
             cur = f([cur, k.dynamic]);
         }
-        if (cur.type != Dynamic.Type.nil && (cur.type != Dynamic.Type.log || cur.log))
+        if (cur.isTruthy)
         {
             res ~= i;
         }
@@ -168,12 +168,12 @@ Dynamic libfsplit(Args args)
     while (index < input.length)
     {
         Dynamic cur = args[1](input[index .. $]);
-        if (cur.type == Dynamic.Type.nil || (cur.type == Dynamic.Type.log && !cur.log))
+        if (cur.isTruthy)
         {
             last ~= input[index];
             index++;
         }
-        else if (cur.type == Dynamic.Type.sml)
+        else if (cur.isNumber)
         {
             ret ~= last.dynamic;
             last = null;

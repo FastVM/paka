@@ -21,27 +21,30 @@ alias Json = JSONValue;
 
 Dynamic.Type dtype(Json json)
 {
-    final switch (json["type"].str)
-    {
-    case "nil":
-        return Dynamic.Type.nil;
-    case "logical":
-        return Dynamic.Type.log;
-    case "number":
-        return Dynamic.Type.sml;
-    case "string":
-        return Dynamic.Type.str;
-    case "tuple":
-        return Dynamic.Type.tup;
-    case "array":
-        return Dynamic.Type.arr;
-    case "table":
-        return Dynamic.Type.tab;
-    case "function":
-        return Dynamic.Type.fun;
-    case "program":
-        return Dynamic.Type.pro;
-    }
+    // final switch (json["type"].str)
+    // {
+    // case "nil":
+    //     return Dynamic.Type.nil;
+    // case "logical":
+    //     return Dynamic.Type.log;
+    // case "number":
+    //     return Dynamic.Type.sml;
+    // case "string":
+    //     return Dynamic.Type.str;
+    // case "tuple":
+    //     return Dynamic.Type.tup;
+    // case "array":
+    //     return Dynamic.Type.arr;
+    // case "table":
+    //     return Dynamic.Type.tab;
+    // case "function":
+    //     return Dynamic.Type.fun;
+    // case "program":
+    //     return Dynamic.Type.pro;
+    // case "thread":
+    //     return Dynamic.Type.thr;
+    // }
+    assert(false, "fixme: implement types in serial");
 }
 
 bool deserialize(T)(Json json) if (is(T == bool))
@@ -191,58 +194,63 @@ alias deserializeCached = cache!(deserialize!(Dynamic));
 Dynamic[] above;
 Dynamic deserialize(T : Dynamic)(Json json)
 {
-    if (json["type"].str == "ref")
-    {
-        return above[json["ref"].integer];
-        // throw new Exception("you have found a bug in libpaka_serial.so: cannot serialize self referential objects");
-    }
-    above ~= Dynamic.nil;
-    scope (exit)
-    {
-        above.length--;
-    }
-    final switch (json.dtype)
-    {
-    case Dynamic.Type.nil:
-        return Dynamic.nil;
-    case Dynamic.Type.log:
-        return json["logical"].deserialize!bool.dynamic;
-    case Dynamic.Type.sml:
-        return json["number"].deserialize!double.dynamic;
-    case Dynamic.Type.str:
-        return json["string"].deserialize!string.dynamic;
-    case Dynamic.Type.sym:
-        return Dynamic.sym(json["symbol"].deserialize!string);
-    case Dynamic.Type.tup:
-        above[$ - 1] = Array.init.dynamic;
-        Dynamic[] got = json["tuple"].deserialize!(Array);
-        foreach (elem; got)
-        {
-            got ~= elem;
-        }
-        above[$-1].value.arr = got.ptr;
-        above[$-1].len = cast(uint) got.length;
-        return above[$ - 1];
-    case Dynamic.Type.arr:
-        above[$ - 1] = Array.init.dynamic;
-        Dynamic[] got = json["array"].deserialize!(Array);
-        above[$-1].value.arr = got.ptr;
-        above[$-1].len = cast(uint) got.length;
-        return above[$ - 1];
-    case Dynamic.Type.tab:
-        Table child = Table.empty;
-        above[$ - 1] = child.dynamic;
-        Table got = json["table"].deserialize!(Table);
-        child.table = got.table;
-        return child.dynamic;
-    case Dynamic.Type.fun:
-        Dynamic function(Args) res = json["function"].deserialize!(Dynamic function(Args));
-        return Fun(res, json["function"].deserialize!string).dynamic;
-    case Dynamic.Type.pro:
-        Bytecode child = new Bytecode;
-        above[$ - 1] = child.dynamic;
-        Bytecode got = json["program"].deserialize!(Bytecode);
-        child.copy(got);
-        return child.dynamic;
-    }
+    assert(false, "fixme: implement types in serial");
+    // if (json["type"].str == "ref")
+    // {
+    //     return above[json["ref"].integer];
+    //     // throw new Exception("you have found a bug in libpaka_serial.so: cannot serialize self referential objects");
+    // }
+    // above ~= Dynamic.nil;
+    // scope (exit)
+    // {
+    //     above.length--;
+    // }
+    // final switch (json.dtype)
+    // {
+    // case Dynamic.Type.nil:
+    //     return Dynamic.nil;
+    // case Dynamic.Type.log:
+    //     return json["logical"].deserialize!bool.dynamic;
+    // case Dynamic.Type.sml:
+    //     return json["number"].deserialize!double.dynamic;
+    // case Dynamic.Type.str:
+    //     return json["string"].deserialize!string.dynamic;
+    // case Dynamic.Type.sym:
+    //     return Dynamic.sym(json["symbol"].deserialize!string);
+    // case Dynamic.Type.tup:
+    //     above[$ - 1] = Array.init.dynamic;
+    //     Dynamic[] got = json["tuple"].deserialize!(Array);
+    //     foreach (elem; got)
+    //     {
+    //         got ~= elem;
+    //     }
+    //     above[$-1].value.arr = got.ptr;
+    //     above[$-1].data = cast(uint) got.length;
+    //     return above[$ - 1];
+    // case Dynamic.Type.arr:
+    //     above[$ - 1] = Array.init.dynamic;
+    //     Dynamic[] got = json["array"].deserialize!(Array);
+    //     above[$-1].value.arr = got.ptr;
+    //     above[$-1].data = cast(uint) got.length;
+    //     return above[$ - 1];
+    // case Dynamic.Type.tab:
+    //     Table child = Table.empty;
+    //     above[$ - 1] = child.dynamic;
+    //     Table got = json["table"].deserialize!(Table);
+    //     child.table = got.table;
+    //     return child.dynamic;
+    // case Dynamic.Type.fun:
+    //     Dynamic function(Args) res = json["function"].deserialize!(Dynamic function(Args));
+    //     return Fun(res, json["function"].deserialize!string).dynamic;
+    // case Dynamic.Type.pro:
+    //     Bytecode child = new Bytecode;
+    //     above[$ - 1] = child.dynamic;
+    //     Bytecode got = json["program"].deserialize!(Bytecode);
+    //     child.copy(got);
+    //     return child.dynamic;
+    // case Dynamic.Type.thr:
+    //     assert(false, "fixme: thread was serialized");
+    // case Dynamic.Type.run:
+    //     assert(false, "fixme: running was serialized");
+    // }
 }

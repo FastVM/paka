@@ -18,6 +18,10 @@ final class DebugFrame
 
     Span span()
     {
+        if (index >= func.spans.length)
+        {
+            return Span.init;
+        }
         return func.spans[index];
     }
 }

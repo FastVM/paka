@@ -11,7 +11,6 @@ import purr.srcloc;
 import purr.bytecode;
 import purr.dynamic;
 import purr.inter;
-import purr.ir.emit;
 import purr.ir.opt;
 
 alias InstrTypes = AliasSeq!(LogicalBranch, TailCallBranch, GotoBranch, ReturnBranch, ConstReturnBranch, ConstBranch, 

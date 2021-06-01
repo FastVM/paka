@@ -5,6 +5,7 @@ import std.conv;
 import purr.dynamic;
 import purr.ast.ast;
 import ext.paka.built;
+import ext.paka.async;
 import ext.paka.parse.util;
 
 Node binaryFold(BinaryOp op, Node lhs, Node rhs)
@@ -49,12 +50,12 @@ string[] readBinaryOp(ref string[] ops)
     string[] ret;
     while (ops.length >= 2)
     {
-        if (ops[0] == "foreach")
+        if (ops[0] == "!")
         {
             ret ~= ops[0];
             ops = ops[1 .. $];
         }
-        else if (ops[0] == "fold")
+        else if (ops[0] == "\\")
         {
             ret ~= ops[0];
             ops = ops[1 .. $];
@@ -69,12 +70,12 @@ string[] readBinaryOp(ref string[] ops)
     ops = ops[1 .. $];
     while (ops.length != 0)
     {
-        if (ops[0] == "foreach")
+        if (ops[0] == "!")
         {
             ret ~= ops[0];
             ops = ops[1 .. $];
         }
-        else if (ops[0] == "fold")
+        else if (ops[0] == "\\")
         {
             if (slash == 0)
             {
@@ -99,7 +100,7 @@ UnaryOp parseUnaryOp(string[] ops)
         string[] rest = ops;
         BinaryOp lastBinary = parseBinaryOp(rest.readBinaryOp);
         UnaryOp curUnary = void;
-        if (rest.length != 0 && rest[0] == "fold")
+        if (rest.length != 0 && rest[0] == "\\")
         {
             ops = rest[1 .. $];
             curUnary = (Node rhs) { return unaryFold(lastBinary, rhs); };
@@ -111,7 +112,7 @@ UnaryOp parseUnaryOp(string[] ops)
         }
         while (ops.length != 0)
         {
-            if (ops[0] == "foreach")
+            if (ops[0] == "!")
             {
                 UnaryOp lastUnary = curUnary;
                 ops = ops[1 .. $];
@@ -144,6 +145,12 @@ UnaryOp parseUnaryOp(string[] ops)
             return new Form("!=", rhs, new Value(true));
         };
     }
+    else if (opName == "await")
+    {
+        return (Node rhs) {
+            return new Form("call", new Value(native!awaitOp), rhs);
+        };
+    }
     else if (opName == "-")
     {
         throw new Exception("parse error: not a unary operator: " ~ opName
@@ -159,26 +166,26 @@ BinaryOp parseBinaryOp(string[] ops)
 {
     if (ops.length > 1)
     {
-        if (ops[0] == "foreach" && ops[$ - 1] == "foreach")
+        if (ops[0] == "!" && ops[$ - 1] == "!")
         {
             BinaryOp next = parseBinaryOp(ops[1 .. $ - 1]);
             return (Node lhs, Node rhs) {
                 return binaryDotmap!metaMapBothParallel(next, lhs, rhs);
             };
         }
-        if (ops[$ - 1] == "fold")
+        if (ops[$ - 1] == "\\")
         {
             BinaryOp next = parseBinaryOp(ops[0 .. $ - 1]);
             return (Node lhs, Node rhs) { return binaryFold(next, lhs, rhs); };
         }
-        if (ops[0] == "foreach")
+        if (ops[0] == "!")
         {
             BinaryOp next = parseBinaryOp(ops[1 .. $]);
             return (Node lhs, Node rhs) {
                 return binaryDotmap!metaMapLhsParallel(next, lhs, rhs);
             };
         }
-        if (ops[$ - 1] == "foreach")
+        if (ops[$ - 1] == "!")
         {
             BinaryOp next = parseBinaryOp(ops[0 .. $ - 1]);
             return (Node lhs, Node rhs) {

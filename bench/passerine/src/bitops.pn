@@ -1,0 +1,16 @@
+
+bitop = f -> {
+    ift = _ -> 0
+    iff = (x, y) -> magic "if" (f (x % 2 + y % 2 * 2), 1, 0) + next ((x - (x % 2)) / 2, (y - (y % 2)) / 2) * 2
+
+    next = arg -> (magic "if" (arg == (0,0), ift, iff)) arg
+    next
+}
+
+bor = bitop (n -> magic "greater" (n, 0))
+band = bitop (n -> magic "greater" (n, 2))
+bxor = bitop (n -> magic "greater" (1, (n - 1) * (n - 2)))
+
+bnot = x -> 0-(x + 1)
+
+print (bor (7, 13), bxor (7, 13), band (7, 13))

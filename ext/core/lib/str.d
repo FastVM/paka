@@ -36,7 +36,7 @@ Dynamic libfroms(Args args)
     string ret;
     foreach (i; args)
     {
-        if (i.type == Dynamic.Type.str)
+        if (i.isString)
         {
             ret ~= i.to!string[1..$-1];
         }

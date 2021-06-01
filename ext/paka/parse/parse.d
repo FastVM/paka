@@ -109,11 +109,12 @@ void stripNewlines(TokenArray tokens)
     }
 }
 
-Node readPostFormExtend(TokenArray tokens, Node last)
+Node readPostCallExtend(TokenArray tokens, Node last)
 {
     Node[][] args = tokens.readOpen!"()";
-    while (tokens.first.isOpen("{") || tokens.first.isOperator(":"))
+    while (tokens.first.isOperator(":"))
     {
+        tokens.nextIs(Token.Type.operator, ":");
         args[$ - 1] ~= new Form("fun", [new Form("args"), tokens.readBlock]);
     }
     foreach (argList; args)
@@ -134,7 +135,13 @@ Node readPostExtendImpl(TokenArray tokens, Node last)
     Node ret = void;
     if (tokens.first.isOpen("("))
     {
-        ret = tokens.readPostFormExtend(last);
+        ret = tokens.readPostCallExtend(last);
+    }
+    else if (tokens.first.isKeyword("await"))
+    {
+        tokens.nextIs(Token.Type.keyword, "await");
+        UnaryOp unary = ["await"].parseUnaryOp;
+        ret = unary(last);
     }
     else if (tokens.first.isOperator("."))
     {
@@ -179,12 +186,13 @@ Node readPostExtendImpl(TokenArray tokens, Node last)
                     }
                 }
             }
-            Node sym = genSym;
-            Node setsym = new Form("set", sym, last);
-            Node indexed = new Form("index", sym, key);
+            // Node sym = genSym;
+            // Node setsym = new Form("set", sym, last);
+            // Node indexed = new Form("index", sym, key);
             // Node res = new Form("cache", indexed, sym);
-            Node res = indexed;
-            ret = new Form("do", setsym, res);
+            // Node res = indexed;
+            // ret = new Form("do", setsym, res);
+            ret = new Form("index", last, key);
         }
     }
     else
@@ -398,7 +406,7 @@ Node readPostExprImpl(TokenArray tokens)
                     new Form("args", tokens.readOpen1!"()"), tokens.readBlock
                     ]);
         }
-        else if (tokens.first.isOpen("{") || tokens.first.isOperator(":"))
+        else if (tokens.first.isOpen("{") || tokens.first.isOperator("->"))
         {
             last = new Form("fun", new Form("args"), tokens.readBlock);
         }
@@ -435,7 +443,7 @@ Node readPostExprImpl(TokenArray tokens)
         {
             checks = null;
         }
-        if (tokens.first.isOpen("{") || tokens.first.isOperator(":"))
+        if (tokens.first.isOpen("{") || tokens.first.isOperator("->"))
         {
             last = new Form("cache", tokens.readBlock, checks);
         }
@@ -547,7 +555,7 @@ Node readPreExprImpl(TokenArray tokens)
 
 bool isDotOperator(Token tok)
 {
-    return tok.isOperator("foreach") || tok.isOperator("fold");
+    return tok.isOperator("!") || tok.isOperator("\\");
 }
 
 alias readExprBase = Spanning!(readExprBaseImpl);
@@ -659,9 +667,9 @@ Node readBlockBodyImpl(TokenArray tokens)
 alias readBlock = Spanning!readBlockImpl;
 Node readBlockImpl(TokenArray tokens)
 {
-    if (tokens.first.isOperator(":"))
+    if (tokens.first.isOperator("->"))
     {
-        tokens.nextIs(Token.Type.operator, ":");
+        tokens.nextIs(Token.Type.operator, "->");
         return tokens.readStmt;
     }
     else

@@ -6,12 +6,8 @@ import std.string;
 import std.array;
 import std.range;
 import std.conv;
-import core.stdc.stdlib;
 import core.stdc.ctype;
-// import core.sys.posix.termios;
-import core.sys.posix.stdlib;
-import core.sys.posix.unistd;
-import core.sys.posix.fcntl;
+import core.sync.mutex;
 
 static import std.stdio;
 
@@ -20,16 +16,20 @@ alias stdin = std.stdio.stdin;
 alias stdout = std.stdio.stdout;
 alias stderr = std.stdio.stderr;
 
-char readchar()
+__gshared Mutex ioLock;
+__gshared Mutex ioLineLock;
+
+shared static this()
 {
-	char ret = stdin.readKeyAbs;
-	write(ret);
-	return ret;
+	ioLock = new Mutex;
+	ioLineLock = new Mutex;
 }
 
 char getchar()
 {
-	return stdin.readKeyAbs;
+	char ret;
+	stdin.readf!"%c"(ret);
+	return ret;
 }
 
 string readln(string prompt)
@@ -42,7 +42,10 @@ void write1s(string str)
 {
 	foreach (chr; str)
 	{
-		stdout.write(chr);
+		synchronized(ioLock)
+		{
+			stdout.write(chr);
+		}
 	}
 }
 
@@ -57,11 +60,4 @@ void write(Args...)(Args args)
 void writeln(Args...)(Args args)
 {
 	write(args, '\n');
-}
-
-char readKeyAbs(File f)
-{
-	char c;
-	read(f.fileno, &c, 1);
-	return c;
 }

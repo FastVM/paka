@@ -17,7 +17,7 @@ version = PurrErrors;
 
 DebugFrame[] debugFrames;
 
-alias LocalFormback = void delegate(uint index, Dynamic[] locals);
+alias LocalCallback = void delegate(uint index, Dynamic[] locals);
 
 enum string[2][] cmpMap()
 {
@@ -41,14 +41,17 @@ pragma(inline, true) T peek(T, A)(ubyte* bytes, A index)
     return *cast(T*)(bytes + index);
 }
 
-Dynamic run(T...)(Bytecode func, Dynamic* args = null, T rest = T.init)
+size_t depth;
+pragma(inline, false)
+Dynamic run(T...)(Bytecode func, Dynamic[] args = null, T rest = T.init)
 {
+    assert(func);
     static foreach (I; T)
     {
-        static assert(is(I == LocalFormback));
+        static assert(is(I == LocalCallback));
     }
     Dynamic* stack = void;
-    if (func.flags & Bytecode.Flags.isLocal || T.length != 0)
+    if ((func.flags & Bytecode.Flags.isLocal) || T.length != 0)
     {
         stack = cast(Dynamic*) GC.malloc((func.stackSize + func.stab.length) * Dynamic.sizeof);
     }
@@ -65,15 +68,37 @@ Dynamic run(T...)(Bytecode func, Dynamic* args = null, T rest = T.init)
             debugFrames ~= new DebugFrame(func, index, locals);
         }
     }
-redoStack:
+    scope(success)
+    {
+        static foreach (callbackIndex, callback; rest)
+        {
+            static if (is(typeof(callback) == LocalCallback))
+            {
+                if (callback !is null) {
+                    callback(index, locals[0 .. func.stab.length]);
+                }
+            }
+        }
+    }
+    depth++;
+    if (depth > 100)
+    {
+        throw new Exception("stack overflow");
+    }
+    scope(exit)
+    {
+        depth--;
+    }
     Dynamic* rstack = stack;
     locals = stack + func.stackSize;
+    ubyte* instrs = func.instrs.ptr;
 redoSame:
     index = 0;
-    ubyte* instrs = func.instrs.ptr;
     while (true)
     {
         Opcode cur = instrs.eat!Opcode(index);
+        // writeln(rstack[0..stack-rstack]);
+        // writeln(cur);
         switch (cur)
         {
         default:
@@ -115,90 +140,52 @@ redoSame:
         case Opcode.call:
             ushort count = instrs.eat!ushort(index);
             stack -= count;
-            Dynamic f = *stack;
-            switch (f.type)
-            {
-            case Dynamic.Type.fun:
-                *stack = f.fun.fun.value(stack[1 .. 1 + count]);
-                break;
-            case Dynamic.Type.pro:
-                *stack = run(f.fun.pro, stack + 1);
-                break;
-            case Dynamic.Type.tab:
-                *stack = f.tab()(stack[1 .. 1 + count]);
-                break;
-            case Dynamic.Type.tup:
-                *stack = f.arr[(*stack).as!size_t];
-                break;
-            case Dynamic.Type.arr:
-                *stack = f.arr[(*stack).as!size_t];
-                break;
-            default:
-                throw new Exception(
-                        "error in dynamic call: not a pro, fun, tab, or arr: " ~ f.to!string);
-            }
+            *stack = (*stack)(stack[1 .. 1 + count]);
             break;
         case Opcode.scall:
             ushort constIndex = instrs.eat!ushort(index);
-            Dynamic f = func.constants[constIndex];
+            Dynamic funcToCall = func.constants[constIndex];
             ushort count = instrs.eat!ushort(index);
             stack -= count;
             stack += 1;
-            Dynamic res = void;
-            switch (f.type)
-            {
-            case Dynamic.Type.fun:
-                res = f.fun.fun.value(stack[0 .. 0 + count]);
-                break;
-            case Dynamic.Type.pro:
-                res = run(f.fun.pro, stack);
-                break;
-            case Dynamic.Type.tab:
-                res = f.tab()(stack[0 .. 0 + count]);
-                break;
-            case Dynamic.Type.tup:
-                res = f.arr[(*stack).as!size_t];
-                break;
-            case Dynamic.Type.arr:
-                res = f.arr[(*stack).as!size_t];
-                break;
-            default:
-                throw new Exception(
-                        "error in static call: not a pro, fun, tab, or arr: " ~ f.to!string);
-            }
-            *stack = res;
+            *stack = funcToCall(stack[1 .. 1 + count]);
+            // switch (f.type)
+            // {
+            // case Dynamic.Type.fun:
+            //     res = f.fun.fun.value(stack[0 .. 0 + count]);
+            //     break;
+            // case Dynamic.Type.pro:
+            //     res = run(f.fun.pro, stack);
+            //     break;
+            // case Dynamic.Type.tab:
+            //     res = f.tab()(stack[0 .. 0 + count]);
+            //     break;
+            // case Dynamic.Type.tup:
+            //     res = f.arr[(*stack).as!size_t];
+            //     break;
+            // case Dynamic.Type.arr:
+            //     res = f.arr[(*stack).as!size_t];
+            //     break;
+            // default:
+            //     throw new Exception(
+            //             "error in static call: not a pro, fun, tab, or arr: " ~ f.to!string);
+            // }
+            // *stack = res;
             break;
         case Opcode.tcall:
             ushort count = instrs.eat!ushort(index);
             stack -= count;
-            Dynamic f = *stack;
-            switch (f.type)
+            Dynamic funcToCall = *stack;
+            if (false && funcToCall.value.fun.pro == func && (func.flags & Bytecode.Flags.isLocal) && T.length == 0)
             {
-            case Dynamic.Type.fun:
-                return f.fun.fun.value(stack[1 .. 1 + count]);
-            case Dynamic.Type.pro:
-                if (f.fun.pro == func)
-                {
-                    args = stack[1 .. 1 + count].dup.ptr;
-                    stack = rstack;
-                    goto redoSame;
-                }
-                else
-                {
-                    func = f.fun.pro;
-                    args = stack[1 .. 1 + count].dup.ptr;
-                    stack = cast(Dynamic*) GC.malloc((func.stackSize + func.stab.length) * Dynamic.sizeof);
-                    goto redoStack;
-                }
-            case Dynamic.Type.tab:
-                return f.tab()(stack[1 .. 1 + count]);
-            case Dynamic.Type.tup:
-                return f.arr[(*stack).as!size_t];
-            case Dynamic.Type.arr:
-                return f.arr[(*stack).as!size_t];
-            default:
-                throw new Exception(
-                        "error in tail call: not a pro, fun, tab, or arr: " ~ f.to!string);
+                args = stack[1 .. 1 + count].dup;
+                stack = rstack;
+                index = 0;
+                break;
+            }
+            else
+            {
+                return funcToCall(stack[1 .. 1 + count]);
             }
         case Opcode.oplt:
             stack -= 1;
@@ -248,39 +235,27 @@ redoSame:
             Dynamic ind = *stack;
             stack--;
             Dynamic arr = *stack;
-            switch (arr.type)
-            {
-            case Dynamic.Type.tup:
-                *stack = arr.arr[ind.as!size_t];
-                break;
-            case Dynamic.Type.arr:
-                *stack = arr.arr[ind.as!size_t];
-                break;
-            case Dynamic.Type.tab:
-                *stack = (arr.tab)[ind];
-                break;
-            default:
-                throw new Exception("error: cannot index a " ~ arr.type.to!string);
-            }
+            *stack = arr[ind];
+            // switch (arr.type)
+            // {
+            // case Dynamic.Type.tup:
+            //     *stack = arr.arr[ind.as!size_t];
+            //     break;
+            // case Dynamic.Type.arr:
+            //     *stack = arr.arr[ind.as!size_t];
+            //     break;
+            // case Dynamic.Type.tab:
+            //     *stack = (arr.tab)[ind];
+            //     break;
+            // default:
+            //     throw new Exception("error: cannot index a " ~ arr.type.to!string);
+            // }
             break;
         case Opcode.opindexc:
             ushort constIndex = instrs.eat!ushort(index);
             Dynamic ind = func.constants[constIndex];
             Dynamic arr = *stack;
-            switch (arr.type)
-            {
-            case Dynamic.Type.tup:
-                *stack = arr.arr[ind.as!size_t];
-                break;
-            case Dynamic.Type.arr:
-                *stack = arr.arr[ind.as!size_t];
-                break;
-            case Dynamic.Type.tab:
-                *stack = (arr.tab)[ind];
-                break;
-            default:
-                assert(false, "invalid opindexc arg");
-            }
+            *stack = arr[ind];
             break;
         case Opcode.gocache:
             ushort cacheNumber = instrs.peek!ushort(index);
@@ -362,20 +337,21 @@ redoSame:
             Dynamic ind = *stack;
             stack--;
             Dynamic arr = *stack;
-            switch (arr.type)
-            {
-            case Dynamic.Type.tup:
-                arr.arr[ind.as!size_t] = val;
-                break;
-            case Dynamic.Type.arr:
-                arr.arr[ind.as!size_t] = val;
-                break;
-            case Dynamic.Type.tab:
-                arr.tab.set(ind, val);
-                break;
-            default:
-                throw new Exception("error: cannot store at index on a " ~ arr.type.to!string);
-            }
+            arr[ind] = val;
+            // switch (arr.type)
+            // {
+            // case Dynamic.Type.tup:
+            //     arr.arr[ind.as!size_t] = val;
+            //     break;
+            // case Dynamic.Type.arr:
+            //     arr.arr[ind.as!size_t] = val;
+            //     break;
+            // case Dynamic.Type.tab:
+            //     arr.tab.set(ind, val);
+            //     break;
+            // default:
+            //     throw new Exception("error: cannot store at index on a " ~ arr.type.to!string);
+            // }
             break;
         case Opcode.cstore:
             Dynamic rhs = *stack;
@@ -384,34 +360,16 @@ redoSame:
             break;
         case Opcode.retval:
             Dynamic v = *(stack--);
-            static foreach (callback; rest)
-            {
-                static if (is(typeof(callback) == LocalFormback))
-                {
-                    {
-                        callback(index, locals[0 .. func.stab.length]);
-                    }
-                }
-            }
             return v;
         case Opcode.retconst:
             ushort constIndex = instrs.peek!ushort(index);
             return func.constants[constIndex];
         case Opcode.retnone:
-            static foreach (callback; rest)
-            {
-                static if (is(typeof(callback) == LocalFormback))
-                {
-                    {
-                        callback(index, locals[0 .. func.stab.length]);
-                    }
-                }
-            }
             return Dynamic.nil;
         case Opcode.iftrue:
             Dynamic val = *(stack--);
             ushort id = instrs.eat!ushort(index);
-            if (val.type != Dynamic.Type.nil && val.log)
+            if (val.isNil && val.log)
             {
                 index = id;
             }
@@ -419,7 +377,7 @@ redoSame:
         case Opcode.branch:
             Dynamic val = *(stack--);
             ushort tb = instrs.eat!ushort(index);
-            if (val.type != Dynamic.Type.nil && val.log)
+            if (val.isTruthy)
             {
                 index = tb;
             }
@@ -431,7 +389,7 @@ redoSame:
         case Opcode.iffalse:
             Dynamic val = *(stack--);
             ushort id = instrs.eat!ushort(index);
-            if (val.type == Dynamic.Type.nil || !val.log)
+            if (!val.isTruthy)
             {
                 index = id;
             }

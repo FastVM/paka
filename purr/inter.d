@@ -15,19 +15,19 @@ import purr.ast.ast;
 import purr.dynamic;
 import purr.parse;
 import purr.vm;
+import purr.async;
 import purr.inter;
 import purr.srcloc;
 import purr.ir.repr;
 import purr.ir.walk;
-import purr.ir.emit;
 
 __gshared bool dumpbytecode = false;
 __gshared bool dumpir = false;
 
 /// vm callback that sets the locals defined into the root base 
-LocalFormback exportLocalsToBaseFormback(size_t ctx, Bytecode func)
+LocalCallback exportLocalsToBaseFormback(size_t ctx, Bytecode func)
 {
-    LocalFormback ret = (uint index, Dynamic[] locals) {
+    LocalCallback ret = (uint index, Dynamic[] locals) {
         most: foreach (i, v; locals)
         {
             foreach (ref rb; rootBases[ctx])
@@ -55,10 +55,14 @@ Dynamic evalImpl(Walker)(size_t ctx, SrcLoc code, Args args)
         oppr.walk(func);
         writeln(oppr.ret);
     }
-    return run(func, args.ptr, ctx.exportLocalsToBaseFormback(func));
+    scope(success)
+    {
+        stopAllAsyncCalls;
+    }
+    return run(func, args, ctx.exportLocalsToBaseFormback(func));
 }
 
-Dynamic eval(size_t ctx, SrcLoc code, Args args=Args.init)
+Dynamic eval(size_t ctx, SrcLoc code, Args args=new Dynamic[0])
 {
     return evalImpl!(purr.ir.walk.Walker)(ctx, code, args);
 }

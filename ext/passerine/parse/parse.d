@@ -38,6 +38,7 @@ Node readParenBody(ref TokenArray tokens, size_t start)
     {
         tokens.eat;
         args ~= tokens.readExpr(start);
+        tokens.eat;
         if (tokens.length != 0 && tokens.first.isComma)
         {
             tokens.nextIs(Token.Type.comma);
@@ -77,19 +78,16 @@ Node readOpen(string v)(ref TokenArray tokens) if (v == "[]")
 {
     tokens.nextIs(Token.Type.open, [v[0]]);
     Node[] args;
-    while (!tokens.first.isClose("]"))
+    outer: while (!tokens.first.isClose("]"))
     {
         tokens.eat;
         args ~= tokens.readExpr(1);
-        if (tokens.first.isComma)
-        {
-            tokens.nextIs(Token.Type.comma);
-            continue;
-        }
-        else
+        tokens.eat;
+        if (!tokens.first.isComma)
         {
             break;
         }
+        tokens.nextIs(Token.Type.comma);
     }
     tokens.nextIs(Token.Type.close, [v[1]]);
     return new Form("array", args);
@@ -140,9 +138,7 @@ Node readPostExtendImpl(ref TokenArray tokens, Node last)
         }
         else
         {
-            ret = new Form("index", [
-                    last, new Value(tokens.first.value)
-                    ]);
+            ret = new Form("index", [last, new Value(tokens.first.value)]);
             tokens.nextIsAny;
         }
         return tokens.readPostExtend(ret);
@@ -445,6 +441,10 @@ redo:
                 {
                     last = getNode(*ret);
                 }
+                else if (tokens.first.value[0].isDigit)
+                {
+                    last = new Value(tokens.first.value.to!double);
+                }
                 else
                 {
                     last = new Ident(tokens.first.value);
@@ -489,7 +489,7 @@ Node checkMacro(Node[] flatlike)
             if (reps.length != 0)
             {
                 nameSubs ~= reps;
-                scope(exit)
+                scope (exit)
                 {
                     nameSubs.length--;
                 }

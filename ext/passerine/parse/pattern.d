@@ -12,7 +12,7 @@ Dynamic matchExact(Args args)
 
 bool isIndexable(Dynamic arg)
 {
-    return arg.type == Dynamic.Type.arr || arg.type == Dynamic.Type.tup;
+    return arg.isArray;
 }
 
 Dynamic matchExactLength(Args args)
@@ -37,7 +37,7 @@ Dynamic rindex(Args args)
 
 Dynamic slice(Args args)
 {
-    return args[0].arr[args[1].as!size_t .. $-args[2].as!size_t].dynamic;
+    return args[0].arr[args[1].as!size_t .. $ - args[2].as!size_t].dynamic;
 }
 
 Node matcher(Node value, Node pattern, size_t line = __LINE__)
@@ -52,16 +52,18 @@ Node matcher(Node value, Node pattern, size_t line = __LINE__)
         Node setter = new Form("set", id, value);
         return new Form("do", setter, new Value(true));
     }
-    else if (Value val = cast(Value) pattern)
+    else if (cast(Value) pattern)
     {
-        return new Form("call", new Value(native!matchExact), [pattern, val]);
+        return new Form("==", pattern, value);
     }
     else if (Form call = cast(Form) pattern)
     {
         switch (call.form)
         {
         default:
-            return new Form("call", new Value(native!matchExact), [value, pattern]);
+            return new Form("call", new Value(native!matchExact), [
+                    value, pattern
+                    ]);
         case ":":
             Node c1 = matcher(value, call.args[0]);
             Node c2 = matcher(value, call.args[1]);
@@ -71,11 +73,15 @@ Node matcher(Node value, Node pattern, size_t line = __LINE__)
             Node c2 = call.args[1];
             return new Form("&&", c1, c2);
         case "tuple":
+            if (call.args.length == 0)
+            {
+                return new Form("==", new Value(Dynamic(cast(Dynamic[]) null)), value);
+            }
             goto case;
         case "array":
             if (call.args.length == 0)
             {
-                return new Form("call", new Value(native!matchNoLength), value);   
+                return new Form("==", new Value(Dynamic.tuple(null)), value);
             }
             Node[] pre;
             Node mid = null;
@@ -105,12 +111,8 @@ Node matcher(Node value, Node pattern, size_t line = __LINE__)
                         [value, new Value(pre.length)]);
                 foreach (index, term; pre)
                 {
-                    Node indexed = new Form("index", [
-                            value, new Value(index)
-                            ]);
-                    ret = new Form("&&", [
-                            ret, matcher(indexed, term)
-                            ]);
+                    Node indexed = new Form("index", [value, new Value(index)]);
+                    ret = new Form("&&", [ret, matcher(indexed, term)]);
                 }
                 return ret;
             }
@@ -120,33 +122,27 @@ Node matcher(Node value, Node pattern, size_t line = __LINE__)
                         [value, new Value(pre.length + post.length)]);
                 foreach (index, term; pre)
                 {
-                    Node indexed = new Form("index", [
-                            value, new Value(index)
-                            ]);
-                    ret = new Form("&&", [
-                            ret, matcher(indexed, term)
-                            ]);
+                    Node indexed = new Form("index", [value, new Value(index)]);
+                    ret = new Form("&&", [ret, matcher(indexed, term)]);
                 }
                 Node sliced = new Form("call", new Value(native!slice), [
                         value, new Value(pre.length), new Value(post.length)
                         ]);
                 Form term0 = cast(Form) mid;
                 assert(term0);
-                ret = new Form("&&", [
-                        ret, matcher(sliced, term0.args[0])
-                        ]);
+                ret = new Form("&&", [ret, matcher(sliced, term0.args[0])]);
                 foreach (index, term; post)
                 {
                     Node indexed = new Form("call", new Value(native!rindex),
                             [value, new Value(index + 1)]);
-                    ret = new Form("&&", [
-                            ret, matcher(indexed, term)
-                            ]);
+                    ret = new Form("&&", [ret, matcher(indexed, term)]);
                 }
                 return ret;
             }
-            case "call":
-                return new Form("call", new Value(native!matchExact), [pattern, call]);
+        case "call":
+            return new Form("call", new Value(native!matchExact), [
+                    pattern, call
+                    ]);
         }
     }
     assert(false);

@@ -142,7 +142,7 @@ Dynamic strConcat(Args args)
     string ret;
     foreach (arg; args)
     {
-        if (arg.type == Dynamic.Type.str)
+        if (arg.isString)
         {
             ret ~= arg.str;
         }

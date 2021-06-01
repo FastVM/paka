@@ -27,18 +27,22 @@ Pair[] libio()
 /// prints with newline
 Dynamic libprint(Args args)
 {
+    string res;
     foreach (i; args)
     {
-        if (i.type == Dynamic.Type.str)
+        if (i.isString)
         {
-            write(i.to!string[1..$-1]);
+            res ~= i.str;
         }
         else
         {
-            write(i);
+            res ~= i.to!string;
         }
     }
-    writeln;
+    synchronized (ioLineLock)
+    {
+        writeln(res);
+    }
     stdout.flush;
     return Dynamic.nil;
 }
@@ -46,16 +50,21 @@ Dynamic libprint(Args args)
 /// prints without newline
 Dynamic libput(Args args)
 {
+    string res;
     foreach (i; args)
     {
-        if (i.type == Dynamic.Type.str)
+        if (i.isString)
         {
-            write(i.to!string[1..$-1]);
+            res ~= i.str;
         }
         else
         {
-            write(i);
+            res ~= i.to!string;
         }
+    }
+    synchronized (ioLineLock)
+    {
+        write(res);
     }
     stdout.flush;
     return Dynamic.nil;
@@ -97,7 +106,7 @@ Dynamic libread(Args args)
     string ret;
     foreach (i; 0..count)
     {
-        ret ~= readchar;
+        ret ~= getchar;
     }
     return ret.dynamic;
 }

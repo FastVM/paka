@@ -1,0 +1,23 @@
+rules = (
+    Both (Index 2, Both (Index 1, Index 2)),
+    Literal "+",
+    Both (Index 4, Both (Index 3, Index 4)),
+    Literal "*",
+    Literal "n",
+)
+
+join = list -> match list {
+    [] -> ""
+    [x, ..xs] -> x + join xs
+}
+
+generate = rules -> {
+    gen = rule -> match rule {
+        Both (lhs, rhs) -> gen lhs + gen rhs
+        Index n -> gen (rules n)
+        Literal s -> [s]
+    }
+    join (gen (rules 0))
+}
+
+generate rules

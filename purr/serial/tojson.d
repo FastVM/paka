@@ -179,41 +179,42 @@ string serialize(Table tab)
 Dynamic[] alreadySerialized;
 string serialize(Dynamic value)
 {
-    foreach (index, val; alreadySerialized)
-    {
-        if (val is value)
-        {
-            return `{"type": "ref", "ref": ` ~ index.to!string ~ `}`;
-        }
-    }
-    alreadySerialized ~= value;
-    scope (exit)
-    {
-        alreadySerialized.length--;
-    }
-    switch (value.type)
-    {
-    default:
-        throw new Exception (value.to!string);
-    case Dynamic.Type.nil:
-        return `{"type": "nil"}`;
-    case Dynamic.Type.log:
-        return `{"type": "logical", "logical": "` ~ value.log.to!string ~ `"}`;
-    case Dynamic.Type.sml:
-        return `{"type": "number", "number": ` ~ value.as!double.serialize ~ `}`;
-    case Dynamic.Type.sym:
-        return `{"type": "symbol", "symbol": ` ~ value.str.serialize ~ `}`;
-    case Dynamic.Type.str:
-        return `{"type": "string", "string": ` ~ value.str.serialize ~ `}`;
-    case Dynamic.Type.tup:
-        return `{"type": "tuple", "tuple": ` ~ value.arr.serialize ~ `}`;
-    case Dynamic.Type.arr:
-        return `{"type": "array", "array": ` ~ value.arr.serialize ~ `}`;
-    case Dynamic.Type.tab:
-        return `{"type": "table", "table": ` ~ value.tab.serialize ~ `}`;
-    case Dynamic.Type.fun:
-        return `{"type": "function", "function": ` ~ value.fun.fun.mangled.serialize ~ `}`;
-    case Dynamic.Type.pro:
-        return `{"type": "program", "program": ` ~ value.fun.pro.serialize ~ `}`;
-    }
+    assert(false, "fixme: implement types in serial");
+    // foreach (index, val; alreadySerialized)
+    // {
+    //     if (val is value)
+    //     {
+    //         return `{"type": "ref", "ref": ` ~ index.to!string ~ `}`;
+    //     }
+    // }
+    // alreadySerialized ~= value;
+    // scope (exit)
+    // {
+    //     alreadySerialized.length--;
+    // }
+    // switch (value.type)
+    // {
+    // default:
+    //     throw new Exception (value.to!string);
+    // case Dynamic.Type.nil:
+    //     return `{"type": "nil"}`;
+    // case Dynamic.Type.log:
+    //     return `{"type": "logical", "logical": "` ~ value.log.to!string ~ `"}`;
+    // case Dynamic.Type.sml:
+    //     return `{"type": "number", "number": ` ~ value.as!double.serialize ~ `}`;
+    // case Dynamic.Type.sym:
+    //     return `{"type": "symbol", "symbol": ` ~ value.str.serialize ~ `}`;
+    // case Dynamic.Type.str:
+    //     return `{"type": "string", "string": ` ~ value.str.serialize ~ `}`;
+    // case Dynamic.Type.tup:
+    //     return `{"type": "tuple", "tuple": ` ~ value.arr.serialize ~ `}`;
+    // case Dynamic.Type.arr:
+    //     return `{"type": "array", "array": ` ~ value.arr.serialize ~ `}`;
+    // case Dynamic.Type.tab:
+    //     return `{"type": "table", "table": ` ~ value.tab.serialize ~ `}`;
+    // case Dynamic.Type.fun:
+    //     return `{"type": "function", "function": ` ~ value.fun.fun.mangled.serialize ~ `}`;
+    // case Dynamic.Type.pro:
+    //     return `{"type": "program", "program": ` ~ value.fun.pro.serialize ~ `}`;
+    // }
 }

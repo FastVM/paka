@@ -1,43 +1,47 @@
 
 syntax 'if cond then 'else else {
-    magic "if" (cond, then, else)
+    magic "if" (cond, () -> then, () -> else) ()
 }
 
 syntax 'if cond then {
-    magic "if" (cond, then, ())
+    magic "if" (cond, () -> then, () -> ()) ()
+}
+
+syntax 'less a b {
+    magic "greater" (b, a)
 }
 
 is_prime = num -> {
     next = arg -> if (num % arg == 0) {
             false
         } else {
-            if (num < arg * arg) {
+            if (less num (arg * arg)) {
                 true
             } else {
-                next (arg + 1)
+                next (arg + 2)
             }
         }
-    next 2
+    if (num % 2 == 0) {
+        false
+    } else {
+        next 3
+    }
 }
 
-prime = cb max -> {
-    next = n -> if (n < max) {
+primes = cb max -> {
+    next = n -> if (less n max) {
         if (is_prime n) {
             cb n
         }
         next (n + 2)
     }
+    cb 2
     next 3
 }
 
-counter = init -> {
-    x = init
-    _ -> {
-        x = x + 1
-        x
-    }
+total = 0
+counter = n -> {
+    total = total + 1
 }
-
-count = counter 0
-prime count 1000000
-print (count ())
+primes counter 10000
+print total

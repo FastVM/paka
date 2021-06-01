@@ -222,14 +222,14 @@ Dynamic libapprox(Args args)
     double abs = 0.00001;
     if (args.length >= 3)
     {
-        if (args[2].type != Dynamic.Type.nil)
+        if (args[2].isNil)
         {
             rel = args[2].as!double;
         }
     }
     if (args.length >= 4)
     {
-        if (args[3].type != Dynamic.Type.nil)
+        if (args[3].isNil)
         {
             abs = args[3].as!double;
         }
@@ -245,14 +245,14 @@ Dynamic libcmp(Args args)
     double abs = 0.00001;
     if (args.length >= 3)
     {
-        if (args[2].type != Dynamic.Type.nil)
+        if (args[2].isNil)
         {
             rel = args[2].as!double;
         }
     }
     if (args.length >= 4)
     {
-        if (args[3].type != Dynamic.Type.nil)
+        if (args[3].isNil)
         {
             abs = args[3].as!double;
         }
@@ -277,14 +277,14 @@ Dynamic liblte(Args args)
     double abs = 0.00001;
     if (args.length >= 3)
     {
-        if (args[2].type != Dynamic.Type.nil)
+        if (args[2].isNil)
         {
             rel = args[2].as!double;
         }
     }
     if (args.length >= 4)
     {
-        if (args[3].type != Dynamic.Type.nil)
+        if (args[3].isNil)
         {
             abs = args[3].as!double;
         }
@@ -305,14 +305,14 @@ Dynamic libgte(Args args)
     double abs = 0.00001;
     if (args.length >= 3)
     {
-        if (args[2].type != Dynamic.Type.nil)
+        if (args[2].isNil)
         {
             rel = args[2].as!double;
         }
     }
     if (args.length >= 4)
     {
-        if (args[3].type != Dynamic.Type.nil)
+        if (args[3].isNil)
         {
             abs = args[3].as!double;
         }

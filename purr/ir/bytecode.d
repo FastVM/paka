@@ -11,9 +11,9 @@ import purr.srcloc;
 import purr.bytecode;
 import purr.dynamic;
 import purr.inter;
-import purr.ir.emit;
 import purr.ir.opt;
 import purr.ir.repr;
+import purr.type.check;
 
 void modifyInstr(T)(Bytecode func, T index, ushort v)
 {
@@ -67,10 +67,12 @@ final class BytecodeEmitter
     BasicBlock[] bbchecked;
     Bytecode func;
     Opt opt;
+    TypeChecker tc;
 
     this()
     {
         opt = new Opt;
+        tc = new TypeChecker;
     }
     
     string[] predef(BasicBlock block, string[] checked = null, string[] nodef=null)
@@ -114,6 +116,7 @@ final class BytecodeEmitter
 
     void emitInFunc(Bytecode newFunc, BasicBlock block)
     {
+        tc.enterFunc;
         Bytecode oldFunc = func;
         scope (exit)
         {
@@ -121,6 +124,7 @@ final class BytecodeEmitter
         }
         func = newFunc;
         emit(block);
+        tc.exitFunc;
     }
 
     ushort emit(BasicBlock block)
@@ -128,10 +132,12 @@ final class BytecodeEmitter
         if (block.place < 0)
         {
             // opt.opt(block);
-            foreach (pre; predef(block))
+            string[] pres = predef(block);
+            foreach (pre; pres)
             {
                 func.stab.define(pre);
             }
+            tc.enterBlock(pres);
             if (dumpir)
             {
                 writeln(block);
@@ -154,6 +160,7 @@ final class BytecodeEmitter
             if (typeid(em) == typeid(Instr))
             {
                 emit(cast(Instr) em);
+                tc.emit(cast(Instr) em);
                 return;
             }
         }

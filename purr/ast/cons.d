@@ -60,7 +60,7 @@ Dynamic astDynamic(Node node, bool useSpan=false)
 
 Node getNode(Dynamic val)
 {
-    if (val.type == Dynamic.Type.str)
+    if (val.isString)
     {
         if (val.str[0] == '$')
         {
@@ -83,11 +83,11 @@ Node getNode(Dynamic val)
             throw new Exception("error: string[0] must match regex [$@:0-9], (string was: \"" ~ val.str ~ "\")");
         }
     }
-    if (val.type == Dynamic.Type.sml)
+    if (val.isNumber)
     {
         return new Ident(val.as!double.to!string);
     }
-    if (val.isArr)
+    if (val.isArray)
     {
         return new Form(val.arr[0].str, val.arr[1..$].map!getNode.array);
     }

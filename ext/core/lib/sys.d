@@ -29,7 +29,7 @@ Pair[] libsys()
 {
     Pair[] ret = [
         FunctionPair!libleave("leave"), FunctionPair!libargs("args"),
-        FunctionPair!libtypeof("typeof"), FunctionPair!libimport("import"),
+        FunctionPair!libimport("import"),
         FunctionPair!libassert("enforce"), FunctionPair!libeval("eval"),
     ];
     ret.addLib("env", libsysenv);
@@ -39,7 +39,7 @@ Pair[] libsys()
 /// asserts value is true, with error msg
 Dynamic libassert(Args args)
 {
-    if (args[0].type == Dynamic.Type.nil || (args[0].type == Dynamic.Type.log && !args[0].log))
+    if (!args[0].isTruthy)
     {
         throw new Exception("assert error: " ~ args[1].to!string);
     }
@@ -73,33 +73,35 @@ Dynamic libeval(Args args)
     return val;
 }
 
-/// returns type of value as a string
-Dynamic libtypeof(Args args)
-{
-    final switch (args[0].type)
-    {
-    case Dynamic.Type.nil:
-        return dynamic("nil");
-    case Dynamic.Type.log:
-        return dynamic("logical");
-    case Dynamic.Type.sml:
-        return dynamic("number");
-    case Dynamic.Type.sym:
-        return dynamic("symbol");
-    case Dynamic.Type.str:
-        return dynamic("string");
-    case Dynamic.Type.tup:
-        return dynamic("tuple");
-    case Dynamic.Type.arr:
-        return dynamic("array");
-    case Dynamic.Type.tab:
-        return dynamic("table");
-    case Dynamic.Type.fun:
-        return dynamic("callable");
-    case Dynamic.Type.pro:
-        return dynamic("callable");
-    }
-}
+// /// returns type of value as a string
+// Dynamic libtypeof(Args args)
+// {
+//     final switch (args[0].type)
+//     {
+//     case Dynamic.Type.nil:
+//         return dynamic("nil");
+//     case Dynamic.Type.log:
+//         return dynamic("logical");
+//     case Dynamic.Type.sml:
+//         return dynamic("number");
+//     case Dynamic.Type.sym:
+//         return dynamic("symbol");
+//     case Dynamic.Type.str:
+//         return dynamic("string");
+//     case Dynamic.Type.tup:
+//         return dynamic("tuple");
+//     case Dynamic.Type.arr:
+//         return dynamic("array");
+//     case Dynamic.Type.tab:
+//         return dynamic("table");
+//     case Dynamic.Type.fun:
+//         return dynamic("callable");
+//     case Dynamic.Type.pro:
+//         return dynamic("callable");
+//     case Dynamic.Type.thr:
+//         return dynamic("callable");
+//     }
+// }
 
 /// internal map function
 Dynamic syslibmap(Args args)

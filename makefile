@@ -1,4 +1,4 @@
-OPT=0
+OPT=3
 BIN=bin
 TMP=tmp
 UNICODE=$(TMP)/UnicodeData.txt
