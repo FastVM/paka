@@ -35,7 +35,7 @@ Dynamic check2(Dynamic[] args)
 
 Dynamic checkTrue(Dynamic[] args)
 {
-    if (!args[0].value.log)
+    if (!args[0].isTruthy)
     {
         throw new Exception("assign error: bad value: " ~ args[1].to!string);
     }
@@ -56,6 +56,10 @@ BinaryOp parseBinaryOp(string[] ops)
                     return rhs;
                 }
                 return new Form("set", id, rhs);
+            }
+            else if (Ident id = cast(Ident) rhs)
+            {
+                return new Form("call", new Value(native!checkTrue), [matcher(rhs, lhs), rhs]);
             }
             else
             {

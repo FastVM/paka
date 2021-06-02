@@ -24,10 +24,16 @@ Dynamic libapply(Dynamic[] args)
     return args[0](args[1].arr);
 }
 
+Dynamic libawait(Dynamic[] args)
+{
+    return args[0].async!true;
+}
+
 Pair[] passerineBaseLibs()
 {
     Pair[] ret;
     ret ~= FunctionPair!libapply("_pn_ffi_apply");
     ret ~= FunctionPair!libprint("print");
+    ret ~= FunctionPair!libawait("await");
     return ret;
 }

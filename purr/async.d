@@ -9,11 +9,11 @@ import purr.locks;
 
 alias DynamicTask = Task!(run, Dynamic, Dynamic[])*;
 
-// __gshared 
+__gshared 
 size_t cur;
-// __gshared 
+__gshared 
 DynamicTask[size_t] tasks;
-// __gshared 
+__gshared 
 Dynamic[size_t] results;
 
 void stopAllAsyncCalls()

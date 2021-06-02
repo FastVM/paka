@@ -1,10 +1,10 @@
 
 syntax 'if cond then 'else else {
-    magic "if" (cond, () -> then, () -> else) ()
+    magic "if" (cond, _ -> then, _ -> else) 0
 }
 
 syntax 'if cond then {
-    magic "if" (cond, () -> then, () -> ()) ()
+    magic "if" (cond, _ -> then, _ -> ()) 0
 }
 
 syntax 'less a b {
@@ -24,24 +24,37 @@ is_prime = num -> {
     if (num % 2 == 0) {
         false
     } else {
-        next 3
+        if (less num 2) {
+            false
+        } else {
+            next 3
+        }
     }
 }
 
-primes = cb max -> {
+primes = cb min max -> {
     next = n -> if (less n max) {
         if (is_prime n) {
             cb n
         }
-        next (n + 2)
+        next (n + 1)
     }
-    cb 2
-    next 3
+    next min
 }
 
-total = 0
-counter = n -> {
-    total = total + 1
+all_primes = cb step times -> {
+    cb 2
+    cb 3
+    next = n -> if (less n times) {
+        await primes cb (step * n) (step * n + step) 
+        next (n + 1)
+    }
+    next 0
 }
-primes counter 10000
-print total
+
+count = 0
+counter = v -> {
+    count = count + 1
+}
+all_primes counter 100 1000
+print count

@@ -42,10 +42,8 @@ pragma(inline, true) T peek(T, A)(ubyte* bytes, A index)
 }
 
 size_t depth;
-pragma(inline, false)
-Dynamic run(T...)(Bytecode func, Dynamic[] args = null, T rest = T.init)
+pragma(inline, false) Dynamic run(T...)(Bytecode func, Dynamic[] args = null, T rest = T.init)
 {
-    assert(func);
     static foreach (I; T)
     {
         static assert(is(I == LocalCallback));
@@ -68,27 +66,28 @@ Dynamic run(T...)(Bytecode func, Dynamic[] args = null, T rest = T.init)
             debugFrames ~= new DebugFrame(func, index, locals);
         }
     }
-    scope(success)
+    scope (success)
     {
         static foreach (callbackIndex, callback; rest)
         {
             static if (is(typeof(callback) == LocalCallback))
             {
-                if (callback !is null) {
+                if (callback !is null)
+                {
                     callback(index, locals[0 .. func.stab.length]);
                 }
             }
         }
     }
-    depth++;
-    if (depth > 100)
-    {
-        throw new Exception("stack overflow");
-    }
-    scope(exit)
-    {
-        depth--;
-    }
+    // depth++;
+    // if (depth > 100)
+    // {
+    //     throw new Exception("stack overflow");
+    // }
+    // scope(exit)
+    // {
+    //     depth--;
+    // }
     Dynamic* rstack = stack;
     locals = stack + func.stackSize;
     ubyte* instrs = func.instrs.ptr;
@@ -149,34 +148,13 @@ redoSame:
             stack -= count;
             stack += 1;
             *stack = funcToCall(stack[1 .. 1 + count]);
-            // switch (f.type)
-            // {
-            // case Dynamic.Type.fun:
-            //     res = f.fun.fun.value(stack[0 .. 0 + count]);
-            //     break;
-            // case Dynamic.Type.pro:
-            //     res = run(f.fun.pro, stack);
-            //     break;
-            // case Dynamic.Type.tab:
-            //     res = f.tab()(stack[0 .. 0 + count]);
-            //     break;
-            // case Dynamic.Type.tup:
-            //     res = f.arr[(*stack).as!size_t];
-            //     break;
-            // case Dynamic.Type.arr:
-            //     res = f.arr[(*stack).as!size_t];
-            //     break;
-            // default:
-            //     throw new Exception(
-            //             "error in static call: not a pro, fun, tab, or arr: " ~ f.to!string);
-            // }
-            // *stack = res;
             break;
         case Opcode.tcall:
             ushort count = instrs.eat!ushort(index);
             stack -= count;
             Dynamic funcToCall = *stack;
-            if (false && funcToCall.value.fun.pro == func && (func.flags & Bytecode.Flags.isLocal) && T.length == 0)
+            if (false && funcToCall.value.fun.pro == func
+                    && (func.flags & Bytecode.Flags.isLocal) && T.length == 0)
             {
                 args = stack[1 .. 1 + count].dup;
                 stack = rstack;

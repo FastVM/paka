@@ -77,12 +77,13 @@ Node matcher(Node value, Node pattern, size_t line = __LINE__)
             {
                 return new Form("==", new Value(Dynamic(cast(Dynamic[]) null)), value);
             }
-            goto case;
+            goto arrayLike;
         case "array":
             if (call.args.length == 0)
             {
                 return new Form("==", new Value(Dynamic.tuple(null)), value);
             }
+        arrayLike:
             Node[] pre;
             Node mid = null;
             Node[] post;
