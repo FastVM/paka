@@ -268,8 +268,7 @@ Node readPostExprImpl(ref TokenArray tokens)
 redo:
     if (tokens.first.isKeyword("syntax"))
     {
-        tokens.readSyntax;
-        return new Value(Dynamic.nil);
+        return tokens.readSyntax;
     }
     else if (tokens.first.isKeyword("match"))
     {
@@ -433,21 +432,21 @@ redo:
             }
             else
             {
-                if (nameSubs.length == 0)
-                {
-                    last = new Ident(tokens.first.value);
-                }
-                else if (Dynamic* ret = tokens.first.value.dynamic in nameSubs[$ - 1])
-                {
-                    last = getNode(*ret);
-                }
-                else if (tokens.first.value[0].isDigit)
+                if (tokens.first.value[0].isDigit)
                 {
                     last = new Value(tokens.first.value.to!double);
                 }
                 else
                 {
                     last = new Ident(tokens.first.value);
+                    writeln(tokens.first.value, nameSubs);
+                    foreach (item; nameSubs)
+                    {
+                        if (Dynamic* ret = tokens.first.value.dynamic in item)
+                        {
+                            last = getNode(*ret);
+                        }
+                    }
                     // Node sym = genSym;
                     // nameSubs[$ - 1].set(tokens.first.value.dynamic, sym.astDynamic);
                     // last = sym;

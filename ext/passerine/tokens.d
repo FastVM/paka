@@ -74,6 +74,11 @@ struct Token
         return type == Type.ident;
     }
 
+    bool isIdent(string name)
+    {
+        return type == Type.ident && name == value;
+    }
+
     bool isString()
     {
         return type == Type.string;

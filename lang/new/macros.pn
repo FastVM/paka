@@ -1,5 +1,10 @@
-syntax 'static 'if n body {
-    syntax if n {
+syntax 'static 'times n body {
+    syntax if (n != 0) {
         body
+        static times (n - 1) body
     }
+}
+
+static times 10 {
+    print 10
 }

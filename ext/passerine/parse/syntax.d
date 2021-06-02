@@ -4,11 +4,13 @@ import purr.io;
 import std.algorithm;
 import std.array;
 import std.conv;
+import purr.base;
 import purr.srcloc;
 import purr.dynamic;
 import purr.ir.walk;
 import purr.ast.ast;
 import purr.ast.cons;
+import purr.bytecode;
 import ext.passerine.tokens;
 import ext.passerine.parse.parse;
 import ext.passerine.parse.util;
@@ -84,28 +86,57 @@ Node macroLike(Node node, Table pattern)
     }
 }
 
-void readSyntax(ref TokenArray tokens)
+Node readSyntax(ref TokenArray tokens)
 {
     tokens.nextIs(Token.Type.keyword, "syntax");
-    Dynamic[] pattern;
-    while (!tokens.first.isOpen("{"))
+    if (tokens.first.isIdent("if"))
     {
-        if (tokens.first.isOperator("'"))
+        tokens.nextIs(Token.Type.ident);
+        size_t ctx = enterCtx;
+        scope(exit)
         {
-            tokens.nextIsAny;
-            pattern ~= ["keyword".dynamic, tokens.first.value.dynamic].dynamic;
-            tokens.nextIsAny;
+            exitCtx;
+        }
+        Node node = tokens.readOpen!"()";
+        Walker walker = new Walker;
+        Bytecode func = walker.walkProgram(node, ctx);
+        Dynamic res = dynamic(func)(null);
+        if (res.isTruthy)
+        {
+            Node ret = tokens.readBlock;
+            writeln(ret);
+            return ret;
         }
         else
         {
-            pattern ~= ["arg".dynamic, tokens.first.value.dynamic].dynamic;
-            tokens.nextIsAny;
+            return new Value(Dynamic.nil);
         }
     }
-    Token[] bodyTokens = tokens.tokens;
-    tokens.readBlock;
-    bodyTokens = bodyTokens[0 .. $ - tokens.tokens.length];
-    syntaxMacros[$ - 1] ~= [pattern.dynamic, bodyTokens.map!tokDynamic.array.dynamic];
+    else
+    {
+        Dynamic[] pattern;
+        while (!tokens.first.isOpen("{"))
+        {
+            if (tokens.first.isOperator("'"))
+            {
+                tokens.nextIsAny;
+                pattern ~= ["keyword".dynamic, tokens.first.value.dynamic].dynamic;
+                tokens.nextIsAny;
+            }
+            else
+            {
+                pattern ~= ["arg".dynamic, tokens.first.value.dynamic].dynamic;
+                tokens.nextIsAny;
+            }
+        }
+        Token[] bodyTokens = tokens.tokens;
+        tokens.readBlock;
+        bodyTokens = bodyTokens[0 .. $ - tokens.tokens.length];
+        syntaxMacros[$ - 1] ~= [
+            pattern.dynamic, bodyTokens.map!tokDynamic.array.dynamic
+        ];
+        return new Value(Dynamic.nil);
+    }
 }
 
 Dynamic locDynamic(SrcLoc loc)
@@ -139,7 +170,8 @@ Span getSpan(Dynamic dyn)
 
 Token getToken(Dynamic dyn)
 {
-    return Token(dyn.tab["span".dynamic].getSpan, dyn.tab["type".dynamic].str.to!(Token.Type), dyn.tab["value".dynamic].str);
+    return Token(dyn.tab["span".dynamic].getSpan,
+            dyn.tab["type".dynamic].str.to!(Token.Type), dyn.tab["value".dynamic].str);
 }
 
 TokenArray getTokens(Dynamic dyn)
