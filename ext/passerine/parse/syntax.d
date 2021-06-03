@@ -18,13 +18,20 @@ import ext.passerine.parse.util;
 Dynamic[2][][] syntaxMacros = [null];
 Table[] nameSubs;
 
-Table matchMacro(Dynamic[] pattern, Node[] flatlike)
+bool inSyntaxDef = false;
+bool noExpand = false;
+
+TokenArray[string] matchMacro(Dynamic[] pattern, Node[] flatlike, TokenArray[] tokens)
 {
+    if (inSyntaxDef)
+    {
+        return null;
+    }
     if (flatlike.length < pattern.length)
     {
-        return Table.empty;
+        return null;
     }
-    Table ret = Table.empty;
+    TokenArray[string] ret;
     foreach (index, value; pattern)
     {
         Node cur = flatlike[index];
@@ -37,11 +44,11 @@ Table matchMacro(Dynamic[] pattern, Node[] flatlike)
                     continue;
                 }
             }
-            return Table.empty;
+            return null;
         }
         else if (value.arr[0].str == "arg")
         {
-            ret.set(value.arr[1], cur.astDynamic);
+            ret[value.arr[1].str] = tokens[index];
         }
         else
         {
@@ -92,20 +99,54 @@ Node readSyntax(ref TokenArray tokens)
     if (tokens.first.isIdent("if"))
     {
         tokens.nextIs(Token.Type.ident);
-        size_t ctx = enterCtx;
-        scope(exit)
+        Node node = tokens.readPostExpr;
+        if (!inSyntaxDef)
         {
-            exitCtx;
+            size_t ctx = enterCtx;
+            scope (exit)
+            {
+                exitCtx;
+            }
+            Walker walker = new Walker;
+            Bytecode func = walker.walkProgram(node, ctx);
+            Dynamic res = dynamic(func)(null);
+            if (res.isTruthy)
+            {
+                return tokens.readBlock;
+            }
+            else
+            {
+                bool lastNoExpand = noExpand;
+                noExpand = true;
+                scope(exit)
+                {
+                    noExpand = lastNoExpand;
+                }
+                Node ret = tokens.readBlock;
+                return new Value(Dynamic.nil);
+            }
         }
-        Node node = tokens.readOpen!"()";
-        Walker walker = new Walker;
-        Bytecode func = walker.walkProgram(node, ctx);
-        Dynamic res = dynamic(func)(null);
-        if (res.isTruthy)
+        else
         {
-            Node ret = tokens.readBlock;
-            writeln(ret);
-            return ret;
+            tokens.readBlock;
+            return new Value(Dynamic.nil);
+        }
+    }
+    else if (tokens.first.isIdent("eval"))
+    {
+        tokens.nextIs(Token.Type.ident);
+        Node node = tokens.readPostExpr;
+        if (!inSyntaxDef)
+        {
+            size_t ctx = enterCtx;
+            scope (exit)
+            {
+                exitCtx;
+            }
+            Walker walker = new Walker;
+            Bytecode func = walker.walkProgram(node, ctx);
+            Dynamic res = dynamic(func)(null);
+            return new Value(res);
         }
         else
         {
@@ -114,28 +155,42 @@ Node readSyntax(ref TokenArray tokens)
     }
     else
     {
-        Dynamic[] pattern;
-        while (!tokens.first.isOpen("{"))
+        if (!inSyntaxDef)
         {
-            if (tokens.first.isOperator("'"))
+            bool wasInSyntaxDef = inSyntaxDef;
+            inSyntaxDef = true;
+            scope (exit)
             {
-                tokens.nextIsAny;
-                pattern ~= ["keyword".dynamic, tokens.first.value.dynamic].dynamic;
-                tokens.nextIsAny;
+                inSyntaxDef = wasInSyntaxDef;
             }
-            else
+            Dynamic[] pattern;
+            while (!tokens.first.isOpen("{"))
             {
-                pattern ~= ["arg".dynamic, tokens.first.value.dynamic].dynamic;
-                tokens.nextIsAny;
+                if (tokens.first.isOperator("'"))
+                {
+                    tokens.nextIsAny;
+                    pattern ~= ["keyword".dynamic, tokens.first.value.dynamic].dynamic;
+                    tokens.nextIsAny;
+                }
+                else
+                {
+                    pattern ~= ["arg".dynamic, tokens.first.value.dynamic].dynamic;
+                    tokens.nextIsAny;
+                }
             }
+            Token[] bodyTokens = tokens.tokens;
+            tokens.readBlock;
+            bodyTokens = bodyTokens[0 .. $ - tokens.tokens.length];
+            syntaxMacros[$ - 1] ~= [
+                pattern.dynamic, bodyTokens.map!tokDynamic.array.dynamic
+            ];
+            return new Value(Dynamic.nil);
         }
-        Token[] bodyTokens = tokens.tokens;
-        tokens.readBlock;
-        bodyTokens = bodyTokens[0 .. $ - tokens.tokens.length];
-        syntaxMacros[$ - 1] ~= [
-            pattern.dynamic, bodyTokens.map!tokDynamic.array.dynamic
-        ];
-        return new Value(Dynamic.nil);
+        else
+        {
+            tokens.readBlock;
+            return new Value(Dynamic.nil);
+        }
     }
 }
 

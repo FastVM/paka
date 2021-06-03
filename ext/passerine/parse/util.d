@@ -127,16 +127,13 @@ struct PushArray(T)
             return tokens[0];
         }
     }
-    else
+    PushArray!T opSlice(size_t i, size_t j)
     {
-        PushArray!T opSlice(size_t i, size_t j)
+        if (j < i || tokens.length < j)
         {
-            if (j < i || tokens.length < j)
-            {
-                throw new Exception("parse error 2");
-            }
-            return PushArray(tokens[i .. j]);
+            throw new Exception("parse error 2");
         }
+        return PushArray(tokens[i .. j]);
     }
 
     /// implements foreach(i; this)

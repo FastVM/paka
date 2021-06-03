@@ -439,17 +439,6 @@ redo:
                 else
                 {
                     last = new Ident(tokens.first.value);
-                    writeln(tokens.first.value, nameSubs);
-                    foreach (item; nameSubs)
-                    {
-                        if (Dynamic* ret = tokens.first.value.dynamic in item)
-                        {
-                            last = getNode(*ret);
-                        }
-                    }
-                    // Node sym = genSym;
-                    // nameSubs[$ - 1].set(tokens.first.value.dynamic, sym.astDynamic);
-                    // last = sym;
                 }
                 tokens.nextIs(Token.Type.ident);
             }
@@ -476,7 +465,7 @@ redo:
     return tokens.readPostExtend(last);
 }
 
-Node checkMacro(Node[] flatlike)
+Node checkMacro(Node[] flatlike, TokenArray[] tokens)
 {
     foreach_reverse (macros; syntaxMacros)
     {
@@ -484,16 +473,22 @@ Node checkMacro(Node[] flatlike)
         {
             Dynamic pattern = pair[0];
             Dynamic astBody = pair[1];
-            Table reps = pattern.arr.matchMacro(flatlike);
-            if (reps.length != 0)
+            TokenArray[string] reps = pattern.arr.matchMacro(flatlike, tokens);
+            if (reps.length != 0 && !noExpand)
             {
-                nameSubs ~= reps;
-                scope (exit)
-                {
-                    nameSubs.length--;
-                }
                 TokenArray toks = astBody.getTokens;
-                return toks.readBlock;
+                TokenArray toks2;
+                foreach (token; toks) {
+                    if (TokenArray* ptr = token.value in reps)
+                    {
+                        toks2.tokens ~= ptr.tokens;
+                    }
+                    else
+                    {
+                        toks2.tokens ~= token;
+                    }
+                }
+                return toks2.readBlock;
             }
         }
     }
@@ -515,8 +510,11 @@ Node readPreExprImpl(ref TokenArray tokens)
         }
         return parseUnaryOp(vals)(tokens.readPostExpr);
     }
+    TokenArray lastTokens = tokens;
     Node callChain = tokens.readPostExpr;
     Node[] flatlike = [callChain];
+    TokenArray[] tokens2 = [lastTokens[0..lastTokens.length - tokens.length]];
+    lastTokens = tokens;
 
     while (tokens.length != 0 && !tokens.first.isSemicolon
             && !tokens.first.isClose && !tokens.first.isComma && !tokens.first.isOperator)
@@ -524,13 +522,16 @@ Node readPreExprImpl(ref TokenArray tokens)
         size_t llen = tokens.length;
         Node arg = tokens.readPostExpr;
         flatlike ~= arg;
+        tokens2 ~= lastTokens[0..lastTokens.length - tokens.length];
         callChain = new Form("call", callChain, arg);
         if (llen == tokens.length)
         {
             break;
         }
+        lastTokens = tokens;
     }
-    if (Node ranMacro = flatlike.checkMacro)
+    assert(flatlike.length == tokens2.length, flatlike.to!string ~ tokens2.to!string);
+    if (Node ranMacro = checkMacro(flatlike, tokens2))
     {
         return ranMacro;
     }
