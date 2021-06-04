@@ -10,7 +10,7 @@ import purr.base;
 import purr.ast.ast;
 import purr.dynamic;
 import purr.srcloc;
-import purr.bytecode;
+import purr.vm.bytecode;
 import purr.ir.repr;
 import purr.ir.bytecode;
 import purr.ir.opt;
@@ -52,13 +52,13 @@ final class Walker
         {
             emitDefault(new ReturnBranch);
         }
-        Bytecode func = new Bytecode;
-        func.parent = ctx.baseFunction;
-        func.captured = func.parent.captured;
-        foreach (i; ctx.rootBase)
-        {
-            func.captab.define(i.name);
-        }
+        Bytecode func = Bytecode.empty(null);
+        // func.parent = ctx.baseFunction;
+        // func.captured = func.parent.captured;
+        // foreach (i; ctx.rootBase)
+        // {
+        //     func.captab.define(i.name);
+        // }
         Opt opt = new Opt;
         opt.opt(entry);
         BytecodeEmitter emitter = new BytecodeEmitter;
@@ -369,23 +369,8 @@ final class Walker
 
     void walkConst(Node[] args)
     {
-        BasicBlock oper = new BasicBlock;
-        BasicBlock after = new BasicBlock;
-        foreach (check; args[1..$])
-        {
-            walk(check);
-        }
-        emitDefault(new ConstBranch(oper, after, args.length - 1));
-        block = oper;
         walk(args[0]);
-        emitDefault(new GotoBranch());
-        block = after;
     }
-
-    // void walkConst(Node[] args)
-    // {
-    //     walk(args[0]);
-    // }
 
     void walkTuple(Node[] args)
     {

@@ -26,7 +26,7 @@ Dynamic libapply(Dynamic[] args)
 
 Dynamic libawait(Dynamic[] args)
 {
-    return args[0].async!true;
+    assert(false);
 }
 
 Pair[] passerineBaseLibs()

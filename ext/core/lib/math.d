@@ -8,7 +8,7 @@ import purr.ir.walk;
 import purr.vm;
 import purr.inter;
 import purr.srcloc;
-import purr.bytecode;
+import purr.vm.bytecode;
 import core.stdc.stdlib;
 import core.runtime;
 import std.algorithm;

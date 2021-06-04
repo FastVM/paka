@@ -10,7 +10,7 @@ import purr.dynamic;
 import purr.ir.walk;
 import purr.ast.ast;
 import purr.ast.cons;
-import purr.bytecode;
+import purr.vm.bytecode;
 import ext.passerine.tokens;
 import ext.passerine.parse.parse;
 import ext.passerine.parse.util;

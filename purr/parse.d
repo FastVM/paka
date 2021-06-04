@@ -4,7 +4,7 @@ import std.conv;
 import purr.io;
 import purr.ast.ast;
 import purr.ir.walk;
-import purr.bytecode;
+import purr.vm.bytecode;
 import purr.base;
 import purr.dynamic;
 import purr.vm;

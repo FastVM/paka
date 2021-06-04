@@ -28,16 +28,13 @@ class TypeChecker
 
     void emit(PushInstruction instr)
     {
-
     }
     
     void emit(ConstOperatorInstruction instr)
     {
-        
     }
     
     void emit(ReturnBranch retb)
     {
-
     }
 }

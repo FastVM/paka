@@ -8,9 +8,8 @@ import std.conv;
 import std.array;
 import std.traits;
 import purr.io;
-import purr.bytecode;
+import purr.vm.bytecode;
 import purr.vm;
-import purr.async;
 import purr.data.map;
 import purr.data.rope;
 import purr.plugin.syms;
@@ -305,8 +304,6 @@ struct DynamicImpl
         tab,
         fun,
         pro,
-        thr,
-        run,
     }
 
     union Value
@@ -314,7 +311,7 @@ struct DynamicImpl
         bool log;
         double sml;
         string* str;
-        Dynamic* arr;
+        List* arr;
         Table tab;
         alias Formable = FormableUnion;
         union FormableUnion
@@ -328,7 +325,6 @@ struct DynamicImpl
     }
 
     private Type type = void;
-    uint data = void;
     Value value = void;
 
 pragma(inline, true):
@@ -341,13 +337,6 @@ pragma(inline, true):
     {
         Dynamic ret = dynamic(s);
         ret.type = Type.sym;
-        return ret;
-    }
-
-    static Dynamic thr(Dynamic f)
-    {
-        Dynamic ret = dynamic([f]);
-        ret.type = Type.thr;
         return ret;
     }
 
@@ -384,9 +373,8 @@ pragma(inline, true):
 
     this(Array arr)
     {
-        value.arr = arr.ptr;
-        data = cast(uint) arr.length;
         type = Type.arr;
+        assert(false);
     }
 
     this(Mapping tab)
@@ -421,7 +409,6 @@ pragma(inline, true):
     void set(Dynamic other)
     {
         type = other.type;
-        data = other.data;
         value = other.value;
     }
 
@@ -454,11 +441,6 @@ pragma(inline, true):
             return arr[args[0].as!size_t];
         case Type.arr:
             return arr[args[0].as!size_t];
-        case Type.thr:
-            Dynamic ret = void;
-            ret.value.run = this.startAsyncCall(args);
-            ret.type = Type.run;
-            return ret;
         default:
             throw new Exception("error: not a function: " ~ this.to!string);
         }
@@ -473,9 +455,11 @@ pragma(inline, true):
             value.tab.set(key, value);
             break;
         case Type.tup:
+            assert(false);
             value.arr[key.as!size_t] = value;
             break;
         case Type.arr:
+            assert(false);
             value.arr[key.as!size_t] = value;
             break;
         default:
@@ -563,19 +547,15 @@ pragma(inline, true):
         case Type.str:
             return (*value.str).hashOf;
         case Type.tup:
-            return cast(size_t) data + 1 << 32;
+            return cast(size_t) value.arr.length + (1L << 31);
         case Type.arr:
-            return cast(size_t) data + 1 << 33;
+            return cast(size_t) value.arr.length + (1L << 32);
         case Type.tab:
             return value.tab.table.length + 1 << 34;
         case Type.fun:
             return size_t.max - 2;
         case Type.pro:
             return size_t.max - 3;
-        case Type.thr:
-            return size_t.max - 4;
-        case Type.run:
-            return size_t.max - 5;
         }
     }
 
@@ -694,7 +674,7 @@ pragma(inline, true):
                 throw new Exception("expected array type (not: " ~ this.to!string ~ ")");
             }
         }
-        return value.arr[0 .. data];
+        return value.arr.ptr!Dynamic[0 .. value.arr.length];
     }
 
     Table tab()
@@ -782,6 +762,7 @@ pragma(inline, true):
 
     bool isArray()
     {
+        assert(false);
         forceResolve;
         return type == Type.arr || type == Type.tup;
     }
@@ -798,31 +779,8 @@ pragma(inline, true):
         return type != Type.nil && (type != Type.log || value.log);
     }
 
-    Dynamic async(bool set)()
-    {
-        forceResolve;
-        static if (set)
-        {
-            if (type == Type.thr)
-            {
-                return this;
-            }
-            Dynamic next = Dynamic.thr(this);
-            next.type = Type.thr;
-            return next;
-        }
-        else
-        {
-            return value.arr[0];
-        }
-    }
-
     void forceResolve()
     {
-        while (type == Dynamic.Type.run)
-        {
-            set(value.run.stopAsyncCall);
-        }
     }
 
     static private int cmpDynamic(Dynamic a, Dynamic b)
@@ -923,10 +881,6 @@ pragma(inline, true):
             return cmp(a.value.fun.fun, b.value.fun.fun);
         case Type.pro:
             return cmpFunction(a.value.fun.pro, b.value.fun.pro);
-        case Type.thr:
-            a.type = cast(Type) a.data;
-            b.type = cast(Type) b.data;
-            goto redo;
         }
     }
 
@@ -996,8 +950,6 @@ pragma(inline, true):
             return (*dyn.value.fun.fun).to!string;
         case Type.pro:
             return dyn.fun.pro.to!string;
-        case Type.thr:
-            return strFormat(dyn.async!false) ~ " async";
         }
     }
 

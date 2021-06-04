@@ -7,5 +7,5 @@ import purr.dynamic;
 
 Dynamic awaitOp(Args args)
 {
-    return args[0].async!true;
+    assert(false);
 }

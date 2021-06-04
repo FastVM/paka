@@ -61,6 +61,16 @@ final class Form : Node
     {
         return NodeKind.call;
     }
+
+    override bool opEquals(Object arg)
+    {
+        Form other = cast(Form) arg;
+        if (other is null)
+        {
+            return false;
+        }
+        return form == other.form && args == other.args;
+    }
 }
 
 size_t usedSyms;
@@ -103,6 +113,16 @@ final class Ident : Node
     {
         return repr;
     }
+
+    override bool opEquals(Object arg)
+    {
+        Ident other = cast(Ident) arg;
+        if (other is null)
+        {
+            return false;
+        }
+        return repr == other.repr;
+    }
 }
 
 /// dynamic value literal
@@ -123,5 +143,15 @@ final class Value : Node
     override NodeKind id()
     {
         return NodeKind.value;
+    }
+
+    override bool opEquals(Object arg)
+    {
+        Value other = cast(Value) arg;
+        if (other is null)
+        {
+            return false;
+        }
+        return value == other.value;
     }
 }

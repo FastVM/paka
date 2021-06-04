@@ -9,7 +9,7 @@ import purr.ir.walk;
 import purr.vm;
 import purr.inter;
 import purr.srcloc;
-import purr.bytecode;
+import purr.vm.bytecode;
 import purr.fs.memory;
 import purr.fs.har;
 import purr.fs.files;

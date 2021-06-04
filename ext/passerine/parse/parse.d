@@ -20,7 +20,7 @@ import purr.fs.disk;
 import purr.fs.har;
 import purr.fs.memory;
 import purr.fs.files;
-import purr.bytecode;
+import purr.vm.bytecode;
 import purr.ir.walk;
 import purr.ast.ast;
 import ext.passerine.magic;

@@ -1,14 +1,19 @@
 OPT=3
+OPT_C=$(OPT)
+OPT_D=$(OPT)
 BIN=bin
 TMP=tmp
 UNICODE=$(TMP)/UnicodeData.txt
-1LFLAGS=
+1LFLAGS=$(BIN)/vm.o
 
 all: build
 pgo: pgo-build
 
-build: $(BIN) $(UNICODE)
-	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT) -of=$(BIN)/purr -Jtmp $(1LFLAGS) $(LFLAGS) $(DFLAGS)
+build: $(BIN) $(UNICODE) minivm
+	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT_D) -of=$(BIN)/purr -Jtmp $(1LFLAGS) $(DFLAGS) $(LFLAGS)
+
+minivm: $(BIN)
+	clang -c minivm.c -o $(BIN)/vm.o --std=c99 -O$(OPT_C) $(CFLAGS)
 
 pgo-gen: $(BIN)
 	$(MAKE) OPT=3 DFLAGS+="-release --stack-protector-guard=none --frame-pointer=none --fp-contract=off -flto=full -fprofile-instr-generate=profile.raw"
