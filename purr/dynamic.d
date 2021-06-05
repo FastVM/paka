@@ -16,8 +16,6 @@ import purr.plugin.syms;
 
 version = safe;
 
-alias Table = TableImpl;
-
 alias Args = Dynamic[];
 alias Array = Dynamic[];
 
@@ -38,234 +36,6 @@ Dynamic gensym()
     }
 }
 
-void*[] beforeTables;
-
-void*[] lookingFor;
-
-shared size_t tableVersion;
-
-final class TableImpl
-{
-    size_t ver = void;
-    Mapping table = emptyMapping;
-    alias table this;
-
-pragma(inline, true):
-    static Table empty()
-    {
-        return new Table;
-    }
-
-    this()
-    {
-        ver = core.atomic.atomicOp!"+="(tableVersion, 1);
-        table = emptyMapping;
-    }
-
-    this(typeof(table) t)
-    {
-        ver = core.atomic.atomicOp!"+="(tableVersion, 1);
-        table = t;
-    }
-
-    this(typeof(table) t, Table m)
-    {
-        ver = core.atomic.atomicOp!"+="(tableVersion, 1);
-        table = t;
-    }
-
-    Dynamic rawIndex(Dynamic key)
-    {
-        if (Dynamic* d = key in table)
-        {
-            return *d;
-        }
-        throw new Exception("key not found: " ~ key.to!string);
-    }
-
-    void rawSet(Dynamic key, Dynamic value)
-    {
-        ver = core.atomic.atomicOp!"+="(tableVersion, 1);
-        table[key] = value;
-    }
-
-    void set(Dynamic key, Dynamic value)
-    {
-        Dynamic* metaset = dynamic("set") in table;
-        if (metaset !is null)
-        {
-            (*metaset)([dynamic(this), key, value]);
-        }
-        rawSet(key, value);
-    }
-
-    Dynamic opIndex(Dynamic key)
-    {
-        if (Dynamic* val = key in this)
-        {
-            return *val;
-        }
-        throw new Exception("key not found: " ~ key.to!string);
-    }
-
-    Dynamic* opBinaryRight(string op : "in")(Dynamic other)
-    {
-        foreach (i; lookingFor)
-        {
-            if (i is cast(void*) this)
-            {
-                return null;
-            }
-        }
-        lookingFor ~= cast(void*) this;
-        scope (exit)
-        {
-            lookingFor.length--;
-        }
-        Dynamic* ret = other in table;
-        if (ret)
-        {
-            return ret;
-        }
-        Dynamic* metaget = "get".dynamic in table;
-        if (metaget is null)
-        {
-            return null;
-        }
-        if (metaget.isArray)
-        {
-            foreach (getter; metaget.arr)
-            {
-                if (Dynamic* got = other in getter.tab)
-                {
-                    return got;
-                }
-            }
-            return null;
-        }
-        else if (metaget.isTable)
-        {
-            return other in (*metaget).tab;
-        }
-        else
-        {
-            return new Dynamic((*metaget)([this.dynamic, other]));
-        }
-    }
-
-    Dynamic opBinary(string op)(Dynamic other)
-    {
-        enum string opname(string op)()
-        {
-            switch (op)
-            {
-            default : assert(0);
-            case "~" : return "cat";
-            case "+" : return "add";
-            case "-" : return "sub";
-            case "*" : return "mul";
-            case "/" : return "div";
-            case "%" : return "mod";
-            }
-        }
-        return table[dynamic(opname!op)]([dynamic(this), other]);
-    }
-
-    Dynamic opCall(Args args)
-    {
-        if (Dynamic* index = "index".dynamic in table)
-        {
-            if (Dynamic* dyn = "self".dynamic in table)
-            {
-                return table[dynamic("index")](dyn.arr ~ args);
-            }
-            return table[dynamic("index")](args);
-        }
-        if (Dynamic* ret = args[0] in table)
-        {
-            return *ret;
-        }
-        throw new Exception("cannot call or index table");
-    }
-
-    Dynamic opUnary(string op)()
-    {
-        enum string opname(string op)()
-        {
-            switch (op)
-            {
-            default : assert(0);
-            case "-" : return "neg";
-            }
-        }
-        return table[dynamic(opname!op)]([this]);
-    }
-
-    override string toString()
-    {
-        foreach (i, v; beforeTables)
-        {
-            if (v is cast(void*) this)
-            {
-                return "&" ~ i.to!string;
-            }
-        }
-        beforeTables ~= cast(void*) this;
-        scope (exit)
-        {
-            beforeTables.length--;
-        }
-        Dynamic* str = "str".dynamic in table;
-        if (str !is null)
-        {
-            Dynamic res = *str;
-            if (res.isString)
-            {
-                res = res([dynamic(this)]);
-            }
-            if (res.isString)
-            {
-                throw new Exception("str must return a string");
-            }
-            return res.str;
-        }
-        return rawToString;
-    }
-
-    string rawToString()
-    {
-        char[] ret;
-        ret ~= "{";
-        size_t i = 0;
-        foreach (key, value; table)
-        {
-            if (i != 0)
-            {
-                ret ~= ", ";
-            }
-            ret ~= key.to!string;
-            ret ~= ": ";
-            ret ~= value.to!string;
-            i++;
-        }
-        ret ~= "}";
-        return cast(string) ret;
-    }
-}
-
-alias Fun = FunStruct;
-
-struct FunStruct
-{
-    Dynamic function(Args) value;
-    string mangled;
-    string[] args;
-    string toString()
-    {
-        return callableFormat(args);
-    }
-}
-
 Dynamic dynamic(T...)(T a)
 {
     return Dynamic(a);
@@ -273,18 +43,14 @@ Dynamic dynamic(T...)(T a)
 
 struct Dynamic
 {
-    enum Type : ubyte
+    enum Type : char
     {
         nil,
         log,
         sml,
-        sym,
         str,
-        tup,
         arr,
-        tab,
         fun,
-        pro,
         err,
     }
 
@@ -294,14 +60,7 @@ struct Dynamic
         double sml;
         string* str;
         List* arr;
-        Table tab;
-        alias Formable = FormableUnion;
-        union FormableUnion
-        {
-            Bytecode pro;
-        }
-
-        Formable fun;
+        Bytecode fun;
         Error err;
     }
 
@@ -319,20 +78,6 @@ pragma(inline, true):
     static Dynamic strToNum(string s)
     {
         return dynamic(s.to!double);
-    }
-
-    static Dynamic sym(string s)
-    {
-        Dynamic ret = dynamic(s);
-        ret.type = Type.sym;
-        return ret;
-    }
-
-    static Dynamic tuple(Array a)
-    {
-        Dynamic ret = dynamic(a);
-        ret.type = Type.tup;
-        return ret;
     }
 
     this(Type t)
@@ -365,28 +110,10 @@ pragma(inline, true):
         assert(false);
     }
 
-    this(Mapping tab)
+    this(Bytecode fun)
     {
-        value.tab = new Table(tab);
-        type = Type.tab;
-    }
-
-    this(Table tab)
-    {
-        value.tab = tab;
-        type = Type.tab;
-    }
-
-    this(Fun fun)
-    {
-        value.fun.fun = [fun].ptr;
+        value.fun = fun;
         type = Type.fun;
-    }
-
-    this(Bytecode pro)
-    {
-        value.fun.pro = pro;
-        type = Type.pro;
     }
 
     this(Dynamic other)
@@ -406,104 +133,6 @@ pragma(inline, true):
         ret.value = Dynamic.Value.init;
         ret.type = Type.nil;
         return ret;
-    }
-
-    string toString()
-    {
-
-        return strFormat(this);
-    }
-
-    Dynamic opCall(Args args)
-    {
-
-        switch (type)
-        {
-        case Type.fun:
-            return fun.fun.value(args);
-        case Type.pro:
-            return run(fun.pro, args);
-        case Type.tab:
-            return value.tab(args);
-        case Type.tup:
-            return arr[args[0].as!size_t];
-        case Type.arr:
-            return arr[args[0].as!size_t];
-        default:
-            throw new Exception("error: not a function: " ~ this.to!string);
-        }
-    }
-
-    void opIndexAssign(Dynamic value, Dynamic key)
-    {
-
-        switch (type)
-        {
-        case Type.tab:
-            value.tab.set(key, value);
-            break;
-        case Type.tup:
-            assert(false);
-            value.arr[key.as!size_t] = value;
-            break;
-        case Type.arr:
-            assert(false);
-            value.arr[key.as!size_t] = value;
-            break;
-        default:
-            throw new Exception("error: not a function: " ~ this.to!string);
-        }
-    }
-
-    Dynamic opIndex(Dynamic other)
-    {
-
-        switch (type)
-        {
-        case Type.tab:
-            return value.tab[other];
-        case Type.tup:
-            return arr[other.as!size_t];
-        case Type.arr:
-            return arr[other.as!size_t];
-        default:
-            throw new Exception("error: not a function: " ~ this.to!string);
-        }
-    }
-
-    int opCmp(Dynamic other)
-    {
-
-        return cmpDynamic(this, other);
-    }
-
-    int flatOpCmp(Dynamic other)
-    {
-
-        Type t = type;
-        switch (t)
-        {
-        default:
-            throw new Exception("error: not comparable: " ~ this.to!string ~ " " ~ other.to!string);
-        case Type.nil:
-            return 0;
-        case Type.log:
-            return value.log - other.log;
-        case Type.sml:
-            double a = as!double;
-            double b = other.value.sml;
-            if (a < b)
-            {
-                return -1;
-            }
-            if (a == b)
-            {
-                return 0;
-            }
-            return 1;
-        case Type.str:
-            return cmp(*value.str, other.str);
-        }
     }
 
     size_t toHash() const nothrow
@@ -530,20 +159,12 @@ pragma(inline, true):
             {
                 return 3 + cast(size_t)-value.sml;
             }
-        case Type.sym:
-            return (*value.str).hashOf;
         case Type.str:
             return (*value.str).hashOf;
-        case Type.tup:
-            return cast(size_t) value.arr.length + (1L << 31);
         case Type.arr:
             return cast(size_t) value.arr.length + (1L << 32);
-        case Type.tab:
-            return value.tab.table.length + 1 << 34;
         case Type.fun:
             return size_t.max - 2;
-        case Type.pro:
-            return size_t.max - 3;
         case Type.err:
             assert(false);
         }
@@ -551,10 +172,54 @@ pragma(inline, true):
 
     bool opEquals(const Dynamic other) const
     {
-        return cmpDynamic(cast(Dynamic) this, cast(Dynamic) other) == 0;
+        if (other.type != type)
+        {
+            return false;
+        }
+        switch (type)
+        {
+        default:
+            assert(false);
+        case Type.nil:
+            return 0;
+        case Type.log:
+            return value.log == other.value.log;
+        case Type.str:
+            return *value.str == *other.value.str;
+        case Type.sml:
+            return value.sml == other.value.sml;
+        case Type.arr:
+            Dynamic[2] cur = [this, other];
+            foreach (i, p; above)
+            {
+                if (cur[0] is p[0] && cur[1] is p[1])
+                {
+                    return false;
+                }
+            }
+            above ~= cur;
+            scope (exit)
+            {
+                above.length--;
+            }
+            if (value.arr.length != other.value.arr.length)
+            {
+                return false;
+            }
+            foreach (i; 0 .. value.arr.length)
+            {
+                if (value.arr.index!Dynamic(i) != other.value.arr.index!Dynamic(i))
+                {
+                    return false;
+                }
+            }
+            return true;
+        case Type.fun:
+            return value.fun is other.value.fun;
+        }
     }
 
-    bool isSameObject(const Dynamic other) const
+    bool opBinary(string op: "is")(const Dynamic other) const
     {
         if (other.type != type)
         {
@@ -570,60 +235,13 @@ pragma(inline, true):
             return value.log == other.value.log;
         case Type.sml:
             return value.sml == other.value.sml;
-        case Type.sym:
-            return cast(void*) value.str == cast(void*) other.value.str;
         case Type.str:
             return cast(void*) value.str == cast(void*) other.value.str;
-        case Type.tup:
-            return cast(void*) value.arr == cast(void*) other.value.arr;
         case Type.arr:
             return cast(void*) value.arr == cast(void*) other.value.arr;
-        case Type.tab:
-            return value.tab.ver == other.value.tab.ver;
         case Type.fun:
-            return cast(void*) value.fun.fun == cast(void*) other.value.fun.fun;
-        case Type.pro:
-            return cast(void*) value.fun.pro == cast(void*) other.value.fun.pro;
+            return cast(void*) value.fun == cast(void*) other.value.fun;
         }
-    }
-
-    bool opEquals(Dynamic other)
-    {
-
-        return cmpDynamic(this, other) == 0;
-    }
-
-    Dynamic opBinary(string op)(Dynamic other)
-    {
-        static if (op != "~")
-        {
-            if (type == Type.sml && other.type == Type.sml)
-            {
-                return dynamic(mixin("value.sml " ~ op ~ " other.value.sml"));
-            }
-            if (type == Type.tab)
-            {
-                return mixin("tab " ~ op ~ " other");
-            }
-        }
-        static if (op == "~" || op == "+")
-        {
-            if (type == Type.str && other.type == Type.str)
-            {
-                return dynamic(str ~ other.str);
-            }
-            if (type == Type.arr && other.type == Type.arr)
-            {
-                return dynamic(arr ~ other.arr);
-            }
-        }
-        throw new Exception("invalid types: " ~ type.to!string ~ op ~ other.type.to!string);
-    }
-
-    Dynamic opUnary(string op)()
-    {
-
-        return dynamic(mixin(op ~ "as!double"));
     }
 
     bool log()
@@ -665,19 +283,6 @@ pragma(inline, true):
         return value.arr.ptr!Dynamic[0 .. value.arr.length];
     }
 
-    Table tab()
-    {
-
-        version (safe)
-        {
-            if (type != Type.tab)
-            {
-                throw new Exception("expected table type (not: " ~ this.to!string ~ ")");
-            }
-        }
-        return value.tab;
-    }
-
     string* strPtr()
     {
 
@@ -689,19 +294,6 @@ pragma(inline, true):
             }
         }
         return value.str;
-    }
-
-    Value.Formable fun()
-    {
-
-        version (safe)
-        {
-            if (type != Type.fun && type != Type.pro)
-            {
-                throw new Exception("expected callable type not " ~ type.to!string);
-            }
-        }
-        return value.fun;
     }
 
     T as(T)() if (isIntegral!T)
@@ -752,18 +344,12 @@ pragma(inline, true):
     {
         assert(false);
 
-        return type == Type.arr || type == Type.tup;
+        return type == Type.arr;
     }
 
     bool isError()
     {
         return type == Type.err;
-    }
-
-    bool isTable()
-    {
-
-        return type == Type.tab;
     }
 
     bool isTruthy()
@@ -772,102 +358,9 @@ pragma(inline, true):
         return type != Type.nil && (type != Type.log || value.log);
     }
 
-    static private int cmpDynamic(Dynamic a, Dynamic b)
+    string toString() const
     {
-        if (b.type != a.type)
-        {
-            return cmp(a.type, b.type);
-        }
-        switch (a.type)
-        {
-        default:
-            assert(false);
-        case Type.nil:
-            return 0;
-        case Type.log:
-            return cmp(a.value.log, b.value.log);
-        case Type.sym:
-            return cmp(*a.value.str, *b.value.str);
-        case Type.str:
-            return cmp(*a.value.str, *b.value.str);
-        case Type.sml:
-            return cmp(a.value.sml, b.value.sml);
-        case Type.tup:
-            Dynamic[2] cur = [a, b];
-            foreach (i, p; above)
-            {
-                if (cur[0] is p[0] && cur[1] is p[1])
-                {
-                    return 0;
-                }
-            }
-            above ~= cur;
-            scope (exit)
-            {
-                above.length--;
-            }
-            if (int c = cmp(a.value.arr.length, b.value.arr.length))
-            {
-                return c;
-            }
-            foreach (i; 0 .. a.value.arr.length)
-            {
-                if (int res = cmpDynamic(a.value.arr.index!Dynamic(i), a.value.arr.index!Dynamic(i)))
-                {
-                    return res;
-                }
-            }
-            return 0;
-        case Type.arr:
-            Dynamic[2] cur = [a, b];
-            foreach (i, p; above)
-            {
-                if (cur[0] is p[0] && cur[1] is p[1])
-                {
-                    return 0;
-                }
-            }
-            above ~= cur;
-            scope (exit)
-            {
-                above.length--;
-            }
-            if (int c = cmp(a.value.arr.length, b.value.arr.length))
-            {
-                return c;
-            }
-            foreach (i; 0 .. a.value.arr.length)
-            {
-                if (int res = cmpDynamic(a.value.arr.index!Dynamic(i), a.value.arr.index!Dynamic(i)))
-                {
-                    return res;
-                }
-            }
-            return 0;
-        case Type.tab:
-            Dynamic[2] cur = [a, b];
-            foreach (i, p; above)
-            {
-                if (cur[0] is p[0] && cur[1] is p[1])
-                {
-                    return 0;
-                }
-            }
-            above ~= cur;
-            scope (exit)
-            {
-                above.length--;
-            }
-            return cmpTable(a.value.tab, b.value.tab);
-        case Type.fun:
-            return cmp(a.value.fun.fun, b.value.fun.fun);
-        case Type.pro:
-            return cmpFunction(a.value.fun.pro, b.value.fun.pro);
-        }
-    }
-
-    private static string strFormat(Dynamic dyn)
-    {
+        Dynamic dyn = cast(Dynamic) this;
         foreach (i, v; before)
         {
             if (dyn is v)
@@ -894,23 +387,8 @@ pragma(inline, true):
                 return to!string(cast(long) dyn.value.sml);
             }
             return dyn.value.sml.to!string;
-        case Type.sym:
-            return ':' ~ *dyn.value.str;
         case Type.str:
-            return '"' ~ dyn.str ~ '"';
-        case Type.tup:
-            char[] ret;
-            ret ~= "(";
-            foreach (i, v; dyn.arr)
-            {
-                if (i != 0)
-                {
-                    ret ~= ", ";
-                }
-                ret ~= v.to!string;
-            }
-            ret ~= ")";
-            return cast(string) ret;
+            return dyn.str;
         case Type.arr:
             char[] ret;
             ret ~= "[";
@@ -924,84 +402,11 @@ pragma(inline, true):
             }
             ret ~= "]";
             return cast(string) ret;
-        case Type.tab:
-            return dyn.tab.toString;
         case Type.fun:
-            return (*dyn.value.fun.fun).to!string;
-        case Type.pro:
-            return "Function(" ~ dyn.fun.pro.to!string ~ ")";
+            return "Function(" ~ dyn.value.fun.to!string ~ ")";
         }
-    }
-
-    private static int cmpFunction(const Bytecode a, const Bytecode b)
-    {
-        return cmp(cast(void*) a, cast(void*) b);
     }
 }
 
-private Dynamic[] before = null;
-private Table[2][] tableAbove;
+private Dynamic[] before;
 private Dynamic[2][] above;
-
-int cmp(T)(T a, T b) if (!is(T == Bytecode) && !is(T == Dynamic))
-{
-    if (a == b)
-    {
-        return 0;
-    }
-    if (a < b)
-    {
-        return -1;
-    }
-    return 1;
-}
-
-int cmpTable(Table at, Table bt)
-{
-    foreach (i, p; tableAbove)
-    {
-        if (at is p[0] && bt is p[1])
-        {
-            return 0;
-        }
-    }
-    tableAbove ~= [at, bt];
-    scope (exit)
-    {
-        tableAbove.length--;
-    }
-    if (int c = cmp(at.table.length, bt.table.length))
-    {
-        return c;
-    }
-    foreach (key, value; at)
-    {
-        const Dynamic* bValue = key in bt;
-        if (bValue is null)
-        {
-            foreach (key2, value2; bt)
-            {
-                if (key2 !in at)
-                {
-                    return Dynamic.cmpDynamic(key, key2);
-                }
-            }
-            assert(0);
-        }
-        if (int res = Dynamic.cmpDynamic(value, *bValue))
-        {
-            return res;
-        }
-    }
-    return 0;
-}
-
-string callableFormat(string[] args)
-{
-    string argsRepr;
-    if (args.length != 0)
-    {
-        argsRepr = "(" ~ args.join(",") ~ ") ";
-    }
-    return "lambda" ~ argsRepr ~ "{...}";
-}

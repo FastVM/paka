@@ -17,7 +17,7 @@ import purr.type.check;
 
 int add(Bytecode func, int val)
 {
-    int where = func.bytecode.length;
+    int where = cast(int) func.bytecode.length;
     func.bytecode.push(val);
     return where;
 }
@@ -29,7 +29,7 @@ void set(Bytecode func, int where, int val)
 
 int length(Bytecode func)
 {
-    return func.bytecode.length;
+    return cast(int) func.bytecode.length;
 }
 
 final class BytecodeEmitter
@@ -67,7 +67,7 @@ final class BytecodeEmitter
     {
         if (block.place < 0)
         {
-            block.place = func.bytecode.length;
+            block.place = cast(int) func.bytecode.length;
             if (dumpir)
             {
                 writeln(block);
@@ -146,7 +146,7 @@ final class BytecodeEmitter
     void emit(ConstReturnBranch branch)
     {
         func.add(Opcode.push);
-        func.add(func.constants.length);
+        func.add(cast(int) func.constants.length);
         func.constants.push(branch.value);
         if (depth > 1)
         {
@@ -228,7 +228,7 @@ final class BytecodeEmitter
             {
                 if (local == load.var)
                 {
-                    func.add(cur.captureFrom.length);
+                    func.add(cast(int) cur.captureFrom.length);
                     cur.captureFrom.push!int(cast(int) key);
                     cur.captureFlags.push!int(Capture.local);
                     return;
@@ -238,7 +238,7 @@ final class BytecodeEmitter
             {
                 if (arg == load.var)
                 {
-                    func.add(cur.captureFrom.length);
+                    func.add(cast(int) cur.captureFrom.length);
                     cur.captureFrom.push!int(cast(int) key);
                     cur.captureFlags.push!int(Capture.arg);
                     return;
@@ -279,7 +279,7 @@ final class BytecodeEmitter
     void emit(PushInstruction push)
     {
         func.add(Opcode.push);
-        func.add(func.constants.length);
+        func.add(cast(int) func.constants.length);
         func.constants.push(push.value);
     }
 
@@ -337,7 +337,7 @@ final class BytecodeEmitter
     void emit(ConstOperatorInstruction op)
     {
         func.add(Opcode.push);
-        func.add(func.constants.length);
+        func.add(cast(int) func.constants.length);
         func.constants.push(op.rhs);
         switch (op.op)
         {
@@ -388,7 +388,7 @@ final class BytecodeEmitter
         Bytecode newFunc = Bytecode.from(func);
         emitInFunc(newFunc, lambda.entry);
         func.add(Opcode.push);
-        func.add(func.constants.length);
+        func.add(cast(int) func.constants.length);
         func.constants.push(newFunc.dynamic);
         func.add(Opcode.func);
     }
@@ -396,5 +396,10 @@ final class BytecodeEmitter
     void emit(PopInstruction pop)
     {
         func.add(Opcode.pop);
+    }
+
+    void emit(PrintInstruction print)
+    {
+        func.add(Opcode.print);
     }
 }

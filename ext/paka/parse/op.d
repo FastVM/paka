@@ -4,7 +4,6 @@ import purr.io;
 import std.conv;
 import purr.dynamic;
 import purr.ast.ast;
-import ext.paka.built;
 import ext.paka.parse.util;
 
 UnaryOp parseUnaryOp(string[] ops)

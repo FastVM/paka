@@ -123,7 +123,12 @@ Node readPostCallExtend(TokenArray tokens, Node last)
             args = args[1..$];
             last = new Form("rec", argList);
         }
-        if (id.repr == "")
+        if (id.repr == "print")
+        {
+            Node[] argList = args[0];
+            args = args[1..$];
+            last = new Form("print", argList);
+        }
     }
     foreach (argList; args)
     {

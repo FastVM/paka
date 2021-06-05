@@ -7,14 +7,13 @@ typedef _Bool bool;
 
 void vm_print_int(int i);
 void vm_print_ptr(void *p);
-void vm_memcpy(void *dest, void *src, int len);
-void *vm_alloc(int len);
-void *vm_realloc(void *mem, int len);
-void vm_error(int, int, int);
+void vm_memcpy(void *dest, void *src, long len);
+void *vm_alloc(long len);
+void *vm_realloc(void *mem, long len);
 
-#ifndef VM_UNTYPED
-#define VM_TYPED
-#endif
+// #ifndef VM_UNTYPED
+// #define VM_TYPED
+// #endif
 
 typedef double number_t;
 
@@ -25,6 +24,7 @@ union value_t;
 enum form_t;
 enum type_t;
 enum opcode_t;
+enum errro_t;
 
 typedef struct obj_t obj_t;
 typedef struct array_t array_t;
@@ -33,6 +33,7 @@ typedef struct func_t func_t;
 typedef enum type_t type_t;
 typedef enum opcode_t opcode_t;
 typedef enum form_t form_t;
+typedef enum error_t error_t;
 
 obj_t vm_run(vm_t *vm, func_t basefunc, int argc, obj_t *argv);
 
@@ -41,20 +42,25 @@ enum type_t
     TYPE_NONE,
     TYPE_BOOLEAN,
     TYPE_NUMBER,
-    TYPE_SYMBOL,
     TYPE_STRING,
-    TYPE_TUPLE,
     TYPE_ARRAY,
-    TYPE_TABLE,
-    TYPE_NATIVE,
     TYPE_FUNCTION,
+    TYPE_ERROR,
     TYPE_MAX1,
-    TYPE_MAX2P = 16,
+    TYPE_MAX2P = 8,
 };
+
+enum error_t
+{
+    VM_ERROR_UNKNOWN,
+    VM_ERROR_OOM,
+    VM_ERROR_OPCODE,
+};
+
 struct array_t
 {
-    int length;
-    int alloc;
+    long length;
+    long alloc;
     char values[0];
 };
 
@@ -67,8 +73,9 @@ struct obj_t
         array_t *arr;
         func_t *function;
         void *other;
+        error_t error;
     };
-    type_t type;
+    char type;
 };
 
 enum local_flags_t
@@ -130,7 +137,7 @@ enum opcode_t
     OPCODE_MAX2P = 128,
 };
 
-void vm_impl_println(obj_t arg);
+void vm_impl_print(obj_t arg);
 
 #include <stddef.h>
 
@@ -142,7 +149,7 @@ array_t *array_new(int elem_size)
     return ret;
 }
 
-void array_ensure(int elem_size, array_t **arr, int index)
+void array_ensure(int elem_size, array_t **arr, long index)
 {
     if (((*arr)->length + index) * elem_size >= (*arr)->alloc)
     {
@@ -153,7 +160,7 @@ void array_ensure(int elem_size, array_t **arr, int index)
 
 #define seg (__builtin_trap())
 
-void *array_index(int elem_size, array_t *arr, int index)
+void *array_index(int elem_size, const array_t *arr, long index)
 {
     if (index < 0)
     {
@@ -192,9 +199,8 @@ void *array_pop(int elem_size, array_t **arr_ptr)
 
 #ifdef VM_DEBUG
 int printf(const char *fmt, ...);
-#define debug_op                                                                          \
-    fprintf(stdout, "%i: %i\n", cur_index, array_ptr(int, cur_func.bytecode)[cur_index]); \
-    fflush(stdout);
+#define debug_op \
+    printf("%i: %i\n", cur_index, array_ptr(int, cur_func.bytecode)[cur_index]);
 #else
 #define debug_op
 #endif
@@ -224,14 +230,29 @@ struct vm_t
 {
     array_t *linear;
     stack_frame_t *frames_low;
-    stack_frame_t *frames_ptr;
     stack_frame_t *frames_high;
 };
 
 #ifdef VM_TYPED
-#define run_next_op                                                      \
-    debug_op goto *ptrs[array_ptr(int, cur_func.bytecode)[cur_index++] + \
-                        (*(cur_stack - 1)).type * OPCODE_MAX2P +         \
+#define run_next_op2(TYPE1, TYPE0)                                                \
+    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] < OPCODE_MAX1); \
+    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] >= 0);          \
+    run_next_op(array_ptr(int, cur_func.bytecode)[cur_index++] + TYPE1 * OPCODE_MAX2P + TYPE0 * OPCODE_MAX2P * TYPE_MAX2P)
+#define run_next_op1(TYPE0)                                                       \
+    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] < OPCODE_MAX1); \
+    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] >= 0);          \
+    __builtin_assume((*(cur_stack - 1)).type < TYPE_MAX1);                        \
+    __builtin_assume((*(cur_stack - 1)).type >= 0);                               \
+    run_next_op(array_ptr(int, cur_func.bytecode)[cur_index++] + (*(cur_stack - 1)).type * OPCODE_MAX2P + TYPE0 * OPCODE_MAX2P * TYPE_MAX2P)
+#define run_next_op                                                               \
+    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] < OPCODE_MAX1); \
+    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] >= 0);          \
+    __builtin_assume((*(cur_stack - 1)).type < TYPE_MAX1);                        \
+    __builtin_assume((*(cur_stack - 1)).type >= 0);                               \
+    __builtin_assume((*cur_stack).type < TYPE_MAX1);                              \
+    __builtin_assume((*cur_stack).type >= 0);                                     \
+    debug_op goto *ptrs[array_ptr(int, cur_func.bytecode)[cur_index++] +          \
+                        (*(cur_stack - 1)).type * OPCODE_MAX2P +                  \
                         (*cur_stack).type * OPCODE_MAX2P * TYPE_MAX2P];
 
 void opcode_on2(void **ptrs, opcode_t op, type_t top2, type_t top1,
@@ -259,16 +280,26 @@ void opcode_on0(void **ptrs, opcode_t op, void *then)
     }
 }
 #else
-#define run_next_op \
+#define run_next_op                                                               \
+    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] < OPCODE_MAX1); \
+    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] >= 0);          \
     debug_op goto *ptrs[array_ptr(int, cur_func.bytecode)[cur_index++]];
+
+#define run_next_op2(_1, _0) run_next_op
+#define run_next_op1(_0) run_next_op
+
 #endif
 
-obj_t vm_run(vm_t *vm, func_t basefunc, int argc, obj_t *argv)
+obj_t vm_run(vm_t *pvm, func_t basefunc, int argc, obj_t *argv)
 {
+    vm_t vm = *pvm;
+    int frames_max = vm.frames_high - vm.frames_low;
+    int frame_number = 0;
     stack_frame_t next = (stack_frame_t){
         .func = basefunc,
         .argc = argc,
         .argv = argv,
+        .index = 0,
     };
     int cur_index;
     int cur_argc;
@@ -277,92 +308,105 @@ obj_t vm_run(vm_t *vm, func_t basefunc, int argc, obj_t *argv)
     obj_t *cur_stack;
     obj_t *cur_locals;
 #ifdef VM_TYPED
-    static void *ptrs[OPCODE_MAX2P * TYPE_MAX2P * TYPE_MAX2P + 1] = {NULL};
-    if (ptrs[0] == NULL)
+    void *ptrs[OPCODE_MAX2P * TYPE_MAX2P * TYPE_MAX2P + 1] = {};
+    for (int top2 = 0; top2 < TYPE_MAX2P; top2++)
     {
-        for (int top2 = 0; top2 < TYPE_MAX2P; top2++)
+        for (int top1 = 0; top1 < TYPE_MAX2P; top1++)
         {
-            for (int top1 = 0; top1 < TYPE_MAX2P; top1++)
+            for (int op = 0; op < OPCODE_MAX2P; op++)
             {
-                for (int op = 0; op < OPCODE_MAX2P; op++)
-                {
-                    ptrs[op + top2 * OPCODE_MAX2P + top1 * OPCODE_MAX2P * TYPE_MAX2P] =
-                        &&do_err;
-                }
+                ptrs[op + top2 * OPCODE_MAX2P + top1 * OPCODE_MAX2P * TYPE_MAX2P] =
+                    &&do_err;
             }
         }
-        opcode_on0(ptrs, OPCODE_RETURN, &&do_return);
-        opcode_on0(ptrs, OPCODE_EXIT, &&do_exit);
-        opcode_on0(ptrs, OPCODE_PUSH, &&do_push);
-        opcode_on0(ptrs, OPCODE_POP, &&do_pop);
-        opcode_on0(ptrs, OPCODE_ARG, &&do_arg);
-        opcode_on0(ptrs, OPCODE_STORE, &&do_store);
-        opcode_on0(ptrs, OPCODE_LOAD, &&do_load);
-        opcode_on0(ptrs, OPCODE_LOADC, &&do_loadc);
-        opcode_on0(ptrs, OPCODE_PRINT, &&do_print);
-        opcode_on0(ptrs, OPCODE_JUMP, &&do_jump);
-        opcode_on0(ptrs, OPCODE_CALL, &&do_call);
-        opcode_on0(ptrs, OPCODE_REC, &&do_rec);
-        opcode_on1(ptrs, OPCODE_NEG, TYPE_NUMBER, &&do_neg);
-        opcode_on1(ptrs, OPCODE_IFTRUE, TYPE_BOOLEAN, &&do_iftrue);
-        opcode_on1(ptrs, OPCODE_IFFALSE, TYPE_BOOLEAN, &&do_iffalse);
-        opcode_on1(ptrs, OPCODE_FUNC, TYPE_FUNCTION, &&do_func);
-        opcode_on2(ptrs, OPCODE_ADD, TYPE_NUMBER, TYPE_NUMBER, &&do_add);
-        opcode_on2(ptrs, OPCODE_SUB, TYPE_NUMBER, TYPE_NUMBER, &&do_sub);
-        opcode_on2(ptrs, OPCODE_MUL, TYPE_NUMBER, TYPE_NUMBER, &&do_mul);
-        opcode_on2(ptrs, OPCODE_DIV, TYPE_NUMBER, TYPE_NUMBER, &&do_div);
-        opcode_on2(ptrs, OPCODE_MOD, TYPE_NUMBER, TYPE_NUMBER, &&do_mod);
-        opcode_on2(ptrs, OPCODE_LT, TYPE_NUMBER, TYPE_NUMBER, &&do_lt);
-        opcode_on2(ptrs, OPCODE_GT, TYPE_NUMBER, TYPE_NUMBER, &&do_gt);
-        opcode_on2(ptrs, OPCODE_LTE, TYPE_NUMBER, TYPE_NUMBER, &&do_lte);
-        opcode_on2(ptrs, OPCODE_GTE, TYPE_NUMBER, TYPE_NUMBER, &&do_gte);
-        opcode_on2(ptrs, OPCODE_EQ, TYPE_NUMBER, TYPE_NUMBER, &&do_eq);
-        opcode_on2(ptrs, OPCODE_NEQ, TYPE_NUMBER, TYPE_NUMBER, &&do_neq);
     }
+    opcode_on0(ptrs, OPCODE_RETURN, &&do_return);
+    opcode_on0(ptrs, OPCODE_EXIT, &&do_exit);
+    opcode_on0(ptrs, OPCODE_PUSH, &&do_push);
+    opcode_on0(ptrs, OPCODE_POP, &&do_pop);
+    opcode_on0(ptrs, OPCODE_ARG, &&do_arg);
+    opcode_on0(ptrs, OPCODE_STORE, &&do_store);
+    opcode_on0(ptrs, OPCODE_LOAD, &&do_load);
+    opcode_on0(ptrs, OPCODE_LOADC, &&do_loadc);
+    opcode_on0(ptrs, OPCODE_PRINT, &&do_print);
+    opcode_on0(ptrs, OPCODE_JUMP, &&do_jump);
+    opcode_on0(ptrs, OPCODE_CALL, &&do_call);
+    opcode_on0(ptrs, OPCODE_REC, &&do_rec);
+    opcode_on1(ptrs, OPCODE_NEG, TYPE_NUMBER, &&do_neg);
+    opcode_on1(ptrs, OPCODE_IFTRUE, TYPE_BOOLEAN, &&do_iftrue);
+    opcode_on1(ptrs, OPCODE_IFFALSE, TYPE_BOOLEAN, &&do_iffalse);
+    opcode_on1(ptrs, OPCODE_FUNC, TYPE_FUNCTION, &&do_func);
+    opcode_on2(ptrs, OPCODE_ADD, TYPE_NUMBER, TYPE_NUMBER, &&do_add);
+    opcode_on2(ptrs, OPCODE_SUB, TYPE_NUMBER, TYPE_NUMBER, &&do_sub);
+    opcode_on2(ptrs, OPCODE_MUL, TYPE_NUMBER, TYPE_NUMBER, &&do_mul);
+    opcode_on2(ptrs, OPCODE_DIV, TYPE_NUMBER, TYPE_NUMBER, &&do_div);
+    opcode_on2(ptrs, OPCODE_MOD, TYPE_NUMBER, TYPE_NUMBER, &&do_mod);
+    opcode_on2(ptrs, OPCODE_LT, TYPE_NUMBER, TYPE_NUMBER, &&do_lt);
+    opcode_on2(ptrs, OPCODE_GT, TYPE_NUMBER, TYPE_NUMBER, &&do_gt);
+    opcode_on2(ptrs, OPCODE_LTE, TYPE_NUMBER, TYPE_NUMBER, &&do_lte);
+    opcode_on2(ptrs, OPCODE_GTE, TYPE_NUMBER, TYPE_NUMBER, &&do_gte);
+    opcode_on2(ptrs, OPCODE_EQ, TYPE_NUMBER, TYPE_NUMBER, &&do_eq);
+    opcode_on2(ptrs, OPCODE_NEQ, TYPE_NUMBER, TYPE_NUMBER, &&do_neq);
 #else
-    static void *ptrs[OPCODE_MAX2P] = {NULL};
-    if (ptrs[0] == NULL)
-    {
-        ptrs[OPCODE_RETURN] = &&do_return;
-        ptrs[OPCODE_EXIT] = &&do_exit;
-        ptrs[OPCODE_PUSH] = &&do_push;
-        ptrs[OPCODE_POP] = &&do_pop;
-        ptrs[OPCODE_ARG] = &&do_arg;
-        ptrs[OPCODE_STORE] = &&do_store;
-        ptrs[OPCODE_LOAD] = &&do_load;
-        ptrs[OPCODE_LOADC] = &&do_loadc;
-        ptrs[OPCODE_ADD] = &&do_add;
-        ptrs[OPCODE_SUB] = &&do_sub;
-        ptrs[OPCODE_MUL] = &&do_mul;
-        ptrs[OPCODE_DIV] = &&do_div;
-        ptrs[OPCODE_MOD] = &&do_mod;
-        ptrs[OPCODE_NEG] = &&do_neg;
-        ptrs[OPCODE_LT] = &&do_lt;
-        ptrs[OPCODE_GT] = &&do_gt;
-        ptrs[OPCODE_LTE] = &&do_lte;
-        ptrs[OPCODE_GTE] = &&do_gte;
-        ptrs[OPCODE_EQ] = &&do_eq;
-        ptrs[OPCODE_NEQ] = &&do_neq;
-        ptrs[OPCODE_PRINT] = &&do_print;
-        ptrs[OPCODE_JUMP] = &&do_jump;
-        ptrs[OPCODE_IFTRUE] = &&do_iftrue;
-        ptrs[OPCODE_IFFALSE] = &&do_iffalse;
-        ptrs[OPCODE_CALL] = &&do_call;
-        ptrs[OPCODE_REC] = &&do_rec;
-        ptrs[OPCODE_TAILREC] = &&do_tailrec;
-        ptrs[OPCODE_FUNC] = &&do_func;
-    }
+    void *ptrs[OPCODE_MAX2P] = {NULL};
+    ptrs[OPCODE_RETURN] = &&do_return;
+    ptrs[OPCODE_EXIT] = &&do_exit;
+    ptrs[OPCODE_PUSH] = &&do_push;
+    ptrs[OPCODE_POP] = &&do_pop;
+    ptrs[OPCODE_ARG] = &&do_arg;
+    ptrs[OPCODE_STORE] = &&do_store;
+    ptrs[OPCODE_LOAD] = &&do_load;
+    ptrs[OPCODE_LOADC] = &&do_loadc;
+    ptrs[OPCODE_ADD] = &&do_add;
+    ptrs[OPCODE_SUB] = &&do_sub;
+    ptrs[OPCODE_MUL] = &&do_mul;
+    ptrs[OPCODE_DIV] = &&do_div;
+    ptrs[OPCODE_MOD] = &&do_mod;
+    ptrs[OPCODE_NEG] = &&do_neg;
+    ptrs[OPCODE_LT] = &&do_lt;
+    ptrs[OPCODE_GT] = &&do_gt;
+    ptrs[OPCODE_LTE] = &&do_lte;
+    ptrs[OPCODE_GTE] = &&do_gte;
+    ptrs[OPCODE_EQ] = &&do_eq;
+    ptrs[OPCODE_NEQ] = &&do_neq;
+    ptrs[OPCODE_PRINT] = &&do_print;
+    ptrs[OPCODE_JUMP] = &&do_jump;
+    ptrs[OPCODE_IFTRUE] = &&do_iftrue;
+    ptrs[OPCODE_IFFALSE] = &&do_iffalse;
+    ptrs[OPCODE_CALL] = &&do_call;
+    ptrs[OPCODE_REC] = &&do_rec;
+    ptrs[OPCODE_TAILREC] = &&do_tailrec;
+    ptrs[OPCODE_FUNC] = &&do_func;
 #endif
 rec_call:
-    if (vm->frames_high - 2 < vm->frames_ptr)
+    if (frames_max <= frame_number + 2)
     {
-        int mlen = (vm->frames_high - vm->frames_low) * 4 + 4;
-        int count = vm->frames_ptr - vm->frames_low;
-        vm->frames_low = vm_realloc(vm->frames_low, mlen * sizeof(obj_t));
-        vm->frames_ptr = vm->frames_low + count;
-        vm->frames_high = vm->frames_low + mlen - 2;
+        int mlen = frame_number * 2 + 2;
+        long nalloc = mlen * sizeof(stack_frame_t);
+        if (nalloc > (3L << 29))
+        {
+            return (obj_t){
+                .type = TYPE_ERROR,
+                .error = VM_ERROR_OOM,
+            };
+        }
+        vm.frames_low = vm_realloc(vm.frames_low, mlen * nalloc);
+        frames_max = mlen;
     }
-    *(vm->frames_ptr++) = (stack_frame_t){
+    if (vm.linear->length * 2 > vm.linear->alloc)
+    {
+        long mlen = (long)vm.linear->alloc * 2 + 2;
+        if (mlen > (3L << 29))
+        {
+            return (obj_t){
+                .type = TYPE_ERROR,
+                .error = VM_ERROR_OOM,
+            };
+        }
+        vm.linear = vm_realloc(vm.linear, sizeof(array_t) + mlen);
+        vm.linear->alloc = mlen;
+    }
+    vm.frames_low[frame_number++] = (stack_frame_t){
         .index = cur_index,
         .argc = cur_argc,
         .argv = cur_argv,
@@ -371,40 +415,38 @@ rec_call:
         .locals = cur_locals,
     };
     vm_set_frame(next);
-    cur_stack = (obj_t *)(vm->linear->values + vm->linear->length);
-#ifdef VM_TYPED
-    (cur_stack++)->type = TYPE_NONE;
-    (cur_stack)->type = TYPE_NONE;
-#endif
-    vm->linear->length += cur_func.stack_used * sizeof(obj_t);
-    cur_locals = (obj_t *)(vm->linear->values + vm->linear->length);
-    vm->linear->length += cur_func.locals_used * sizeof(obj_t);
-    cur_index = 0;
-    run_next_op;
+    cur_stack = (obj_t *)(vm.linear->values + vm.linear->length);
+    cur_locals = cur_stack + cur_func.stack_used;
+    vm.linear->length += (cur_func.locals_used + cur_func.stack_used) * sizeof(obj_t);
+    run_next_op2(TYPE_ERROR, TYPE_ERROR);
 do_err:
 {
-    vm_error(array_ptr(int, cur_func.bytecode)[cur_index++], (*(cur_stack - 1)).type, (*cur_stack).type);
+    return (obj_t){
+        .type = TYPE_ERROR,
+        .error = VM_ERROR_OPCODE,
+    };
 };
 do_return:
 {
     obj_t retval = *cur_stack;
-    vm->linear->length -= (cur_func.stack_used + cur_func.locals_used) * sizeof(obj_t);
-    vm_set_frame(*(--vm->frames_ptr));
+    vm.linear->length -= (cur_func.stack_used + cur_func.locals_used) * sizeof(obj_t);
+    vm_set_frame(vm.frames_low[--frame_number]);
     *cur_stack = retval;
     run_next_op;
 }
 do_exit:
 {
     obj_t retval = *cur_stack;
-    vm->linear->length -= (cur_func.stack_used + cur_func.locals_used) * sizeof(obj_t);
-    --vm->frames_ptr;
+    vm.linear->length -= (cur_func.stack_used + cur_func.locals_used) * sizeof(obj_t);
+    vm.frames_high = vm.frames_low + frames_max;
+    *pvm = vm;
     return retval;
 }
 do_push:
 {
-    *(++cur_stack) = array_ptr(
-        obj_t, cur_func.constants)[array_ptr(int, cur_func.bytecode)[cur_index++]];
-    run_next_op;
+    obj_t val = array_ptr(obj_t, cur_func.constants)[array_ptr(int, cur_func.bytecode)[cur_index++]];
+    *(++cur_stack) = val;
+    run_next_op1(val.type);
 }
 do_pop:
 {
@@ -413,59 +455,62 @@ do_pop:
 }
 do_arg:
 {
-    *(++cur_stack) = cur_argv[array_ptr(int, cur_func.bytecode)[cur_index++]];
-    run_next_op;
+    obj_t val = cur_argv[array_ptr(int, cur_func.bytecode)[cur_index++]];
+    *(++cur_stack) = val;
+    run_next_op1(val.type);
 }
 do_store:
 {
-    cur_locals[array_ptr(int, cur_func.bytecode)[cur_index++]] = *cur_stack;
-    run_next_op;
+    obj_t val = *cur_stack;
+    cur_locals[array_ptr(int, cur_func.bytecode)[cur_index++]] = val;
+    run_next_op1(val.type);
 }
 do_load:
 {
-    *(++cur_stack) = cur_locals[array_ptr(int, cur_func.bytecode)[cur_index++]];
-    run_next_op;
+    obj_t val = cur_locals[array_ptr(int, cur_func.bytecode)[cur_index++]];
+    *(++cur_stack) = val;
+    run_next_op1(val.type);
 }
 do_loadc:
 {
-    *(++cur_stack) = array_ptr(
-        obj_t, cur_func.captured)[array_ptr(int, cur_func.bytecode)[cur_index++]];
-    run_next_op;
+    obj_t val = array_ptr(obj_t, cur_func.captured)[array_ptr(int, cur_func.bytecode)[cur_index++]];
+    *(++cur_stack) = val;
+    run_next_op1(val.type);
 }
 do_add:
 {
     number_t rhs = (cur_stack--)->number;
     cur_stack->number += rhs;
-    run_next_op;
+    run_next_op1(TYPE_NUMBER);
 }
 do_sub:
 {
     number_t rhs = (cur_stack--)->number;
     cur_stack->number -= rhs;
-    run_next_op;
+    run_next_op1(TYPE_NUMBER);
 }
 do_mul:
 {
     number_t rhs = (cur_stack--)->number;
     cur_stack->number *= rhs;
-    run_next_op;
+    run_next_op1(TYPE_NUMBER);
 }
 do_div:
 {
     number_t rhs = (cur_stack--)->number;
     cur_stack->number /= rhs;
-    run_next_op;
+    run_next_op1(TYPE_NUMBER);
 }
 do_mod:
 {
     number_t rhs = (cur_stack--)->number;
     cur_stack->number *= rhs;
-    run_next_op;
+    run_next_op1(TYPE_NUMBER);
 }
 do_neg:
 {
     cur_stack->number *= -1;
-    run_next_op;
+    run_next_op1(TYPE_NUMBER);
 }
 do_lt:
 {
@@ -474,7 +519,7 @@ do_lt:
         .type = TYPE_BOOLEAN,
         .boolean = cur_stack->number < rhs,
     };
-    run_next_op;
+    run_next_op1(TYPE_BOOLEAN);
 }
 do_gt:
 {
@@ -483,7 +528,7 @@ do_gt:
         .type = TYPE_BOOLEAN,
         .boolean = cur_stack->number > rhs,
     };
-    run_next_op;
+    run_next_op1(TYPE_BOOLEAN);
 }
 do_lte:
 {
@@ -492,7 +537,7 @@ do_lte:
         .type = TYPE_BOOLEAN,
         .boolean = cur_stack->number <= rhs,
     };
-    run_next_op;
+    run_next_op1(TYPE_BOOLEAN);
 }
 do_gte:
 {
@@ -501,7 +546,7 @@ do_gte:
         .type = TYPE_BOOLEAN,
         .boolean = cur_stack->number >= rhs,
     };
-    run_next_op;
+    run_next_op1(TYPE_BOOLEAN);
 }
 do_eq:
 {
@@ -510,7 +555,7 @@ do_eq:
         .type = TYPE_BOOLEAN,
         .boolean = cur_stack->number == rhs,
     };
-    run_next_op;
+    run_next_op1(TYPE_BOOLEAN);
 }
 do_neq:
 {
@@ -519,13 +564,13 @@ do_neq:
         .type = TYPE_BOOLEAN,
         .boolean = cur_stack->number != rhs,
     };
-    run_next_op;
+    run_next_op1(TYPE_BOOLEAN);
 }
 do_print:
 {
-    vm_impl_println(*cur_stack);
+    vm_impl_print(*cur_stack);
     cur_stack->type = TYPE_NONE;
-    run_next_op;
+    run_next_op1(TYPE_NONE);
 }
 do_jump:
 {
@@ -564,6 +609,7 @@ do_call:
         .func = *cur_stack->function,
         .argc = nargs,
         .argv = cur_stack + 1,
+        .index = 0,
     };
     goto rec_call;
 }
@@ -575,6 +621,7 @@ do_rec:
         .argc = nargs,
         .argv = cur_stack,
         .func = cur_func,
+        .index = 0,
     };
     goto rec_call;
 }
@@ -607,6 +654,6 @@ do_func:
         }
     }
     cur_stack->function = new_func;
-    run_next_op;
+    run_next_op1(TYPE_FUNCTION);
 }
 }

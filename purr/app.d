@@ -72,17 +72,6 @@ Thunk cliArgHandler(immutable string arg)
     return { fileArgs ~= arg.dynamic; };
 }
 
-Thunk cliFormHandler(immutable string code)
-{
-    return {
-        Dynamic got = dynamics[$ - 1]([
-                eval(SrcLoc(1, 1, "__main__", code))
-                ]);
-        dynamics.length--;
-        dynamics ~= got;
-    };
-}
-
 Thunk cliEvalHandler(immutable string code)
 {
     return {

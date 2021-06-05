@@ -11,8 +11,8 @@ extern(C) Dynamic vm_run(VM *vm, Bytecode func, int argc, Dynamic* argv);
 
 struct List
 {
-    int length;
-    int alloc;
+    long length;
+    long alloc;
     void[0] values;
 
 pragma(inline, true)
@@ -22,7 +22,7 @@ pragma(inline, true)
     }
 }
 
-void ensure(T)(ref List* self, int index)
+void ensure(T)(ref List* self, long index)
 {
     array_ensure(T.sizeof, self, index);
 }
@@ -32,7 +32,7 @@ void push(T)(ref List* self, T arg)
     array_push(T.sizeof, self, cast(void*) &arg);
 }
 
-ref T index(T)(List* self, int index)
+ref T index(T)(const List* self, long index)
 {
     return *cast(T*) array_index(T.sizeof, self, index);
 }
@@ -50,8 +50,8 @@ T* ptr(T)(List* self)
 extern (C)
 {
     List* array_new(int elem_size);
-    void array_ensure(int elem_size, ref List* arr, int index);
-    void* array_index(int elem_size, List* arr, int index);
+    void array_ensure(int elem_size, ref List* arr, long index);
+    void* array_index(int elem_size, const List* arr, long index);
     void array_push(int elem_size, ref List* arr, void *value);
     void* array_pop(int elem_size, ref List* arr_ptr);
 }
@@ -60,7 +60,6 @@ struct VM
 {
     List* linear;
     Frame* framesLow;
-    Frame* framesPtr;
     Frame* framesHigh;
 }
 
@@ -107,8 +106,8 @@ struct Function
         ret.constants = List.empty!(Dynamic);
         ret.captureFrom = List.empty!(int);
         ret.captureFlags = List.empty!(int);
-        ret.stackSize = 32;
-        ret.localSize = 32;
+        ret.stackSize = 128;
+        ret.localSize = 128;
         return ret;
     }
 }
@@ -141,14 +140,13 @@ enum Opcode : int
     iffalse,
     call,
     rec,
-    tailrec,
     func,
     max1,
     max2p = 128,
 }
 
 
-extern (C) void vm_impl_println(Dynamic arg)
+extern (C) void vm_impl_print(Dynamic arg)
 {
-    writeln(arg);
+    write(arg);
 }

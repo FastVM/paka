@@ -15,7 +15,7 @@ import purr.ir.opt;
 
 alias InstrTypes = AliasSeq!(LogicalBranch, TailCallBranch, GotoBranch, ReturnBranch, ConstReturnBranch, 
         BuildTupleInstruction,BuildArrayInstruction, BuildTableInstruction, CallInstruction, StaticCallInstruction, PushInstruction,
-        OperatorInstruction, ConstOperatorInstruction, LambdaInstruction, PopInstruction,
+        OperatorInstruction, ConstOperatorInstruction, LambdaInstruction, PopInstruction, PrintInstruction,
         StoreInstruction, StoreIndexInstruction, LoadInstruction, RecInstruction, ArgNumberInstruction);
 
 __gshared size_t nameCount;
@@ -378,6 +378,17 @@ class PopInstruction : Instruction
     {
         string ret;
         ret ~= "pop\n";
+        return ret;
+    }
+}
+
+class PrintInstruction : Instruction
+{
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "print\n";
         return ret;
     }
 }

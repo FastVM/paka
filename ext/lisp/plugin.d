@@ -25,12 +25,13 @@ void strip(ref string code)
 }
 
 enum string[string] forms = [
-    "define": "set", "rec": "rec",
+    "define": "set", "rec": "rec", "lambda": "fun",
     "+": "+", "-": "-", "*": "*", "/": "/", "%": "%",
-    "do": "do", "if": "if",
+    "do": "do", "if": "if", 
     "<": "<", "<=": "<=", ">": ">", ">=": ">=",
     "!=": "!=", "==": "==",
     "and": "&&", "or": "||",
+    "print": "print",
 ];
 
 Node read(ref string code)

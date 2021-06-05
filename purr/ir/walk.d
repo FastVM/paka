@@ -214,13 +214,11 @@ final class Walker
 
     void walkStoreDef(Node lhs, Node[] args, Node rhs)
     {
-        Node funForm = new Form("fun", [
-                new Form("args", args), rhs
-                ]);
+        Node funForm = new Form("fun", [new Form("args", args), rhs]);
         Node setForm = new Form("set", lhs, funForm);
         walk(setForm);
     }
-    
+
     void walkStoreIndex(Node on, Node ind, Node val)
     {
         walk(on);
@@ -240,11 +238,11 @@ final class Walker
         {
             if (call.form == "call")
             {
-                walkStoreDef(call.args[0], call.args[1..$], args[1]);
+                walkStoreDef(call.args[0], call.args[1 .. $], args[1]);
             }
             else if (call.form == "args")
             {
-                walkStoreDef(call.args[0], call.args[1..$], args[1]);
+                walkStoreDef(call.args[0], call.args[1 .. $], args[1]);
             }
             else if (call.form == "index")
             {
@@ -256,9 +254,9 @@ final class Walker
             }
             else if (call.form == "do")
             {
-                walkDo(call.args[0..$-1]);
+                walkDo(call.args[0 .. $ - 1]);
                 emit(new PopInstruction);
-                walkStore([call.args[$-1], args[1]]);
+                walkStore([call.args[$ - 1], args[1]]);
             }
             else
             {
@@ -387,7 +385,8 @@ final class Walker
     void walkCall(Node fun, Node[] args)
     {
         walk(fun);
-        foreach (arg; args) {
+        foreach (arg; args)
+        {
             walk(arg);
         }
         emit(new CallInstruction(cast(int) args.length));
@@ -395,10 +394,23 @@ final class Walker
 
     void walkRec(Node[] args)
     {
-        foreach (arg; args) {
+        foreach (arg; args)
+        {
             walk(arg);
         }
         emit(new RecInstruction(cast(int) args.length));
+    }
+
+    void walkPrint(Node[] args)
+    {
+        foreach (arg; args)
+        {
+            walk(arg);
+            emit(new PrintInstruction);
+            emit(new PopInstruction);
+        }
+        emit(new PushInstruction("\n".dynamic));
+        emit(new PrintInstruction);
     }
 
     void walkSpecialForm(string special, Node[] args)
@@ -441,13 +453,16 @@ final class Walker
             walkAssert(args);
             break;
         case "rcall":
-            walkCall(args[$-1], args[0..$-1]);
+            walkCall(args[$ - 1], args[0 .. $ - 1]);
             break;
         case "rec":
             walkRec(args);
             break;
+        case "print":
+            walkPrint(args);
+            break;
         case "call":
-            walkCall(args[0], args[1..$]);
+            walkCall(args[0], args[1 .. $]);
             break;
         case "return":
             walkReturn(args);

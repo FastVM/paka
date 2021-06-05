@@ -11,11 +11,12 @@ VM* vm;
 static this()
 {
     vm = cast(VM*) GC.calloc(VM.sizeof);
-    vm.linear = cast(List*) GC.malloc(List.sizeof + (1 << 24));
+    int lalloc = (1 << 16) * Dynamic.sizeof;
+    vm.linear = cast(List*) GC.malloc(List.sizeof + lalloc);
     vm.linear.length = 0;
-    vm.framesLow = cast(Frame*) GC.malloc((1 << 16) * Frame.sizeof);
-    vm.framesPtr = vm.framesLow;
-    vm.framesHigh = vm.framesLow + (1 << 16) - 2;
+    vm.linear.alloc = lalloc;
+    vm.framesLow = cast(Frame*) GC.malloc((1 << 8) * Frame.sizeof);
+    vm.framesHigh = vm.framesLow + (1 << 8) - 1;
 }
 
 extern (C)
@@ -31,17 +32,16 @@ extern (C)
     {
         import std.stdio : writeln;
 
-        writeln("DEBUG: ", ptr);
         void* base = GC.addrOf(ptr);
         assert(base !is null);
         size_t len = GC.sizeOf(ptr);
-        // writeln("size: ", len);
-        // writeln("base: ", base);
-        // writeln("head: ", ptr - base);
-        // writeln("data: ", base[0 .. len]);
+        writeln("size: ", len);
+        writeln("base: ", base);
+        writeln("head: ", ptr - base);
+        writeln("data: ", base[0 .. len]);
     }
 
-    extern (C) void* vm_alloc(int len)
+    extern (C) void* vm_alloc(long len)
     {
         import std.stdio : writeln;
 
@@ -49,19 +49,12 @@ extern (C)
         return ret;
     }
 
-    extern (C) void* vm_realloc(void* ptr, int len)
+    extern (C) void* vm_realloc(void* ptr, long len)
     {
         void* ret = GC.realloc(ptr, cast(size_t) len);
         return ret;
     }
-
-    extern (C) void vm_error(int op, int top2, int top1)
-    {
-        import std.conv : to;
-        throw new Error("interal error " ~ [op, top2, top1].to!string);
-    }
-
-    extern (C) void vm_memcpy(void* src, void* dest, int len)
+    extern (C) void vm_memcpy(void* src, void* dest, long len)
     {
         src[0 .. len] = dest[0 .. len];
     }
@@ -69,5 +62,18 @@ extern (C)
 
 Dynamic run(Bytecode func, Dynamic[] args)
 {
-    return vm_run(vm, func, cast(int) args.length, args.ptr);
+    Dynamic ret = vm_run(vm, func, cast(int) args.length, args.ptr);
+    if (ret.isError)
+    {
+        final switch (ret.value.err)
+        {
+        case Dynamic.Error.unknown:
+            throw new Exception("internal error in vm: an unknown error has occured");
+        case Dynamic.Error.oom:
+            throw new Exception("internal error in vm: out of memory");
+        case Dynamic.Error.opcode:
+            throw new Exception("internal error in vm: typed instruction given wrong types");
+        }
+    }
+    return ret;
 }
