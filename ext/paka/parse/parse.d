@@ -20,7 +20,6 @@ import purr.fs.files;
 import purr.vm.bytecode;
 import purr.ir.walk;
 import purr.ast.ast;
-import ext.paka.built;
 import ext.paka.parse.tokens;
 import ext.paka.parse.util;
 import ext.paka.parse.op;
@@ -124,6 +123,7 @@ Node readPostCallExtend(TokenArray tokens, Node last)
             args = args[1..$];
             last = new Form("rec", argList);
         }
+        if (id.repr == "")
     }
     foreach (argList; args)
     {

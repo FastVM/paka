@@ -16,7 +16,6 @@ import purr.plugin.syms;
 
 version = safe;
 
-alias Dynamic = DynamicImpl;
 alias Table = TableImpl;
 
 alias Args = Dynamic[];
@@ -272,7 +271,7 @@ Dynamic dynamic(T...)(T a)
     return Dynamic(a);
 }
 
-struct DynamicImpl
+struct Dynamic
 {
     enum Type : ubyte
     {
@@ -286,6 +285,7 @@ struct DynamicImpl
         tab,
         fun,
         pro,
+        err,
     }
 
     union Value
@@ -298,12 +298,18 @@ struct DynamicImpl
         alias Formable = FormableUnion;
         union FormableUnion
         {
-            Fun* fun;
             Bytecode pro;
         }
 
         Formable fun;
-        size_t run;
+        Error err;
+    }
+
+    enum Error
+    {
+        unknown,
+        oom,
+        opcode,
     }
 
     Value value = void;
@@ -538,6 +544,8 @@ pragma(inline, true):
             return size_t.max - 2;
         case Type.pro:
             return size_t.max - 3;
+        case Type.err:
+            assert(false);
         }
     }
 
@@ -745,6 +753,11 @@ pragma(inline, true):
         assert(false);
 
         return type == Type.arr || type == Type.tup;
+    }
+
+    bool isError()
+    {
+        return type == Type.err;
     }
 
     bool isTable()
