@@ -11,7 +11,6 @@ import std.string;
 import std.algorithm;
 import purr.vm;
 import purr.inter;
-import purr.base;
 import purr.dynamic;
 import purr.srcloc;
 import purr.inter;
@@ -23,7 +22,6 @@ import purr.fs.files;
 import purr.vm.bytecode;
 import purr.ir.walk;
 import purr.ast.ast;
-import ext.passerine.magic;
 import ext.passerine.tokens;
 import ext.passerine.parse.util;
 import ext.passerine.parse.pattern;
@@ -273,134 +271,6 @@ redo:
     else if (tokens.first.isKeyword("match"))
     {
         last = tokens.readMatch();
-    }
-    else if (tokens.first.isKeyword("magic"))
-    {
-        tokens.nextIs(Token.Type.keyword, "magic");
-        string word = tokens.first.value;
-        tokens.nextIs(Token.Type.string, word);
-        switch (word)
-        {
-        case "call":
-            if (tokens.first.isOpen("("))
-            {
-                tokens.nextIs(Token.type.open, "(");
-                Node[] args = [tokens.readExpr(1)];
-                while (tokens.first.isComma)
-                {
-                    tokens.nextIs(Token.Type.comma);
-                    args ~= tokens.readExpr(1);
-                }
-                tokens.nextIs(Token.type.close, ")");
-                last = new Form("call", new Value(native!magiccall), args);
-            }
-            else
-            {
-                throw new Exception("Magic Form");
-            }
-            break;
-        case "if":
-            if (tokens.first.isOpen("("))
-            {
-                tokens.nextIs(Token.type.open, "(");
-                Node cond = tokens.readExpr(1);
-                tokens.nextIs(Token.Type.comma);
-                Node iftrue = tokens.readExpr(1);
-                tokens.nextIs(Token.Type.comma);
-                Node iffalse = tokens.readExpr(1);
-                if (tokens.first.isComma)
-                {
-                    tokens.nextIs(Token.Type.comma);
-                }
-                tokens.eat;
-                tokens.nextIs(Token.type.close, ")");
-                last = new Form("if", cond, iftrue, iffalse);
-            }
-            else
-            {
-                throw new Exception("Magic If");
-            }
-            break;
-        case "add":
-            if (tokens.first.isOpen("("))
-            {
-                tokens.nextIs(Token.type.open, "(");
-                Node lhs = tokens.readExpr(1);
-                tokens.nextIs(Token.Type.comma);
-                Node rhs = tokens.readExpr(1);
-                if (tokens.first.isComma)
-                {
-                    tokens.nextIs(Token.Type.comma);
-                }
-                tokens.nextIs(Token.type.close, ")");
-                last = new Form("+", lhs, rhs);
-            }
-            else
-            {
-                throw new Exception("Magic Add");
-            }
-            break;
-        case "sub":
-            if (tokens.first.isOpen("("))
-            {
-                tokens.nextIs(Token.type.open, "(");
-                Node lhs = tokens.readExpr(1);
-                tokens.nextIs(Token.Type.comma);
-                Node rhs = tokens.readExpr(1);
-                if (tokens.first.isComma)
-                {
-                    tokens.nextIs(Token.Type.comma);
-                }
-                tokens.nextIs(Token.type.close, ")");
-                last = new Form("-", lhs, rhs);
-            }
-            else
-            {
-                throw new Exception("Magic Sub");
-            }
-            break;
-        case "to_string":
-            last = new Value(native!magictostring);
-            break;
-        case "print":
-            last = new Value(native!magicprint);
-            break;
-        case "println":
-            last = new Value(native!magicprintln);
-            break;
-        case "equal":
-            if (tokens.first.isOpen("("))
-            {
-                tokens.nextIs(Token.type.open, "(");
-                Node lhs = tokens.readExpr(1);
-                tokens.nextIs(Token.Type.comma);
-                Node rhs = tokens.readExpr(1);
-                tokens.nextIs(Token.type.close, ")");
-                last = new Form("==", lhs, rhs);
-            }
-            else
-            {
-                throw new Exception("Magic Equals");
-            }
-            break;
-        case "greater":
-            if (tokens.first.isOpen("("))
-            {
-                tokens.nextIs(Token.type.open, "(");
-                Node lhs = tokens.readExpr(1);
-                tokens.nextIs(Token.Type.comma);
-                Node rhs = tokens.readExpr(1);
-                tokens.nextIs(Token.type.close, ")");
-                last = new Form(">", lhs, rhs);
-            }
-            else
-            {
-                throw new Exception("Magic Greater");
-            }
-            break;
-        default:
-            throw new Exception("not implemented: magic " ~ word);
-        }
     }
     else if (tokens.first.isOpen("("))
     {
@@ -709,12 +579,6 @@ Node parse(SrcLoc loc)
 {
     SrcLoc[] olocs = locs;
     locs = null;
-    staticCtx ~= enterCtx;
-    scope (exit)
-    {
-        locs = olocs;
-        staticCtx.length--;
-    }
     fileSystem ~= parseHar(loc, fileSystem);
     MemoryTextFile main = "main.passerine".readMemFile;
     if (main is null)

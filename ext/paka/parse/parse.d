@@ -13,7 +13,6 @@ import purr.vm;
 import purr.inter;
 import purr.dynamic;
 import purr.srcloc;
-import purr.base;
 import purr.fs.disk;
 import purr.fs.har;
 import purr.fs.memory;
@@ -112,10 +111,19 @@ void stripNewlines(TokenArray tokens)
 Node readPostCallExtend(TokenArray tokens, Node last)
 {
     Node[][] args = tokens.readOpen!"()";
-    while (tokens.first.isOperator(":"))
+    while (tokens.first.isOperator("->"))
     {
-        tokens.nextIs(Token.Type.operator, ":");
+        tokens.nextIs(Token.Type.operator, "->");
         args[$ - 1] ~= new Form("fun", [new Form("args"), tokens.readBlock]);
+    }
+    if (Ident id = cast(Ident) last)
+    {
+        if (id.repr == "rec")
+        {
+            Node[] argList = args[0];
+            args = args[1..$];
+            last = new Form("rec", argList);
+        }
     }
     foreach (argList; args)
     {
@@ -406,7 +414,7 @@ Node readPostExprImpl(TokenArray tokens)
                     new Form("args", tokens.readOpen1!"()"), tokens.readBlock
                     ]);
         }
-        else if (tokens.first.isOpen("{") || tokens.first.isOperator("->"))
+        else if (tokens.first.isOpen("{") || tokens.first.isOperator(":"))
         {
             last = new Form("fun", new Form("args"), tokens.readBlock);
         }
@@ -443,7 +451,7 @@ Node readPostExprImpl(TokenArray tokens)
         {
             checks = null;
         }
-        if (tokens.first.isOpen("{") || tokens.first.isOperator("->"))
+        if (tokens.first.isOpen("{") || tokens.first.isOperator(":"))
         {
             last = new Form("cache", tokens.readBlock, checks);
         }
@@ -513,25 +521,6 @@ Node readPostExprImpl(TokenArray tokens)
             last = new Ident(tokens.first.value);
             tokens.nextIs(Token.Type.ident);
         }
-    }
-    else if (tokens.first.isString)
-    {
-        if (!tokens.first.value.canFind('\\'))
-        {
-            last = new Value(tokens.first.value);
-        }
-        else
-        {
-            Node[] args;
-            string value = tokens.first.value;
-            Span span = tokens.first.span;
-            while (value.length != 0)
-            {
-                args ~= value.readStringPart(span);
-            }
-            last = new Form("call", new Value(native!strConcat), args);
-        }
-        tokens.nextIs(Token.Type.string);
     }
     return tokens.readPostExtend(last);
 }
@@ -634,13 +623,9 @@ Node readStmtImpl(TokenArray tokens)
     {
         tokens.nextIs(Token.Type.keyword, "def");
         Form call = cast(Form) tokens.readExprBase;
-        assert(call);
-        Node name = new Form("args", call.args[0 .. $ - 1]);
-        Form fun = cast(Form) call.args[$ - 1];
-        assert(fun);
-        Node dobody = fun.args[$ - 1];
-        // Node dobody = tokens.readBlock;
-        return new Form("set", name, dobody);
+        Node name = new Form("args", call.args);
+        Node fun = tokens.readBlock;
+        return new Form("set", name, fun);
     }
     return tokens.readExprBase;
 }
@@ -667,9 +652,9 @@ Node readBlockBodyImpl(TokenArray tokens)
 alias readBlock = Spanning!readBlockImpl;
 Node readBlockImpl(TokenArray tokens)
 {
-    if (tokens.first.isOperator("->"))
+    if (tokens.first.isOperator(":"))
     {
-        tokens.nextIs(Token.Type.operator, "->");
+        tokens.nextIs(Token.Type.operator, ":");
         return tokens.readStmt;
     }
     else
@@ -730,12 +715,6 @@ Node parseUncached(SrcLoc loc)
 {
     SrcLoc[] olocs = locs;
     locs = null;
-    staticCtx ~= enterCtx;
-    scope (exit)
-    {
-        locs = olocs;
-        staticCtx.length--;
-    }
     fileSystem ~= parseHar(loc, fileSystem);
     MemoryTextFile main = "main.paka".readMemFile;
     if (main is null)

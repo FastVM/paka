@@ -18,9 +18,6 @@ string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 /// locations for error handling
 SrcLoc[] locs;
 
-/// context for static expressions
-size_t[] staticCtx;
-
 /// wraps a function of type Node function(T...)(TokenArray tokens, T args).
 /// it gets the span of tokens consumed and it gives them a span
 template Spanning(alias F, T...)

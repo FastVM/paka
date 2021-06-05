@@ -1,7 +1,7 @@
-fib(n) =
-    if n < 2:
-        return n
+fib() =
+    if $0 < 2:
+        return $0 
     else:
-        return rec(n-2) + rec(n-1)
+        return rec($0 - 2) + rec($0 - 1)
 
-io.print(fib(40))
+fib(40)

@@ -1,11 +1,9 @@
 module purr;
 
-public import purr.repl;
 public import purr.ir.repr;
 public import purr.ir.walk;
 public import purr.vm;
 public import purr.srcloc;
-public import purr.base;
 public import purr.ast.ast;
 public import purr.dynamic;
 public import purr.parse;

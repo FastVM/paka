@@ -1,7 +1,6 @@
 module ext.paka.plugin;
 
 import purr.io;
-import ext.paka.base;
 import ext.paka.parse.parse;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
@@ -14,7 +13,6 @@ shared static this()
 Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
-    plugin.libs ~= pakaBaseLibs;
     plugin.parsers["paka"] = &parseUncached;
     plugin.parsers["paka.cached"] = &parseCached;
     plugin.parsers["paka.uncached"] = &parseUncached;

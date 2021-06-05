@@ -1,6 +1,5 @@
-module ext.passerine.plugin;
+module ext.passerine.plugin.fixme;
 
-import ext.passerine.base;
 import ext.passerine.parse.parse;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
@@ -13,12 +12,6 @@ shared static this()
 Plugin thisPlugin()
 {
     Plugin plugin = new Plugin;
-    plugin.libs ~= passerineBaseLibs;
     plugin.parsers["passerine"] = &parse;
     return plugin;
-}
-
-extern (C) Plugin purr_get_library_plugin()
-{
-    return thisPlugin;
 }

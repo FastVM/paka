@@ -14,7 +14,7 @@ UnaryOp parseUnaryOp(string[] ops)
     {
         return (Node rhs) { return new Form("-", new Value(0), rhs); };
     }
-    if (opName == "..")
+    else if (opName == "..")
     {
         return (Node rhs) { return new Form("..", rhs); };
     }
@@ -22,24 +22,6 @@ UnaryOp parseUnaryOp(string[] ops)
     {
         throw new Exception("parse error: not a unary operator: " ~ opName);
     }
-}
-
-Dynamic check2(Dynamic[] args)
-{
-    if (args[0] != args[1])
-    {
-        throw new Exception("assign error: " ~ args[0].to!string ~ " = " ~ args[1].to!string);
-    }
-    return args[1];
-}
-
-Dynamic checkTrue(Dynamic[] args)
-{
-    if (!args[0].isTruthy)
-    {
-        throw new Exception("assign error: bad value: " ~ args[1].to!string);
-    }
-    return args[1];
 }
 
 BinaryOp parseBinaryOp(string[] ops)
@@ -59,13 +41,13 @@ BinaryOp parseBinaryOp(string[] ops)
             }
             else if (Ident id = cast(Ident) rhs)
             {
-                return new Form("call", new Value(native!checkTrue), [matcher(rhs, lhs), rhs]);
+                return new Form("assert", matcher(rhs, lhs), rhs);
             }
             else
             {
                 Node sym = genSym;
                 Node assign = new Form("set", sym, rhs);
-                Node check = new Form("call", new Value(native!checkTrue), [matcher(sym, lhs), sym]);
+                Node check = new Form("assert", matcher(sym, lhs), sym);
                 return new Form("do", assign, check); 
             }
         };
@@ -97,14 +79,14 @@ BinaryOp parseBinaryOp(string[] ops)
                 if (Value val = cast(Value) arg)
                 {
                     Ident sym = genSym;
-                    Node okCheck = new Form("call", new Value(native!check2), [arg, sym]);
+                    Node okCheck = new Form("==", [arg, sym]);
                     Node func = new Form("do", okCheck, ret);
                     ret = new Form("fun", new Form("args", new Ident(sym.repr)), func);
                 }
                 if (Form call = cast(Form) arg)
                 {
                     Ident sym = genSym;
-                    Node check = new Form("call", new Value(native!checkTrue), [matcher(sym, arg), sym]);
+                    Node check = matcher(sym, arg);
                     Node func = new Form("do", check, ret);
                     ret = new Form("fun", new Form("args", new Ident(sym.repr)), func);
                 }

@@ -169,9 +169,9 @@ class ConstReturnBranch : Branch
 
 class BuildTupleInstruction : Instruction
 {
-    size_t argc;
+    int argc;
 
-    this(size_t a)
+    this(int a)
     {
         argc = a;
     }
@@ -186,9 +186,9 @@ class BuildTupleInstruction : Instruction
 
 class BuildArrayInstruction : Instruction
 {
-    size_t argc;
+    int argc;
 
-    this(size_t a)
+    this(int a)
     {
         argc = a;
     }
@@ -203,9 +203,9 @@ class BuildArrayInstruction : Instruction
 
 class BuildTableInstruction : Instruction
 {
-    size_t argc;
+    int argc;
 
-    this(size_t a)
+    this(int a)
     {
         argc = a;
     }
@@ -220,11 +220,11 @@ class BuildTableInstruction : Instruction
 
 class CallInstruction : Instruction
 {
-    size_t argc;
+    int argc;
 
-    this(size_t ac)
+    this(int a)
     {
-        argc = ac;
+        argc = a;
     }
 
     override string toString()
@@ -237,9 +237,9 @@ class CallInstruction : Instruction
 
 class TailCallBranch : Branch
 {
-    size_t argc;
+    int argc;
 
-    this(size_t ac)
+    this(int ac)
     {
         argc = ac;
     }
@@ -255,9 +255,9 @@ class TailCallBranch : Branch
 class StaticCallInstruction : Instruction
 {
     Dynamic func;
-    size_t argc;
+    int argc;
 
-    this(Dynamic fn, size_t ac)
+    this(Dynamic fn, int ac)
     {
         func = fn;
         argc = ac;
@@ -290,28 +290,17 @@ class PushInstruction : Instruction
 
 class RecInstruction : Instruction
 {
-    this()
+    int argc;
+
+    this(int a)
     {
+        argc = a;
     }
 
     override string toString()
     {
         string ret;
-        ret ~= "rec\n";
-        return ret;
-    }
-}
-
-class InspectInstruction : Instruction
-{
-    this()
-    {
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "inspect\n";
+        ret ~= "rec argc=" ~ argc.to!string~ "\n";
         return ret;
     }
 }
@@ -425,16 +414,7 @@ class StoreIndexInstruction : Instruction
 
 class LoadInstruction : Instruction
 {
-    enum Capture : ubyte
-    {
-        unk,
-        not,
-        arg,
-        cap,
-    }
-
     string var;
-    Capture capture;
 
     this(string v)
     {
@@ -450,9 +430,9 @@ class LoadInstruction : Instruction
 }
 class ArgNumberInstruction : Instruction
 {
-    size_t argno;
+    int argno;
 
-    this(size_t arg)
+    this(int arg)
     {
         argno = arg;
     }

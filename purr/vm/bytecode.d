@@ -7,7 +7,7 @@ import core.memory;
 alias Number = double;
 alias String = immutable(char)*;
 
-extern(C) Dynamic vm_run(VM *vm, Bytecode func, int argc, Dynamic* argv, bool is_run1);
+extern(C) Dynamic vm_run(VM *vm, Bytecode func, int argc, Dynamic* argv);
 
 struct List
 {
@@ -15,6 +15,7 @@ struct List
     int alloc;
     void[0] values;
 
+pragma(inline, true)
     static List* empty(T)()
     {
         return array_new(T.sizeof);
@@ -57,8 +58,20 @@ extern (C)
 
 struct VM
 {
-    List* frames;
     List* linear;
+    Frame* framesLow;
+    Frame* framesPtr;
+    Frame* framesHigh;
+}
+
+struct Frame
+{
+    int index;
+    int argc;
+    Dynamic *argv;
+    Dynamic *stack;
+    Dynamic *locals;
+    Function func;
 }
 
 enum Local
@@ -69,9 +82,9 @@ enum Local
 
 enum Capture
 {
-    parent_local,
-    parent_arg,
-    parent_capture,
+    local,
+    arg,
+    parent,
 }
 
 alias Bytecode = Function*;
@@ -80,24 +93,18 @@ struct Function
     List* bytecode;
     List* constants;
     Bytecode parent;
-    List* localNames;
-    List* localFlags;
-    List* captureNames;
     List* captureFrom;
     List* captureFlags;
     int stackSize;
     int localSize;
     List* captured;
 
-    static Function* empty(Function* last)
+    static Function* from(Function* last)
     {
-        Function* ret = cast(Function*) GC.malloc(Function.sizeof);
+        Function* ret = cast(Function*) GC.calloc(Function.sizeof);
         ret.parent = last;
         ret.bytecode = List.empty!(int);
         ret.constants = List.empty!(Dynamic);
-        ret.localNames = List.empty!(char *);
-        ret.localFlags = List.empty!(int);
-        ret.captureNames = List.empty!(char *);
         ret.captureFrom = List.empty!(int);
         ret.captureFlags = List.empty!(int);
         ret.stackSize = 32;
@@ -106,7 +113,7 @@ struct Function
     }
 }
 
-enum Opcode
+enum Opcode : int
 {
     ret,
     exit,

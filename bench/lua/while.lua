@@ -4,4 +4,3 @@ while x <= 100000000 do
     s = s + x
     x = x + 1
 end
-print(s)

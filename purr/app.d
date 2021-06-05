@@ -1,13 +1,11 @@
 module purr.app;
 
 import purr.io;
-import purr.repl;
 import purr.ir.repr;
 import purr.ir.opt;
 import purr.ir.walk;
 import purr.vm;
 import purr.srcloc;
-import purr.base;
 import purr.ast.ast;
 import purr.dynamic;
 import purr.parse;
@@ -37,7 +35,6 @@ extern (C) __gshared string[] rt_options = [];
 
 alias Thunk = void delegate();
 
-__gshared size_t ctx = size_t.max;
 __gshared Dynamic[] dynamics;
 __gshared Dynamic[] fileArgs;
 Thunk cliFileHandler(immutable string filename)
@@ -65,7 +62,7 @@ Thunk cliFileHandler(immutable string filename)
             fileArgs = null;
         }
         filename.dirName.chdir;
-        retval = ctx.eval(code, fileArgs);
+        retval = eval(code, fileArgs);
         dynamics ~= retval;
     };
 }
@@ -79,7 +76,7 @@ Thunk cliFormHandler(immutable string code)
 {
     return {
         Dynamic got = dynamics[$ - 1]([
-                ctx.eval(SrcLoc(1, 1, "__main__", code))
+                eval(SrcLoc(1, 1, "__main__", code))
                 ]);
         dynamics.length--;
         dynamics ~= got;
@@ -93,7 +90,7 @@ Thunk cliEvalHandler(immutable string code)
         {
             fileArgs = null;
         }
-        Dynamic got = ctx.eval(SrcLoc(1, 1, "__main__", code), fileArgs);
+        Dynamic got = eval(SrcLoc(1, 1, "__main__", code), fileArgs);
         dynamics ~= got;
     };
 }
@@ -112,7 +109,7 @@ Thunk cliValidateHandler(immutable string code)
         SrcLoc loc = SrcLoc(1, 1, "__main__", code);
         Node node = loc.parse;
         Walker walker = new Walker;
-        BasicBlock func = walker.walkBasicBlock(node, ctx);
+        BasicBlock func = walker.walkBasicBlock(node);
     };
 }
 
@@ -122,7 +119,7 @@ Thunk cliCompileHandler(immutable string code)
         SrcLoc loc = SrcLoc(1, 1, "__main__", code);
         Node node = loc.parse;
         Walker walker = new Walker;
-        Bytecode func = walker.walkProgram(node, ctx);
+        Bytecode func = walker.walkProgram(node);
     };
 }
 
@@ -178,17 +175,14 @@ Thunk cliSerialHandler(string filename)
 }
 
 __gshared string serialFile = null;
-__gshared Dynamic[] bases = null;
 
 Thunk cliReplHandler()
 {
     return {
-        bases = [];
-        rootBases[ctx].addLib("repl", librepl);
+        size_t lineno = 1;
         while (true)
         {
-        // before:
-            string prompt = "(" ~ to!string(bases.length + 1) ~ ")> ";
+            string prompt = "(" ~ lineno.to!string ~ ")> ";
             string line = null;
             line = readln(prompt);
             while (line.length > 0)
@@ -206,17 +200,17 @@ Thunk cliReplHandler()
                     break;
                 }
             }
-            SrcLoc code = SrcLoc(bases.length, 1, "__main__", line);
+            SrcLoc code = SrcLoc(lineno, 1, "__main__", line);
             if (code.src.length == 0)
             {
                 break;
             }
-            Dynamic res = ctx.eval(code);
+            Dynamic res = eval(code);
             if (res.isNil)
             {
                 writeln(res);
             }
-            bases ~= ctx.baseObject().dynamic;
+            lineno += 1;
         }
     };
 }
@@ -270,11 +264,6 @@ void domain(string[] args)
     args = args[1 .. $];
     Thunk[] todo;
     langNameDefault = "paka";
-    ctx = enterCtx;
-    scope (exit)
-    {
-        exitCtx;
-    }
     foreach_reverse (arg; args)
     {
         string[] parts = arg.split("=").array;

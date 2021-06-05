@@ -2,7 +2,6 @@ module purr.plugin.plugins;
 
 import purr.io;
 import purr.plugin.plugin;
-import purr.base;
 import purr.ir.walk;
 import purr.parse;
 import purr.srcloc;
@@ -10,16 +9,6 @@ import purr.ast.ast;
 import purr.srcloc;
 
 __gshared Plugin[] plugins;
-
-Pair[] pluginLib()
-{
-    Pair[] ret;
-    foreach (plugin; plugins)
-    {
-        ret ~= plugin.libs;
-    }
-    return ret;
-}
 
 void pushPlugin(ref Node function(SrcLoc code)[string] par, Node function(SrcLoc code)[string] vals)
 {

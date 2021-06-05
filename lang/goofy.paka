@@ -1,0 +1,8 @@
+nontail(n) =
+    if (n <= 0) {
+        n
+    } else {
+        rec(n-1) + 1
+    }
+
+nontail(1000)

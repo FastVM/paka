@@ -4,7 +4,6 @@ import purr.io;
 import std.algorithm;
 import std.array;
 import std.conv;
-import purr.base;
 import purr.srcloc;
 import purr.dynamic;
 import purr.ir.walk;
@@ -35,7 +34,7 @@ TokenArray[string] matchMacro(Dynamic[] pattern, Node[] flatlike, TokenArray[] t
     foreach (index, value; pattern)
     {
         Node cur = flatlike[index];
-        if (value.arr[0].str == "keyword")
+        if (value.arr.index!Dynamic(0).str == "keyword")
         {
             if (Ident id = cast(Ident) cur)
             {
@@ -102,13 +101,8 @@ Node readSyntax(ref TokenArray tokens)
         Node node = tokens.readPostExpr;
         if (!inSyntaxDef)
         {
-            size_t ctx = enterCtx;
-            scope (exit)
-            {
-                exitCtx;
-            }
             Walker walker = new Walker;
-            Bytecode func = walker.walkProgram(node, ctx);
+            Bytecode func = walker.walkProgram(node);
             Dynamic res = dynamic(func)(null);
             if (res.isTruthy)
             {
@@ -138,13 +132,8 @@ Node readSyntax(ref TokenArray tokens)
         Node node = tokens.readPostExpr;
         if (!inSyntaxDef)
         {
-            size_t ctx = enterCtx;
-            scope (exit)
-            {
-                exitCtx;
-            }
             Walker walker = new Walker;
-            Bytecode func = walker.walkProgram(node, ctx);
+            Bytecode func = walker.walkProgram(node);
             Dynamic res = dynamic(func)(null);
             return new Value(res);
         }

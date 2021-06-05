@@ -254,24 +254,6 @@ pragma(inline, true):
     }
 }
 
-template native(alias func)
-{
-    alias native = impl;
-
-    shared static this()
-    {
-        syms[func.mangleof] = &func;
-    }
-
-    Fun impl()
-    {
-        Fun fun = Fun(&func);
-        fun.mangled = func.mangleof;
-        return fun;
-
-    }
-}
-
 alias Fun = FunStruct;
 
 struct FunStruct
@@ -324,8 +306,8 @@ struct DynamicImpl
         size_t run;
     }
 
-    private Type type = void;
     Value value = void;
+    Type type = void;
 
 pragma(inline, true):
     static Dynamic strToNum(string s)
@@ -422,13 +404,13 @@ pragma(inline, true):
 
     string toString()
     {
-        forceResolve;
+
         return strFormat(this);
     }
 
     Dynamic opCall(Args args)
     {
-        forceResolve;
+
         switch (type)
         {
         case Type.fun:
@@ -448,7 +430,7 @@ pragma(inline, true):
 
     void opIndexAssign(Dynamic value, Dynamic key)
     {
-        forceResolve;
+
         switch (type)
         {
         case Type.tab:
@@ -469,7 +451,7 @@ pragma(inline, true):
 
     Dynamic opIndex(Dynamic other)
     {
-        forceResolve;
+
         switch (type)
         {
         case Type.tab:
@@ -485,13 +467,13 @@ pragma(inline, true):
 
     int opCmp(Dynamic other)
     {
-        forceResolve;
+
         return cmpDynamic(this, other);
     }
 
     int flatOpCmp(Dynamic other)
     {
-        forceResolve;
+
         Type t = type;
         switch (t)
         {
@@ -599,14 +581,12 @@ pragma(inline, true):
 
     bool opEquals(Dynamic other)
     {
-        forceResolve;
+
         return cmpDynamic(this, other) == 0;
     }
 
     Dynamic opBinary(string op)(Dynamic other)
     {
-        forceResolve;
-        other.forceResolve;
         static if (op != "~")
         {
             if (type == Type.sml && other.type == Type.sml)
@@ -634,13 +614,13 @@ pragma(inline, true):
 
     Dynamic opUnary(string op)()
     {
-        forceResolve;
+
         return dynamic(mixin(op ~ "as!double"));
     }
 
     bool log()
     {
-        forceResolve;
+
         version (safe)
         {
             if (type != Type.log)
@@ -653,7 +633,7 @@ pragma(inline, true):
 
     string str()
     {
-        forceResolve;
+
         version (safe)
         {
             if (type != Type.str)
@@ -666,7 +646,7 @@ pragma(inline, true):
 
     Array arr()
     {
-        forceResolve;
+
         version (safe)
         {
             if (!isArray)
@@ -679,7 +659,7 @@ pragma(inline, true):
 
     Table tab()
     {
-        forceResolve;
+
         version (safe)
         {
             if (type != Type.tab)
@@ -692,7 +672,7 @@ pragma(inline, true):
 
     string* strPtr()
     {
-        forceResolve;
+
         version (safe)
         {
             if (type != Type.str)
@@ -705,7 +685,7 @@ pragma(inline, true):
 
     Value.Formable fun()
     {
-        forceResolve;
+
         version (safe)
         {
             if (type != Type.fun && type != Type.pro)
@@ -718,7 +698,7 @@ pragma(inline, true):
 
     T as(T)() if (isIntegral!T)
     {
-        forceResolve;
+
         if (type == Type.sml)
         {
             return cast(T) value.sml;
@@ -731,7 +711,7 @@ pragma(inline, true):
 
     T as(T)() if (isFloatingPoint!T)
     {
-        forceResolve;
+
         if (type == Type.sml)
         {
             return cast(T) value.sml;
@@ -744,50 +724,43 @@ pragma(inline, true):
 
     bool isNil()
     {
-        forceResolve;
+
         return type == Type.nil;
     }
 
     bool isString()
     {
-        forceResolve;
+
         return type == Type.str;
     }
 
     bool isNumber()
     {
-        forceResolve;
+
         return type == Type.sml;
     }
 
     bool isArray()
     {
         assert(false);
-        forceResolve;
+
         return type == Type.arr || type == Type.tup;
     }
 
     bool isTable()
     {
-        forceResolve;
+
         return type == Type.tab;
     }
 
     bool isTruthy()
     {
-        forceResolve;
-        return type != Type.nil && (type != Type.log || value.log);
-    }
 
-    void forceResolve()
-    {
+        return type != Type.nil && (type != Type.log || value.log);
     }
 
     static private int cmpDynamic(Dynamic a, Dynamic b)
     {
-        a.forceResolve;
-        b.forceResolve;
-    redo:
         if (b.type != a.type)
         {
             return cmp(a.type, b.type);
@@ -820,15 +793,13 @@ pragma(inline, true):
             {
                 above.length--;
             }
-            const Dynamic[] as = a.arr;
-            const Dynamic[] bs = b.arr;
-            if (int c = cmp(as.length, bs.length))
+            if (int c = cmp(a.value.arr.length, b.value.arr.length))
             {
                 return c;
             }
-            foreach (i; 0 .. as.length)
+            foreach (i; 0 .. a.value.arr.length)
             {
-                if (int res = cmpDynamic(as[i], bs[i]))
+                if (int res = cmpDynamic(a.value.arr.index!Dynamic(i), a.value.arr.index!Dynamic(i)))
                 {
                     return res;
                 }
@@ -848,15 +819,13 @@ pragma(inline, true):
             {
                 above.length--;
             }
-            const Dynamic[] as = a.arr;
-            const Dynamic[] bs = b.arr;
-            if (int c = cmp(as.length, bs.length))
+            if (int c = cmp(a.value.arr.length, b.value.arr.length))
             {
                 return c;
             }
-            foreach (i; 0 .. as.length)
+            foreach (i; 0 .. a.value.arr.length)
             {
-                if (int res = cmpDynamic(as[i], bs[i]))
+                if (int res = cmpDynamic(a.value.arr.index!Dynamic(i), a.value.arr.index!Dynamic(i)))
                 {
                     return res;
                 }
@@ -886,7 +855,6 @@ pragma(inline, true):
 
     private static string strFormat(Dynamic dyn)
     {
-        dyn.forceResolve;
         foreach (i, v; before)
         {
             if (dyn is v)
@@ -899,7 +867,6 @@ pragma(inline, true):
         {
             before.length--;
         }
-    redo:
         switch (dyn.type)
         {
         default:
@@ -949,7 +916,7 @@ pragma(inline, true):
         case Type.fun:
             return (*dyn.value.fun.fun).to!string;
         case Type.pro:
-            return dyn.fun.pro.to!string;
+            return "Function(" ~ dyn.fun.pro.to!string ~ ")";
         }
     }
 

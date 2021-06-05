@@ -6,7 +6,6 @@ import purr.io;
 import std.string;
 import std.algorithm;
 import std.ascii;
-import purr.base;
 import purr.ast.ast;
 import purr.dynamic;
 import purr.srcloc;
@@ -23,7 +22,7 @@ final class Walker
     BasicBlock block;
     BasicBlock funcblk;
 
-    BasicBlock walkBasicBlock(Node node, size_t ctx)
+    BasicBlock walkBasicBlock(Node node)
     {
         if (dumpast)
         {
@@ -37,7 +36,7 @@ final class Walker
         return entry;
     }
 
-    Bytecode walkProgram(Node node, size_t ctx)
+    Bytecode walkProgram(Node node)
     {
         if (dumpast)
         {
@@ -52,15 +51,7 @@ final class Walker
         {
             emitDefault(new ReturnBranch);
         }
-        Bytecode func = Bytecode.empty(null);
-        // func.parent = ctx.baseFunction;
-        // func.captured = func.parent.captured;
-        // foreach (i; ctx.rootBase)
-        // {
-        //     func.captab.define(i.name);
-        // }
-        Opt opt = new Opt;
-        opt.opt(entry);
+        Bytecode func = Bytecode.from(null);
         BytecodeEmitter emitter = new BytecodeEmitter;
         emitter.emitInFunc(func, entry);
         return func;
@@ -99,20 +90,8 @@ final class Walker
 
     void emit(Instruction instr)
     {
-        if (inspecting)
-        {
-            Instruction ainstr = new InspectInstruction;
-            ainstr.span = nodes[$ - 1];
-            block.instrs ~= ainstr;
-        }
         instr.span = nodes[$ - 1];
         block.instrs ~= instr;
-        if (inspecting)
-        {
-            Instruction ainstr = new InspectInstruction;
-            ainstr.span = nodes[$ - 1];
-            block.instrs ~= ainstr;
-        }
     }
 
     void emitDefault(Branch branch)
@@ -134,13 +113,9 @@ final class Walker
     void walkExact(Ident id)
     {
         string ident = id.repr;
-        if (ident == "rec")
+        if (ident.length != 0 && ident[0] == '$' && ident[1 .. $].isNumeric)
         {
-            emit(new RecInstruction);
-        }
-        else if (ident.length != 0 && ident[0] == '$' && ident[1 .. $].isNumeric)
-        {
-            emit(new ArgNumberInstruction(ident[1 .. $].to!size_t));
+            emit(new ArgNumberInstruction(ident[1 .. $].to!int));
         }
         else if (ident.isNumeric)
         {
@@ -378,7 +353,7 @@ final class Walker
         {
             walk(i);
         }
-        emit(new BuildTupleInstruction(args.length));
+        emit(new BuildTupleInstruction(cast(int) args.length));
     }
 
     void walkArray(Node[] args)
@@ -387,7 +362,7 @@ final class Walker
         {
             walk(i);
         }
-        emit(new BuildArrayInstruction(args.length));
+        emit(new BuildArrayInstruction(cast(int) args.length));
     }
 
     void walkTable(Node[] args)
@@ -396,7 +371,7 @@ final class Walker
         {
             walk(i);
         }
-        emit(new BuildTableInstruction(args.length / 2));
+        emit(new BuildTableInstruction(cast(int) args.length / 2));
     }
 
     void walkAssert(Node[] args)
@@ -409,13 +384,21 @@ final class Walker
         walk(args[0]);
     }
 
-    void walkForm(Node fun, Node[] args)
+    void walkCall(Node fun, Node[] args)
     {
         walk(fun);
         foreach (arg; args) {
             walk(arg);
         }
-        emit(new CallInstruction(args.length));
+        emit(new CallInstruction(cast(int) args.length));
+    }
+
+    void walkRec(Node[] args)
+    {
+        foreach (arg; args) {
+            walk(arg);
+        }
+        emit(new RecInstruction(cast(int) args.length));
     }
 
     void walkSpecialForm(string special, Node[] args)
@@ -458,10 +441,13 @@ final class Walker
             walkAssert(args);
             break;
         case "rcall":
-            walkForm(args[$-1], args[0..$-1]);
+            walkCall(args[$-1], args[0..$-1]);
+            break;
+        case "rec":
+            walkRec(args);
             break;
         case "call":
-            walkForm(args[0], args[1..$]);
+            walkCall(args[0], args[1..$]);
             break;
         case "return":
             walkReturn(args);

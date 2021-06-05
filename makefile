@@ -9,19 +9,22 @@ UNICODE=$(TMP)/UnicodeData.txt
 all: build
 pgo: pgo-build
 
+opt: $(BIN)
+	$(MAKE) OPT_C=fast CFLAGS+="-fno-stack-protector -fomit-frame-pointer -ffp-contract=off -flto"
+
 build: $(BIN) $(UNICODE) minivm
 	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT_D) -of=$(BIN)/purr -Jtmp $(1LFLAGS) $(DFLAGS) $(LFLAGS)
 
 minivm: $(BIN)
-	clang -c minivm.c -o $(BIN)/vm.o --std=c99 -O$(OPT_C) $(CFLAGS)
+	$(CC) -c minivm.c -o $(BIN)/vm.o --std=c11 -O$(OPT_C) $(CFLAGS)
 
-pgo-gen: $(BIN)
-	$(MAKE) OPT=3 DFLAGS+="-release --stack-protector-guard=none --frame-pointer=none --fp-contract=off -flto=full -fprofile-instr-generate=profile.raw"
-	./bin/purr --file=bench/paka/{fib40,tree,while}.paka
-	ldc-profdata merge -output=profile.data profile.raw
+
+pgo-gen: $(TMP)
+	$(MAKE) OPT_C=3 OPT_D=0 CFLAGS+="-fprofile-generate=$(TMP)/profile" LFLAGS+=-L-lgcov
+	./bin/purr --file=bench/paka/fib40.paka
 	
-pgo-build: pgo-gen
-	$(MAKE) OPT=3 DFLAGS+="-release --stack-protector-guard=none --frame-pointer=none --fp-contract=off -flto=full -fprofile-instr-use=profile.data"
+pgo-build: pgo-gen $(TMP)
+	$(MAKE) OPT_C=fast CFLAGS+="-fno-stack-protector -fomit-frame-pointer -ffp-contract=off -flto -fprofile-use=$(TMP)/profile"
 
 $(TMP):
 	mkdir -p $(TMP)

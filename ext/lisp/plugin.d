@@ -25,7 +25,7 @@ void strip(ref string code)
 }
 
 enum string[string] forms = [
-    "define": "set",
+    "define": "set", "rec": "rec",
     "+": "+", "-": "-", "*": "*", "/": "/", "%": "%",
     "do": "do", "if": "if",
     "<": "<", "<=": "<=", ">": ">", ">=": ">=",

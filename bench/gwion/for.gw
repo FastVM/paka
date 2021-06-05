@@ -1,6 +1,3 @@
-#!var int s;
-#!for(var int x; x <= 100000000; ++x)
-#!    x +=> s;
 var int s;
 repeat(100000000)
     ++s;
