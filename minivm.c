@@ -5,15 +5,16 @@ typedef _Bool bool;
 
 #define NULL ((void *)0)
 
-void vm_print_int(int i);
-void vm_print_ptr(void *p);
-void vm_memcpy(void *dest, void *src, long len);
-void *vm_alloc(long len);
-void *vm_realloc(void *mem, long len);
 
 // #ifndef VM_UNTYPED
 // #define VM_TYPED
 // #endif
+
+#ifdef __clang__
+#define vm_assume(expr) (__builtin_assume(expr))
+#else
+#define vm_assume(expr) ((void) 0)
+#endif
 
 typedef double number_t;
 
@@ -36,6 +37,12 @@ typedef enum form_t form_t;
 typedef enum error_t error_t;
 
 obj_t vm_run(vm_t *vm, func_t basefunc, int argc, obj_t *argv);
+void vm_print_int(int i);
+void vm_print_ptr(void *p);
+void vm_memcpy(void *dest, void *src, long len);
+void *vm_alloc(long len);
+void *vm_realloc(void *mem, long len);
+void vm_impl_print(obj_t arg);
 
 enum type_t
 {
@@ -94,7 +101,6 @@ enum capture_from_t
 struct func_t
 {
     array_t *bytecode;
-    array_t *constants;
     func_t *parent;
     array_t *capture_from;
     array_t *capture_flags;
@@ -131,13 +137,11 @@ enum opcode_t
     OPCODE_IFFALSE,
     OPCODE_CALL,
     OPCODE_REC,
-    OPCODE_TAILREC,
     OPCODE_FUNC,
     OPCODE_MAX1,
     OPCODE_MAX2P = 128,
 };
 
-void vm_impl_print(obj_t arg);
 
 #include <stddef.h>
 
@@ -200,7 +204,7 @@ void *array_pop(int elem_size, array_t **arr_ptr)
 #ifdef VM_DEBUG
 int printf(const char *fmt, ...);
 #define debug_op \
-    printf("%i: %i\n", cur_index, array_ptr(int, cur_func.bytecode)[cur_index]);
+    printf("%i: %i\n", cur_index, cur_bytecode[cur_index]);
 #else
 #define debug_op
 #endif
@@ -215,15 +219,16 @@ typedef struct
     func_t func;
 } stack_frame_t;
 
-#define vm_set_frame(frame_arg) (        \
-    {                                    \
-        stack_frame_t frame = frame_arg; \
-        cur_index = frame.index;         \
-        cur_argc = frame.argc;           \
-        cur_argv = frame.argv;           \
-        cur_stack = frame.stack;         \
-        cur_locals = frame.locals;       \
-        cur_func = frame.func;           \
+#define vm_set_frame(frame_arg) (                           \
+    {                                                       \
+        stack_frame_t frame = frame_arg;                    \
+        cur_index = frame.index;                            \
+        cur_argc = frame.argc;                              \
+        cur_argv = frame.argv;                              \
+        cur_stack = frame.stack;                            \
+        cur_locals = frame.locals;                          \
+        cur_func = frame.func;                              \
+        cur_bytecode = array_ptr(char, cur_func.bytecode); \
     })
 
 struct vm_t
@@ -234,25 +239,25 @@ struct vm_t
 };
 
 #ifdef VM_TYPED
-#define run_next_op2(TYPE1, TYPE0)                                                \
-    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] < OPCODE_MAX1); \
-    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] >= 0);          \
-    run_next_op(array_ptr(int, cur_func.bytecode)[cur_index++] + TYPE1 * OPCODE_MAX2P + TYPE0 * OPCODE_MAX2P * TYPE_MAX2P)
-#define run_next_op1(TYPE0)                                                       \
-    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] < OPCODE_MAX1); \
-    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] >= 0);          \
-    __builtin_assume((*(cur_stack - 1)).type < TYPE_MAX1);                        \
-    __builtin_assume((*(cur_stack - 1)).type >= 0);                               \
-    run_next_op(array_ptr(int, cur_func.bytecode)[cur_index++] + (*(cur_stack - 1)).type * OPCODE_MAX2P + TYPE0 * OPCODE_MAX2P * TYPE_MAX2P)
-#define run_next_op                                                               \
-    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] < OPCODE_MAX1); \
-    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] >= 0);          \
-    __builtin_assume((*(cur_stack - 1)).type < TYPE_MAX1);                        \
-    __builtin_assume((*(cur_stack - 1)).type >= 0);                               \
-    __builtin_assume((*cur_stack).type < TYPE_MAX1);                              \
-    __builtin_assume((*cur_stack).type >= 0);                                     \
-    debug_op goto *ptrs[array_ptr(int, cur_func.bytecode)[cur_index++] +          \
-                        (*(cur_stack - 1)).type * OPCODE_MAX2P +                  \
+#define run_next_op2(TYPE1, TYPE0)                           \
+    vm_assume(cur_bytecode[cur_index] < OPCODE_MAX1); \
+    vm_assume(cur_bytecode[cur_index] >= 0);          \
+    run_next_op(cur_bytecode[cur_index++] + TYPE1 * OPCODE_MAX2P + TYPE0 * OPCODE_MAX2P * TYPE_MAX2P)
+#define run_next_op1(TYPE0)                                  \
+    vm_assume(cur_bytecode[cur_index] < OPCODE_MAX1); \
+    vm_assume(cur_bytecode[cur_index] >= 0);          \
+    vm_assume((*(cur_stack - 1)).type < TYPE_MAX1);   \
+    vm_assume((*(cur_stack - 1)).type >= 0);          \
+    run_next_op(cur_bytecode[cur_index++] + (*(cur_stack - 1)).type * OPCODE_MAX2P + TYPE0 * OPCODE_MAX2P * TYPE_MAX2P)
+#define run_next_op                                              \
+    vm_assume(cur_bytecode[cur_index] < OPCODE_MAX1);     \
+    vm_assume(cur_bytecode[cur_index] >= 0);              \
+    vm_assume((*(cur_stack - 1)).type < TYPE_MAX1);       \
+    vm_assume((*(cur_stack - 1)).type >= 0);              \
+    vm_assume((*cur_stack).type < TYPE_MAX1);             \
+    vm_assume((*cur_stack).type >= 0);                    \
+    debug_op goto *ptrs[cur_bytecode[cur_index++] +              \
+                        (*(cur_stack - 1)).type * OPCODE_MAX2P + \
                         (*cur_stack).type * OPCODE_MAX2P * TYPE_MAX2P];
 
 void opcode_on2(void **ptrs, opcode_t op, type_t top2, type_t top1,
@@ -280,15 +285,17 @@ void opcode_on0(void **ptrs, opcode_t op, void *then)
     }
 }
 #else
-#define run_next_op                                                               \
-    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] < OPCODE_MAX1); \
-    __builtin_assume(array_ptr(int, cur_func.bytecode)[cur_index] >= 0);          \
-    debug_op goto *ptrs[array_ptr(int, cur_func.bytecode)[cur_index++]];
+#define run_next_op                                          \
+    vm_assume(cur_bytecode[cur_index] < OPCODE_MAX1); \
+    vm_assume(cur_bytecode[cur_index] >= 0);          \
+    debug_op goto *ptrs[cur_bytecode[cur_index++]];
 
 #define run_next_op2(_1, _0) run_next_op
 #define run_next_op1(_0) run_next_op
 
 #endif
+
+#define cur_bytecode_next(Type) ({Type ret = *(Type*)&cur_bytecode[cur_index]; cur_index += sizeof(Type); ret;})
 
 obj_t vm_run(vm_t *pvm, func_t basefunc, int argc, obj_t *argv)
 {
@@ -307,6 +314,7 @@ obj_t vm_run(vm_t *pvm, func_t basefunc, int argc, obj_t *argv)
     func_t cur_func;
     obj_t *cur_stack;
     obj_t *cur_locals;
+    char *cur_bytecode;
 #ifdef VM_TYPED
     void *ptrs[OPCODE_MAX2P * TYPE_MAX2P * TYPE_MAX2P + 1] = {};
     for (int top2 = 0; top2 < TYPE_MAX2P; top2++)
@@ -375,7 +383,6 @@ obj_t vm_run(vm_t *pvm, func_t basefunc, int argc, obj_t *argv)
     ptrs[OPCODE_IFFALSE] = &&do_iffalse;
     ptrs[OPCODE_CALL] = &&do_call;
     ptrs[OPCODE_REC] = &&do_rec;
-    ptrs[OPCODE_TAILREC] = &&do_tailrec;
     ptrs[OPCODE_FUNC] = &&do_func;
 #endif
 rec_call:
@@ -418,7 +425,7 @@ rec_call:
     cur_stack = (obj_t *)(vm.linear->values + vm.linear->length);
     cur_locals = cur_stack + cur_func.stack_used;
     vm.linear->length += (cur_func.locals_used + cur_func.stack_used) * sizeof(obj_t);
-    run_next_op2(TYPE_ERROR, TYPE_ERROR);
+    run_next_op2(TYPE_NONE, TYPE_NONE);
 do_err:
 {
     return (obj_t){
@@ -432,7 +439,7 @@ do_return:
     vm.linear->length -= (cur_func.stack_used + cur_func.locals_used) * sizeof(obj_t);
     vm_set_frame(vm.frames_low[--frame_number]);
     *cur_stack = retval;
-    run_next_op;
+    run_next_op1(retval.type);
 }
 do_exit:
 {
@@ -444,7 +451,7 @@ do_exit:
 }
 do_push:
 {
-    obj_t val = array_ptr(obj_t, cur_func.constants)[array_ptr(int, cur_func.bytecode)[cur_index++]];
+    obj_t val = cur_bytecode_next(obj_t);
     *(++cur_stack) = val;
     run_next_op1(val.type);
 }
@@ -455,25 +462,25 @@ do_pop:
 }
 do_arg:
 {
-    obj_t val = cur_argv[array_ptr(int, cur_func.bytecode)[cur_index++]];
+    obj_t val = cur_argv[cur_bytecode_next(int)];
     *(++cur_stack) = val;
     run_next_op1(val.type);
 }
 do_store:
 {
     obj_t val = *cur_stack;
-    cur_locals[array_ptr(int, cur_func.bytecode)[cur_index++]] = val;
+    cur_locals[cur_bytecode_next(int)] = val;
     run_next_op1(val.type);
 }
 do_load:
 {
-    obj_t val = cur_locals[array_ptr(int, cur_func.bytecode)[cur_index++]];
+    obj_t val = cur_locals[cur_bytecode_next(int)];
     *(++cur_stack) = val;
     run_next_op1(val.type);
 }
 do_loadc:
 {
-    obj_t val = array_ptr(obj_t, cur_func.captured)[array_ptr(int, cur_func.bytecode)[cur_index++]];
+    obj_t val = array_ptr(obj_t, cur_func.captured)[cur_bytecode_next(int)];
     *(++cur_stack) = val;
     run_next_op1(val.type);
 }
@@ -574,18 +581,19 @@ do_print:
 }
 do_jump:
 {
-    cur_index = array_ptr(int, cur_func.bytecode)[cur_index];
+    cur_index = cur_bytecode_next(int);
     run_next_op;
 }
 do_iftrue:
 {
     if ((cur_stack--)->boolean)
     {
-        cur_index = array_ptr(int, cur_func.bytecode)[cur_index];
+        int res = cur_bytecode_next(int);
+        cur_index = res;
     }
     else
     {
-        cur_index++;
+        cur_bytecode_next(int);
     }
     run_next_op;
 }
@@ -593,17 +601,18 @@ do_iffalse:
 {
     if (!(cur_stack--)->boolean)
     {
-        cur_index = array_ptr(int, cur_func.bytecode)[cur_index];
+        int res = cur_bytecode_next(int);
+        cur_index = res;
     }
     else
     {
-        cur_index++;
+        cur_bytecode_next(int);
     }
     run_next_op;
 }
 do_call:
 {
-    int nargs = array_ptr(int, cur_func.bytecode)[cur_index++];
+    int nargs = cur_bytecode_next(int);
     cur_stack -= nargs;
     next = (stack_frame_t){
         .func = *cur_stack->function,
@@ -615,7 +624,7 @@ do_call:
 }
 do_rec:
 {
-    int nargs = array_ptr(int, cur_func.bytecode)[cur_index++];
+    int nargs = cur_bytecode_next(int);
     cur_stack -= nargs - 1;
     next = (stack_frame_t){
         .argc = nargs,
@@ -624,10 +633,6 @@ do_rec:
         .index = 0,
     };
     goto rec_call;
-}
-do_tailrec:
-{
-    run_next_op;
 }
 do_func:
 {

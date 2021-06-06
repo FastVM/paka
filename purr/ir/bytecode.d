@@ -15,16 +15,37 @@ import purr.ir.opt;
 import purr.ir.repr;
 import purr.type.check;
 
+int add(Bytecode func, Opcode op)
+{
+    int where = cast(int) func.bytecode.length;
+    func.bytecode.push!char(op);
+    return where;
+}
+
 int add(Bytecode func, int val)
 {
     int where = cast(int) func.bytecode.length;
-    func.bytecode.push(val);
+    char[int.sizeof] chrs = *cast(char[int.sizeof]*)&val;
+    foreach (chr; chrs)
+    {
+        func.bytecode.push!char(chr);
+    }
     return where;
+}
+
+void add(Bytecode func, Dynamic val)
+{
+    char[Dynamic.sizeof] chrs = *cast(char[Dynamic.sizeof]*)&val;
+    foreach (chr; chrs)
+    {
+        func.bytecode.push!char(chr);
+    }
 }
 
 void set(Bytecode func, int where, int val)
 {
-    func.bytecode.index!int(where) = val;
+    char* ptr = &func.bytecode.index!char(where);
+    *cast(int*)ptr = val;
 }
 
 int length(Bytecode func)
@@ -146,8 +167,7 @@ final class BytecodeEmitter
     void emit(ConstReturnBranch branch)
     {
         func.add(Opcode.push);
-        func.add(cast(int) func.constants.length);
-        func.constants.push(branch.value);
+        func.add(branch.value);
         if (depth > 1)
         {
             func.add(Opcode.ret);
@@ -279,8 +299,7 @@ final class BytecodeEmitter
     void emit(PushInstruction push)
     {
         func.add(Opcode.push);
-        func.add(cast(int) func.constants.length);
-        func.constants.push(push.value);
+        func.add(push.value);
     }
 
     void emit(RecInstruction rec)
@@ -337,8 +356,7 @@ final class BytecodeEmitter
     void emit(ConstOperatorInstruction op)
     {
         func.add(Opcode.push);
-        func.add(cast(int) func.constants.length);
-        func.constants.push(op.rhs);
+        func.add(op.rhs);
         switch (op.op)
         {
         default:
@@ -388,8 +406,7 @@ final class BytecodeEmitter
         Bytecode newFunc = Bytecode.from(func);
         emitInFunc(newFunc, lambda.entry);
         func.add(Opcode.push);
-        func.add(cast(int) func.constants.length);
-        func.constants.push(newFunc.dynamic);
+        func.add(newFunc.dynamic);
         func.add(Opcode.func);
     }
 

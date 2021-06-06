@@ -1,7 +1,10 @@
-fib(n) =
-    if n < 2:
+def fib(n) {
+    if n < 2 {
         return n
-    else:
+    }
+    else {
         return rec(n-2) + rec(n-1)
+    }
+}
 
-fib(35)
+print(fib(35))

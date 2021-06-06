@@ -90,7 +90,6 @@ alias Bytecode = Function*;
 struct Function
 {
     List* bytecode;
-    List* constants;
     Bytecode parent;
     List* captureFrom;
     List* captureFlags;
@@ -103,7 +102,6 @@ struct Function
         Function* ret = cast(Function*) GC.calloc(Function.sizeof);
         ret.parent = last;
         ret.bytecode = List.empty!(int);
-        ret.constants = List.empty!(Dynamic);
         ret.captureFrom = List.empty!(int);
         ret.captureFlags = List.empty!(int);
         ret.stackSize = 128;
@@ -112,7 +110,7 @@ struct Function
     }
 }
 
-enum Opcode : int
+enum Opcode : char
 {
     ret,
     exit,
