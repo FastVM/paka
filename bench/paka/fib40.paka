@@ -1,7 +1,7 @@
-fib() =
-    if $0 < 2:
-        return $0 
+def fib(n :: Int):
+    if n < 2:
+        return n
     else:
-        return rec($0 - 2) + rec($0 - 1)
+        return rec(n - 2) + rec(n - 1)
 
-fib(40)
+print(fib(40))

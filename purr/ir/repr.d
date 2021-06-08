@@ -9,14 +9,14 @@ import std.meta;
 import purr.io;
 import purr.srcloc;
 import purr.vm.bytecode;
-import purr.dynamic;
 import purr.inter;
 import purr.ir.opt;
+import purr.type.repr;
 
-alias InstrTypes = AliasSeq!(LogicalBranch, TailCallBranch, GotoBranch, ReturnBranch, ConstReturnBranch, 
-        BuildTupleInstruction,BuildArrayInstruction, BuildTableInstruction, CallInstruction, StaticCallInstruction, PushInstruction,
-        OperatorInstruction, ConstOperatorInstruction, LambdaInstruction, PopInstruction, PrintInstruction,
-        StoreInstruction, StoreIndexInstruction, LoadInstruction, RecInstruction, ArgNumberInstruction);
+alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, LabelBranch, JumpBranch, ReturnBranch,
+        CallInstruction, PushInstruction, OperatorInstruction, LambdaInstruction,
+        PopInstruction, PrintInstruction, StoreInstruction,
+        StoreIndexInstruction, LoadInstruction, RecInstruction);
 
 __gshared size_t nameCount;
 
@@ -118,6 +118,34 @@ class LogicalBranch : Branch
     }
 }
 
+class LabelBranch : Branch
+{
+    this(BasicBlock t)
+    {
+        target = [t];
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "label " ~ target[0].name ~ " \n";
+        return ret;
+    }
+}
+
+class JumpBranch: Branch
+{
+    this()
+    {
+    }
+
+    override string toString()
+    {
+        string ret;
+        ret ~= "jump\n";
+        return ret;
+    }
+}
 
 class GotoBranch : Branch
 {
@@ -141,6 +169,13 @@ class GotoBranch : Branch
 
 class ReturnBranch : Branch
 {
+    Type type;
+
+    this(Type ty)
+    {
+        type = ty;
+    }
+
     override string toString()
     {
         string ret;
@@ -149,141 +184,46 @@ class ReturnBranch : Branch
     }
 }
 
-class ConstReturnBranch : Branch
-{
-    Dynamic value;
-    this(Dynamic val)
-    {
-        value = val;
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "const-return value=";
-        ret ~= value.to!string;
-        ret ~= '\n';
-        return ret;
-    }
-}
-
-class BuildTupleInstruction : Instruction
-{
-    int argc;
-
-    this(int a)
-    {
-        argc = a;
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "array " ~ argc.to!string ~ "\n";
-        return ret;
-    }
-}
-
-class BuildArrayInstruction : Instruction
-{
-    int argc;
-
-    this(int a)
-    {
-        argc = a;
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "array " ~ argc.to!string ~ "\n";
-        return ret;
-    }
-}
-
-class BuildTableInstruction : Instruction
-{
-    int argc;
-
-    this(int a)
-    {
-        argc = a;
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "table " ~ argc.to!string ~ "\n";
-        return ret;
-    }
-}
-
 class CallInstruction : Instruction
 {
-    int argc;
+    Type[] args;
 
-    this(int a)
+    this(Type[] a)
     {
-        argc = a;
+        args = a;
     }
 
     override string toString()
     {
         string ret;
-        ret ~= "call " ~ argc.to!string ~ "\n";
-        return ret;
-    }
-}
-
-class TailCallBranch : Branch
-{
-    int argc;
-
-    this(int ac)
-    {
-        argc = ac;
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "tail-call " ~ argc.to!string ~ "\n";
-        return ret;
-    }
-}
-
-class StaticCallInstruction : Instruction
-{
-    Dynamic func;
-    int argc;
-
-    this(Dynamic fn, int ac)
-    {
-        func = fn;
-        argc = ac;
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "static-call func=(?) " ~ argc.to!string ~ "\n";
+        ret ~= "call " ~ args.length.to!string ~ "\n";
         return ret;
     }
 }
 
 class PushInstruction : Instruction
 {
-    Dynamic value;
+    void[] value;
+    Type type;
 
-    this(Dynamic v)
+    this(void[] v, Type ty)
     {
         value = v;
+        type = ty;
+    }
+
+    this(T)(T v, Type ty)
+    {
+        static assert(is(T == bool) || is(T == double) || is(T == Bytecode));
+        void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
+        value = arr.dup;
+        type = ty;
     }
 
     override string toString()
     {
         string ret;
-        ret ~= "push " ~ value.to!string ~ "\n";
+        ret ~= "push " ~ to!string(cast(ubyte[]) value) ~ "\n";
         return ret;
     }
 }
@@ -300,7 +240,7 @@ class RecInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "rec argc=" ~ argc.to!string~ "\n";
+        ret ~= "rec argc=" ~ argc.to!string ~ "\n";
         return ret;
     }
 }
@@ -312,42 +252,22 @@ enum string[] operators = [
 
 class OperatorInstruction : Instruction
 {
-    string[] attrs;
     string op;
+    Type resType;
+    Type[] inputTypes;
 
-    this(string oper, string[] ats=null)
+    this(string oper, Type rt, Type[] its)
     {
         op = oper;
-        attrs = ats;
+        resType = rt;
+        inputTypes = its;
         assert(operators.canFind(oper) || oper == "index");
     }
 
     override string toString()
     {
         string ret;
-        ret ~= "operator " ~ op ~ " " ~ attrs.map!(x => "@" ~ x).join(" ") ~ "\n";
-        return ret;
-    }
-}
-
-class ConstOperatorInstruction : Instruction
-{
-    string[] attrs;
-    string op;
-    Dynamic rhs;
-
-    this(string oper, Dynamic r, string[] ats=null)
-    {
-        op = oper;
-        attrs = ats;
-        rhs = r;
-        assert(operators.canFind(oper) || oper == "index");
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "const-operator " ~ op ~ " rhs=" ~ rhs.to!string ~ " " ~ attrs.map!(x => "@" ~ x).join(" ") ~ "\n";
+        ret ~= "operator " ~ op ~ "\n";
         return ret;
     }
 }
@@ -355,24 +275,34 @@ class ConstOperatorInstruction : Instruction
 class LambdaInstruction : Instruction
 {
     BasicBlock entry;
-    string[] argNames;
+    Type[string] types;
+    string[] args;
+    Bytecode impl;
 
-    this(BasicBlock bb, string[] args)
+    this(BasicBlock bb, string[] a, Type[string] t, Bytecode ip)
     {
         entry = bb;
-        argNames = args;
+        types = t;
+        args = a;
+        impl = ip;
     }
 
     override string toString()
     {
         string ret;
-        ret ~= "lambda " ~ entry.name ~ " (" ~ argNames.join(", ").to!string ~ ")" ~ "\n";
+        ret ~= "lambda " ~ entry.name ~ " (" ~ args.to!string[1..$-1] ~ ")" ~ "\n";
         return ret;
     }
 }
 
 class PopInstruction : Instruction
 {
+    Type type;
+
+    this(Type ty)
+    {
+        type = ty;
+    }
 
     override string toString()
     {
@@ -384,6 +314,12 @@ class PopInstruction : Instruction
 
 class PrintInstruction : Instruction
 {
+    Type type;
+
+    this(Type t)
+    {
+        type = t;
+    }
 
     override string toString()
     {
@@ -396,9 +332,12 @@ class PrintInstruction : Instruction
 class StoreInstruction : Instruction
 {
     string var;
-    this(string v)
+    Type type;
+
+    this(string v, Type t)
     {
         var = v;
+        type = t;
     }
 
     override string toString()
@@ -426,34 +365,18 @@ class StoreIndexInstruction : Instruction
 class LoadInstruction : Instruction
 {
     string var;
+    Type type;
 
-    this(string v)
+    this(string v, Type ty)
     {
         var = v;
+        type = ty;
     }
 
     override string toString()
     {
         string ret;
         ret ~= "load " ~ var ~ "\n";
-        return ret;
-    }
-}
-class ArgNumberInstruction : Instruction
-{
-    int argno;
-
-    this(int arg)
-    {
-        argno = arg;
-    }
-    
-    override string toString()
-    {
-        string ret;
-        ret ~= "arg num=";
-        ret ~= argno.to!string;
-        ret ~= "\n";
         return ret;
     }
 }

@@ -3,8 +3,8 @@ module purr.ast.ast;
 import std.algorithm;
 import std.conv;
 import std.meta;
-import purr.dynamic;
 import purr.srcloc;
+import purr.type.repr;
 
 /// all possible node types
 alias NodeTypes = AliasSeq!(Form, Value, Ident);
@@ -81,7 +81,8 @@ Ident genSym()
     return new Ident("_purr_" ~ to!string(usedSyms - 1));
 }
 
-template ident(string name){
+template ident(string name)
+{
     Ident value;
 
     shared static this()
@@ -89,7 +90,8 @@ template ident(string name){
         value = new Ident(name);
     }
 
-    Ident ident() {
+    Ident ident()
+    {
         return value;
     }
 }
@@ -125,19 +127,52 @@ final class Ident : Node
     }
 }
 
-/// dynamic value literal
 final class Value : Node
 {
-    Dynamic value;
+    Type type;
+    void[] value;
 
     this(T)(T v)
     {
-        value = v.dynamic;
+        static if (is(T == bool))
+        {
+            type = Type.logical;
+            void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
+            value = arr.dup;
+        }
+        else static if (is(T == double))
+        {
+            assert(false);
+            type = Type.number;
+            void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
+            value = arr.dup;
+        }
+        else static if (is(T == long))
+        {
+            type = Type.integer;
+            void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
+            value = arr.dup;
+        }
+        else static if (is(T == void[0]) || is(T == typeof(null)))
+        {
+            type = Type.nil;
+            value = null;
+        }
+        else
+        {
+            static assert(false, T.stringof);
+        }
+    }
+
+    static Value empty()
+    {
+        void[0] e;
+        return new Value(e);
     }
 
     override string toString()
     {
-        return "[" ~ value.to!string ~ "]";
+        return to!string(cast(ubyte[]) value);
     }
 
     override NodeKind id()

@@ -11,7 +11,6 @@ import std.algorithm;
 import std.functional;
 import purr.vm;
 import purr.inter;
-import purr.dynamic;
 import purr.srcloc;
 import purr.fs.disk;
 import purr.fs.har;
@@ -145,74 +144,14 @@ Node readPostExtendImpl(TokenArray tokens, Node last)
     {
         return last;
     }
-    Node ret = void;
     if (tokens.first.isOpen("("))
     {
-        ret = tokens.readPostCallExtend(last);
-    }
-    else if (tokens.first.isKeyword("await"))
-    {
-        tokens.nextIs(Token.Type.keyword, "await");
-        UnaryOp unary = ["await"].parseUnaryOp;
-        ret = unary(last);
-    }
-    else if (tokens.first.isOperator("."))
-    {
-        tokens.nextIs(Token.Type.operator, ".");
-        if (tokens.first.isOpen("["))
-        {
-            Node[] arr = tokens.readOpen!"[]";
-            ret = new Form("index", [last, new Form("do", arr)]);
-        }
-        else if (tokens.first.isOpen("("))
-        {
-            Node[][] arr = tokens.readOpen!"()";
-            Node dov = new Form("do", arr.map!(s => cast(Node) new Form("do", s)).array);
-            ret = new Form("index", last, dov);
-        }
-        else 
-        {
-            Node key = void;
-            if (tokens.first.value[0].isDigit)
-            {
-                key = new Value(tokens.first.value.to!double);
-            }
-            else
-            {
-                key = new Value(tokens.first.value);
-            }
-            tokens.nextIs(Token.Type.ident);
-            if (Form form = cast(Form) last)
-            {
-                if (form.form == "cache")
-                {
-                    last = form.args[0];
-                }
-                if (form.form == "do")
-                {
-                    if (Form form2 = cast(Form) form.args[$-1])
-                    {
-                        if (form2.form == "cache")
-                        {
-                            last = new Form("do", form.args[0..$-1], form2.args[0]);
-                        }
-                    }
-                }
-            }
-            // Node sym = genSym;
-            // Node setsym = new Form("set", sym, last);
-            // Node indexed = new Form("index", sym, key);
-            // Node res = new Form("cache", indexed, sym);
-            // Node res = indexed;
-            // ret = new Form("do", setsym, res);
-            ret = new Form("index", last, key);
-        }
+        return tokens.readPostExtend(tokens.readPostCallExtend(last));
     }
     else
     {
         return last; // throw new Exception("parse error " ~ tokens.to!string);
     }
-    return tokens.readPostExtend(ret);
 }
 
 /// read an if statement
@@ -229,7 +168,7 @@ Node readIfImpl(TokenArray tokens)
     }
     else
     {
-        iffalse = new Value(Dynamic.nil);
+        iffalse = Value.empty;
     }
     return new Form("if", cond, iftrue, iffalse);
 }
@@ -240,20 +179,6 @@ Node readWhileImpl(TokenArray tokens)
     Node cond = tokens.readExprBase;
     Node block = tokens.readBlock;
     return new Form("while", cond, block);
-}
-
-alias readTable = Spanning!readTableImpl;
-Node readTableImpl(TokenArray tokens)
-{
-    Ident thisSaveSym = genSym;
-    Ident thisSym = new Ident("this");
-    Ident result = genSym;
-    Node savethis = new Form("set", thisSaveSym, thisSym);
-    Node set = new Form("set", thisSym, new Form("table", new Value("get"), thisSaveSym));
-    Node build = tokens.readBlock;
-    Node saveresult = new Form("set", result, thisSym);
-    Node loadthis = new Form("set", thisSym, thisSaveSym);
-    return new Form("do", savethis, set, build, saveresult, loadthis, result);
 }
 
 void skip1(ref string str, ref Span span)
@@ -356,55 +281,6 @@ size_t escapeNumber(ref string input)
     }
 }
 
-Node readStringPart(ref string str, ref Span span)
-{
-    Span spanInput = span;
-    char first = str[0];
-    if (first == '\\')
-    {
-        str.skip1(span);
-    }
-    string ret;
-    while (str.length != 0 && str[0] != '\\')
-    {
-        ret ~= str[0];
-        str.skip1(span);
-    }
-    Node node = void;
-    if (first != '\\')
-    {
-        node = new Value(ret);
-    }
-    else
-    {
-        str.skip1(span);
-        if ((ret[0] == 'u' && ret[1] == 'f') || (ret[0] == 'f' && ret[1] == 'u'))
-        {
-            string input = ret[3 .. $ - 1].strip;
-            node = SrcLoc(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
-                .parsePakaAs!readExprBase;
-            node = new Form("call", [new Ident("_unicode_ctrl"), node]);
-        }
-        else if (ret[0] == 'f')
-        {
-            string input = ret[2 .. $ - 1].strip;
-            node = SrcLoc(spanInput.first.line, spanInput.first.column, "string", input ~ ";")
-                .parsePakaAs!readExprBase;
-        }
-        else if (ret[0] == 'u')
-        {
-            string input = ret[2 .. $ - 1].strip;
-            node = new Form("call", [new Ident("_unicode_ctrl"), new Value(input)]);
-        }
-        else
-        {
-            assert(false);
-        }
-    }
-    node.span = spanInput;
-    return node;
-}
-
 /// reads first element of postfix expression
 alias readPostExpr = Spanning!readPostExprImpl;
 Node readPostExprImpl(TokenArray tokens)
@@ -429,7 +305,7 @@ Node readPostExprImpl(TokenArray tokens)
         Node[] nodes = tokens.readOpen1!"()";
         if (nodes.length == 0)
         {
-            last = new Value(Dynamic.nil);
+            last = Value.empty;
         }
         else if (nodes.length == 1)
         {
@@ -437,38 +313,12 @@ Node readPostExprImpl(TokenArray tokens)
         }
         else
         {
-            last = new Form("tuple", nodes);
+            last = new Form("array", nodes);
         }
     }
     else if (tokens.first.isOpen("["))
     {
         last = new Form("array", tokens.readOpen!"[]");
-    }
-    else if (tokens.first.isKeyword("cache"))
-    {
-        tokens.nextIs(Token.Type.keyword, "cache");
-        Node[] checks = void;
-        if (tokens.first.isOpen("("))
-        {
-            checks = tokens.readOpen1!"()";
-        }
-        else
-        {
-            checks = null;
-        }
-        if (tokens.first.isOpen("{") || tokens.first.isOperator(":"))
-        {
-            last = new Form("cache", tokens.readBlock, checks);
-        }
-        else
-        {
-            last = new Form("cache", tokens.readPostExpr, checks);
-        }
-    }
-    else if (tokens.first.isKeyword("table"))
-    {
-        tokens.nextIs(Token.Type.keyword, "table");
-        last = tokens.readTable;
     }
     else if (tokens.first.isKeyword("if"))
     {
@@ -493,39 +343,33 @@ Node readPostExprImpl(TokenArray tokens)
     else if (tokens.first.isKeyword("nil"))
     {
         tokens.nextIs(Token.Type.keyword, "nil");
-        last = new Value(Dynamic.nil);
+        last = Value.empty;
     }
     else if (tokens.first.isIdent)
     {
-        if (tokens.first.value[0] == '$')
+        if (tokens.first.value[0].isDigit)
+        {
+            if (tokens.first.value.canFind("."))
+            {
+                last = new Value(tokens.first.value.to!double);
+                tokens.nextIs(Token.Type.ident);
+            }
+            else
+            {
+                last = new Value(tokens.first.value.to!long);
+                tokens.nextIs(Token.Type.ident);
+            }
+        }
+        else
         {
             last = new Ident(tokens.first.value);
             tokens.nextIs(Token.Type.ident);
         }
-        else if (tokens.first.value[0].isDigit)
-        {
-            last = new Value(tokens.first.value.to!double);
-            tokens.nextIs(Token.Type.ident);
-        }
-        else if (tokens.first.value[0] == '@')
-        {
-            Node var = new Ident("this");
-            Node index = new Value(tokens.first.value[1 .. $]);
-            tokens.nextIs(Token.Type.ident);
-            last = new Form("index", var, index);
-        }
-        // else
-        // {
-        //     Node var = new Ident("this");
-        //     Node index = new Value(tokens.first.value);
-        //     tokens.nextIs(Token.Type.ident);
-        //     last = new Form("cache", new Form("index", var, index));
-        // }
+    }
     else
-        {
-            last = new Ident(tokens.first.value);
-            tokens.nextIs(Token.Type.ident);
-        }
+    {
+        last = new Ident(tokens.first.value);
+        tokens.nextIs(Token.Type.ident);
     }
     return tokens.readPostExtend(last);
 }
@@ -545,11 +389,6 @@ Node readPreExprImpl(TokenArray tokens)
         return parseUnaryOp(vals)(tokens.readPostExpr);
     }
     return tokens.readPostExpr;
-}
-
-bool isDotOperator(Token tok)
-{
-    return tok.isOperator("!") || tok.isOperator("\\");
 }
 
 alias readExprBase = Spanning!(readExprBaseImpl);
@@ -581,23 +420,11 @@ Node readExprImpl(TokenArray tokens, size_t level)
     }
     string[][] opers;
     Node[] subNodes = [tokens.readExpr(level + 1)];
-    while (tokens.first.isAnyOperator(prec[level]) || tokens.first.isDotOperator)
+    while (tokens.first.isAnyOperator(prec[level]))
     {
-        string[] oper;
-        while (tokens.first.isDotOperator)
-        {
-            oper ~= tokens.first.value;
-            tokens.nextIs(Token.Type.operator);
-        }
-        oper ~= tokens.first.value;
+        opers ~= [tokens.first.value];
         tokens.nextIs(Token.Type.operator);
-        while (tokens.first.isDotOperator)
-        {
-            oper ~= tokens.first.value;
-            tokens.nextIs(Token.Type.operator);
-        }
         subNodes ~= tokens.readExpr(level + 1);
-        opers ~= oper;
     }
     Node ret = subNodes[0];
     Ident last;
@@ -619,10 +446,15 @@ Node readStmtImpl(TokenArray tokens)
             tokens.nextIs(Token.Type.semicolon);
         }
     }
-    if (tokens.first.isKeyword("return"))
+    // if (tokens.first.isKeyword("return"))
+    // {
+    //     tokens.nextIs(Token.Type.keyword, "return");
+    //     return new Form("return", tokens.readExprBase);
+    // }
+    if (tokens.first.isKeyword("jump"))
     {
-        tokens.nextIs(Token.Type.keyword, "return");
-        return new Form("return", tokens.readExprBase);
+        tokens.nextIs(Token.Type.keyword, "jump");
+        return new Form("jump", tokens.readExprBase);
     }
     if (tokens.first.isKeyword("def"))
     {
@@ -731,6 +563,7 @@ Node parseUncached(SrcLoc loc)
         throw new Exception("input error: missing __main__");
     }
     SrcLoc location = main.location;
-    Node ret = location.parsePaka;
-    return ret;
+    Node ast = location.parsePaka;
+    // Node ret = new Form("do", ast, new Form("call", new Ident("main")));
+    return ast;
 }

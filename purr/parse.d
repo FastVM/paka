@@ -5,7 +5,6 @@ import purr.io;
 import purr.ast.ast;
 import purr.ir.walk;
 import purr.vm.bytecode;
-import purr.dynamic;
 import purr.vm;
 import purr.srcloc;
 

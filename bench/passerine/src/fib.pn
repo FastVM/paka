@@ -1,6 +1,0 @@
-
-recv = n -> fib (n-1) + fib (n-2)
-pass = n -> n
-fib = n -> (magic "if" (n < 2, pass, recv)) n
-
-print (fib 35)

@@ -1,7 +1,6 @@
 module purr.io;
 
 import std.algorithm;
-import std.process;
 import std.string;
 import std.array;
 import std.range;

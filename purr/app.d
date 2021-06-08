@@ -7,7 +7,6 @@ import purr.ir.walk;
 import purr.vm;
 import purr.srcloc;
 import purr.ast.ast;
-import purr.dynamic;
 import purr.parse;
 import purr.inter;
 import purr.io;
@@ -22,7 +21,6 @@ import std.file;
 import std.json;
 import std.ascii;
 import std.algorithm;
-import std.process;
 import std.conv;
 import std.string;
 import std.getopt;
@@ -35,8 +33,6 @@ extern (C) __gshared string[] rt_options = [];
 
 alias Thunk = void delegate();
 
-__gshared Dynamic[] dynamics;
-__gshared Dynamic[] fileArgs;
 Thunk cliFileHandler(immutable string filename)
 {
     return {
@@ -54,33 +50,20 @@ Thunk cliFileHandler(immutable string filename)
             langNameDefault = "passerine";
         }
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        string cdir = getcwd;
-        Dynamic retval;
-        scope (exit)
-        {
-            cdir.chdir;
-            fileArgs = null;
-        }
-        filename.dirName.chdir;
-        retval = eval(code, fileArgs);
-        dynamics ~= retval;
+        // string cdir = getcwd;
+        // scope (exit)
+        // {
+        //     cdir.chdir;
+        // }
+        // filename.dirName.chdir;
+        eval(code);
     };
-}
-
-Thunk cliArgHandler(immutable string arg)
-{
-    return { fileArgs ~= arg.dynamic; };
 }
 
 Thunk cliEvalHandler(immutable string code)
 {
     return {
-        scope (exit)
-        {
-            fileArgs = null;
-        }
-        Dynamic got = eval(SrcLoc(1, 1, "__main__", code), fileArgs);
-        dynamics ~= got;
+        eval(SrcLoc(1, 1, "__main__", code));
     };
 }
 
@@ -125,83 +108,6 @@ Thunk cliAstHandler()
 Thunk cliIrHandler()
 {
     return { dumpir = !dumpir; };
-}
-
-Thunk cliEchoHandler()
-{
-    return {
-        if (dynamics[$ - 1].isString)
-        {
-            writeln(dynamics[$ - 1].str);
-        }
-        else
-        {
-            writeln(dynamics[$ - 1].to!string);
-        }
-        dynamics.length--;
-    };
-}
-
-Thunk cliIntoHandler(string filename)
-{
-    return {
-        File file = File(filename, "w");
-        if (dynamics[$ - 1].isString)
-        {
-            file.write(dynamics[$ - 1].str);
-        }
-        else
-        {
-            file.write(dynamics[$ - 1].to!string);
-        }
-        dynamics.length--;
-    };
-}
-
-Thunk cliSerialHandler(string filename)
-{
-    return { serialFile = filename; };
-}
-
-__gshared string serialFile = null;
-
-Thunk cliReplHandler()
-{
-    return {
-        size_t lineno = 1;
-        while (true)
-        {
-            string prompt = "(" ~ lineno.to!string ~ ")> ";
-            string line = null;
-            line = readln(prompt);
-            while (line.length > 0)
-            {
-                if (line[0].isWhite)
-                {
-                    line = line[1 .. $];
-                }
-                else if (line[$ - 1].isWhite)
-                {
-                    line = line[0 .. $ - 1];
-                }
-                else
-                {
-                    break;
-                }
-            }
-            SrcLoc code = SrcLoc(lineno, 1, "__main__", line);
-            if (code.src.length == 0)
-            {
-                break;
-            }
-            Dynamic res = eval(code);
-            if (res.isNil)
-            {
-                writeln(res);
-            }
-            lineno += 1;
-        }
-    };
 }
 
 Thunk cliTimeHandler(Thunk next)
@@ -292,14 +198,8 @@ void domain(string[] args)
         case "--bench":
             todo[$-1] = cliBenchHandler(part1.to!size_t, todo[$-1]);
             break;
-        case "--repl":
-            todo ~= cliReplHandler;
-            break;
         case "--file":
             todo ~= part1.cliFileHandler;
-            break;
-        case "--arg":
-            todo ~= part1.cliArgHandler;
             break;
         case "--parse":
             todo ~= part1.cliParseHandler;
@@ -313,9 +213,6 @@ void domain(string[] args)
         case "--lang":
             todo ~= part1.cliLangHandler;
             break;
-        case "--into":
-            todo ~= part1.cliIntoHandler;
-            break;
         case "--opt":
             todo ~= cliOptHandler(part1.to!size_t);
             break;
@@ -324,9 +221,6 @@ void domain(string[] args)
             break;
         case "--ir":
             todo ~= cliIrHandler;
-            break;
-        case "--echo":
-            todo ~= cliEchoHandler;
             break;
         }
     }

@@ -2,7 +2,6 @@ module ext.paka.parse.op;
 
 import purr.io;
 import std.conv;
-import purr.dynamic;
 import purr.ast.ast;
 import ext.paka.parse.util;
 
@@ -21,7 +20,7 @@ UnaryOp parseUnaryOp(string[] ops)
     }
     else if (opName == "not")
     {
-        return (Node rhs) { return new Form("!=", rhs, new Value(true)); };
+        return (Node rhs) { return new Form("not", rhs); };
     }
     else if (opName == "-")
     {

@@ -4,4 +4,4 @@ while x <= 100000000 {
     s = s + x
     x = x + 1
 }
-s
+print(s)

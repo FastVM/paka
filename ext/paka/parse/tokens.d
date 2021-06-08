@@ -9,19 +9,20 @@ import purr.srcloc;
 
 /// operator precidence
 string[][] prec = [
+    ["::"], ["->"],
     ["+=", "~=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"],
-    ["or", "and"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-", "~"],
-    ["*", "/", "%"], ["to", "thru"]
+    ["or", "and"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"],
+    ["*", "/", "%"]
 ];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "not", ",", ":", "\\", "!", "#"];
+string[] nops = [".", "not", ",", "\\", "!", "#", ":", "::"];
 
 /// language keywords
 string[] keywords = [
-    "if", "else", "return", "def", "lambda",
+    "if", "else", "def", "lambda",
     "import", "true", "false", "nil", "table",
-    "while", "cache", "await"
+    "while"
 ];
 
 /// gets the operators by length not precidence
@@ -232,11 +233,11 @@ redo:
             return consToken(Token.Type.operator, i);
         }
     }
-    if (peek.isAlphaNum || peek == '_' || peek == '$' || peek == '@' || peek == '?')
+    if (peek.isAlphaNum || peek == '_' || peek == '@' || peek == '?')
     {
         bool isNumber = true;
         char[] ret;
-        while (peek.isAlphaNum || peek == '_' || peek == '$' || peek == '@'
+        while (peek.isAlphaNum || peek == '_' || peek == '@'
                 || peek == '?' || (isNumber && peek == '.'))
         {
             isNumber = isNumber && (peek.isDigit || peek == '.');
@@ -286,22 +287,22 @@ redo:
                 case 's':
                     ret ~= ' ';
                     break;
-                case 'f':
-                    goto case;
-                case 'u':
-                    ret ~= '\\';
-                    ret ~= got;
-                    while (got != '}')
-                    {
-                        got = read;
-                        if (got == '\0')
-                        {
-                            throw new Exception("parse error: end of file with unclosed string");
-                        }
-                        ret ~= got;
-                    }
-                    ret ~= '\\';
-                    break;
+                // case 'f':
+                //     goto case;
+                // case 'u':
+                //     ret ~= '\\';
+                //     ret ~= got;
+                //     while (got != '}')
+                //     {
+                //         got = read;
+                //         if (got == '\0')
+                //         {
+                //             throw new Exception("parse error: end of file with unclosed string");
+                //         }
+                //         ret ~= got;
+                //     }
+                //     ret ~= '\\';
+                //     break;
                 default:
                     throw new Exception("parse error: unknown escape '" ~ got ~ "'");
                 }

@@ -1,75 +1,25 @@
 module purr.vm.bytecode;
 
-import purr.dynamic;
-import std.stdio;
+import purr.io;
 import core.memory;
 
 alias Number = double;
 alias String = immutable(char)*;
 
-extern(C) Dynamic vm_run(VM *vm, Bytecode func, int argc, Dynamic* argv);
-
-struct List
-{
-    long length;
-    long alloc;
-    void[0] values;
-
-pragma(inline, true)
-    static List* empty(T)()
-    {
-        return array_new(T.sizeof);
-    }
-}
-
-void ensure(T)(ref List* self, long index)
-{
-    array_ensure(T.sizeof, self, index);
-}
-
-void push(T)(ref List* self, T arg)
-{
-    array_push(T.sizeof, self, cast(void*) &arg);
-}
-
-ref T index(T)(const List* self, long index)
-{
-    return *cast(T*) array_index(T.sizeof, self, index);
-}
-
-ref T pop(T)(ref List* self)
-{
-    return *cast(T*) array_pop(T.sizeof, self);
-}
-
-T* ptr(T)(List* self)
-{
-    return cast(T*) &self.values;
-}
-
-extern (C)
-{
-    List* array_new(int elem_size);
-    void array_ensure(int elem_size, ref List* arr, long index);
-    void* array_index(int elem_size, const List* arr, long index);
-    void array_push(int elem_size, ref List* arr, void *value);
-    void* array_pop(int elem_size, ref List* arr_ptr);
-}
+extern (C) void vm_run(VM* vm, Function *func, void* argv);
 
 struct VM
 {
-    List* linear;
-    Frame* framesLow;
-    Frame* framesHigh;
+    void* linear;
+    Frame* frames;
 }
 
 struct Frame
 {
     int index;
-    int argc;
-    Dynamic *argv;
-    Dynamic *stack;
-    Dynamic *locals;
+    void* argv;
+    void* stack;
+    void* locals;
     Function func;
 }
 
@@ -83,68 +33,88 @@ enum Capture
 {
     local,
     arg,
-    parent,
 }
 
 alias Bytecode = Function*;
 struct Function
 {
-    List* bytecode;
-    Bytecode parent;
-    List* captureFrom;
-    List* captureFlags;
+    void* bytecode;
     int stackSize;
     int localSize;
-    List* captured;
+    int bytecodeLength;
 
-    static Function* from(Function* last)
+    static Function* empty()
     {
         Function* ret = cast(Function*) GC.calloc(Function.sizeof);
-        ret.parent = last;
-        ret.bytecode = List.empty!(int);
-        ret.captureFrom = List.empty!(int);
-        ret.captureFlags = List.empty!(int);
-        ret.stackSize = 128;
-        ret.localSize = 128;
+        ret.bytecode = new void[2 ^^ 16].ptr;
+        ret.stackSize = 256;
+        ret.localSize = 256;
         return ret;
     }
 }
 
 enum Opcode : char
 {
-    ret,
     exit,
-    push,
-    pop,
-    arg,
-    store,
-    load,
-    loadc,
-    add,
-    sub,
-    mul,
-    div,
-    mod,
-    neg,
-    lt,
-    gt,
-    lte,
-    gte,
-    eq,
-    neq,
-    print,
+    return_nil,
+    return1,
+    return2,
+    return4,
+    return8,
+    push1,
+    push2,
+    push4,
+    push8,
+    pop1,
+    pop2,
+    pop4,
+    pop8,
+    arg1,
+    arg2,
+    arg4,
+    arg8,
+    store1,
+    store2,
+    store4,
+    store8,
+    load1,
+    load2,
+    load4,
+    load8,
+    add_float,
+    sub_float,
+    mul_float,
+    div_float,
+    mod_float,
+    add_integer,
+    sub_integer,
+    mul_integer,
+    div_integer,
+    mod_integer,
+    not,
+    neg_float,
+    lt_float,
+    gt_float,
+    lte_float,
+    gte_float,
+    eq_float,
+    neq_float,
+    print_float,
+    neg_integer,
+    lt_integer,
+    gt_integer,
+    lte_integer,
+    gte_integer,
+    eq_integer,
+    neq_integer,
+    print_integer,
     jump,
     iftrue,
     iffalse,
     call,
     rec,
-    func,
+    ec_cons,
+    ec_call,
     max1,
     max2p = 128,
-}
-
-
-extern (C) void vm_impl_print(Dynamic arg)
-{
-    write(arg);
 }

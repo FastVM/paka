@@ -3,7 +3,6 @@ module ext.paka.parse.util;
 import purr.io;
 import std.conv;
 import purr.srcloc;
-import purr.dynamic;
 import purr.ast.ast;
 import ext.paka.parse.tokens;
 

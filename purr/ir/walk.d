@@ -7,20 +7,33 @@ import std.string;
 import std.algorithm;
 import std.ascii;
 import purr.ast.ast;
-import purr.dynamic;
 import purr.srcloc;
 import purr.vm.bytecode;
 import purr.ir.repr;
 import purr.ir.bytecode;
 import purr.ir.opt;
+import purr.type.repr;
 
 __gshared bool dumpast = false;
+
+struct Todo
+{
+    BasicBlock lambda;
+    Node[] args;
+    string[] argNames;
+    Type[string] locals;
+    Func functy;
+}
 
 final class Walker
 {
     Span[] nodes = [Span.init];
     BasicBlock block;
     BasicBlock funcblk;
+    Func curFunc;
+    Type[string][] localTypes = [];
+    Value[string][] localDefs = [];
+    Todo[][] todos = [];
 
     BasicBlock walkBasicBlock(Node node)
     {
@@ -38,6 +51,16 @@ final class Walker
 
     Bytecode walkProgram(Node node)
     {
+        localTypes.length++;
+        localDefs.length++;
+        todos.length++;
+        scope (exit)
+        {
+            localTypes.length--;
+            localDefs.length--;
+            todos.length--;
+        }
+        curFunc = Func.empty;
         if (dumpast)
         {
             writeln(node);
@@ -46,18 +69,23 @@ final class Walker
         BasicBlock entry = new BasicBlock;
         block = entry;
         funcblk = block;
-        walk(node);
+        Type ret = walk(node);
         if (block.exit is null)
         {
-            emitDefault(new ReturnBranch);
+            emit(new PopInstruction(ret));
+            emitDefault(new ReturnBranch(Type.nil));
         }
-        Bytecode func = Bytecode.from(null);
+        foreach (nextTodo; todos[$ - 1])
+        {
+            runTodo(nextTodo);
+        }
+        Bytecode func = Bytecode.empty;
         BytecodeEmitter emitter = new BytecodeEmitter;
         emitter.emitInFunc(func, entry);
         return func;
     }
 
-    void walk(Node node)
+    Type walk(Node node)
     {
         if (node.span != Span.init)
         {
@@ -73,14 +101,11 @@ final class Walker
         switch (node.id)
         {
         case NodeKind.call:
-            walkExact(cast(Form) node);
-            break;
+            return walkExact(cast(Form) node);
         case NodeKind.ident:
-            walkExact(cast(Ident) node);
-            break;
+            return walkExact(cast(Ident) node);
         case NodeKind.value:
-            walkExact(cast(Value) node);
-            break;
+            return walkExact(cast(Value) node);
         default:
             assert(false);
         }
@@ -110,24 +135,67 @@ final class Walker
         block.exit = branch;
     }
 
-    void walkExact(Ident id)
+    Type walkExact(Ident id)
     {
         string ident = id.repr;
-        if (ident.length != 0 && ident[0] == '$' && ident[1 .. $].isNumeric)
+        if (ident.isNumeric)
         {
-            emit(new ArgNumberInstruction(ident[1 .. $].to!int));
-        }
-        else if (ident.isNumeric)
-        {
-            emit(new PushInstruction(Dynamic.strToNum(ident)));
+            assert(false);
         }
         else
         {
-            emit(new LoadInstruction(ident));
+            Type[string] locals = localTypes[$ - 1];
+            if (Type* ret = ident in locals)
+            {
+                emit(new LoadInstruction(ident, *ret));
+                return *ret;
+            }
+            foreach_reverse (Type[string] level; localTypes[0 .. $ - 1])
+            {
+                if (Type* ret = ident in level)
+                {
+                    Type ty = *ret;
+                    if (Func func = ty.as!Func)
+                    {
+                        emit(new PushInstruction(func.impl, ty));
+                        return ty;
+                    }
+                }
+            }
+            throw new Exception("undefined variable: " ~ ident);
         }
     }
 
-    void walkIf(Node[] args)
+    Type walkIf(Node[] args)
+    {
+        BasicBlock iftrue = new BasicBlock;
+        BasicBlock iffalse = new BasicBlock;
+        BasicBlock after = new BasicBlock;
+        walk(args[0]);
+        emit(new LogicalBranch(iftrue, iffalse));
+        block = iftrue;
+        Type br1 = walk(args[1]);
+        emitDefault(new GotoBranch(after));
+        block = iffalse;
+        Type br2 = walk(args[2]);
+        emitDefault(new GotoBranch(after));
+        block = after;
+        if (br1.isUnk)
+        {
+            (cast(Unk) br1).set(br2);
+        }
+        else if (br2.isUnk)
+        {
+            (cast(Unk) br2).set(br1);
+        }
+        if (!br1.fits(br2))
+        {
+            throw new Exception("arms of if of different types");
+        }
+        return br1;
+    }
+
+    Type walkAnd(Node[] args)
     {
         BasicBlock iftrue = new BasicBlock;
         BasicBlock iffalse = new BasicBlock;
@@ -138,12 +206,13 @@ final class Walker
         walk(args[1]);
         emitDefault(new GotoBranch(after));
         block = iffalse;
-        walk(args[2]);
+        emit(new PushInstruction(false, Type.logical));
         emitDefault(new GotoBranch(after));
         block = after;
+        return Type.logical;
     }
 
-    void walkAnd(Node[] args)
+    Type walkOr(Node[] args)
     {
         BasicBlock iftrue = new BasicBlock;
         BasicBlock iffalse = new BasicBlock;
@@ -151,112 +220,70 @@ final class Walker
         walk(args[0]);
         emit(new LogicalBranch(iftrue, iffalse));
         block = iftrue;
-        walk(args[1]);
-        emitDefault(new GotoBranch(after));
-        block = iffalse;
-        emit(new PushInstruction(false.dynamic));
-        emitDefault(new GotoBranch(after));
-        block = after;
-    }
-
-    void walkOr(Node[] args)
-    {
-        BasicBlock iftrue = new BasicBlock;
-        BasicBlock iffalse = new BasicBlock;
-        BasicBlock after = new BasicBlock;
-        walk(args[0]);
-        emit(new LogicalBranch(iftrue, iffalse));
-        block = iftrue;
-        emit(new PushInstruction(true.dynamic));
+        emit(new PushInstruction(true, Type.logical));
         emitDefault(new GotoBranch(after));
         block = iffalse;
         walk(args[1]);
         emitDefault(new GotoBranch(after));
         block = after;
+        return Type.logical;
     }
 
-    void walkWhile(Node[] args)
+    Type walkWhile(Node[] args)
     {
         BasicBlock cond = new BasicBlock;
-        BasicBlock loop = new BasicBlock;
-        BasicBlock after1 = new BasicBlock;
-        emit(new GotoBranch(cond));
-        block = loop;
-        walk(args[1]);
-        emit(new GotoBranch(cond));
-        emit(new PopInstruction);
+        BasicBlock iftrue = new BasicBlock;
+        BasicBlock after = new BasicBlock;
+        emitDefault(new GotoBranch(cond));
         block = cond;
         walk(args[0]);
-        emit(new LogicalBranch(loop, after1));
-        block = after1;
-        emit(new PushInstruction(Dynamic.nil));
+        emitDefault(new LogicalBranch(iftrue, after));
+        block = iftrue;
+        Type blk = walk(args[1]);
+        emit(new PopInstruction(blk));
+        emitDefault(new GotoBranch(cond));
+        block = after;
+        return Type.nil;
     }
 
-    void walkDo(Node[] args)
+    Type walkDo(Node[] args)
     {
         if (args.length == 0)
         {
-            emit(new PushInstruction(Dynamic.nil));
+            return Type.nil;
         }
         else
         {
-            if (args.length != 1)
+            foreach (arg; args[0 .. $ - 1])
             {
-                foreach (arg; args[0 .. $ - 1])
-                {
-                    walk(arg);
-                    emit(new PopInstruction);
-                }
+                Type got = walk(arg);
+                emit(new PopInstruction(got));
             }
-            walk(args[$ - 1]);
+            return walk(args[$ - 1]);
         }
     }
 
-    void walkStoreDef(Node lhs, Node[] args, Node rhs)
+    Type walkStoreFun(Node lhs, Node[] args, Node rhs)
     {
         Node funForm = new Form("fun", [new Form("args", args), rhs]);
         Node setForm = new Form("set", lhs, funForm);
-        walk(setForm);
+        return walk(setForm);
     }
 
-    void walkStoreIndex(Node on, Node ind, Node val)
-    {
-        walk(on);
-        walk(ind);
-        walk(val);
-        emit(new StoreIndexInstruction);
-    }
-
-    void walkStore(Node[] args)
+    Type walkStore(Node[] args)
     {
         if (Ident id = cast(Ident) args[0])
         {
-            walk(args[1]);
-            emit(new StoreInstruction(id.repr));
+            Type ty = walk(args[1]);
+            emit(new StoreInstruction(id.repr, ty));
+            localTypes[$ - 1][id.repr] = ty;
+            return ty;
         }
         else if (Form call = cast(Form) args[0])
         {
-            if (call.form == "call")
+            if (call.form == "args" || call.form == "call")
             {
-                walkStoreDef(call.args[0], call.args[1 .. $], args[1]);
-            }
-            else if (call.form == "args")
-            {
-                walkStoreDef(call.args[0], call.args[1 .. $], args[1]);
-            }
-            else if (call.form == "index")
-            {
-                walkStoreIndex(call.args[0], call.args[1], args[1]);
-            }
-            else if (call.form == "cache")
-            {
-                walkStore([call.args[0], args[1]]);
-            }
-            else if (call.form == "do")
-            {
-                walkDo(call.args[0 .. $ - 1]);
-                emit(new PopInstruction);
-                walkStore([call.args[$ - 1], args[1]]);
+                return walkStoreFun(call.args[0], call.args[1 .. $], args[1]);
             }
             else
             {
@@ -269,263 +296,297 @@ final class Walker
         }
     }
 
-    void walkFun(Node[] args)
+    Type walkType(Node node)
     {
-        Form argl = cast(Form) args[0];
-        string[] argNames;
-        foreach (i, v; argl.args)
+        switch (node.id)
         {
-            Ident id = cast(Ident) v;
-            assert(id, v.to!string);
-            argNames ~= id.repr;
-        }
-        BasicBlock lambda = new BasicBlock;
-        emit(new LambdaInstruction(lambda, argNames));
-        BasicBlock outter = block;
-        BasicBlock outterfunc = funcblk;
-        block = lambda;
-        foreach (i, v; args[1 .. $])
-        {
-            if (i != 0)
+        case NodeKind.call:
+            Form form = cast(Form) node;
+            assert(false);
+        case NodeKind.ident:
+            Ident id = cast(Ident) node;
+            switch (id.repr)
             {
-                emit(new PopInstruction);
+            default:
+                foreach (layer; localTypes)
+                {
+                    if (Type* ptr = id.repr in layer)
+                    {
+                        return *ptr;
+                    }
+                }
+                throw new Exception("type not found " ~ id.repr);
+            case "Frame":
+                return Type.frame;
+            case "Int":
+                return Type.integer;
+            case "Float":
+                return Type.number;
             }
-            walk(v);
+            break;
+        case NodeKind.value:
+            throw new Exception("type cannot be a literal value");
+        default:
+            assert(false);
+        }
+    }
+
+    void runTodo(Todo todo)
+    {
+        BasicBlock last = block;
+        todos.length++;
+        localTypes ~= todo.locals;
+        curFunc = todo.functy;
+        scope (exit)
+        {
+            block = last;
+            todos.length--;
+            localTypes.length--;
+        }
+        block = todo.lambda;
+        Type ret = Type.nil;
+        foreach (i, v; todo.args[1 .. $])
+        {
+            ret = walk(v);
         }
         if (block.exit is null)
         {
-            if (args.length == 0)
-            {
-                emitDefault(new ConstReturnBranch(Dynamic.nil));
-            }
-            else
-            {
-                emitDefault(new ReturnBranch);
-            }
+            emitReturn(ret);
         }
-        block = outter;
-        funcblk = outterfunc;
+        foreach (nextTodo; todos[$ - 1])
+        {
+            runTodo(nextTodo);
+        }
     }
 
-    void walkReturn(Node[] args)
+    Type walkFun(Node[] args)
+    {
+        Form argl = cast(Form) args[0];
+        Type[string] locals;
+        string[] argNames;
+        Type[] argTypes;
+        foreach (i, v; argl.args)
+        {
+            if (Form form = cast(Form) v)
+            {
+                if (form.form != "::")
+                {
+                    throw new Exception("args type must start with a `::`");
+                }
+                else
+                {
+                    Ident name = cast(Ident) form.args[0];
+                    Type type = walkType(form.args[1]);
+                    locals[name.repr] = type;
+                    argNames ~= name.repr;
+                    argTypes ~= type;
+                }
+            }
+            if (Ident name = cast(Ident) v)
+            {
+                Type type = Type.unk;
+                locals[name.repr] = type;
+                argNames ~= name.repr;
+                argTypes ~= type;
+            }
+        }
+        BasicBlock lambda = new BasicBlock;
+        Func functy = Func.empty;
+        functy.args = argTypes;
+        emit(new LambdaInstruction(lambda, argNames, locals, functy.impl));
+        todos[$ - 1] ~= Todo(lambda, args, argNames, locals, functy);
+        return cast(Type) functy;
+    }
+
+    void emitReturn(Type ret)
+    {
+        // if (curFunc.ret.isUnk && ret.as!Never !is null)
+        if (curFunc.ret.isUnk)
+        {
+            (cast(Unk) curFunc.ret).set(ret);
+        }
+        else if (ret.isUnk)
+        {
+            (cast(Unk) ret).set(curFunc.ret);
+        }
+        else
+        {
+            assert(curFunc.ret.fits(ret), curFunc.ret.to!string ~ " vs " ~ ret.to!string);
+        }
+        emit(new ReturnBranch(ret));
+    }
+
+    Type walkReturn(Node[] args)
     {
         if (args.length == 0)
         {
-            // emit(new ConstReturnBranch(Dynamic.nil));
             assert(false);
         }
-        walk(args[0]);
-        emit(new ReturnBranch);
+        Type ret = walk(args[0]);
+        return Type.never;
     }
 
     alias walkIndex = walkBinary!"index";
 
-    void walkBinary(string op)(Node[] args)
+    Type walkBinary(string op)(Node[] args)
     {
-        walk(args[0]);
-        if (Value val = cast(Value) args[1])
+        Type t1 = walk(args[0]);
+        Type t2 = walk(args[1]);
+        emit(new OperatorInstruction(op, t1, [t1, t2]));
+        return t1;
+    }
+
+    Type walkUnary(string op)(Node[] args)
+    {
+        Type t1 = walk(args[0]);
+        emit(new OperatorInstruction(op, t1, [t1]));
+        return t1;
+    }
+
+    Type walkCall(Node fun, Node[] args)
+    {
+        Func func = walk(fun).as!Func;
+        if (func is null)
         {
-            emit(new ConstOperatorInstruction(op, val.value));
+            throw new Exception("type is not a function");
         }
-        else
+        if (func.args.length != args.length)
         {
-            walk(args[1]);
-            emit(new OperatorInstruction(op));
+            throw new Exception("wrong number of arguments");
         }
-    }
-
-    void walkUnary(string op)(Node[] args)
-    {
-        walk(args[0]);
-        emit(new OperatorInstruction(op));
-    }
-
-    void walkConst(Node[] args)
-    {
-        walk(args[0]);
-    }
-
-    void walkTuple(Node[] args)
-    {
-        foreach (i; args)
+        foreach (index, arg; args)
         {
-            walk(i);
+            Type wantty = func.args[index];
+            Type gotty = walk(arg);
+            if (wantty.isUnk)
+            {
+                (cast(Unk) wantty).set(gotty);
+            }
+            else if (gotty.isUnk)
+            {
+                (cast(Unk) gotty).set(wantty);
+            }
+            else if (!gotty.fits(wantty))
+            {
+                throw new Exception("expected " ~ wantty.to!string ~ " got " ~ gotty.to!string);
+            }
         }
-        emit(new BuildTupleInstruction(cast(int) args.length));
+        emit(new CallInstruction(func.args));
+        return func.ret;
     }
 
-    void walkArray(Node[] args)
+    Type walkRec(Node[] args)
     {
-        foreach (i; args)
-        {
-            walk(i);
-        }
-        emit(new BuildArrayInstruction(cast(int) args.length));
-    }
-
-    void walkTable(Node[] args)
-    {
-        foreach (i; args)
-        {
-            walk(i);
-        }
-        emit(new BuildTableInstruction(cast(int) args.length / 2));
-    }
-
-    void walkAssert(Node[] args)
-    {
-        inspecting = true;
-        scope (exit)
-        {
-            inspecting = false;
-        }
-        walk(args[0]);
-    }
-
-    void walkCall(Node fun, Node[] args)
-    {
-        walk(fun);
+        int size;
         foreach (arg; args)
         {
-            walk(arg);
+            Type argty = walk(arg);
+            size += argty.size;
         }
-        emit(new CallInstruction(cast(int) args.length));
+        emit(new RecInstruction(size));
+        return curFunc.ret;
     }
 
-    void walkRec(Node[] args)
+    Type walkPrint(Node[] args)
     {
-        foreach (arg; args)
-        {
-            walk(arg);
-        }
-        emit(new RecInstruction(cast(int) args.length));
+        assert(args.length == 1);
+        Type t1 = walk(args[0]);
+        emit(new PrintInstruction(t1));
+        return Type.nil;
     }
 
-    void walkPrint(Node[] args)
-    {
-        foreach (arg; args)
-        {
-            walk(arg);
-            emit(new PrintInstruction);
-            emit(new PopInstruction);
-        }
-        emit(new PushInstruction("\n".dynamic));
-        emit(new PrintInstruction);
-    }
+    // Type walkLabel(Node[] args)
+    // {
+    //     BasicBlock after = new BasicBlock;
+    //     emitDefault(new LabelBranch(after));
+    //     block = after;
+    //     return Type.frame;
+    // }
 
-    void walkSpecialForm(string special, Node[] args)
+    // Type walkJump(Node[] args)
+    // {
+    //     walk(args[0]);
+    //     BasicBlock after = new BasicBlock;
+    //     emitDefault(new JumpBranch);
+    //     block = after;
+    //     return Type.nil;
+    // }
+
+    Type walkSpecialForm(string special, Node[] args)
     {
         switch (special)
         {
         default:
             assert(0, "not implemented: " ~ special);
         case "do":
-            walkDo(args);
-            break;
+            return walkDo(args);
         case "if":
-            walkIf(args);
-            break;
+            return walkIf(args);
         case "while":
-            walkWhile(args);
-            break;
+            return walkWhile(args);
         case "&&":
-            walkAnd(args);
-            break;
+            return walkAnd(args);
         case "||":
-            walkOr(args);
-            break;
+            return walkOr(args);
         case "set":
-            walkStore(args);
-            break;
-        case "tuple":
-            walkTuple(args);
-            break;
-        case "array":
-            walkArray(args);
-            break;
-        case "table":
-            walkTable(args);
-            break;
+            return walkStore(args);
         case "fun":
-            walkFun(args);
-            break;
-        case "inspect":
-            walkAssert(args);
-            break;
+            return walkFun(args);
         case "rcall":
-            walkCall(args[$ - 1], args[0 .. $ - 1]);
-            break;
+            return walkCall(args[$ - 1], args[0 .. $ - 1]);
         case "rec":
-            walkRec(args);
-            break;
+            return walkRec(args);
         case "print":
-            walkPrint(args);
-            break;
+            return walkPrint(args);
         case "call":
-            walkCall(args[0], args[1 .. $]);
-            break;
+            return walkCall(args[0], args[1 .. $]);
         case "return":
-            walkReturn(args);
-            break;
+            throw new Exception("return is broken");
+            // return walkReturn(args);
         case "index":
-            walkIndex(args);
-            break;
-        case "cache":
-            walkConst(args);
-            break;
-        case "~":
-            walkBinary!"cat"(args);
-            break;
+            return walkIndex(args);
         case "+":
-            walkBinary!"add"(args);
-            break;
+            return walkBinary!"add"(args);
         case "%":
-            walkBinary!"mod"(args);
-            break;
+            return walkBinary!"mod"(args);
+        case "not":
+            return walkUnary!"not"(args);
         case "-":
             if (args.length == 1)
             {
-                walkUnary!"neg"(args);
+                return walkUnary!"neg"(args);
             }
             else
             {
-                walkBinary!"sub"(args);
+                return walkBinary!"sub"(args);
             }
-            break;
         case "*":
-            walkBinary!"mul"(args);
-            break;
+            return walkBinary!"mul"(args);
         case "/":
-            walkBinary!"div"(args);
-            break;
+            return walkBinary!"div"(args);
         case "<":
-            walkBinary!"lt"(args);
-            break;
+            return walkBinary!"lt"(args);
         case ">":
-            walkBinary!"gt"(args);
-            break;
+            return walkBinary!"gt"(args);
         case "<=":
-            walkBinary!"lte"(args);
-            break;
+            return walkBinary!"lte"(args);
         case ">=":
-            walkBinary!"gte"(args);
-            break;
+            return walkBinary!"gte"(args);
         case "!=":
-            walkBinary!"neq"(args);
-            break;
+            return walkBinary!"neq"(args);
         case "==":
-            walkBinary!"eq"(args);
-            break;
+            return walkBinary!"eq"(args);
         }
     }
 
-    void walkExact(Form call)
+    Type walkExact(Form call)
     {
-        walkSpecialForm(call.form, call.args);
+        return walkSpecialForm(call.form, call.args);
     }
 
-    void walkExact(Value val)
+    Type walkExact(Value val)
     {
-        emit(new PushInstruction(val.value.dynamic));
+        emit(new PushInstruction(val.value, val.type));
+        return val.type;
     }
 }

@@ -9,63 +9,60 @@ import std.meta;
 import purr.io;
 import purr.srcloc;
 import purr.vm.bytecode;
-import purr.dynamic;
 import purr.inter;
 import purr.ir.opt;
 import purr.ir.repr;
-import purr.type.check;
+import purr.type.repr;
 
-int add(Bytecode func, Opcode op)
+int add(Bytecode func, ubyte ub)
 {
-    int where = cast(int) func.bytecode.length;
-    func.bytecode.push!char(op);
+    int where = func.bytecodeLength++;
+    *cast(ubyte*)&func.bytecode[where] = ub;
     return where;
 }
 
 int add(Bytecode func, int val)
 {
-    int where = cast(int) func.bytecode.length;
-    char[int.sizeof] chrs = *cast(char[int.sizeof]*)&val;
-    foreach (chr; chrs)
+    int where = func.bytecodeLength;
+    ubyte[int.sizeof] ubs = *cast(ubyte[int.sizeof]*)&val;
+    foreach (ub; ubs)
     {
-        func.bytecode.push!char(chr);
+        func.add(ub);
     }
     return where;
 }
 
-void add(Bytecode func, Dynamic val)
+void add(Bytecode func, void[] vals)
 {
-    char[Dynamic.sizeof] chrs = *cast(char[Dynamic.sizeof]*)&val;
-    foreach (chr; chrs)
+    foreach (ubyte val; cast(ubyte[]) vals)
     {
-        func.bytecode.push!char(chr);
+        func.add(val);
     }
 }
 
 void set(Bytecode func, int where, int val)
 {
-    char* ptr = &func.bytecode.index!char(where);
-    *cast(int*)ptr = val;
+    *cast(int*)&func.bytecode[where] = val;
 }
 
 int length(Bytecode func)
 {
-    return cast(int) func.bytecode.length;
+    return cast(int) func.bytecodeLength;
 }
 
 final class BytecodeEmitter
 {
+pragma(inline, false):
     BasicBlock[] bbchecked;
     Bytecode func;
     Opt opt;
-    TypeChecker tc;
-    string[][] locals = [null];
-    string[][] args = [null];
+    int[string][] locals = [null];
+    int[] offsets = [0];
+    int[string][] args = [null];
 
     this()
     {
         opt = new Opt;
-        tc = new TypeChecker;
     }
 
     int depth()
@@ -75,6 +72,7 @@ final class BytecodeEmitter
 
     void emitInFunc(Bytecode newFunc, BasicBlock block)
     {
+        opt.opt(block);
         Bytecode lastFunc = func;
         func = newFunc;
         scope (exit)
@@ -88,7 +86,7 @@ final class BytecodeEmitter
     {
         if (block.place < 0)
         {
-            block.place = cast(int) func.bytecode.length;
+            block.place = cast(int) func.bytecodeLength;
             if (dumpir)
             {
                 writeln(block);
@@ -109,7 +107,6 @@ final class BytecodeEmitter
             if (typeid(em) == typeid(Instr))
             {
                 emit(cast(Instr) em);
-                tc.emit(cast(Instr) em);
                 return;
             }
         }
@@ -152,62 +149,90 @@ final class BytecodeEmitter
         }
     }
 
+    void emit(LabelBranch branch)
+    {
+        func.add(Opcode.ec_cons);
+        if (branch.target[0].place < 0)
+        {
+            emit(branch.target[0]);
+        }
+        else
+        {
+            func.add(Opcode.jump);
+            int jump = func.add(-1);
+            int to = emit(branch.target[0]);
+            func.set(jump, to);
+        }
+    }
+
+    void emit(JumpBranch branch)
+    {
+        func.add(Opcode.ec_call);
+    }
+
     void emit(ReturnBranch branch)
     {
         if (depth > 1)
         {
-            func.add(Opcode.ret);
+            final switch (branch.type.size)
+            {
+            case 0:
+                func.add(Opcode.return_nil);
+                break;
+            case 1:
+                func.add(Opcode.return1);
+                break;
+            case 2:
+                func.add(Opcode.return2);
+                break;
+            case 4:
+                func.add(Opcode.return4);
+                break;
+            case 8:
+                func.add(Opcode.return8);
+                break;
+            }
         }
         else
         {
             func.add(Opcode.exit);
         }
     }
-
-    void emit(ConstReturnBranch branch)
-    {
-        func.add(Opcode.push);
-        func.add(branch.value);
-        if (depth > 1)
-        {
-            func.add(Opcode.ret);
-        }
-        else
-        {
-            func.add(Opcode.exit);
-        }
-    }
-
-    // void emit(BuildArrayInstruction arr)
-    // {
-    //     assert(false, "not implemented");
-    // }
-
-    // void emit(BuildTupleInstruction arr)
-    // {
-    //     assert(false, "not implemented");
-    // }
-
-    // void emit(BuildTableInstruction table)
-    // {
-    //     assert(false, "not implemented");
-    // }
 
     void emit(StoreInstruction store)
     {
-        foreach (k, v; locals[$ - 1])
+        int data;
+        if (int* pdata = store.var in locals[$ - 1])
         {
-            if (v == store.var)
-            {
-                func.add(Opcode.store);
-                func.add(cast(int) k);
-                return;
-            }
+            data = *pdata;
         }
-        int index = cast(int) locals[$ - 1].length;
-        locals[$ - 1] ~= store.var;
-        func.add(Opcode.store);
-        func.add(index);
+        else
+        {
+            data = offsets[$ - 1];
+            locals[$ - 1][store.var] = data;
+            offsets[$ - 1] += store.type.size;
+        }
+        final switch (store.type.size)
+        {
+        case 0:
+            break;
+        case 1:
+            func.add(Opcode.store1);
+            func.add(data);
+            break;
+        case 2:
+            func.add(Opcode.store2);
+            func.add(data);
+            break;
+        case 4:
+            func.add(Opcode.store4);
+            func.add(data);
+            break;
+        case 8:
+            func.add(Opcode.store8);
+            func.add(data);
+            break;
+        }
     }
 
     void emit(StoreIndexInstruction store)
@@ -217,101 +242,99 @@ final class BytecodeEmitter
 
     void emit(LoadInstruction load)
     {
-        foreach (key, arg; args[$ - 1])
+        if (int* pdata = load.var in locals[$ - 1])
         {
-            if (arg == load.var)
+            int data = *pdata;
+            final switch (load.type.size)
             {
-                func.add(Opcode.arg);
-                func.add(cast(int) key);
-                return;
+            case 0:
+                break;
+            case 1:
+                func.add(Opcode.load1);
+                func.add(data);
+                break;
+            case 2:
+                func.add(Opcode.load2);
+                func.add(data);
+                break;
+            case 4:
+                func.add(Opcode.load4);
+                func.add(data);
+                break;
+            case 8:
+                func.add(Opcode.load8);
+                func.add(data);
+                break;
             }
         }
+        else if (int * parg = load.var in args[$ - 1])
+        {
+            int arg =  * parg;
+            final switch (load.type.size)
+            {
+            case 0 : break;
+            case 1 : func.add(Opcode.arg1);
+                func.add(arg);
+                break;
+            case 2 : func.add(Opcode.arg2);
+                func.add(arg);
+                break;
+            case 4 : func.add(Opcode.arg4);
+                func.add(arg);
+                break;
+            case 8 : func.add(Opcode.arg8);
+                func.add(arg);
+                break;
+            }
 
-        foreach (k, v; locals[$ - 1])
-        {
-            if (v == load.var)
-            {
-                func.add(Opcode.load);
-                func.add(cast(int) k);
-                return;
-            }
+            return;
         }
-
-        func.add(Opcode.loadc);
-        Bytecode cur = func;
-        int index = depth - 1;
-        while (index > 0)
+        else
         {
-            assert(cur !is null);
-            index--;
-            foreach (key, local; locals[index])
-            {
-                if (local == load.var)
-                {
-                    func.add(cast(int) cur.captureFrom.length);
-                    cur.captureFrom.push!int(cast(int) key);
-                    cur.captureFlags.push!int(Capture.local);
-                    return;
-                }
-            }
-            foreach (key, arg; args[index])
-            {
-                if (arg == load.var)
-                {
-                    func.add(cast(int) cur.captureFrom.length);
-                    cur.captureFrom.push!int(cast(int) key);
-                    cur.captureFlags.push!int(Capture.arg);
-                    return;
-                }
-            }
-            cur.captureFrom.push!int(cast(int) cur.parent.captureFrom.length);
-            cur.captureFlags.push!int(Capture.parent);
-            cur = cur.parent;
+            throw new Exception("variable not found: " ~ load.var);
         }
-        assert(false);
     }
 
     void emit(CallInstruction call)
     {
-        func.add(Opcode.call);
-        func.add(call.argc);
-    }
-
-    void emit(TailCallBranch call)
-    {
-        func.add(Opcode.call);
-        func.add(call.argc);
-        if (depth > 1)
+        int argc = 0;
+        foreach (arg; call.args)
         {
-            func.add(Opcode.ret);
+            argc += arg.size;
         }
-        else
-        {
-            func.add(Opcode.exit);
-        }
-    }
-
-    void emit(StaticCallInstruction call)
-    {
-        assert(false, "not implemented");
+        func.add(Opcode.call);
+        func.add(argc);
     }
 
     void emit(PushInstruction push)
     {
-        func.add(Opcode.push);
-        func.add(push.value);
+        final switch (push.value.length)
+        {
+        case 0:
+            break;
+        case 1:
+            func.add(Opcode.push1);
+            func.add(push.value);
+            break;
+        case 2:
+            func.add(Opcode.push2);
+            func.add(push.value);
+            break;
+        case 4:
+            func.add(Opcode.push4);
+            func.add(push.value);
+            break;
+        case 8:
+            func.add(Opcode.push8);
+            func.add(push.value);
+            break;
+        }
     }
 
     void emit(RecInstruction rec)
     {
         func.add(Opcode.rec);
         func.add(rec.argc);
-    }
-
-    void emit(ArgNumberInstruction argno)
-    {
-        func.add(Opcode.arg);
-        func.add(argno.argno);
     }
 
     void emit(OperatorInstruction op)
@@ -321,75 +344,107 @@ final class BytecodeEmitter
         default:
             assert(false, "not implemented " ~ op.op);
         case "add":
-            func.add(Opcode.add);
+            if (op.resType.fits(Type.integer))
+            {
+                func.add(Opcode.add_integer);
+            }
+            else
+            {
+                func.add(Opcode.add_float);
+            }
             break;
         case "sub":
-            func.add(Opcode.sub);
+            if (op.resType.fits(Type.integer))
+            {
+                func.add(Opcode.sub_integer);
+            }
+            else
+            {
+                func.add(Opcode.sub_float);
+            }
             break;
         case "mul":
-            func.add(Opcode.mul);
+            if (op.resType.fits(Type.integer))
+            {
+                func.add(Opcode.mul_integer);
+            }
+            else
+            {
+                func.add(Opcode.add_float);
+            }
             break;
         case "div":
-            func.add(Opcode.div);
+            if (op.resType.fits(Type.integer))
+            {
+                func.add(Opcode.div_integer);
+            }
+            else
+            {
+                func.add(Opcode.div_float);
+            }
             break;
         case "lt":
-            func.add(Opcode.lt);
+            if (op.resType.fits(Type.integer))
+            {
+                func.add(Opcode.lt_integer);
+            }
+            else
+            {
+                func.add(Opcode.lt_float);
+            }
             break;
         case "gt":
-            func.add(Opcode.gt);
+            if (op.resType.fits(Type.integer))
+            {
+                func.add(Opcode.gt_integer);
+            }
+            else
+            {
+                func.add(Opcode.gt_float);
+            }
             break;
         case "lte":
-            func.add(Opcode.lte);
+            if (op.resType.fits(Type.integer))
+            {
+                func.add(Opcode.lte_integer);
+            }
+            else
+            {
+                func.add(Opcode.lte_float);
+            }
             break;
         case "gte":
-            func.add(Opcode.gte);
+            if (op.resType.fits(Type.integer))
+            {
+                func.add(Opcode.gte_integer);
+            }
+            else
+            {
+                func.add(Opcode.gte_float);
+            }
             break;
         case "eq":
-            func.add(Opcode.eq);
+            if (op.resType.fits(Type.integer))
+            {
+                func.add(Opcode.eq_integer);
+            }
+            else
+            {
+                func.add(Opcode.eq_float);
+            }
             break;
         case "neq":
-            func.add(Opcode.neq);
+            if (op.resType.fits(Type.integer))
+            {
+                func.add(Opcode.neq_integer);
+            }
+            else
+            {
+                func.add(Opcode.neq_float);
+            }
             break;
-        }
-    }
-
-    void emit(ConstOperatorInstruction op)
-    {
-        func.add(Opcode.push);
-        func.add(op.rhs);
-        switch (op.op)
-        {
-        default:
-            assert(false, "not implemented " ~ op.op);
-        case "add":
-            func.add(Opcode.add);
-            break;
-        case "sub":
-            func.add(Opcode.sub);
-            break;
-        case "mul":
-            func.add(Opcode.mul);
-            break;
-        case "div":
-            func.add(Opcode.div);
-            break;
-        case "lt":
-            func.add(Opcode.lt);
-            break;
-        case "gt":
-            func.add(Opcode.gt);
-            break;
-        case "lte":
-            func.add(Opcode.lte);
-            break;
-        case "gte":
-            func.add(Opcode.gte);
-            break;
-        case "eq":
-            func.add(Opcode.eq);
-            break;
-        case "neq":
-            func.add(Opcode.neq);
+        case "not":
+            func.add(Opcode.not);
             break;
         }
     }
@@ -397,26 +452,63 @@ final class BytecodeEmitter
     void emit(LambdaInstruction lambda)
     {
         locals.length++;
-        args ~= lambda.argNames;
+        offsets.length++;
+        int argoffset = 0;
+        int[string] cargs;
+        foreach (argname; lambda.args)
+        {
+            Type argty = lambda.types[argname];
+            cargs[argname] = argoffset;
+            argoffset += argty.size;
+        }
+        args ~= cargs;
         scope (exit)
         {
             locals.length--;
             args.length--;
+            offsets.length--;
         }
-        Bytecode newFunc = Bytecode.from(func);
+        Bytecode newFunc = lambda.impl;
         emitInFunc(newFunc, lambda.entry);
-        func.add(Opcode.push);
-        func.add(newFunc.dynamic);
-        func.add(Opcode.func);
+        func.add(Opcode.push8);
+        func.add(*cast(void[size_t.sizeof]*)&newFunc);
     }
 
     void emit(PopInstruction pop)
     {
-        func.add(Opcode.pop);
+        size_t size = pop.type.size;
+        while (size >= 8)
+        {
+            func.add(Opcode.pop8);
+            size -= 8;
+        }
+        if (size >= 4)
+        {
+            func.add(Opcode.pop4);
+            size -= 4;
+        }
+        if (size >= 2)
+        {
+            func.add(Opcode.pop2);
+            size -= 2;
+        }
+        if (size >= 1)
+        {
+            func.add(Opcode.pop1);
+            size -= 1;
+        }
+        assert(size == 0);
     }
 
     void emit(PrintInstruction print)
     {
-        func.add(Opcode.print);
+        if (print.type.fits(Type.integer))
+        {
+            func.add(Opcode.print_integer);
+        }
+        else
+        {
+            func.add(Opcode.print_float);
+        }
     }
 }

@@ -56,21 +56,5 @@ class Opt
                 block.exit = nextBlock.exit;
             }
         }
-        if (block.instrs.length != 0)
-        {
-            if (ReturnBranch lastReturn = cast(ReturnBranch) block.exit)
-            {
-                if (PushInstruction lastPush = cast(PushInstruction) block.instrs[$-1])
-                {
-                    block.exit = new ConstReturnBranch(lastPush.value);
-                    block.instrs.length--;
-                }
-                else if (CallInstruction lastCall = cast(CallInstruction) block.instrs[$-1])
-                {
-                    block.exit = new TailCallBranch(lastCall.argc);
-                    block.instrs.length--;
-                }
-            }
-        }
     }
 }
