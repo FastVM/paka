@@ -1,0 +1,15 @@
+
+def main() {
+    0
+}
+
+def call(f) {
+    f()
+}
+
+def overload(T, A) {
+    type(T(A.init))
+}
+
+x = call(main)
+print(call.overload([Int] -> Int))

@@ -3,6 +3,7 @@ module purr.ast.ast;
 import std.algorithm;
 import std.conv;
 import std.meta;
+import std.string;
 import purr.srcloc;
 import purr.type.repr;
 
@@ -156,6 +157,13 @@ final class Value : Node
         {
             type = Type.nil;
             value = null;
+        }
+        else static if (is(T == string))
+        {
+            type = Type.text;
+            immutable(char)* str = v.toStringz;
+            void[size_t.sizeof] arr = *cast(void[size_t.sizeof]*)&str;
+            value = arr.dup;
         }
         else
         {

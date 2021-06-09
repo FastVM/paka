@@ -128,20 +128,10 @@ Node readPostCallExtend(TokenArray tokens, Node last)
             args = args[1..$];
             last = new Form("print", argList);
         }
-        if (id.repr == "type")
-        {
-            Node[] argList = args[0];
-            args = args[1..$];
-            if (argList.length != 1)
-            {
-                throw new Exception("type() takes one argument");
-            }
-            last = new Form("info", new Ident("type"), argList);
-        }
     }
     foreach (argList; args)
     {
-        last = new Form("call", last ~ argList);
+        last = last.call(argList);
     }
     return last;
 }
@@ -157,6 +147,18 @@ Node readPostExtendImpl(TokenArray tokens, Node last)
     if (tokens.first.isOpen("("))
     {
         return tokens.readPostExtend(tokens.readPostCallExtend(last));
+    }
+    else if (tokens.first.isOperator("."))
+    {
+        tokens.nextIs(Token.Type.operator, ".");
+        Node index = new Value(tokens.first.value);
+        tokens.nextIs(Token.Type.ident);
+        Node[] args = [last];
+        if (tokens.first.isOpen("("))
+        {
+            args ~= tokens.readOpen1!"()";
+        }
+        return tokens.readPostExtend(index.call(args));
     }
     else
     {
@@ -329,11 +331,7 @@ Node readPostExprImpl(TokenArray tokens)
     else if (tokens.first.isOpen("["))
     {
         Node[] nodes = tokens.readOpen!"[]";
-        last = new Form("tuple", nodes);
-    }
-    else if (tokens.first.isOpen("["))
-    {
-        last = new Form("array", tokens.readOpen!"[]");
+        last = new Form("array", nodes);
     }
     else if (tokens.first.isKeyword("if"))
     {

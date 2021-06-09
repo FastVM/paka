@@ -7,6 +7,37 @@ import purr.ast.ast;
 
 class Type
 {
+    void delegate(Known)[] thens;
+
+    void then(void delegate(Known) arg)
+    {
+        if (Known kn = this.as!Known)
+        {
+            arg(kn);
+        }
+        else
+        {
+            thens ~= arg;
+        }
+    }
+
+    void resolve(Type arg)
+    {
+        if (arg.isUnk) 
+        {
+            arg.thens ~= thens;
+        }
+        else
+        {
+            Known known = arg.as!Known;
+            foreach (run; thens)
+            {
+                run(known);
+            }
+        }
+        thens = null;
+    }
+
     bool fits(Type other)
     {
         assert(false, typeid(this).to!string);
@@ -33,7 +64,7 @@ class Type
         return cast(Unk) this;
     }
 
-    T as(T)() if (!is(T == Unk) && !is(T == Lambda))
+    T as(T)() if (!is(T == Unk) && !is(T == Lambda) && !is(T == Exactly))
     {
         if (Unk box = this.getUnk)
         {
@@ -42,6 +73,10 @@ class Type
         if (Lambda fun = cast(Lambda) this)
         {
             return fun.get.as!T;
+        }
+        if (Exactly exa = cast(Exactly) this)
+        {
+            return exa.rough.as!T;
         }
         return cast(T) this;
     }
@@ -165,7 +200,7 @@ class Lambda : Type
 class Unk : Type
 {
     Unk[] same;
-    Type next;
+    Known next;
 
     override bool isUnk()
     {
@@ -202,6 +237,10 @@ class Unk : Type
         {
             throw new Exception("internal error: type error");
         }
+        if (Exactly exa = cast(Exactly) found)
+        {
+            found = exa.rough;
+        }
         if (found.isUnk)
         {
             Unk other = found.getUnk;
@@ -210,7 +249,8 @@ class Unk : Type
         }
         else if (next is null)
         {
-            next = found;
+            next = found.as!Known;
+            resolve(next);
             Unk[] iter = same;
             same = null;
             foreach (s; iter)
@@ -228,7 +268,8 @@ class Unk : Type
             {
                 box.set(found);
             }
-            next = found;
+            next = found.as!Known;
+            resolve(next);
             Unk[] iter = same;
             same = null;
             foreach (s; iter)
@@ -265,13 +306,72 @@ class Known : Type
     }
 }
 
+class Exactly : Type
+{
+    Known rough;
+    void[] data;
+
+    this(Known r, void[] d)
+    {
+        rough = r;
+        data = d;
+    } 
+    
+    override void then(void delegate(Known) arg)
+    {
+        arg(rough);
+    }
+
+    override bool isUnk()
+    {
+        return false;
+    }
+    
+    override size_t size()
+    {
+        return rough.size;
+    }
+
+    override bool fits(Type arg)
+    {
+        Exactly other = cast(Exactly) arg;
+        if (other is null)
+        {
+            // return false;
+            return rough.fits(arg);
+        }
+        if (!rough.fits(other.rough))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    override bool runtime()
+    {
+        return rough.runtime;
+    }
+
+    override string toString()
+    {
+        return rough.to!string;
+    }
+}
+
 class Generic : Known
 {
-    Type delegate(Type[]) specialize;
+    Type delegate(Type[]) runme;
 
     this(Type delegate(Type[]) spec)
     {
-        specialize = spec;
+        runme = spec;
+    }
+
+    Type specialize(Type[] args)
+    {
+        Type ret = runme(args);
+        resolve(ret);
+        return ret;
     }
 
     override bool fits(Type other)
@@ -307,6 +407,11 @@ class Higher : Known
     override bool runtime()
     {
         return false;
+    }
+
+    override size_t size()
+    {
+        return 0;
     }
 
     override bool fits(Type arg)

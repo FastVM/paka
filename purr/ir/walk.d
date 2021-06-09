@@ -52,7 +52,13 @@ final class Walker
 
     Bytecode walkProgram(Node node)
     {
-        localTypes.length++;
+        localTypes ~= [
+            "Frame": Type.frame,
+            "Text": Type.text,
+            "Int": Type.integer,
+            "Nil": Type.nil,
+            "Float": Type.float_,
+        ];
         localDefs.length++;
         todos.length++;
         scope (exit)
@@ -170,7 +176,7 @@ final class Walker
                     {
                         if (func.impl !is null)
                         {
-                            emit(new PushInstruction(func.impl, ty, ty));
+                            emit(new PushInstruction(func.impl, ty));
                             return ty;
                         }
                     }
@@ -202,10 +208,10 @@ final class Walker
         {
             br2.getUnk.set(br1);
         }
-        if (!br1.fits(br2))
-        {
-            throw new Exception("arms of if of different types");
-        }
+        // if (!br1.fits(br2))
+        // {
+        //     throw new Exception("arms of if of different types");
+        // }
         return br1;
     }
 
@@ -220,7 +226,7 @@ final class Walker
         walk(args[1]);
         emitDefault(new GotoBranch(after));
         block = iffalse;
-        emit(new PushInstruction(false, Type.logical, Type.logical));
+        emit(new PushInstruction(false, Type.logical));
         emitDefault(new GotoBranch(after));
         block = after;
         return Type.logical;
@@ -234,7 +240,7 @@ final class Walker
         walk(args[0]);
         emit(new LogicalBranch(iftrue, iffalse));
         block = iftrue;
-        emit(new PushInstruction(true, Type.logical, Type.logical));
+        emit(new PushInstruction(true, Type.logical));
         emitDefault(new GotoBranch(after));
         block = iffalse;
         walk(args[1]);
@@ -316,7 +322,6 @@ final class Walker
                         continue outter;
                     }
                 }
-                writeln(dones[checkno]);
                 return dones[checkno];
             }
             Unk done = Type.unk.getUnk;
@@ -335,13 +340,24 @@ final class Walker
                     else
                     {
                         Ident name = cast(Ident) form.args[0];
-                        Type type = walkType(form.args[1]);
-                        locals[name.repr] = type;
+                        Type want = walkType(form.args[1]);
+                        Type got = argTypes[i];
+                        if (!want.fits(got))
+                        {
+                            throw new Exception(
+                                    "generic arg got: " ~ got.to!string
+                                    ~ ", wanted: " ~ want.to!string);
+                        }
+                        locals[name.repr] = got;
                         argNames ~= name.repr;
                     }
                 }
                 if (Ident name = cast(Ident) v)
                 {
+                    if (argTypes.length == i)
+                    {
+                        throw new Exception("too few args");
+                    }
                     Type type = argTypes[i];
                     locals[name.repr] = type;
                     argNames ~= name.repr;
@@ -432,8 +448,10 @@ final class Walker
                 return Type.frame;
             case "Text":
                 return Type.text;
-            case "Integer":
+            case "Int":
                 return Type.integer;
+            case "Nil":
+                return Type.nil;
             case "Float":
                 return Type.float_;
             }
@@ -561,37 +579,64 @@ final class Walker
 
     Type walkCall(Node fun, Node[] args)
     {
-        Type ty = walk(fun);
-        Type[] argTypes;
-        foreach (_; 0 .. args.length)
+        if (Value strv = cast(Value) fun)
         {
-            argTypes ~= Type.unk;
-        }
-        // if (n != 0)
-        // {
-            // emit(new PushInstruction(ty.as!Func.impl, ty));
-        // }
-        foreach (argno, arg; args)
-        {
-            Type argty = walk(arg);
-            if (argTypes[argno].isUnk)
+            if (!Type.text.fits(strv.type))
             {
-                argTypes[argno].getUnk.set(argty);
+                throw new Exception("cannot call thing of type: " ~ strv.type.to!string);
             }
-            else
-            {
-                throw new Exception("type error in function arguments");
-            }
+            string name = fromStringz(*cast(immutable(char)**) strv.value.ptr);
+            return walk(new Form("call", new Ident(name), args));
         }
-        if (Generic generic = ty.as!Generic)
+        else
         {
-            ty = generic.specialize(argTypes);
+            if (Ident id = cast(Ident) fun)
+            {
+                switch (id.repr)
+                {
+                default:
+                    break;
+                case "type":
+                    BasicBlock lastBlock = block;
+                    block = new BasicBlock;
+                    Type ret = walk(args[0]);
+                    block = lastBlock;
+                    return Type.higher(ret);
+                case "init":
+                    Type ret = walk(args[0]);
+                    emit(new PushInstruction(new void[ret.size], ret));
+                    return ret;
+                }
+            }
+            Type ty = walk(fun);
+            Type[] argTypes;
+            foreach (_; 0 .. args.length)
+            {
+                argTypes ~= Type.unk;
+            }
+            foreach (argno, arg; args)
+            {
+                Type argty = walk(arg);
+                if (argTypes[argno].isUnk)
+                {
+                    argTypes[argno].getUnk.set(argty);
+                }
+                else
+                {
+                    throw new Exception("type error in function arguments");
+                }
+            }
+            if (Generic generic = ty.as!Generic)
+            {
+                ty = generic.specialize(argTypes);
+            }
+            emit(new CallInstruction(ty, argTypes));
+            return Type.lambda({
+                Func func = ty.as!Func;
+                assert(func, fun.to!string);
+                return func.ret;
+            });
         }
-        emit(new CallInstruction(ty, argTypes));
-        return Type.lambda({
-            Func func = ty.as!Func;
-            return func.ret;
-        });
     }
 
     // Type walkRec(Node[] args)
@@ -612,23 +657,6 @@ final class Walker
         Type type = walk(args[0]);
         emit(new PrintInstruction(type));
         return Type.nil;
-    }
-
-    Type walkInfo(Node[] args)
-    {
-        Ident name = cast(Ident) args[0];
-        assert(name !is null);
-        switch (name.repr)
-        {
-        default:
-            assert(false, "type info not implemented: " ~ name.repr);
-        case "type":
-            BasicBlock lastBlock = block;
-            block = new BasicBlock;
-            Type ret = walk(args[1]);
-            block = lastBlock;
-            return Type.higher(ret);
-        }
     }
 
     // Type walkLabel(Node[] args)
@@ -670,21 +698,16 @@ final class Walker
             return walkStore(args);
         case "fun":
             return walkFun(args);
-        case "rcall":
-            return walkCall(args[$ - 1], args[0 .. $ - 1]);
-        // case "rec":
-        //     return walkRec(args);
-        case "info":
-            return walkInfo(args);
         case "print":
             return walkPrint(args);
         case "call":
             return walkCall(args[0], args[1 .. $]);
         case "return":
             throw new Exception("return is broken");
-            // return walkReturn(args);
         case "index":
             return walkIndex(args);
+        case "->":
+            return walkType(new Form("->", args));
         case "+":
             return walkBinary!"add"(args);
         case "%":
@@ -726,7 +749,11 @@ final class Walker
 
     Type walkExact(Value val)
     {
-        emit(new PushInstruction(val.value, val.type, val.type));
+        if (cast(Exactly) val.type is null)
+        {
+            val.type = new Exactly(val.type.as!Known, val.value);
+        }
+        emit(new PushInstruction(val.value, val.type));
         return val.type;
     }
 }

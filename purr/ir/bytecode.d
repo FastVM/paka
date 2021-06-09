@@ -43,6 +43,14 @@ int add(Bytecode func, void[] vals)
     return where;
 }
 
+void set(Bytecode func, int where, void[] vals)
+{
+    foreach (index, val; cast(ubyte[]) vals)
+    {
+        *cast(ubyte*)&func.bytecode[where + index] = val;
+    }
+}
+
 void set(Bytecode func, int where, int val)
 {
     *cast(int*)&func.bytecode[where] = val;
@@ -325,10 +333,10 @@ pragma(inline, false):
         int argc = 0;
         foreach(argno, expected; functy.args)
         {
-            if (!call.args[argno].runtime || expected.fits(call.args[argno]))
-            {
+            // if (!call.args[argno].runtime || expected.fits(call.args[argno]))
+            // {
                 argc += expected.size;
-            }
+            // }
         }
         if (functy.impl is null)
         {
@@ -523,10 +531,10 @@ pragma(inline, false):
         {
             Type argty = lambda.types[argname];
             cargs[argname] = argoffset;
-            if (!argty.isUnk)
-            {
-                argoffset += argty.size;
-            }
+            // if (!argty.isUnk)
+            // {
+            argoffset += argty.size;
+            // }
         }
         args ~= cargs;
         scope (exit)
@@ -587,9 +595,14 @@ pragma(inline, false):
         }
         else if (Higher higher = print.type.as!Higher)
         {
+            Type boxed = higher.type;
             func.add(Opcode.push8);
-            immutable(char)* typename = higher.type.to!string.toStringz;
-            func.add(*cast(void[size_t.sizeof]*)&typename);
+            immutable(char)* typename = "?".toStringz;
+            int loc = func.add(*cast(void[size_t.sizeof]*)&typename);
+            boxed.then((Known kn) {
+                immutable(char)* typename = kn.to!string.toStringz;
+                func.set(loc, *cast(void[size_t.sizeof]*)&typename);
+            });
             func.add(Opcode.print_text);
         }
         else

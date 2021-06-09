@@ -206,33 +206,31 @@ class CallInstruction : Instruction
 class PushInstruction : Instruction
 {
     private void[] val;
-    Type from;
     Type res;
 
-    this(void[] v, Type f, Type r)
+    this(void[] v, Type r)
     {
         val = v;
-        from = f;
         res = r;
     }
 
-    this(T)(T v, Type f, Type r)
+    this(T)(T v, Type r)
             if (is(T == bool) || is(T == double) || is(T == Bytecode)
                 || is(immutable(T) == immutable(char*)))
     {
         void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
         val = arr.dup;
-        from = f;
         res = r;
     }
 
     void[] value()
     {
-        if (from.fits(res))
-        {
-            return val;
-        }
-        assert(false, res.to!string ~ " vs " ~ from.to!string);
+        return val;
+        // if (from.fits(res))
+        // {
+        //     return val;
+        // }
+        // assert(false, res.to!string ~ " vs " ~ from.to!string);
     }
 
     override string toString()

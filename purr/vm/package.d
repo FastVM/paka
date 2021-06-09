@@ -21,11 +21,13 @@ extern (C)
 {
     void* vm_alloc(int arg)
     {
-        return GC.malloc(arg);  
+        return GC.malloc(arg);
     }
 }
 
 void run(Bytecode func)
 {
+    GC.disable;
     vm_run(vm, func, null);
+    GC.enable;
 }

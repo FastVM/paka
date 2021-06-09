@@ -33,6 +33,11 @@ UnaryOp parseUnaryOp(string[] ops)
     }
 }
 
+Node call(Node fun, Node[] args)
+{
+    return new Form("call", fun, args);
+}
+
 BinaryOp parseBinaryOp(string[] ops)
 {
     assert(ops.length == 1);
@@ -51,11 +56,11 @@ BinaryOp parseBinaryOp(string[] ops)
     default:
         if (opName == "|>")
         {
-            return (Node lhs, Node rhs) { return new Form("rcall", lhs, rhs); };
+            return (Node lhs, Node rhs) { return rhs.call([lhs]); };
         }
         else if (opName == "<|")
         {
-            return (Node lhs, Node rhs) { return new Form("call", lhs, rhs); };
+            return (Node lhs, Node rhs) { return lhs.call([rhs]); };
         }
         else
         {
