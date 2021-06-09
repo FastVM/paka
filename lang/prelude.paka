@@ -1,3 +1,0 @@
-filter(f; n) = arr.filter(n, f)
-shuffle(a) = arr.shuffle(a)
-range(a; b) = a to b

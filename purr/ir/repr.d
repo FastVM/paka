@@ -13,10 +13,10 @@ import purr.inter;
 import purr.ir.opt;
 import purr.type.repr;
 
-alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, LabelBranch, JumpBranch, ReturnBranch,
-        CallInstruction, PushInstruction, OperatorInstruction, LambdaInstruction,
-        PopInstruction, PrintInstruction, StoreInstruction,
-        StoreIndexInstruction, LoadInstruction, RecInstruction);
+alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, LabelBranch, JumpBranch,
+        ReturnBranch, CallInstruction, PushInstruction, OperatorInstruction,
+        LambdaInstruction, PopInstruction, PrintInstruction,
+        StoreInstruction, StoreIndexInstruction, LoadInstruction, RecInstruction);
 
 __gshared size_t nameCount;
 
@@ -133,7 +133,7 @@ class LabelBranch : Branch
     }
 }
 
-class JumpBranch: Branch
+class JumpBranch : Branch
 {
     this()
     {
@@ -186,10 +186,12 @@ class ReturnBranch : Branch
 
 class CallInstruction : Instruction
 {
+    Type func;
     Type[] args;
 
-    this(Type[] a)
+    this(Type f, Type[] a)
     {
+        func = f;
         args = a;
     }
 
@@ -203,21 +205,34 @@ class CallInstruction : Instruction
 
 class PushInstruction : Instruction
 {
-    void[] value;
-    Type type;
+    private void[] val;
+    Type from;
+    Type res;
 
-    this(void[] v, Type ty)
+    this(void[] v, Type f, Type r)
     {
-        value = v;
-        type = ty;
+        val = v;
+        from = f;
+        res = r;
     }
 
-    this(T)(T v, Type ty)
+    this(T)(T v, Type f, Type r)
+            if (is(T == bool) || is(T == double) || is(T == Bytecode)
+                || is(immutable(T) == immutable(char*)))
     {
-        static assert(is(T == bool) || is(T == double) || is(T == Bytecode));
         void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
-        value = arr.dup;
-        type = ty;
+        val = arr.dup;
+        from = f;
+        res = r;
+    }
+
+    void[] value()
+    {
+        if (from.fits(res))
+        {
+            return val;
+        }
+        assert(false);
     }
 
     override string toString()
@@ -290,7 +305,7 @@ class LambdaInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "lambda " ~ entry.name ~ " (" ~ args.to!string[1..$-1] ~ ")" ~ "\n";
+        ret ~= "lambda " ~ entry.name ~ " (" ~ args.to!string[1 .. $ - 1] ~ ")" ~ "\n";
         return ret;
     }
 }

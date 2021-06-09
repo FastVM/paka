@@ -1,0 +1,9 @@
+def run(n) {
+    if (n <= 0) {
+        0
+    } else {
+        run(n-1)
+    }
+}
+
+print(run(10))

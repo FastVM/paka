@@ -128,6 +128,16 @@ Node readPostCallExtend(TokenArray tokens, Node last)
             args = args[1..$];
             last = new Form("print", argList);
         }
+        if (id.repr == "type")
+        {
+            Node[] argList = args[0];
+            args = args[1..$];
+            if (argList.length != 1)
+            {
+                throw new Exception("type() takes one argument");
+            }
+            last = new Form("info", new Ident("type"), argList);
+        }
     }
     foreach (argList; args)
     {
@@ -318,6 +328,11 @@ Node readPostExprImpl(TokenArray tokens)
     }
     else if (tokens.first.isOpen("["))
     {
+        Node[] nodes = tokens.readOpen!"[]";
+        last = new Form("tuple", nodes);
+    }
+    else if (tokens.first.isOpen("["))
+    {
         last = new Form("array", tokens.readOpen!"[]");
     }
     else if (tokens.first.isKeyword("if"))
@@ -462,7 +477,7 @@ Node readStmtImpl(TokenArray tokens)
         Form call = cast(Form) tokens.readExprBase;
         Node name = new Form("args", call.args);
         Node fun = tokens.readBlock;
-        return new Form("set", name, fun);
+        return new Form("def", name, fun);
     }
     return tokens.readExprBase;
 }

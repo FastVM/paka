@@ -1,0 +1,10 @@
+def gadd(x, y) {
+    x + y
+}
+
+def call(f, a1, a2) {
+    f(a1, a2)
+}
+
+print(call(gadd, 1, 2))
+print(call(gadd, 1.0, 2.0))

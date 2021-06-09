@@ -142,8 +142,7 @@ final class Value : Node
         }
         else static if (is(T == double))
         {
-            assert(false);
-            type = Type.number;
+            type = Type.float_;
             void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
             value = arr.dup;
         }

@@ -106,7 +106,6 @@ enum opcode_t
     OPCODE_GTE_FLOAT,
     OPCODE_EQ_FLOAT,
     OPCODE_NEQ_FLOAT,
-    OPCODE_PRINT_FLOAT,
     OPCODE_NEG_INTEGER,
     OPCODE_LT_INTEGER,
     OPCODE_GT_INTEGER,
@@ -114,11 +113,14 @@ enum opcode_t
     OPCODE_GTE_INTEGER,
     OPCODE_EQ_INTEGER,
     OPCODE_NEQ_INTEGER,
+    OPCODE_PRINT_FLOAT,
     OPCODE_PRINT_INTEGER,
+    OPCODE_PRINT_TEXT,
     OPCODE_JUMP,
     OPCODE_IFTRUE,
     OPCODE_IFFALSE,
     OPCODE_CALL,
+    OPCODE_CALL_STATIC,
     OPCODE_REC,
     OPCODE_EC_CONS,
     OPCODE_EC_CALL,
@@ -263,7 +265,6 @@ void vm_run(vm_t *pvm, func_t *basefunc, void *argv)
     ptrs[OPCODE_GTE_FLOAT] = &&do_gte_float;
     ptrs[OPCODE_EQ_FLOAT] = &&do_eq_float;
     ptrs[OPCODE_NEQ_FLOAT] = &&do_neq_float;
-    ptrs[OPCODE_PRINT_FLOAT] = &&do_print_float;
     ptrs[OPCODE_NEG_INTEGER] = &&do_neg_integer;
     ptrs[OPCODE_LT_INTEGER] = &&do_lt_integer;
     ptrs[OPCODE_GT_INTEGER] = &&do_gt_integer;
@@ -271,11 +272,14 @@ void vm_run(vm_t *pvm, func_t *basefunc, void *argv)
     ptrs[OPCODE_GTE_INTEGER] = &&do_gte_integer;
     ptrs[OPCODE_EQ_INTEGER] = &&do_eq_integer;
     ptrs[OPCODE_NEQ_INTEGER] = &&do_neq_integer;
+    ptrs[OPCODE_PRINT_FLOAT] = &&do_print_float;
     ptrs[OPCODE_PRINT_INTEGER] = &&do_print_integer;
+    ptrs[OPCODE_PRINT_TEXT] = &&do_print_text;
     ptrs[OPCODE_JUMP] = &&do_jump;
     ptrs[OPCODE_IFTRUE] = &&do_iftrue;
     ptrs[OPCODE_IFFALSE] = &&do_iffalse;
     ptrs[OPCODE_CALL] = &&do_call;
+    ptrs[OPCODE_CALL_STATIC] = &&do_call_static;
     ptrs[OPCODE_REC] = &&do_rec;
     ptrs[OPCODE_EC_CONS] = &&do_ec_cons;
     ptrs[OPCODE_EC_CALL] = &&do_ec_call;
@@ -564,11 +568,6 @@ do_neq_float:
     cur_stack_push(bool, lhs != rhs);
     run_next_op;
 }
-do_print_float:
-{
-    printf("%lf\n", cur_stack_load_pop(float_t));
-    run_next_op;
-}
 do_neg_integer:
 {
     cur_stack_peek(integer_t) *= -1;
@@ -616,9 +615,19 @@ do_neq_integer:
     cur_stack_push(bool, lhs != rhs);
     run_next_op;
 }
+do_print_float:
+{
+    printf("%lf\n", cur_stack_load_pop(float_t));
+    run_next_op;
+}
 do_print_integer:
 {
     printf("%ld\n", cur_stack_load_pop(integer_t));
+    run_next_op;
+}
+do_print_text:
+{
+    printf("%s\n", cur_stack_load_pop(char *));
     run_next_op;
 }
 do_jump:
@@ -658,6 +667,19 @@ do_call:
     cur_stack -= arg_size;
     void *argv = cur_stack;
     func_t next_func = *cur_stack_load_pop(func_t *);
+    next = (stack_frame_t){
+        .func = next_func,
+        .argv = argv,
+        .index = 0,
+    };
+    goto rec_call;
+}
+do_call_static:
+{
+    int arg_size = cur_bytecode_next(int);
+    cur_stack -= arg_size;
+    void *argv = cur_stack;
+    func_t next_func = *cur_bytecode_next(func_t *);
     next = (stack_frame_t){
         .func = next_func,
         .argv = argv,

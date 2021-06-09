@@ -3,6 +3,7 @@ module purr.ir.bytecode;
 import core.memory;
 import std.conv;
 import std.array;
+import std.string;
 import std.algorithm;
 import std.typecons;
 import std.meta;
@@ -172,7 +173,11 @@ pragma(inline, false):
 
     void emit(ReturnBranch branch)
     {
-        if (depth > 1)
+        if (depth <= 1)
+        {
+            func.add(Opcode.exit);
+        }
+        else
         {
             final switch (branch.type.size)
             {
@@ -193,14 +198,14 @@ pragma(inline, false):
                 break;
             }
         }
-        else
-        {
-            func.add(Opcode.exit);
-        }
     }
 
     void emit(StoreInstruction store)
     {
+        // if (!store.type.runtime)
+        // {
+        //     return;
+        // }
         int data;
         if (int* pdata = store.var in locals[$ - 1])
         {
@@ -242,6 +247,10 @@ pragma(inline, false):
 
     void emit(LoadInstruction load)
     {
+        // if (!load.type.runtime)
+        // {
+        //     return;
+        // }
         if (int* pdata = load.var in locals[$ - 1])
         {
             int data = *pdata;
@@ -289,7 +298,7 @@ pragma(inline, false):
 
             return;
         }
-        else
+        else if (load.type.runtime)
         {
             throw new Exception("variable not found: " ~ load.var);
         }
@@ -297,18 +306,41 @@ pragma(inline, false):
 
     void emit(CallInstruction call)
     {
-        int argc = 0;
-        foreach (arg; call.args)
+        Type basety = call.func;
+        if (Generic generic = call.func.as!Generic)
         {
-            argc += arg.size;
+            basety = generic.specialize(call.args);
         }
-        func.add(Opcode.call);
-        func.add(argc);
+        Func functy = basety.as!Func;
+        if (functy is null)
+        {
+            throw new Exception("cannot call: " ~ call.func.to!string);
+        }
+        int argc = 0;
+        foreach(argno, expected; functy.args)
+        {
+            if (!call.args[argno].runtime || expected.fits(call.args[argno]))
+            {
+                argc += expected.size;
+            }
+        }
+        if (functy.impl is null)
+        {
+            func.add(Opcode.call);
+            func.add(argc);
+        }
+        else
+        {
+            func.add(Opcode.call_static);
+            func.add(argc);
+            void[Bytecode.sizeof] arr = *cast(void[Bytecode.sizeof]*)&functy.impl;
+            func.add(arr.dup);
+        }
     }
 
     void emit(PushInstruction push)
     {
-        final switch (push.value.length)
+        final switch (push.res.size)
         {
         case 0:
             break;
@@ -339,6 +371,13 @@ pragma(inline, false):
 
     void emit(OperatorInstruction op)
     {
+        if (op.inputTypes.length == 2)
+        {
+            if (!op.inputTypes[0].fits(op.inputTypes[1]))
+            {
+                throw new Exception("type error in " ~ op.op ~ ": " ~ op.inputTypes[0].to!string ~ " vs " ~ op.inputTypes[1].to!string);
+            }
+        }
         switch (op.op)
         {
         default:
@@ -370,7 +409,7 @@ pragma(inline, false):
             }
             else
             {
-                func.add(Opcode.add_float);
+                func.add(Opcode.mul_float);
             }
             break;
         case "div":
@@ -459,7 +498,10 @@ pragma(inline, false):
         {
             Type argty = lambda.types[argname];
             cargs[argname] = argoffset;
-            argoffset += argty.size;
+            if (!argty.isUnk)
+            {
+                argoffset += argty.size;
+            }
         }
         args ~= cargs;
         scope (exit)
@@ -470,12 +512,16 @@ pragma(inline, false):
         }
         Bytecode newFunc = lambda.impl;
         emitInFunc(newFunc, lambda.entry);
-        func.add(Opcode.push8);
-        func.add(*cast(void[size_t.sizeof]*)&newFunc);
+        // func.add(Opcode.push8);
+        // func.add(*cast(void[size_t.sizeof]*)&newFunc);
     }
 
     void emit(PopInstruction pop)
     {
+        // if (!pop.type.runtime)
+        // {
+        //     return;
+        // }
         size_t size = pop.type.size;
         while (size >= 8)
         {
@@ -506,9 +552,24 @@ pragma(inline, false):
         {
             func.add(Opcode.print_integer);
         }
-        else
+        else if (print.type.fits(Type.float_))
         {
             func.add(Opcode.print_float);
+        }
+        else if (print.type.fits(Type.text))
+        {
+            func.add(Opcode.print_text);
+        }
+        else if (Higher higher = print.type.as!Higher)
+        {
+            func.add(Opcode.push8);
+            immutable(char)* typename = higher.type.to!string.toStringz;
+            func.add(*cast(void[size_t.sizeof]*)&typename);
+            func.add(Opcode.print_text);
+        }
+        else
+        {
+            throw new Exception("cannot print value of type: " ~ print.type.to!string);
         }
     }
 }

@@ -3,6 +3,7 @@ module purr.type.repr;
 import purr.io;
 import std.conv;
 import purr.vm.bytecode;
+import purr.ast.ast;
 
 class Type
 {
@@ -18,14 +19,29 @@ class Type
 
     bool isUnk()
     {
+        assert(false, typeid(this).to!string);
+    }
+
+    bool runtime()
+    {
+        // return true;
         assert(false);
     }
 
-    T as(T)() if (!is(T == Unk))
+    Unk getUnk()
     {
-        if (Unk box = cast(Unk) this)
+        return cast(Unk) this;
+    }
+
+    T as(T)() if (!is(T == Unk) && !is(T == Lambda))
+    {
+        if (Unk box = this.getUnk)
         {
             return box.next.as!T;            
+        }
+        if (Lambda fun = cast(Lambda) this)
+        {
+            return fun.get.as!T;
         }
         return cast(T) this;
     }
@@ -45,9 +61,9 @@ class Type
         return new Logical;
     }
 
-    static Type number()
+    static Type float_()
     {
-        return new Number;
+        return new Float;
     }
 
     static Type higher(Type other)
@@ -65,6 +81,21 @@ class Type
         return Func.empty(bc);
     }
 
+    static Type lambda(Type delegate() dg)
+    {
+        return new Lambda(dg);
+    }
+
+    static Type text()
+    {
+        return new Text;
+    }
+
+    static Type generic(Type delegate(Type[]) spec)
+    {
+        return new Generic(spec);
+    }
+
     static Type nil()
     {
         return new Nil;
@@ -78,6 +109,56 @@ class Type
     static Type unk()
     {
         return new Unk;
+    }
+}
+
+class Lambda : Type
+{
+    private Type delegate() run;
+    private Type got;
+
+    Type get()
+    {
+        if (got is null)
+        {
+            got = run();
+        }
+        return got;
+    }
+
+    this(Type delegate() dg)
+    {
+        run = dg;
+    }
+
+    override size_t size()
+    {
+        return get.size;
+    }
+
+    override Unk getUnk()
+    {
+        return get.getUnk;
+    }
+
+    override bool isUnk()
+    {
+        return get.isUnk;
+    }
+
+    override bool fits(Type other)
+    {
+        return get.fits(other);
+    }
+
+    override bool runtime()
+    {
+        return get.runtime;
+    }
+    
+    override string toString()
+    {
+        return get.to!string;
     }
 }
 
@@ -100,6 +181,12 @@ class Unk : Type
         return next.size;
     }
 
+    override bool runtime()
+    {
+        assert(!isUnk);
+        return next.runtime;
+    }
+
     override bool fits(Type other)
     {
         if (isUnk)
@@ -117,18 +204,39 @@ class Unk : Type
         }
         if (found.isUnk)
         {
-            same ~= cast(Unk) found; 
+            Unk other = found.getUnk;
+            same ~= other;
+            other.same ~= this; 
         }
-        if (Unk box = cast(Unk) next)
+        else if (next is null)
         {
-            box.set(found);
-        }
-        next = found;
-        foreach (s; same)
-        {
-            if (s.isUnk)
+            next = found;
+            Unk[] iter = same;
+            same = null;
+            foreach (s; iter)
             {
-                s.set(found);
+                if (s.isUnk)
+                {
+                    s.set(found);
+                }
+            }
+        }
+        else
+        {
+            // writeln(next);
+            if (Unk box = next.getUnk)
+            {
+                box.set(found);
+            }
+            next = found;
+            Unk[] iter = same;
+            same = null;
+            foreach (s; iter)
+            {
+                if (s.isUnk)
+                {
+                    s.set(found);
+                }
             }
         }
     }
@@ -143,11 +251,42 @@ class Unk : Type
     }
 }
 
+
 class Known : Type
 {
     override bool isUnk()
     {
         return false;
+    }
+
+    override bool runtime()
+    {
+        return false;
+    }
+}
+
+class Generic : Known
+{
+    Type delegate(Type[]) specialize;
+
+    this(Type delegate(Type[]) spec)
+    {
+        specialize = spec;
+    }
+
+    override bool runtime()
+    {
+        return false;
+    }
+
+    override size_t size()
+    {
+        return 0;
+    }    
+
+    override string toString()
+    {
+        return "Generic(...)";
     }
 }
 
@@ -158,6 +297,11 @@ class Higher : Known
     this(Type t)
     {
         type = t;
+    }
+    
+    override bool runtime()
+    {
+        return false;
     }
 
     override bool fits(Type arg)
@@ -261,11 +405,11 @@ class Logical : Known
     }
 }
 
-class Number : Known
+class Text : Known
 {
     override bool fits(Type other)
     {
-        return other.as!Number !is null || other.as!Never !is null;
+        return other.as!Text !is null || other.as!Never !is null;
     }
 
     override size_t size()
@@ -275,7 +419,25 @@ class Number : Known
 
     override string toString()
     {
-        return "Number";
+        return "Text";
+    }
+}
+
+class Float : Known
+{
+    override bool fits(Type other)
+    {
+        return other.as!Float !is null || other.as!Never !is null;
+    }
+
+    override size_t size()
+    {
+        return 8;
+    }
+
+    override string toString()
+    {
+        return "Float";
     }
 }
 
@@ -315,6 +477,11 @@ class Func : Known
         impl = ip;
     }
 
+    override bool runtime()
+    {
+        return impl is null;
+    }
+
     override bool fits(Type t)
     {
         Func other = t.as!Func;
@@ -328,6 +495,10 @@ class Func : Known
         }
         foreach (index, arg; other.args)
         {
+            if (arg.isUnk && args[index].isUnk)
+            {
+                continue;
+            }
             if (!args[index].fits(arg))
             {
                 return false;

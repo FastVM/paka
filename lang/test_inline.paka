@@ -1,6 +1,0 @@
-
-[true, false] foreach |> lambda(x):
-    [true, false] foreach |> lambda(y):
-        [true, false] foreach |> lambda(z):
-            io.print(dostuff(x, y, z))
-            

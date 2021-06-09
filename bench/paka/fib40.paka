@@ -1,7 +1,7 @@
-def fib(n :: Int):
+def fib(n):
     if n < 2:
-        return n
+        n
     else:
-        return rec(n - 2) + rec(n - 1)
+        fib(n - 2) + fib(n - 1)
 
 print(fib(40))
