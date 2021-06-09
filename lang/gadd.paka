@@ -2,5 +2,5 @@ def add(x, y) {
     x + y
 }
 
-print(add(1, 2))
+print(add(10, 20))
 print(add(1.0, 2.0))

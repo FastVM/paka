@@ -33,12 +33,14 @@ int add(Bytecode func, int val)
     return where;
 }
 
-void add(Bytecode func, void[] vals)
+int add(Bytecode func, void[] vals)
 {
+    int where = func.bytecodeLength;
     foreach (ubyte val; cast(ubyte[]) vals)
     {
         func.add(val);
     }
+    return where;
 }
 
 void set(Bytecode func, int where, int val)
@@ -179,6 +181,10 @@ pragma(inline, false):
         }
         else
         {
+            if (branch.type.isUnk)
+            {
+                branch.type.getUnk.set(Type.nil);
+            }
             final switch (branch.type.size)
             {
             case 0:
@@ -373,9 +379,28 @@ pragma(inline, false):
     {
         if (op.inputTypes.length == 2)
         {
+            if (op.inputTypes[0].isUnk)
+            {
+                op.inputTypes[0].getUnk.set(op.inputTypes[1]);
+            }
+            if (op.inputTypes[1].isUnk)
+            {
+                op.inputTypes[1].getUnk.set(op.inputTypes[0]);
+            }
             if (!op.inputTypes[0].fits(op.inputTypes[1]))
             {
                 throw new Exception("type error in " ~ op.op ~ ": " ~ op.inputTypes[0].to!string ~ " vs " ~ op.inputTypes[1].to!string);
+            }
+            if (op.resType.isUnk)
+            {
+                if (numops.canFind(op.op))
+                {
+                    op.resType.getUnk.set(op.inputTypes[0]);
+                }
+                if (logicops.canFind(op.op))
+                {
+                    op.resType.getUnk.set(Type.logical);
+                }
             }
         }
         switch (op.op)

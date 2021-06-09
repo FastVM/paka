@@ -232,7 +232,7 @@ class PushInstruction : Instruction
         {
             return val;
         }
-        assert(false);
+        assert(false, res.to!string ~ " vs " ~ from.to!string);
     }
 
     override string toString()
@@ -260,10 +260,9 @@ class RecInstruction : Instruction
     }
 }
 
-enum string[] operators = [
-        "cat", "add", "mod", "neg", "sub", "mul", "div", "lt", "gt", "lte", "gte",
-        "neq", "eq"
-    ];
+enum string[] numops = ["add", "mod", "neg", "sub", "mul", "div"];
+enum string[] logicops = ["lt", "gt", "lte", "gte", "neq", "eq"];
+enum string[] operators = numops ~ logicops;
 
 class OperatorInstruction : Instruction
 {

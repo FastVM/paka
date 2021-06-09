@@ -1,9 +1,9 @@
-def run(n) {
-    if (n <= 0) {
-        0
+def fac(n) {
+    if (n == 0) {
+        1
     } else {
-        run(n-1)
+        fac(n-1) * n
     }
 }
 
-print(run(10))
+print(fac(10))

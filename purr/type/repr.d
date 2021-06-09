@@ -274,6 +274,11 @@ class Generic : Known
         specialize = spec;
     }
 
+    override bool fits(Type other)
+    {
+        return other.as!Generic !is null && this is other;
+    }
+
     override bool runtime()
     {
         return false;
@@ -391,7 +396,7 @@ class Logical : Known
 {
     override bool fits(Type other)
     {
-        return other.as!Logical is null || other.as!Never !is null;
+        return other.as!Logical !is null || other.as!Never !is null;
     }
 
     override size_t size()

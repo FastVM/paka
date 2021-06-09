@@ -293,31 +293,22 @@ final class Walker
         assert(target !is null);
         Unk[] dones;
         Type[][] checks;
-        Type specialize(Type[] args)
+        Type specialize(Type[] argTypes)
         {
             outter: foreach (checkno, check; checks)
             {
-                if (args.length != check.length)
+                if (argTypes.length != check.length)
                 {
                     continue;
                 }
-                inner: foreach (argno, arg; args)
+                inner: foreach (argno, arg; argTypes)
                 {
                     if (arg is check[argno])
                     {
                         continue inner;
                     }
-                    // if (check[argno].isUnk)
-                    // {
-                    //     continue inner;
-                    // }
-                    if (arg.isUnk)
+                    if (arg.isUnk || check[argno].isUnk)
                     {
-                        // writeln(check[argno], arg);
-                        // if (check[argno].isUnk)
-                        // {
-                        //     continue inner;
-                        // }
                         continue outter;
                     }
                     if (!arg.fits(check[argno]))
@@ -325,14 +316,14 @@ final class Walker
                         continue outter;
                     }
                 }
+                writeln(dones[checkno]);
                 return dones[checkno];
             }
             Unk done = Type.unk.getUnk;
-            checks ~= args;
+            checks ~= argTypes;
             dones ~= done;
             Type[string] locals;
             string[] argNames;
-            Type[] argTypes;
             foreach (i, v; call.args[1 .. $])
             {
                 if (Form form = cast(Form) v)
@@ -347,22 +338,20 @@ final class Walker
                         Type type = walkType(form.args[1]);
                         locals[name.repr] = type;
                         argNames ~= name.repr;
-                        argTypes ~= type;
                     }
                 }
                 if (Ident name = cast(Ident) v)
                 {
-                    Type type = args[i];
+                    Type type = argTypes[i];
                     locals[name.repr] = type;
                     argNames ~= name.repr;
-                    argTypes ~= type;
                 }
             }
             BasicBlock lambda = new BasicBlock;
             Func functy = Func.empty;
-            functy.args = args;
+            functy.args = argTypes;
             // globals.instrs ~= new LambdaInstruction(lambda, argNames, locals, functy.impl);
-            block.instrs ~= new LambdaInstruction(lambda, argNames, locals, functy.impl);
+            globals.instrs ~= new LambdaInstruction(lambda, argNames, locals, functy.impl);
             // globals.instrs ~= new PopInstruction(functy);
             todos[$ - 1] ~= Todo(lambda, defArgs, argNames, locals, functy);
             done.set(cast(Type) functy);
@@ -578,10 +567,6 @@ final class Walker
         {
             argTypes ~= Type.unk;
         }
-        if (Generic generic = ty.as!Generic)
-        {
-            ty = generic.specialize(argTypes);
-        }
         // if (n != 0)
         // {
             // emit(new PushInstruction(ty.as!Func.impl, ty));
@@ -597,6 +582,10 @@ final class Walker
             {
                 throw new Exception("type error in function arguments");
             }
+        }
+        if (Generic generic = ty.as!Generic)
+        {
+            ty = generic.specialize(argTypes);
         }
         emit(new CallInstruction(ty, argTypes));
         return Type.lambda({
@@ -635,12 +624,9 @@ final class Walker
             assert(false, "type info not implemented: " ~ name.repr);
         case "type":
             BasicBlock lastBlock = block;
-            scope (exit)
-            {
-                block = lastBlock;
-            }
             block = new BasicBlock;
             Type ret = walk(args[1]);
+            block = lastBlock;
             return Type.higher(ret);
         }
     }
