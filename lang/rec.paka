@@ -6,4 +6,4 @@ def fac(n) {
     }
 }
 
-print(fac(10))
+println(fac(10))

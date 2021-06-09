@@ -113,6 +113,7 @@ enum opcode_t
     OPCODE_GTE_INTEGER,
     OPCODE_EQ_INTEGER,
     OPCODE_NEQ_INTEGER,
+    OPCODE_PRINT_LOGICAL,
     OPCODE_PRINT_FLOAT,
     OPCODE_PRINT_INTEGER,
     OPCODE_PRINT_TEXT,
@@ -191,8 +192,8 @@ struct cont_t
     })
 
 #define cur_stack_peek(Type) (*(Type *)(cur_stack - sizeof(Type)))
-#define cur_stack_pop(Type) (cur_stack -= sizeof(Type), (void)0)
 #define cur_stack_load_pop(Type) (cur_stack_pop(Type), *(Type *)cur_stack)
+#define cur_stack_pop(Type) (cur_stack -= sizeof(Type), (void)0)
 #define cur_stack_push(Type, value) ( \
     {                                 \
         *(Type *)cur_stack = value;   \
@@ -272,6 +273,7 @@ void vm_run(vm_t *pvm, func_t *basefunc, void *argv)
     ptrs[OPCODE_GTE_INTEGER] = &&do_gte_integer;
     ptrs[OPCODE_EQ_INTEGER] = &&do_eq_integer;
     ptrs[OPCODE_NEQ_INTEGER] = &&do_neq_integer;
+    ptrs[OPCODE_PRINT_LOGICAL] = &&do_print_logical;
     ptrs[OPCODE_PRINT_FLOAT] = &&do_print_float;
     ptrs[OPCODE_PRINT_INTEGER] = &&do_print_integer;
     ptrs[OPCODE_PRINT_TEXT] = &&do_print_text;
@@ -386,73 +388,73 @@ do_pop8:
 }
 do_arg1:
 {
-    val1_t val = *(val1_t *)&cur_argv[cur_bytecode_next(int)];
+    val1_t val = *(val1_t *)&((char*) cur_argv)[cur_bytecode_next(int)];
     cur_stack_push(val1_t, val);
     run_next_op;
 }
 do_arg2:
 {
-    val2_t val = *(val2_t *)&cur_argv[cur_bytecode_next(int)];
+    val2_t val = *(val2_t *)&((char*) cur_argv)[cur_bytecode_next(int)];
     cur_stack_push(val2_t, val);
     run_next_op;
 }
 do_arg4:
 {
-    val4_t val = *(val4_t *)&cur_argv[cur_bytecode_next(int)];
+    val4_t val = *(val4_t *)&((char*) cur_argv)[cur_bytecode_next(int)];
     cur_stack_push(val4_t, val);
     run_next_op;
 }
 do_arg8:
 {
-    val8_t val = *(val8_t *)&cur_argv[cur_bytecode_next(int)];
+    val8_t val = *(val8_t *)&((char*) cur_argv)[cur_bytecode_next(int)];
     cur_stack_push(val8_t, val);
     run_next_op;
 }
 do_store1:
 {
     val1_t val = cur_stack_peek(val1_t);
-    *(val1_t *)&cur_locals[cur_bytecode_next(int)] = val;
+    *(val1_t *)&((char*) cur_locals)[cur_bytecode_next(int)] = val;
     run_next_op;
 }
 do_store2:
 {
     val2_t val = cur_stack_peek(val2_t);
-    *(val2_t *)&cur_locals[cur_bytecode_next(int)] = val;
+    *(val2_t *)&((char*) cur_locals)[cur_bytecode_next(int)] = val;
     run_next_op;
 }
 do_store4:
 {
     val4_t val = cur_stack_peek(val4_t);
-    *(val4_t *)&cur_locals[cur_bytecode_next(int)] = val;
+    *(val4_t *)&((char*) cur_locals)[cur_bytecode_next(int)] = val;
     run_next_op;
 }
 do_store8:
 {
     val8_t val = cur_stack_peek(val8_t);
-    *(val8_t *)&cur_locals[cur_bytecode_next(int)] = val;
+    *(val8_t *)&((char*) cur_locals)[cur_bytecode_next(int)] = val;
     run_next_op;
 }
 do_load1:
 {
-    val1_t val = *(val1_t *)&cur_locals[cur_bytecode_next(int)];
+    val1_t val = *(val1_t *)&((char*) cur_locals)[cur_bytecode_next(int)];
     cur_stack_push(val1_t, val);
     run_next_op;
 }
 do_load2:
 {
-    val2_t val = *(val2_t *)&cur_locals[cur_bytecode_next(int)];
+    val2_t val = *(val2_t *)&((char*) cur_locals)[cur_bytecode_next(int)];
     cur_stack_push(val2_t, val);
     run_next_op;
 }
 do_load4:
 {
-    val4_t val = *(val4_t *)&cur_locals[cur_bytecode_next(int)];
+    val4_t val = *(val4_t *)&((char*) cur_locals)[cur_bytecode_next(int)];
     cur_stack_push(val4_t, val);
     run_next_op;
 }
 do_load8:
 {
-    val8_t val = *(val8_t *)&cur_locals[cur_bytecode_next(int)];
+    val8_t val = *(val8_t *)&((char*) cur_locals)[cur_bytecode_next(int)];
     cur_stack_push(val8_t, val);
     run_next_op;
 }
@@ -615,19 +617,26 @@ do_neq_integer:
     cur_stack_push(bool, lhs != rhs);
     run_next_op;
 }
+do_print_logical:
+    printf("%s", cur_stack_load_pop(bool) ? "true" : "false");
+    run_next_op;
 do_print_float:
 {
-    printf("%lf\n", cur_stack_load_pop(float_t));
+    printf("%lf", cur_stack_load_pop(float_t));
     run_next_op;
 }
 do_print_integer:
 {
-    printf("%ld\n", cur_stack_load_pop(integer_t));
+    printf("%ld", cur_stack_load_pop(integer_t));
     run_next_op;
 }
 do_print_text:
 {
-    printf("%s\n", cur_stack_load_pop(char *));
+    char *text = cur_stack_load_pop(char *);
+    if (text != NULL)
+    {
+        printf("%s", text);
+    }
     run_next_op;
 }
 do_jump:

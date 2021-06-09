@@ -30,8 +30,7 @@ enum string[string] forms = [
     "do": "do", "if": "if", 
     "<": "<", "<=": "<=", ">": ">", ">=": ">=",
     "!=": "!=", "==": "==",
-    "and": "&&", "or": "||",
-    "print": "print",
+    "and": "&&", "or": "||"
 ];
 
 Node read(ref string code)

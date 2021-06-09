@@ -565,7 +565,7 @@ class Integer : Known
 
     override string toString()
     {
-        return "Integer";
+        return "Int";
     }
 }
 

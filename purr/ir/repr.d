@@ -179,7 +179,7 @@ class ReturnBranch : Branch
     override string toString()
     {
         string ret;
-        ret ~= "return\n";
+        ret ~= "return " ~ type.to!string ~ "\n";
         return ret;
     }
 }
@@ -198,7 +198,7 @@ class CallInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "call " ~ args.length.to!string ~ "\n";
+        ret ~= "call " ~ func.to!string ~ "\n";
         return ret;
     }
 }
@@ -236,7 +236,7 @@ class PushInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "push " ~ to!string(cast(ubyte[]) value) ~ "\n";
+        ret ~= "push " ~ res.to!string ~ "\n";
         return ret;
     }
 }
@@ -302,7 +302,7 @@ class LambdaInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "lambda " ~ entry.name ~ " (" ~ args.to!string[1 .. $ - 1] ~ ")" ~ "\n";
+        ret ~= "lambda " ~ entry.name ~ " (" ~ types.to!string[1 .. $ - 1] ~ ")" ~ "\n";
         return ret;
     }
 }
@@ -355,7 +355,7 @@ class StoreInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "store " ~ var ~ "\n";
+        ret ~= "store " ~ var ~ ": " ~ type.to!string ~ "\n";
         return ret;
     }
 }
@@ -388,7 +388,7 @@ class LoadInstruction : Instruction
     override string toString()
     {
         string ret;
-        ret ~= "load " ~ var ~ "\n";
+        ret ~= "load " ~ var ~ ": " ~ type.to!string ~ "\n";
         return ret;
     }
 }

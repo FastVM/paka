@@ -12,10 +12,6 @@ import std.functional;
 import purr.vm;
 import purr.inter;
 import purr.srcloc;
-import purr.fs.disk;
-import purr.fs.har;
-import purr.fs.memory;
-import purr.fs.files;
 import purr.vm.bytecode;
 import purr.ir.walk;
 import purr.ast.ast;
@@ -121,12 +117,6 @@ Node readPostCallExtend(TokenArray tokens, Node last)
             Node[] argList = args[0];
             args = args[1..$];
             last = new Form("rec", argList);
-        }
-        if (id.repr == "print")
-        {
-            Node[] argList = args[0];
-            args = args[1..$];
-            last = new Form("print", argList);
         }
     }
     foreach (argList; args)
@@ -379,6 +369,11 @@ Node readPostExprImpl(TokenArray tokens)
             tokens.nextIs(Token.Type.ident);
         }
     }
+    else if (tokens.first.isString)
+    {
+        last = new Value(tokens.first.value);
+        tokens.nextIs(Token.Type.string);
+    }
     else
     {
         last = new Ident(tokens.first.value);
@@ -563,19 +558,7 @@ alias parseCached = memoize!parseUncached;
 /// parses code as archive of the paka programming language
 Node parseUncached(SrcLoc loc)
 {
-    SrcLoc[] olocs = locs;
-    locs = null;
-    fileSystem ~= parseHar(loc, fileSystem);
-    MemoryTextFile main = "main.paka".readMemFile;
-    if (main is null)
-    {
-        main = "__main__".readMemFile;
-    }
-    if (main is null)
-    {
-        throw new Exception("input error: missing __main__");
-    }
-    SrcLoc location = main.location;
+    SrcLoc location = loc;
     Node ast = location.parsePaka;
     // Node ret = new Form("do", ast, new Form("call", new Ident("main")));
     return ast;

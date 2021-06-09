@@ -10,8 +10,6 @@ import purr.ast.ast;
 import purr.parse;
 import purr.inter;
 import purr.io;
-import purr.fs.files;
-import purr.fs.disk;
 import purr.vm.bytecode;
 import purr.ir.walk;
 import std.uuid;

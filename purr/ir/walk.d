@@ -53,11 +53,11 @@ final class Walker
     Bytecode walkProgram(Node node)
     {
         localTypes ~= [
-            "Frame": Type.frame,
-            "Text": Type.text,
-            "Int": Type.integer,
-            "Nil": Type.nil,
-            "Float": Type.float_,
+            "Frame": Type.higher(Type.frame),
+            "Text": Type.higher(Type.text),
+            "Int": Type.higher(Type.integer),
+            "Nil": Type.higher(Type.nil),
+            "Float": Type.higher(Type.float_),
         ];
         localDefs.length++;
         todos.length++;
@@ -66,7 +66,7 @@ final class Walker
             localTypes.length--;
             localDefs.length--;
             todos.length--;
-        }
+        } 
         curFunc = Func.empty;
         if (dumpast)
         {
@@ -327,8 +327,12 @@ final class Walker
             Unk done = Type.unk.getUnk;
             checks ~= argTypes;
             dones ~= done;
-            Type[string] locals;
             string[] argNames;
+            localTypes.length++;
+            scope(exit)
+            {
+                localTypes.length--;
+            }
             foreach (i, v; call.args[1 .. $])
             {
                 if (Form form = cast(Form) v)
@@ -348,7 +352,7 @@ final class Walker
                                     "generic arg got: " ~ got.to!string
                                     ~ ", wanted: " ~ want.to!string);
                         }
-                        locals[name.repr] = got;
+                        localTypes[$-1][name.repr] = got;
                         argNames ~= name.repr;
                     }
                 }
@@ -359,17 +363,15 @@ final class Walker
                         throw new Exception("too few args");
                     }
                     Type type = argTypes[i];
-                    locals[name.repr] = type;
+                    localTypes[$-1][name.repr] = type;
                     argNames ~= name.repr;
                 }
             }
             BasicBlock lambda = new BasicBlock;
             Func functy = Func.empty;
             functy.args = argTypes;
-            // globals.instrs ~= new LambdaInstruction(lambda, argNames, locals, functy.impl);
-            globals.instrs ~= new LambdaInstruction(lambda, argNames, locals, functy.impl);
-            // globals.instrs ~= new PopInstruction(functy);
-            todos[$ - 1] ~= Todo(lambda, defArgs, argNames, locals, functy);
+            globals.instrs ~= new LambdaInstruction(lambda, argNames, localTypes[$-1], functy.impl);
+            todos[$ - 1] ~= Todo(lambda, defArgs, argNames, localTypes[$-1], functy);
             done.set(cast(Type) functy);
             return done;
         }
@@ -440,7 +442,10 @@ final class Walker
                 {
                     if (Type* ptr = id.repr in layer)
                     {
-                        return *ptr;
+                        if (Higher higher = ptr.as!Higher)
+                        {
+                            return higher.type;
+                        }
                     }
                 }
                 throw new Exception("type not found " ~ id.repr);
@@ -598,12 +603,34 @@ final class Walker
                     break;
                 case "type":
                     BasicBlock lastBlock = block;
+                    BasicBlock lastGlobals = globals;
+                    scope (exit)
+                    {
+                        block = lastBlock;
+                        globals = lastGlobals;
+                    }
                     block = new BasicBlock;
+                    globals = new BasicBlock;
                     Type ret = walk(args[0]);
-                    block = lastBlock;
                     return Type.higher(ret);
+                case "print":
+                    walkPrint(args);
+                    return Type.nil;
+                case "println":
+                    walkPrint(args);
+                    Type type = walk(new Value("\n"));
+                    emit(new PrintInstruction(type)); 
+                    return Type.nil;
                 case "init":
                     Type ret = walk(args[0]);
+                    if (Higher higher = ret.as!Higher)
+                    {
+                        ret = higher.type;
+                    }
+                    if (Higher higher = ret.as!Higher)
+                    {
+                        throw new Exception("init() cannot be applied to a type of a type");
+                    }
                     emit(new PushInstruction(new void[ret.size], ret));
                     return ret;
                 }
@@ -653,9 +680,11 @@ final class Walker
 
     Type walkPrint(Node[] args)
     {
-        assert(args.length == 1);
-        Type type = walk(args[0]);
-        emit(new PrintInstruction(type));
+        foreach (arg; args)
+        {
+            Type type = walk(arg);
+            emit(new PrintInstruction(type)); 
+        }
         return Type.nil;
     }
 
@@ -698,16 +727,16 @@ final class Walker
             return walkStore(args);
         case "fun":
             return walkFun(args);
-        case "print":
-            return walkPrint(args);
         case "call":
             return walkCall(args[0], args[1 .. $]);
         case "return":
             throw new Exception("return is broken");
         case "index":
             return walkIndex(args);
+        case "::":
+            return walk(new Value(walk(args[0]).fits(walkType(args[1]))));
         case "->":
-            return walkType(new Form("->", args));
+            return Type.higher(walkType(new Form("->", args)));
         case "+":
             return walkBinary!"add"(args);
         case "%":

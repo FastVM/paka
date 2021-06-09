@@ -1,15 +1,5 @@
-
-def main() {
-    0
+def check(T, a) {
+    a :: T
 }
 
-def call(f) {
-    f()
-}
-
-def overload(T, A) {
-    type(T(A.init))
-}
-
-x = call(main)
-print(call.overload([Int] -> Int))
+Int.check(10).println

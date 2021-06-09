@@ -106,6 +106,7 @@ enum Opcode : char
     gte_integer,
     eq_integer,
     neq_integer,
+    print_logical,
     print_float,
     print_integer,
     print_text,

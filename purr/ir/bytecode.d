@@ -581,7 +581,11 @@ pragma(inline, false):
 
     void emit(PrintInstruction print)
     {
-        if (print.type.fits(Type.integer))
+        if (print.type.fits(Type.logical))
+        {
+            func.add(Opcode.print_logical);
+        }
+        else if (print.type.fits(Type.integer))
         {
             func.add(Opcode.print_integer);
         }

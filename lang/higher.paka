@@ -1,7 +1,3 @@
-def call(f) {
-    f()
-}
-
 def call1(f, a1) {
     f(a1)
 }
@@ -11,7 +7,7 @@ def call2(f, a1, a2) {
 }
 
 def show(arg) {
-    print(arg)
+    println(arg)
 }
 
 call2(call1, show, 10)
