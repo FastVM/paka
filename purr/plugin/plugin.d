@@ -8,7 +8,7 @@ final class Plugin
 {
     Node function(SrcLoc code)[string] parsers;
 
-    override string toString()
+    version(repr) override string toString()
     {
         string ret;
         ret ~= "Plugin(langs: ";

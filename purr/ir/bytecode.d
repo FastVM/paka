@@ -160,27 +160,6 @@ pragma(inline, false):
         }
     }
 
-    void emit(LabelBranch branch)
-    {
-        func.add(Opcode.ec_cons);
-        if (branch.target[0].place < 0)
-        {
-            emit(branch.target[0]);
-        }
-        else
-        {
-            func.add(Opcode.jump);
-            int jump = func.add(-1);
-            int to = emit(branch.target[0]);
-            func.set(jump, to);
-        }
-    }
-
-    void emit(JumpBranch branch)
-    {
-        func.add(Opcode.ec_call);
-    }
-
     void emit(ReturnBranch branch)
     {
         if (depth <= 1)

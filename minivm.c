@@ -5,7 +5,6 @@ typedef _Bool bool;
 
 #define NULL ((void *)0)
 
-void *vm_alloc(int size);
 int printf(const char *fmt, ...);
 double fmod(double lhs, double rhs);
 
@@ -123,8 +122,6 @@ enum opcode_t
     OPCODE_CALL,
     OPCODE_CALL_STATIC,
     OPCODE_REC,
-    OPCODE_EC_CONS,
-    OPCODE_EC_CALL,
     OPCODE_MAX1,
     OPCODE_MAX2P = 128,
 };
@@ -283,8 +280,6 @@ void vm_run(vm_t *pvm, func_t *basefunc, void *argv)
     ptrs[OPCODE_CALL] = &&do_call;
     ptrs[OPCODE_CALL_STATIC] = &&do_call_static;
     ptrs[OPCODE_REC] = &&do_rec;
-    ptrs[OPCODE_EC_CONS] = &&do_ec_cons;
-    ptrs[OPCODE_EC_CALL] = &&do_ec_call;
     goto first_call;
 rec_call:
     vm.frames[frame_number++] = (stack_frame_t){
@@ -706,23 +701,5 @@ do_rec:
         .index = 0,
     };
     goto rec_call;
-}
-do_ec_cons:
-{
-    cont_t *cont = vm_alloc(sizeof(cont_t));
-    cont->frame = vm_get_frame();
-    cont->vm = vm;
-    cont->frame_number = frame_number;
-    cur_stack_push(cont_t*, cont);
-    run_next_op;
-}
-do_ec_call:
-{
-    cont_t *cont = cur_stack_load_pop(cont_t*);
-    vm_set_frame(cont->frame);
-    vm = cont->vm;
-    frame_number = cont->frame_number;
-    cur_stack_push(cont_t*, cont);
-    run_next_op;
 }
 }

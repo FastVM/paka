@@ -1,0 +1,5 @@
+def tuple(...args) {
+    args
+}
+
+print(tuple(Int, Int))

@@ -2,42 +2,34 @@ OPT_C=fast
 OPT_D=s
 BIN=bin
 TMP=tmp
-1LFLAGS=$(BIN)/vm.o
 OPT_PGO=$(OPT_C)
+DFILES:=$(shell find ext purr -type f -name '*.d')
+ifdef LLVM
+CC=clang
+DC=ldc2
+LOUT=-of=
+CFLAGS+=-fPIC
+else
+CC=gcc
+DC=gdc
+LOUT=-o
+endif
 
 all: build
-pgo: 
-	$(MAKE) pgo-gen
-	$(MAKE) pgo-build
 
 opt: $(BIN)
-	$(MAKE) OPT_C=fast OPT_D=s CFLAGS+="-fno-stack-protector -fomit-frame-pointer -ffp-contract=off -flto"
+	@$(MAKE) --no-print-directory OPT_C=fast OPT_D=s CFLAGS+="-fno-stack-protector -fomit-frame-pointer -ffp-contract=off -fno-signed-zeros -fno-trapping-math"
 
-build: $(BIN) minivm
-	ldc2 -i purr/app.d ext/*/plugin.d -O$(OPT_D) -of=$(BIN)/purr -Jtmp $(1LFLAGS) $(DFLAGS) $(LFLAGS)
+build: $(BIN) compiler 
 
-minivm: $(BIN)
+compiler: minivm
+	$(DC) $(DFILES) -O$(OPT_D) $(LOUT)$(BIN)/purr $(BIN)/vm.o -Jtmp $(DFLAGS) $(LFLAGS)
+
+minivm: minivm.c
 	$(CC) -c minivm.c -o $(BIN)/vm.o --std=c11 -O$(OPT_C) $(CFLAGS)
 
-pgo-gen: $(TMP)
-ifdef LLVM
-	$(MAKE) OPT_C=3 OPT_D=0 CFLAGS+="-fprofile-generate=$(TMP)/profile_llvm" DFLAGS+="-fprofile-generate=$(TMP)/dprofile"
-	./bin/purr --file=bench/paka/fib40.paka
-	llvm-profdata merge $(TMP)/profile_llvm --output=$(TMP)/cprofile_llvm
-else
-	$(MAKE) OPT_C=3 OPT_D=0 LFLAGS+=-L-lgcov CFLAGS+="-fprofile-generate=$(TMP)/cprofile_gcc" DFLAGS+="-fprofile-generate=$(TMP)/dprofile"
-	./bin/purr --file=bench/paka/fib40.paka
-endif
-	
-pgo-build: $(TMP)
-ifdef LLVM
-	$(MAKE) OPT_C=$(PGO_OPT) CFLAGS+="-ffast-math -fno-stack-protector -fomit-frame-pointer -ffp-contract=off -flto -fprofile-use=$(TMP)/cprofile_llvm -fno-signed-zeros -fno-trapping-math -mllvm -polly"
-else
-	$(MAKE) OPT_C=$(PGO_OPT) CFLAGS+="-ffast-math -fno-stack-protector -fomit-frame-pointer -ffp-contract=off -flto -fprofile-use=$(TMP)/cprofile_gcc -fno-signed-zeros -fno-trapping-math"
-endif
-
 $(TMP):
-	mkdir -p $(TMP)
+	@mkdir -p $(TMP)
 
 $(BIN):
-	mkdir -p $(BIN)
+	@mkdir -p $(BIN)

@@ -61,7 +61,7 @@ final class BasicBlock
         name = n;
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= name ~ ":\n";
@@ -110,7 +110,7 @@ class LogicalBranch : Branch
         target = [ift, iff];
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "branch " ~ target[0].name ~ " " ~ target[1].name ~ " \n";
@@ -125,7 +125,7 @@ class LabelBranch : Branch
         target = [t];
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "label " ~ target[0].name ~ " \n";
@@ -139,7 +139,7 @@ class JumpBranch : Branch
     {
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "jump\n";
@@ -159,7 +159,7 @@ class GotoBranch : Branch
         target = [t];
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "goto " ~ target[0].name ~ " \n";
@@ -176,7 +176,7 @@ class ReturnBranch : Branch
         type = ty;
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "return " ~ type.to!string ~ "\n";
@@ -195,7 +195,7 @@ class CallInstruction : Instruction
         args = a;
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "call " ~ func.to!string ~ "\n";
@@ -233,7 +233,7 @@ class PushInstruction : Instruction
         // assert(false, res.to!string ~ " vs " ~ from.to!string);
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "push " ~ res.to!string ~ "\n";
@@ -250,7 +250,7 @@ class RecInstruction : Instruction
         argc = a;
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "rec argc=" ~ argc.to!string ~ "\n";
@@ -276,7 +276,7 @@ class OperatorInstruction : Instruction
         assert(operators.canFind(oper) || oper == "index");
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "operator " ~ op ~ "\n";
@@ -299,7 +299,7 @@ class LambdaInstruction : Instruction
         impl = ip;
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "lambda " ~ entry.name ~ " (" ~ types.to!string[1 .. $ - 1] ~ ")" ~ "\n";
@@ -316,7 +316,7 @@ class PopInstruction : Instruction
         type = ty;
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "pop\n";
@@ -333,7 +333,7 @@ class PrintInstruction : Instruction
         type = t;
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "print\n";
@@ -352,7 +352,7 @@ class StoreInstruction : Instruction
         type = t;
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "store " ~ var ~ ": " ~ type.to!string ~ "\n";
@@ -366,7 +366,7 @@ class StoreIndexInstruction : Instruction
     {
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "store-index\n";
@@ -385,7 +385,7 @@ class LoadInstruction : Instruction
         type = ty;
     }
 
-    override string toString()
+    debug(repr) override string toString()
     {
         string ret;
         ret ~= "load " ~ var ~ ": " ~ type.to!string ~ "\n";

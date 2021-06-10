@@ -60,17 +60,12 @@ Thunk cliFileHandler(immutable string filename)
 
 Thunk cliEvalHandler(immutable string code)
 {
-    return {
-        eval(SrcLoc(1, 1, "__main__", code));
-    };
+    return { eval(SrcLoc(1, 1, "__main__", code)); };
 }
 
 Thunk cliParseHandler(immutable string code)
 {
-    return {
-        SrcLoc loc = SrcLoc(1, 1, "__main__", code);
-        Node res = loc.parse;
-    };
+    return { SrcLoc loc = SrcLoc(1, 1, "__main__", code); Node res = loc.parse; };
 }
 
 Thunk cliValidateHandler(immutable string code)
@@ -123,7 +118,7 @@ Thunk cliBenchHandler(size_t n, Thunk next)
 {
     return {
         Duration all;
-        foreach (_; 0..n)
+        foreach (_; 0 .. n)
         {
             StopWatch watch = StopWatch(AutoStart.no);
             watch.start();
@@ -138,7 +133,7 @@ Thunk cliBenchHandler(size_t n, Thunk next)
 Thunk cliRepeatHandler(size_t n, Thunk next)
 {
     return {
-        foreach (_; 0..n)
+        foreach (_; 0 .. n)
         {
             next();
         }
@@ -147,9 +142,7 @@ Thunk cliRepeatHandler(size_t n, Thunk next)
 
 Thunk cliOptHandler(size_t n)
 {
-    return {
-        defaultOptLevel = n;
-    };
+    return { defaultOptLevel = n; };
 }
 
 void domain(string[] args)
@@ -165,16 +158,17 @@ void domain(string[] args)
             assert(parts.length != 0);
             if (parts.length == 1)
             {
-                throw new Exception(parts[0] ~ " takes an argument using " ~ parts[0]  ~"=argument");
+                throw new Exception(parts[0] ~ " takes an argument using " ~ parts[0] ~ "=argument");
             }
-            return parts[1..$].join("=");
+            return parts[1 .. $].join("=");
         }
-        bool runNow = parts[0][$-1] == ':';
-        scope(exit)
+
+        bool runNow = parts[0][$ - 1] == ':';
+        scope (exit)
         {
             if (runNow)
             {
-                Thunk last = todo[$-1];
+                Thunk last = todo[$ - 1];
                 todo.length--;
                 last();
             }
@@ -188,13 +182,13 @@ void domain(string[] args)
         default:
             throw new Exception("use --file=" ~ parts[0]);
         case "--time":
-            todo[$-1] = todo[$-1].cliTimeHandler;
+            todo[$ - 1] = todo[$ - 1].cliTimeHandler;
             break;
         case "--repeat":
-            todo[$-1] = cliRepeatHandler(part1.to!size_t, todo[$-1]);
+            todo[$ - 1] = cliRepeatHandler(part1.to!size_t, todo[$ - 1]);
             break;
         case "--bench":
-            todo[$-1] = cliBenchHandler(part1.to!size_t, todo[$-1]);
+            todo[$ - 1] = cliBenchHandler(part1.to!size_t, todo[$ - 1]);
             break;
         case "--file":
             todo ~= part1.cliFileHandler;
@@ -214,12 +208,15 @@ void domain(string[] args)
         case "--opt":
             todo ~= cliOptHandler(part1.to!size_t);
             break;
+            debug (repr)
+            {
         case "--ast":
-            todo ~= cliAstHandler;
-            break;
+                todo ~= cliAstHandler;
+                break;
         case "--ir":
-            todo ~= cliIrHandler;
-            break;
+                todo ~= cliIrHandler;
+                break;
+            }
         }
     }
     foreach_reverse (fun; todo)

@@ -116,8 +116,6 @@ enum Opcode : char
     call,
     call_static,
     rec,
-    ec_cons,
-    ec_call,
     max1,
     max2p = 128,
 }

@@ -17,14 +17,6 @@ static this()
     vm.frames = cast(Frame*) GC.calloc(falloc);
 }
 
-extern (C)
-{
-    void* vm_alloc(int arg)
-    {
-        return GC.malloc(arg);
-    }
-}
-
 void run(Bytecode func)
 {
     GC.disable;
