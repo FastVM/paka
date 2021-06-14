@@ -407,25 +407,25 @@ do_arg8:
 }
 do_store1:
 {
-    val1_t val = cur_stack_peek(val1_t);
+    val1_t val = cur_stack_load_pop(val1_t);
     *(val1_t *)&((char*) cur_locals)[cur_bytecode_next(int)] = val;
     run_next_op;
 }
 do_store2:
 {
-    val2_t val = cur_stack_peek(val2_t);
+    val2_t val = cur_stack_load_pop(val2_t);
     *(val2_t *)&((char*) cur_locals)[cur_bytecode_next(int)] = val;
     run_next_op;
 }
 do_store4:
 {
-    val4_t val = cur_stack_peek(val4_t);
+    val4_t val = cur_stack_load_pop(val4_t);
     *(val4_t *)&((char*) cur_locals)[cur_bytecode_next(int)] = val;
     run_next_op;
 }
 do_store8:
 {
-    val8_t val = cur_stack_peek(val8_t);
+    val8_t val = cur_stack_load_pop(val8_t);
     *(val8_t *)&((char*) cur_locals)[cur_bytecode_next(int)] = val;
     run_next_op;
 }

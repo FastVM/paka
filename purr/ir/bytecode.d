@@ -193,43 +193,80 @@ pragma(inline, false):
         }
     }
 
-    void emit(StoreInstruction store)
+    void store(Type type, int data)
     {
-        // if (!store.type.runtime)
-        // {
-        //     return;
-        // }
-        int data;
-        if (int* pdata = store.var in locals[$ - 1])
+        if (Join join = type.as!Join)
         {
-            data = *pdata;
+            size_t offset = join.size;
+            foreach_reverse (elem; join.elems)
+            {
+                offset -= elem.size;
+                store(elem, data + cast(int) offset);
+            }
         }
         else
         {
-            data = offsets[$ - 1];
-            locals[$ - 1][store.var] = data;
-            offsets[$ - 1] += store.type.size;
+            final switch (type.size)
+            {
+            case 0:
+                break;
+            case 1:
+                func.add(Opcode.store1);
+                func.add(data);
+                break;
+            case 2:
+                func.add(Opcode.store2);
+                func.add(data);
+                break;
+            case 4:
+                func.add(Opcode.store4);
+                func.add(data);
+                break;
+            case 8:
+                func.add(Opcode.store8);
+                func.add(data);
+                break;
+            }
         }
-        final switch (store.type.size)
+    }
+
+    void load(Type type, int arg)
+    {
+        final switch (type.size)
         {
         case 0:
             break;
         case 1:
-            func.add(Opcode.store1);
-            func.add(data);
+            func.add(Opcode.arg1);
+            func.add(arg);
             break;
         case 2:
-            func.add(Opcode.store2);
-            func.add(data);
+            func.add(Opcode.arg2);
+            func.add(arg);
             break;
         case 4:
-            func.add(Opcode.store4);
-            func.add(data);
+            func.add(Opcode.arg4);
+            func.add(arg);
             break;
         case 8:
-            func.add(Opcode.store8);
-            func.add(data);
+            func.add(Opcode.arg8);
+            func.add(arg);
             break;
+        }
+    }
+
+    void emit(StoreInstruction instr)
+    {
+        if (int* pdata = instr.var in locals[$ - 1])
+        {
+            store(instr.type, *pdata);
+        }
+        else
+        {
+            int data = offsets[$ - 1];
+            locals[$ - 1][instr.var] = data;
+            offsets[$ - 1] += instr.type.size;
+            store(instr.type, data);
         }
     }
 
@@ -238,62 +275,23 @@ pragma(inline, false):
         assert(false, "not implemented");
     }
 
-    void emit(LoadInstruction load)
+    void emit(LoadInstruction instr)
     {
         // if (!load.type.runtime)
         // {
         //     return;
         // }
-        if (int* pdata = load.var in locals[$ - 1])
+        if (int* pdata = instr.var in locals[$ - 1])
         {
-            int data = *pdata;
-            final switch (load.type.size)
-            {
-            case 0:
-                break;
-            case 1:
-                func.add(Opcode.load1);
-                func.add(data);
-                break;
-            case 2:
-                func.add(Opcode.load2);
-                func.add(data);
-                break;
-            case 4:
-                func.add(Opcode.load4);
-                func.add(data);
-                break;
-            case 8:
-                func.add(Opcode.load8);
-                func.add(data);
-                break;
-            }
+            load(instr.type, *pdata);
         }
-        else if (int * parg = load.var in args[$ - 1])
+        else if (int* parg = instr.var in args[$ - 1])
         {
-            int arg =  * parg;
-            final switch (load.type.size)
-            {
-            case 0 : break;
-            case 1 : func.add(Opcode.arg1);
-                func.add(arg);
-                break;
-            case 2 : func.add(Opcode.arg2);
-                func.add(arg);
-                break;
-            case 4 : func.add(Opcode.arg4);
-                func.add(arg);
-                break;
-            case 8 : func.add(Opcode.arg8);
-                func.add(arg);
-                break;
-            }
-
-            return;
+            load(instr.type, *parg);
         }
-        else if (load.type.runtime)
+        else if (instr.type.runtime)
         {
-            throw new Exception("variable not found: " ~ load.var);
+            throw new Exception("variable not found: " ~ instr.var);
         }
     }
 
@@ -310,11 +308,11 @@ pragma(inline, false):
             throw new Exception("cannot call: " ~ call.func.to!string);
         }
         int argc = 0;
-        foreach(argno, expected; functy.args)
+        foreach (argno, expected; functy.args)
         {
             // if (!call.args[argno].runtime || expected.fits(call.args[argno]))
             // {
-                argc += expected.size;
+            argc += expected.size;
             // }
         }
         if (functy.impl is null)
@@ -376,7 +374,9 @@ pragma(inline, false):
             }
             if (!op.inputTypes[0].fits(op.inputTypes[1]))
             {
-                throw new Exception("type error in " ~ op.op ~ ": " ~ op.inputTypes[0].to!string ~ " vs " ~ op.inputTypes[1].to!string);
+                throw new Exception(
+                        "type error in " ~ op.op ~ ": " ~ op.inputTypes[0].to!string
+                        ~ " vs " ~ op.inputTypes[1].to!string);
             }
             if (op.resType.isUnk)
             {
@@ -512,7 +512,7 @@ pragma(inline, false):
             cargs[argname] = argoffset;
             // if (!argty.isUnk)
             // {
-            argoffset += argty.size;
+                argoffset += argty.size;
             // }
         }
         args ~= cargs;
@@ -558,25 +558,52 @@ pragma(inline, false):
         assert(size == 0);
     }
 
-    void emit(PrintInstruction print)
+    void print(Type type)
     {
-        if (print.type.fits(Type.logical))
+        if (Join tup = type.as!Join)
+        {
+            func.add(Opcode.push8);
+            immutable(char)* opening = "(".toStringz;
+            func.add(*cast(void[size_t.sizeof]*)&opening);
+            func.add(Opcode.print_text);
+            bool first = true;
+            foreach_reverse(elem; tup.elems)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    func.add(Opcode.push8);
+                    immutable(char)* comma = ", ".toStringz;
+                    func.add(*cast(void[size_t.sizeof]*)&comma);
+                    func.add(Opcode.print_text);
+                }
+                print(elem);
+            }
+            func.add(Opcode.push8);
+            immutable(char)* closing = ")".toStringz;
+            func.add(*cast(void[size_t.sizeof]*)&closing);
+            func.add(Opcode.print_text);
+        }
+        else if (type.fits(Type.logical))
         {
             func.add(Opcode.print_logical);
         }
-        else if (print.type.fits(Type.integer))
+        else if (type.fits(Type.integer))
         {
             func.add(Opcode.print_integer);
         }
-        else if (print.type.fits(Type.float_))
+        else if (type.fits(Type.float_))
         {
             func.add(Opcode.print_float);
         }
-        else if (print.type.fits(Type.text))
+        else if (type.fits(Type.text))
         {
             func.add(Opcode.print_text);
         }
-        else if (Higher higher = print.type.as!Higher)
+        else if (Higher higher = type.as!Higher)
         {
             Type boxed = higher.type;
             func.add(Opcode.push8);
@@ -590,7 +617,12 @@ pragma(inline, false):
         }
         else
         {
-            throw new Exception("cannot print value of type: " ~ print.type.to!string);
+            throw new Exception("cannot print value of type: " ~ type.to!string);
         }
+    }
+
+    void emit(PrintInstruction instr)
+    {
+        print(instr.type);
     }
 }

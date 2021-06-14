@@ -44,7 +44,7 @@ final class Form : Node
         form = f;
     }
 
-    version(repr) override string toString()
+    override string toString()
     {
         char[] ret;
         ret ~= "(";
@@ -112,7 +112,7 @@ final class Ident : Node
         return NodeKind.ident;
     }
 
-    version(repr) override string toString()
+    override string toString()
     {
         return repr;
     }
@@ -177,7 +177,7 @@ final class Value : Node
         return new Value(e);
     }
 
-    version(repr) override string toString()
+    override string toString()
     {
         return to!string(cast(ubyte[]) value);
     }

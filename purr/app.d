@@ -208,15 +208,12 @@ void domain(string[] args)
         case "--opt":
             todo ~= cliOptHandler(part1.to!size_t);
             break;
-            debug (repr)
-            {
         case "--ast":
-                todo ~= cliAstHandler;
-                break;
+            todo ~= cliAstHandler;
+            break;
         case "--ir":
-                todo ~= cliIrHandler;
-                break;
-            }
+            todo ~= cliIrHandler;
+            break;
         }
     }
     foreach_reverse (fun; todo)

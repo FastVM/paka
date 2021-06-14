@@ -1,4 +1,4 @@
-module ext.paka.parse.tokens;
+module ext.passerine.tokens;
 
 import std.ascii;
 import std.conv;
@@ -8,21 +8,14 @@ import purr.io;
 import purr.srcloc;
 
 /// operator precidence
-string[][] prec = [
-    ["::"], ["->"],
-    ["+=", "~=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"],
-    ["or", "and"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"],
-    ["*", "/", "%"]
-];
+string[][] prec = [["="], ["->"], ["|"], ["..", ":"], ["and", "or"], ["<", ">", "<=", ">=", "==", "!="] ,["+", "-", "++"], ["*", "/", "%"], ["."]];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "not", ",", "\\", "!", "#", ":", "..."];
+string[] nops = [",", "'", "::"];
 
 /// language keywords
 string[] keywords = [
-    "if", "else", "def", "lambda",
-    "import", "true", "false", "nil", "table",
-    "while", "static",
+    "magic"
 ];
 
 /// gets the operators by length not precidence
@@ -30,10 +23,6 @@ string[] levels()
 {
     return join(prec ~ nops).sort!"a.length > b.length".array;
 }
-
-version = nanorc;
-
-Token.Type[] noFollow = [Token.Type.ident, Token.Type.string, Token.Type.format];
 
 /// simple token
 struct Token
@@ -59,8 +48,6 @@ struct Token
         close,
         /// string literal
         string,
-        /// string template literal
-        format,
     }
 
     Type type;
@@ -68,7 +55,6 @@ struct Token
     /// where is the token
     Span span;
     /// only constructor
-pragma(inline, true):
     this(T)(Span s, Type t, T v = null)
     {
         type = t;
@@ -76,21 +62,21 @@ pragma(inline, true):
         span = s;
     }
 
-
     /// shows token along with location
     string toString()
     {
-        return span.pretty ~ " -> \"" ~ value ~ "\"";
-    }
-
-    bool exists()
-    {
-        return type != Type.none;
+        // return span.pretty ~ " -> \"" ~ value ~ "\"";
+        return "\"" ~ value ~ "\"";
     }
 
     bool isIdent()
     {
         return type == Type.ident;
+    }
+
+    bool isIdent(string name)
+    {
+        return type == Type.ident && name == value;
     }
 
     bool isString()
@@ -150,13 +136,8 @@ pragma(inline, true):
 }
 
 /// reads a single token from a string
-Token readToken(ref SrcLoc location)
+Token readToken(ref string code, ref SrcLoc location)
 {
-    ref string code()
-    {
-        return location.src;   
-    }
-
     char peek()
     {
         if (code.length == 0)
@@ -200,23 +181,28 @@ Token readToken(ref SrcLoc location)
         return Token(span, t, v);
     }
 
-redo:
-    if (peek == '#' && code.length >= 2 && code[1] == '#')
+    if (code.startsWith("--"))
     {
         while (code.length != 0 && peek != '\n')
         {
             consume;
         }
-        goto redo;
+        return code.readToken(location);
     }
-    if (peek.isWhite)
+    if (peek.isWhite && peek != '\n')
     {
         consume;
-        goto redo;
+        return consToken(Token.Type.none, " ");
     }
-    if (peek == ';')
+    if (peek == ';' )
     {
-        return consToken(Token.Type.semicolon, [read]);
+        read;
+        return consToken(Token.Type.semicolon, ";");
+    }
+    if (peek == '\n')
+    {
+        read;
+        return consToken(Token.Type.semicolon, "__newline__");
     }
     if (peek == ',')
     {
@@ -224,7 +210,7 @@ redo:
     }
     foreach (i; levels)
     {
-        if (code.startsWith(i) && !i[$-1].isAlphaNum)
+        if (code.startsWith(i))
         {
             foreach (_; 0 .. i.length)
             {
@@ -233,15 +219,23 @@ redo:
             return consToken(Token.Type.operator, i);
         }
     }
-    if (peek.isAlphaNum || peek == '_' || peek == '@' || peek == '?')
+    if (peek.isAlphaNum || peek == '_' || peek == '$' || peek == '@' || peek == '?')
     {
         bool isNumber = true;
         char[] ret;
-        while (peek.isAlphaNum || peek == '_' || peek == '@'
+        while (peek.isAlphaNum || peek == '_' || peek == '$' || peek == '@'
                 || peek == '?' || (isNumber && peek == '.'))
         {
             isNumber = isNumber && (peek.isDigit || peek == '.');
-            ret ~= read;
+            if (peek != '@')
+            {
+                ret ~= read;
+            }
+            else
+            {
+                consume;
+                ret ~= '.';
+            }
         }
         if (levels.canFind(ret))
         {
@@ -263,15 +257,17 @@ redo:
     }
     if (peek == '"')
     {
-        char got = read;
+        char first = read;
         char[] ret;
-        while (peek != '"')
+        while (peek != first)
         {
-            got = read;
+            char got = read;
             if (got == '\\')
             {
                 switch (got = read)
                 {
+                default:
+                    throw new Exception("Unknown escape code \\" ~ got);
                 case 'n':
                     ret ~= '\n';
                     break;
@@ -287,24 +283,9 @@ redo:
                 case 's':
                     ret ~= ' ';
                     break;
-                // case 'f':
-                //     goto case;
-                // case 'u':
-                //     ret ~= '\\';
-                //     ret ~= got;
-                //     while (got != '}')
-                //     {
-                //         got = read;
-                //         if (got == '\0')
-                //         {
-                //             throw new Exception("parse error: end of file with unclosed string");
-                //         }
-                //         ret ~= got;
-                //     }
-                //     ret ~= '\\';
-                //     break;
-                default:
-                    throw new Exception("parse error: unknown escape '" ~ got ~ "'");
+                case '\\':
+                    ret ~= ' ';
+                    break;
                 }
             }
             else
@@ -319,9 +300,22 @@ redo:
         consume;
         return consToken(Token.Type.string, ret);
     }
-    if (peek == '\0')
-    {
-        return consToken(Token.Type.none, "");
-    }
     throw new Exception("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
+}
+
+/// repeatedly calls a readToken until its empty
+Token[] tokenize(SrcLoc location)
+{
+    string code = location.src;
+    Token[] tokens;
+    while (code.length > 0)
+    {
+        Token token = code.readToken(location);
+        if (token.type == Token.Type.none)
+        {
+            continue;
+        }
+        tokens ~= token;
+    }
+    return tokens;
 }

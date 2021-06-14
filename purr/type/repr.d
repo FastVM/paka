@@ -55,7 +55,6 @@ class Type
 
     bool runtime()
     {
-        // return true;
         assert(false);
     }
 
@@ -64,8 +63,12 @@ class Type
         return cast(Unk) this;
     }
 
-    T as(T)() if (!is(T == Unk) && !is(T == Lambda) && !is(T == Exactly))
+    final T as(T)() if (!is(T == Unk) && !is(T == Lambda) && !is(T == Exactly))
     {
+        if (this is null)
+        {
+            return null;
+        }
         if (Unk box = this.getUnk)
         {
             return box.next.as!T;            
@@ -115,6 +118,11 @@ class Type
     {
         return Func.empty(bc);
     }
+    
+    static Type join(Type[] args)
+    {
+        return new Join(args);
+    }
 
     static Type lambda(Type delegate() dg)
     {
@@ -134,6 +142,11 @@ class Type
     static Type nil()
     {
         return new Nil;
+    }
+
+    static Type hole(string name)
+    {
+        return new Hole(name);
     }
 
     static Type frame()
@@ -202,6 +215,11 @@ class Unk : Type
     Unk[] same;
     Known next;
 
+    Hole getHole()
+    {
+        return cast(Hole) this;
+    }
+
     override bool isUnk()
     {
         return next is null;
@@ -263,7 +281,6 @@ class Unk : Type
         }
         else
         {
-            // writeln(next);
             if (Unk box = next.getUnk)
             {
                 box.set(found);
@@ -284,14 +301,25 @@ class Unk : Type
     
     override string toString()
     {
-        if (isUnk)
-        {
-            return "?";
-        }
+        assert(!isUnk);
         return next.to!string;
     }
 }
 
+class Hole : Unk
+{
+    string name;
+
+    this(string n)
+    {
+        name = n;
+    }
+
+    override string toString()
+    {
+        return "?" ~ name.to!string;
+    }
+}
 
 class Known : Type
 {
@@ -603,6 +631,10 @@ class Func : Known
         {
             return false;
         }
+        if (other.args.length != args.length)
+        {
+            return false;
+        }
         foreach (index, arg; other.args)
         {
             if (arg.isUnk && args[index].isUnk)
@@ -625,5 +657,63 @@ class Func : Known
     override string toString()
     {
         return "(" ~ args.to!string[1 .. $ - 1] ~ ")" ~ " -> " ~ ret.to!string;
+    }
+}
+
+class Join : Known
+{
+    Type[] elems;
+
+    this(Type[] a)
+    {
+        elems = a;
+    }
+
+    override bool runtime()
+    {
+        foreach (arg; elems)
+        {
+            if (arg.runtime)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    override bool fits(Type t)
+    {
+        Join other = t.as!Join;
+        if (other.elems.length != elems.length)
+        {
+            return false;
+        }
+        foreach (index, arg; other.elems)
+        {
+            if (arg.isUnk && elems[index].isUnk)
+            {
+                continue;
+            }
+            if (!elems[index].fits(arg))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    override size_t size()
+    {
+        size_t ret = 0;
+        foreach (elem; elems)
+        {
+            ret += elem.size;
+        }
+        return ret;
+    }
+
+    override string toString()
+    {
+        return "[" ~ elems.to!string[1 .. $ - 1] ~ "]";
     }
 }

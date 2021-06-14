@@ -12,7 +12,6 @@ import std.functional;
 import purr.vm;
 import purr.inter;
 import purr.srcloc;
-import purr.vm.bytecode;
 import purr.ir.walk;
 import purr.ast.ast;
 import ext.paka.parse.tokens;
@@ -108,7 +107,7 @@ Node readPostCallExtend(TokenArray tokens, Node last)
     while (tokens.first.isOperator("->"))
     {
         tokens.nextIs(Token.Type.operator, "->");
-        args[$ - 1] ~= new Form("fun", [new Form("args"), tokens.readBlock]);
+        args[$ - 1] ~= new Form("lambda", [new Form("args"), tokens.readBlock]);
     }
     if (Ident id = cast(Ident) last)
     {
@@ -293,35 +292,29 @@ Node readPostExprImpl(TokenArray tokens)
         tokens.nextIs(Token.Type.keyword, "lambda");
         if (tokens.first.isOpen("("))
         {
-            last = new Form("fun", [
+            last = new Form("lambda", [
                     new Form("args", tokens.readOpen1!"()"), tokens.readBlock
                     ]);
         }
         else if (tokens.first.isOpen("{") || tokens.first.isOperator(":"))
         {
-            last = new Form("fun", new Form("args"), tokens.readBlock);
+            last = new Form("lambda", new Form("args"), tokens.readBlock);
         }
     }
     else if (tokens.first.isOpen("("))
     {
         Node[] nodes = tokens.readOpen1!"()";
-        if (nodes.length == 0)
-        {
-            last = Value.empty;
-        }
-        else if (nodes.length == 1)
-        {
-            last = nodes[0];
-        }
-        else
-        {
-            last = new Form("array", nodes);
-        }
+        last = new Form("tuple", nodes);
     }
     else if (tokens.first.isOpen("["))
     {
         Node[] nodes = tokens.readOpen!"[]";
         last = new Form("array", nodes);
+    }
+    else if (tokens.first.isKeyword("static"))
+    {
+        tokens.nextIs(Token.Type.keyword, "static");
+        last = new Form("static", tokens.readBlock);
     }
     else if (tokens.first.isKeyword("if"))
     {
