@@ -144,11 +144,6 @@ class Type
         return new Nil;
     }
 
-    static Type hole(string name)
-    {
-        return new Hole(name);
-    }
-
     static Type frame()
     {
         return new Frame;
@@ -214,11 +209,6 @@ class Unk : Type
 {
     Unk[] same;
     Known next;
-
-    Hole getHole()
-    {
-        return cast(Hole) this;
-    }
 
     override bool isUnk()
     {
@@ -301,23 +291,11 @@ class Unk : Type
     
     override string toString()
     {
-        assert(!isUnk);
+        if (isUnk)
+        {
+            return "???";
+        }
         return next.to!string;
-    }
-}
-
-class Hole : Unk
-{
-    string name;
-
-    this(string n)
-    {
-        name = n;
-    }
-
-    override string toString()
-    {
-        return "?" ~ name.to!string;
     }
 }
 
@@ -388,6 +366,8 @@ class Exactly : Type
 
 class Generic : Known
 {
+    Type[] rets;
+    Type[][] cases;
     Type delegate(Type[]) runme;
 
     this(Type delegate(Type[]) spec)
@@ -398,6 +378,8 @@ class Generic : Known
     Type specialize(Type[] args)
     {
         Type ret = runme(args);
+        cases ~= args;
+        rets ~= ret;
         resolve(ret);
         return ret;
     }
@@ -419,7 +401,32 @@ class Generic : Known
 
     override string toString()
     {
-        return "Generic(...)";
+        string str;
+        foreach (i; 0..cases.length)
+        {
+            str ~= "\n";
+            Type ret = rets[i];
+            Type[] args = cases[i];
+            str ~= "case (";
+            str ~= args.to!string[1..$-1];
+            str ~= "): ";
+            str ~= ret.to!string;
+        }
+        string ret;
+        ret ~= "Generic {";
+        foreach (chr; str)
+        {
+            if (chr == '\n')
+            {
+                ret ~= "\n    ";
+            }
+            else
+            {
+                ret ~= chr;
+            }
+        }
+        ret ~= "\n}";
+        return ret;
     }
 }
 

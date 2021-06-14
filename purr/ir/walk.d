@@ -32,6 +32,7 @@ final class Walker
     BasicBlock globals;
     BasicBlock funcblk;
     Func curFunc;
+    bool holes;
     Type[string][] localTypes = [];
     Value[string][] localDefs = [];
     Todo[][] todos = [];
@@ -52,6 +53,7 @@ final class Walker
 
     Bytecode walkProgram(Node node)
     {
+        holes = false;
         localTypes ~= [
             "Frame": Type.higher(Type.frame),
             "Text": Type.higher(Type.text),
@@ -93,6 +95,10 @@ final class Walker
         }
         Bytecode func = Bytecode.empty;
         BytecodeEmitter emitter = new BytecodeEmitter;
+        if (holes)
+        {
+            throw new Exception("compilation stopped, ?? hole found");
+        }
         emitter.emitInFunc(func, start);
         return func;
     }
@@ -156,9 +162,28 @@ final class Walker
         }
         else if (ident[0] == '?')
         {
-            Type ret = Type.hole(ident[1..$]);
-            localTypes[$-1][ident[1..$]] = ret;
+            ident = ident[1..$];
+            bool debugging = false;
+            if (ident[0] == '?')
+            {
+                holes = true;
+                ident = ident[1..$];
+                debugging = true;
+            }
+            Type ret = Type.unk();
+            localTypes[$-1][ident] = Type.higher(ret);
+            PushInstruction push = new PushInstruction(new void[0], ret);
+            emit(push);
+            ret.then((Known known) {
+                if (debugging)
+                {
+                    writeln("type ", ident, " = ", known);
+                }
+                push.value = new void[known.size];
+                push.res = known;
+            });
             return ret;
+            // return Type.never;
         }
         else
         {
@@ -395,7 +420,6 @@ final class Walker
             BasicBlock lambda = new BasicBlock;
             Func functy = Func.empty;
             functy.args = argTypes;
-            writeln(globals);
             if (globals !is null)
             {
                 globals.instrs ~= new LambdaInstruction(lambda, argNames, localTypes[$-1], functy.impl);
@@ -418,6 +442,21 @@ final class Walker
         {
             Type ty = walk(args[1]);
             emit(new StoreInstruction(id.repr, ty));
+            if (Type *pty = id.repr in localTypes[$ - 1])
+            {
+                pty.then((Known kn){
+                    if (ty.isUnk)
+                    {
+                        ty.getUnk.set(kn);
+                    }
+                });
+                ty.then((Known kn) {
+                    if (pty.isUnk)
+                    {
+                        pty.getUnk.set(kn);
+                    }
+                });
+            }
             localTypes[$ - 1][id.repr] = ty;
             return Type.nil;
         }
@@ -601,7 +640,38 @@ final class Walker
     {
         Type t1 = walk(args[0]);
         Type t2 = walk(args[1]);
-        emit(new OperatorInstruction(op, t1, [t1, t2]));
+        Type tr = Type.unk;
+        t1.then((Known t1k) {
+            if (t2.isUnk)
+            {
+                t2.getUnk.set(t1k);
+            }
+            if (tr.isUnk)
+            {
+                tr.getUnk.set(t1k);
+            }
+        });
+        t2.then((Known t2k) {
+            if (t1.isUnk)
+            {
+                t1.getUnk.set(t2k);
+            }
+            if (tr.isUnk)
+            {
+                tr.getUnk.set(t2k);
+            }
+        });
+        tr.then((Known trk){
+            if (t1.isUnk)
+            {
+                t1.getUnk.set(trk);
+            }
+            if (t2.isUnk)
+            {
+                t1.getUnk.set(trk);
+            }
+        });
+        emit(new OperatorInstruction(op, tr, [t1, t2]));
         return t1;
     }
 
@@ -653,19 +723,6 @@ final class Walker
                     globals = null;
                     Type ret = walk(args[0]);
                     return Type.higher(ret);
-                case "message":
-                    BasicBlock lastBlock = block;
-                    BasicBlock lastGlobals = globals;
-                    scope (exit)
-                    {
-                        block = lastBlock;
-                        globals = lastGlobals;
-                    }
-                    block = new BasicBlock;
-                    globals = null;
-                    Type ret = walk(args[0]);
-                    writeln(ret);
-                    return Type.nil;
                 case "print":
                     walkPrint(args);
                     return Type.nil;

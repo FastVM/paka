@@ -145,6 +145,13 @@ Thunk cliOptHandler(size_t n)
     return { defaultOptLevel = n; };
 }
 
+bool debugging;
+
+Thunk cliDebugHandler()
+{
+    return { debugging = !debugging; };
+}
+
 void domain(string[] args)
 {
     args = args[1 .. $];
@@ -214,6 +221,9 @@ void domain(string[] args)
         case "--ir":
             todo ~= cliIrHandler;
             break;
+        case "--debug":
+            todo ~= cliDebugHandler;
+            break;
         }
     }
     foreach_reverse (fun; todo)
@@ -224,7 +234,14 @@ void domain(string[] args)
 
 void thrown(Err)(Err e)
 {
-    throw e;
+    if (debugging)
+    {
+        throw e;
+    }
+    else
+    {
+        writeln(e.msg);
+    }
 }
 
 /// the main function that handles runtime errors

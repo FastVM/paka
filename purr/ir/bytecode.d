@@ -362,34 +362,34 @@ pragma(inline, false):
 
     void emit(OperatorInstruction op)
     {
-        if (op.inputTypes.length == 2)
-        {
-            if (op.inputTypes[0].isUnk)
-            {
-                op.inputTypes[0].getUnk.set(op.inputTypes[1]);
-            }
-            if (op.inputTypes[1].isUnk)
-            {
-                op.inputTypes[1].getUnk.set(op.inputTypes[0]);
-            }
-            if (!op.inputTypes[0].fits(op.inputTypes[1]))
-            {
-                throw new Exception(
-                        "type error in " ~ op.op ~ ": " ~ op.inputTypes[0].to!string
-                        ~ " vs " ~ op.inputTypes[1].to!string);
-            }
-            if (op.resType.isUnk)
-            {
-                if (numops.canFind(op.op))
-                {
-                    op.resType.getUnk.set(op.inputTypes[0]);
-                }
-                if (logicops.canFind(op.op))
-                {
-                    op.resType.getUnk.set(Type.logical);
-                }
-            }
-        }
+        // if (op.inputTypes.length == 2)
+        // {
+        //     if (op.inputTypes[0].isUnk)
+        //     {
+        //         op.inputTypes[0].getUnk.set(op.inputTypes[1]);
+        //     }
+        //     if (op.inputTypes[1].isUnk)
+        //     {
+        //         op.inputTypes[1].getUnk.set(op.inputTypes[0]);
+        //     }
+        //     if (!op.inputTypes[0].fits(op.inputTypes[1]))
+        //     {
+        //         throw new Exception(
+        //                 "type error in " ~ op.op ~ ": " ~ op.inputTypes[0].to!string
+        //                 ~ " vs " ~ op.inputTypes[1].to!string);
+        //     }
+        //     if (op.resType.isUnk)
+        //     {
+        //         if (numops.canFind(op.op))
+        //         {
+        //             op.resType.getUnk.set(op.inputTypes[0]);
+        //         }
+        //         if (logicops.canFind(op.op))
+        //         {
+        //             op.resType.getUnk.set(Type.logical);
+        //         }
+        //     }
+        // }
         switch (op.op)
         {
         default:
@@ -510,10 +510,7 @@ pragma(inline, false):
         {
             Type argty = lambda.types[argname];
             cargs[argname] = argoffset;
-            // if (!argty.isUnk)
-            // {
-                argoffset += argty.size;
-            // }
+            argoffset += argty.size;
         }
         args ~= cargs;
         scope (exit)
