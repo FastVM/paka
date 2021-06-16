@@ -447,11 +447,11 @@ Node readStmtImpl(TokenArray tokens)
             tokens.nextIs(Token.Type.semicolon);
         }
     }
-    // if (tokens.first.isKeyword("return"))
-    // {
-    //     tokens.nextIs(Token.Type.keyword, "return");
-    //     return new Form("return", tokens.readExprBase);
-    // }
+    if (tokens.first.isKeyword("return"))
+    {
+        tokens.nextIs(Token.Type.keyword, "return");
+        return new Form("return", tokens.readExprBase);
+    }
     if (tokens.first.isKeyword("jump"))
     {
         tokens.nextIs(Token.Type.keyword, "jump");

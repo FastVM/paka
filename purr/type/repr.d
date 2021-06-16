@@ -38,6 +38,18 @@ class Type
         thens = null;
     }
 
+    bool check(Args...)(Args args)
+    {
+        foreach (arg; args)
+        {
+            if (arg.fits(this))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool fits(Type other)
     {
         assert(false, typeid(this).to!string);

@@ -13,6 +13,7 @@ import purr.ir.repr;
 import purr.ir.bytecode;
 import purr.ir.opt;
 import purr.type.repr;
+import purr.type.err;
 
 __gshared bool dumpast = false;
 
@@ -167,7 +168,7 @@ final class Walker
             if (ident[0] == '?')
             {
                 holes = true;
-                ident = ident[1..$];
+                // ident = ident[1..$];
                 debugging = true;
             }
             Type ret = Type.unk();
@@ -231,18 +232,27 @@ final class Walker
         Type br2 = walk(args[2]);
         emitDefault(new GotoBranch(after));
         block = after;
-        if (br1.isUnk)
+        void check()
         {
-            br1.getUnk.set(br2);
+            if (!br1.fits(br2))
+            {
+                throw new Exception("arms of if of different types");
+            }
         }
-        else if (br2.isUnk)
-        {
-            br2.getUnk.set(br1);
-        }
-        // if (!br1.fits(br2))
-        // {
-        //     throw new Exception("arms of if of different types");
-        // }
+        br1.then((Known kn){
+            if (br2.isUnk)
+            {
+                br2.getUnk.set(kn);
+            }
+            check;
+        });
+        br2.then((Known kn){
+            if (br1.isUnk)
+            {
+                br1.getUnk.set(kn);
+            }
+            check;
+        });
         return br1;
     }
 
@@ -336,11 +346,15 @@ final class Walker
         Form call = cast(Form) defArgs[0];
         assert(call !is null);
         assert(call.form == "args" || call.form == "call");
-        Unk[] dones;
-        Type[][] checks;
+        // Unk[] dones;
+        // Type[][] checks;
+        Type ret = Type.generic(null);
+
+        Generic gen = ret.as!Generic;
+
         Type specialize(Type[] argTypes)
         {
-            outter: foreach (checkno, check; checks)
+            outter: foreach (checkno, check; gen.cases)
             {
                 if (argTypes.length != check.length)
                 {
@@ -361,13 +375,13 @@ final class Walker
                         continue outter;
                     }
                 }
-                return dones[checkno];
+                return gen.rets[checkno];
             }
-            Unk done = Type.unk.getUnk;
+            Type done = Type.unk;
             if (globals !is null)
             {
-                checks ~= argTypes;
-                dones ~= done;
+                gen.cases ~= argTypes;
+                gen.rets ~= done;
             }
             string[] argNames;
             localTypes.length++;
@@ -425,11 +439,12 @@ final class Walker
                 globals.instrs ~= new LambdaInstruction(lambda, argNames, localTypes[$-1], functy.impl);
                 todos[$ - 1] ~= Todo(lambda, defArgs, argNames, localTypes[$-1], functy);
             }
-            done.set(cast(Type) functy);
+            done.getUnk.set(cast(Type) functy);
             return done;
         }
 
-        Type ret = Type.generic(&specialize);
+        gen.runme = &specialize;
+
         return ret;
         // emit(new StoreInstruction(target.repr, ret));
         // localTypes[$ - 1][target.repr] = ret;
@@ -609,18 +624,18 @@ final class Walker
 
     void emitReturn(Type ret)
     {
-        if (curFunc.ret.isUnk)
-        {
-            curFunc.ret.getUnk.set(ret);
-        }
-        else if (ret.isUnk)
-        {
-            ret.getUnk.set(curFunc.ret);
-        }
-        else
-        {
-            assert(curFunc.ret.fits(ret), curFunc.ret.to!string ~ " vs " ~ ret.to!string);
-        }
+        ret.then((Known kn) {
+            if (curFunc.ret.isUnk)
+            {
+                curFunc.ret.getUnk.set(kn);
+            }
+        });
+        curFunc.ret.then((Known kn) {
+            if (ret.isUnk)
+            {
+                ret.getUnk.set(curFunc.ret);
+            }
+        });
         emit(new ReturnBranch(ret));
     }
 
@@ -642,6 +657,10 @@ final class Walker
         Type t2 = walk(args[1]);
         Type tr = Type.unk;
         t1.then((Known t1k) {
+            if (!t1k.check(Type.integer, Type.float_))
+            {
+                throw new FailedBinaryOperatorLeft!op(t1k, [Type.integer, Type.float_], t2);
+            }
             if (t2.isUnk)
             {
                 t2.getUnk.set(t1k);
@@ -652,6 +671,10 @@ final class Walker
             }
         });
         t2.then((Known t2k) {
+            if (!t2k.check(Type.integer, Type.float_))
+            {
+                throw new FailedBinaryOperatorRight!op(t2k, [Type.integer, Type.float_], t1);
+            }
             if (t1.isUnk)
             {
                 t1.getUnk.set(t2k);
@@ -670,9 +693,13 @@ final class Walker
             {
                 t1.getUnk.set(trk);
             }
+            if (!t1.check(t2))
+            {
+                throw new FailedBinaryOperatorArms!op(t1, t2);
+            }
         });
         emit(new OperatorInstruction(op, tr, [t1, t2]));
-        return t1;
+        return tr;
     }
 
     Type walkUnary(string op)(Node[] args)
@@ -909,10 +936,10 @@ final class Walker
 
     Type walkExact(Value val)
     {
-        if (cast(Exactly) val.type is null)
-        {
-            val.type = new Exactly(val.type.as!Known, val.value);
-        }
+        // if (cast(Exactly) val.type is null)
+        // {
+        //     val.type = new Exactly(val.type.as!Known, val.value);
+        // }
         emit(new PushInstruction(val.value, val.type));
         return val.type;
     }

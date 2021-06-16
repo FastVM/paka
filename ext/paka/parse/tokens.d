@@ -22,7 +22,7 @@ string[] nops = [".", "not", ",", "\\", "!", "#", ":", "..."];
 string[] keywords = [
     "if", "else", "def", "lambda",
     "import", "true", "false", "nil", "table",
-    "while", "static",
+    "while", "static", "return"
 ];
 
 /// gets the operators by length not precidence
