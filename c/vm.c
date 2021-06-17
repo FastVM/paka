@@ -1,197 +1,60 @@
 
-typedef _Bool bool;
-#define false ((bool)0)
-#define true ((bool)1)
+#include "vm.h"
 
-#define NULL ((void *)0)
+#define vm_set_frame(frame_arg)           \
+  (                                       \
+      {                                   \
+        stack_frame_t frame = frame_arg;  \
+        cur_index = frame.index;          \
+        cur_argv = frame.argv;            \
+        cur_stack = frame.stack;          \
+        cur_locals = frame.locals;        \
+        cur_func = frame.func;            \
+        cur_bytecode = cur_func.bytecode; \
+      })
 
-int printf(const char *fmt, ...);
-double fmod(double lhs, double rhs);
-
-typedef char val1_t;
-typedef short val2_t;
-typedef int val4_t;
-typedef long val8_t;
-
-_Static_assert(sizeof(val1_t) == 1, "sizeof(val1_t) != 1");
-_Static_assert(sizeof(val2_t) == 2, "sizeof(val2_t) != 2");
-_Static_assert(sizeof(val4_t) == 4, "sizeof(val4_t) != 4");
-_Static_assert(sizeof(val8_t) == 8, "sizeof(val8_t) != 8");
-
-#ifdef __clang__
-#define vm_assume(expr) (__builtin_assume(expr))
-#else
-#define vm_assume(expr) ((void)0)
-#endif
-
-// #define vm_fetch (next_op_value = ptrs[cur_bytecode[cur_index++]])
-#define vm_fetch ((void)0)
-#define next_op (ptrs[cur_bytecode[cur_index++]])
-
-typedef double float_t;
-typedef long integer_t;
-typedef char opcode_t;
-
-struct func_t;
-struct vm_t;
-struct cont_t;
-union value_t;
-enum errro_t;
-
-typedef struct vm_t vm_t;
-typedef struct func_t func_t;
-typedef struct cont_t cont_t;
-typedef enum error_t error_t;
-
-enum error_t {
-  VM_ERROR_UNKNOWN,
-  VM_ERROR_OOM,
-  VM_ERROR_OPCODE,
-};
-
-enum local_flags_t {
-  LOCAL_FLAGS_NONE = 0,
-  LOCAL_FLAGS_ARG = 1,
-};
-
-struct func_t {
-  void *bytecode;
-  int stack_used;
-  int locals_used;
-};
-
-enum opcode_t {
-  OPCODE_EXIT,
-  OPCODE_RETURN_NIL,
-  OPCODE_RETURN1,
-  OPCODE_RETURN2,
-  OPCODE_RETURN4,
-  OPCODE_RETURN8,
-  OPCODE_PUSH1,
-  OPCODE_PUSH2,
-  OPCODE_PUSH4,
-  OPCODE_PUSH8,
-  OPCODE_POP1,
-  OPCODE_POP2,
-  OPCODE_POP4,
-  OPCODE_POP8,
-  OPCODE_ARG1,
-  OPCODE_ARG2,
-  OPCODE_ARG4,
-  OPCODE_ARG8,
-  OPCODE_STORE1,
-  OPCODE_STORE2,
-  OPCODE_STORE4,
-  OPCODE_STORE8,
-  OPCODE_LOAD1,
-  OPCODE_LOAD2,
-  OPCODE_LOAD4,
-  OPCODE_LOAD8,
-  OPCODE_ADD_FLOAT,
-  OPCODE_SUB_FLOAT,
-  OPCODE_MUL_FLOAT,
-  OPCODE_DIV_FLOAT,
-  OPCODE_MOD_FLOAT,
-  OPCODE_ADD_INTEGER,
-  OPCODE_SUB_INTEGER,
-  OPCODE_MUL_INTEGER,
-  OPCODE_DIV_INTEGER,
-  OPCODE_MOD_INTEGER,
-  OPCODE_NOT,
-  OPCODE_NEG_FLOAT,
-  OPCODE_LT_FLOAT,
-  OPCODE_GT_FLOAT,
-  OPCODE_LTE_FLOAT,
-  OPCODE_GTE_FLOAT,
-  OPCODE_EQ_FLOAT,
-  OPCODE_NEQ_FLOAT,
-  OPCODE_NEG_INTEGER,
-  OPCODE_LT_INTEGER,
-  OPCODE_GT_INTEGER,
-  OPCODE_LTE_INTEGER,
-  OPCODE_GTE_INTEGER,
-  OPCODE_EQ_INTEGER,
-  OPCODE_NEQ_INTEGER,
-  OPCODE_PRINT_LOGICAL,
-  OPCODE_PRINT_FLOAT,
-  OPCODE_PRINT_INTEGER,
-  OPCODE_PRINT_TEXT,
-  OPCODE_JUMP,
-  OPCODE_IFTRUE,
-  OPCODE_IFFALSE,
-  OPCODE_CALL,
-  OPCODE_CALL_STATIC,
-  OPCODE_REC,
-  OPCODE_MAX1,
-  OPCODE_MAX2P = 128,
-};
-
-#ifdef VM_DEBUG
-#define debug_op printf("%i: %i\n", cur_index, cur_bytecode[cur_index]);
-#else
-#define debug_op
-#endif
-
-typedef struct {
-  int index;
-  void *argv;
-  void *stack;
-  void *locals;
-  func_t func;
-} stack_frame_t;
-
-#define vm_set_frame(frame_arg)                                                \
-  ({                                                                           \
-    stack_frame_t frame = frame_arg;                                           \
-    cur_index = frame.index;                                                   \
-    cur_argv = frame.argv;                                                     \
-    cur_stack = frame.stack;                                                   \
-    cur_locals = frame.locals;                                                 \
-    cur_func = frame.func;                                                     \
-    cur_bytecode = cur_func.bytecode;                                          \
-  })
-
-#define vm_get_frame()                                                         \
-  (stack_frame_t) {                                                            \
-    .index = cur_index, .argv = cur_argv, .stack = cur_stack,                  \
-    .locals = cur_locals, .func = cur_func,                                    \
+#define vm_get_frame()                                        \
+  (stack_frame_t)                                             \
+  {                                                           \
+    .index = cur_index, .argv = cur_argv, .stack = cur_stack, \
+    .locals = cur_locals, .func = cur_func,                   \
   }
 
-struct vm_t {
-  void *linear;
-  stack_frame_t *frames;
-};
-
-struct cont_t {
-  vm_t vm;
-  stack_frame_t frame;
-  int frame_number;
-};
-
-#define run_next_op                                                            \
-  vm_assume(cur_bytecode[cur_index] < OPCODE_MAX1);                            \
-  vm_assume(cur_bytecode[cur_index] >= 0);                                     \
+#define run_next_op                                 \
+  vm_assume(cur_bytecode[cur_index] < OPCODE_MAX1); \
+  vm_assume(cur_bytecode[cur_index] >= 0);          \
   debug_op goto *next_op;
 
-#define cur_bytecode_next(Type)                                                \
-  ({                                                                           \
-    Type ret = *(Type *)&cur_bytecode[cur_index];                              \
-    cur_index += sizeof(Type);                                                 \
-    ret;                                                                       \
-  })
+#define cur_bytecode_next(Type)                       \
+  (                                                   \
+      {                                               \
+        Type ret = *(Type *)&cur_bytecode[cur_index]; \
+        cur_index += sizeof(Type);                    \
+        ret;                                          \
+      })
 
 #define cur_stack_peek(Type) (*(Type *)(cur_stack - sizeof(Type)))
 #define cur_stack_load_pop(Type) (cur_stack_pop(Type), *(Type *)cur_stack)
 #define cur_stack_pop(Type) (cur_stack -= sizeof(Type), (void)0)
-#define cur_stack_push(Type, value)                                            \
-  ({                                                                           \
-    *(Type *)cur_stack = value;                                                \
-    cur_stack += sizeof(Type);                                                 \
-  })
+#define cur_stack_push(Type, value) \
+  (                                 \
+      {                             \
+        *(Type *)cur_stack = value; \
+        cur_stack += sizeof(Type);  \
+      })
 
-void vm_error(error_t err) { printf("error: (todo)"); }
+void vm_error(error_t err)
+{
+  printf("error: (todo)");
+}
 
-void vm_run(vm_t *pvm, func_t *basefunc, void *argv) {
+void vm_run(vm_t *pvm, func_t *basefunc, void *argv)
+{
+  if (basefunc->native)
+  {
+    basefunc->native(NULL, argv);
+    return;
+  }
   vm_t vm = *pvm;
   int frame_number = 0;
   stack_frame_t next = (stack_frame_t){
@@ -285,13 +148,15 @@ first_call:
   vm.linear += cur_func.stack_used + cur_func.locals_used;
   vm_fetch;
   run_next_op;
-do_return_nil : {
+do_return_nil:
+{
   vm.linear -= cur_func.stack_used + cur_func.locals_used;
   vm_set_frame(vm.frames[--frame_number]);
   vm_fetch;
   run_next_op;
 }
-do_return1 : {
+do_return1:
+{
   val1_t retval = cur_stack_load_pop(val1_t);
   vm.linear -= cur_func.stack_used + cur_func.locals_used;
   vm_set_frame(vm.frames[--frame_number]);
@@ -299,7 +164,8 @@ do_return1 : {
   vm_fetch;
   run_next_op;
 }
-do_return2 : {
+do_return2:
+{
   val2_t retval = cur_stack_load_pop(val2_t);
   vm.linear -= cur_func.stack_used + cur_func.locals_used;
   vm_set_frame(vm.frames[--frame_number]);
@@ -307,7 +173,8 @@ do_return2 : {
   vm_fetch;
   run_next_op;
 }
-do_return4 : {
+do_return4:
+{
   val4_t retval = cur_stack_load_pop(val4_t);
   vm.linear -= cur_func.stack_used + cur_func.locals_used;
   vm_set_frame(vm.frames[--frame_number]);
@@ -315,7 +182,8 @@ do_return4 : {
   vm_fetch;
   run_next_op;
 }
-do_return8 : {
+do_return8:
+{
   val8_t retval = cur_stack_load_pop(val8_t);
   vm.linear -= cur_func.stack_used + cur_func.locals_used;
   vm_set_frame(vm.frames[--frame_number]);
@@ -323,284 +191,332 @@ do_return8 : {
   vm_fetch;
   run_next_op;
 }
-do_exit : { return; }
-do_push1 : {
+do_exit:
+{
+  return;
+}
+do_push1:
+{
   val1_t val = cur_bytecode_next(val1_t);
   vm_fetch;
   cur_stack_push(val1_t, val);
   run_next_op;
 }
-do_push2 : {
+do_push2:
+{
   val2_t val = cur_bytecode_next(val2_t);
   vm_fetch;
   cur_stack_push(val2_t, val);
   run_next_op;
 }
-do_push4 : {
+do_push4:
+{
   val4_t val = cur_bytecode_next(val4_t);
   vm_fetch;
   cur_stack_push(val4_t, val);
   run_next_op;
 }
-do_push8 : {
+do_push8:
+{
   val8_t val = cur_bytecode_next(val8_t);
   vm_fetch;
   cur_stack_push(val8_t, val);
   run_next_op;
 }
-do_pop1 : {
+do_pop1:
+{
   vm_fetch;
   cur_stack -= 1;
   run_next_op;
 }
-do_pop2 : {
+do_pop2:
+{
   vm_fetch;
   cur_stack -= 2;
   run_next_op;
 }
-do_pop4 : {
+do_pop4:
+{
   vm_fetch;
   cur_stack -= 8;
   run_next_op;
 }
-do_pop8 : {
+do_pop8:
+{
   vm_fetch;
   cur_stack -= 8;
   run_next_op;
 }
-do_arg1 : {
+do_arg1:
+{
   val1_t val = *(val1_t *)&((char *)cur_argv)[cur_bytecode_next(int)];
   vm_fetch;
   cur_stack_push(val1_t, val);
   run_next_op;
 }
-do_arg2 : {
+do_arg2:
+{
   val2_t val = *(val2_t *)&((char *)cur_argv)[cur_bytecode_next(int)];
   vm_fetch;
   cur_stack_push(val2_t, val);
   run_next_op;
 }
-do_arg4 : {
+do_arg4:
+{
   val4_t val = *(val4_t *)&((char *)cur_argv)[cur_bytecode_next(int)];
   vm_fetch;
   cur_stack_push(val4_t, val);
   run_next_op;
 }
-do_arg8 : {
+do_arg8:
+{
   val8_t val = *(val8_t *)&((char *)cur_argv)[cur_bytecode_next(int)];
   vm_fetch;
   cur_stack_push(val8_t, val);
   run_next_op;
 }
-do_store1 : {
+do_store1:
+{
   val1_t val = cur_stack_load_pop(val1_t);
   int ind = cur_bytecode_next(int);
   vm_fetch;
   *(val1_t *)&((char *)cur_locals)[ind] = val;
   run_next_op;
 }
-do_store2 : {
+do_store2:
+{
   val2_t val = cur_stack_load_pop(val2_t);
   int ind = cur_bytecode_next(int);
   vm_fetch;
   *(val2_t *)&((char *)cur_locals)[ind] = val;
   run_next_op;
 }
-do_store4 : {
+do_store4:
+{
   val4_t val = cur_stack_load_pop(val4_t);
   int ind = cur_bytecode_next(int);
   vm_fetch;
   *(val4_t *)&((char *)cur_locals)[ind] = val;
   run_next_op;
 }
-do_store8 : {
+do_store8:
+{
   val8_t val = cur_stack_load_pop(val8_t);
   int ind = cur_bytecode_next(int);
   vm_fetch;
   *(val8_t *)&((char *)cur_locals)[ind] = val;
   run_next_op;
 }
-do_load1 : {
+do_load1:
+{
   int ind = cur_bytecode_next(int);
   vm_fetch;
   val1_t val = *(val1_t *)&((char *)cur_locals)[ind];
   cur_stack_push(val1_t, val);
   run_next_op;
 }
-do_load2 : {
+do_load2:
+{
   int ind = cur_bytecode_next(int);
   vm_fetch;
   val2_t val = *(val2_t *)&((char *)cur_locals)[ind];
   cur_stack_push(val2_t, val);
   run_next_op;
 }
-do_load4 : {
+do_load4:
+{
   int ind = cur_bytecode_next(int);
   vm_fetch;
   val4_t val = *(val4_t *)&((char *)cur_locals)[ind];
   cur_stack_push(val4_t, val);
   run_next_op;
 }
-do_load8 : {
+do_load8:
+{
   int ind = cur_bytecode_next(int);
   vm_fetch;
   val8_t val = *(val8_t *)&((char *)cur_locals)[ind];
   cur_stack_push(val8_t, val);
   run_next_op;
 }
-do_add_float : {
+do_add_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   cur_stack_peek(float_t) += rhs;
   run_next_op;
 }
-do_sub_float : {
+do_sub_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   cur_stack_peek(float_t) -= rhs;
   run_next_op;
 }
-do_mul_float : {
+do_mul_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   cur_stack_peek(float_t) *= rhs;
   run_next_op;
 }
-do_div_float : {
+do_div_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   cur_stack_peek(float_t) /= rhs;
   run_next_op;
 }
-do_mod_float : {
+do_mod_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   cur_stack_peek(float_t) = fmod(cur_stack_peek(float_t), rhs);
   run_next_op;
 }
-do_add_integer : {
+do_add_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   cur_stack_peek(integer_t) += rhs;
   run_next_op;
 }
-do_sub_integer : {
+do_sub_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   cur_stack_peek(integer_t) -= rhs;
   run_next_op;
 }
-do_mul_integer : {
+do_mul_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   cur_stack_peek(integer_t) *= rhs;
   run_next_op;
 }
-do_div_integer : {
+do_div_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   cur_stack_peek(integer_t) /= rhs;
   run_next_op;
 }
-do_mod_integer : {
+do_mod_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   cur_stack_peek(integer_t) %= rhs;
   run_next_op;
 }
-do_not : {
+do_not:
+{
   vm_fetch;
   cur_stack_peek(bool) = !cur_stack_peek(bool);
   run_next_op;
 }
-do_neg_float : {
+do_neg_float:
+{
   vm_fetch;
   cur_stack_peek(float_t) *= -1;
   run_next_op;
 }
-do_lt_float : {
+do_lt_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   float_t lhs = cur_stack_load_pop(float_t);
   cur_stack_push(bool, lhs < rhs);
   run_next_op;
 }
-do_gt_float : {
+do_gt_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   float_t lhs = cur_stack_load_pop(float_t);
   cur_stack_push(bool, lhs > rhs);
   run_next_op;
 }
-do_lte_float : {
+do_lte_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   float_t lhs = cur_stack_load_pop(float_t);
   cur_stack_push(bool, lhs <= rhs);
   run_next_op;
 }
-do_gte_float : {
+do_gte_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   float_t lhs = cur_stack_load_pop(float_t);
   cur_stack_push(bool, lhs >= rhs);
   run_next_op;
 }
-do_eq_float : {
+do_eq_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   float_t lhs = cur_stack_load_pop(float_t);
   cur_stack_push(bool, lhs == rhs);
   run_next_op;
 }
-do_neq_float : {
+do_neq_float:
+{
   vm_fetch;
   float_t rhs = cur_stack_load_pop(float_t);
   float_t lhs = cur_stack_load_pop(float_t);
   cur_stack_push(bool, lhs != rhs);
   run_next_op;
 }
-do_neg_integer : {
+do_neg_integer:
+{
   vm_fetch;
   cur_stack_peek(integer_t) *= -1;
   run_next_op;
 }
-do_lt_integer : {
+do_lt_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   integer_t lhs = cur_stack_load_pop(integer_t);
   cur_stack_push(bool, lhs < rhs);
   run_next_op;
 }
-do_gt_integer : {
+do_gt_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   integer_t lhs = cur_stack_load_pop(integer_t);
   cur_stack_push(bool, lhs > rhs);
   run_next_op;
 }
-do_lte_integer : {
+do_lte_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   integer_t lhs = cur_stack_load_pop(integer_t);
   cur_stack_push(bool, lhs <= rhs);
   run_next_op;
 }
-do_gte_integer : {
+do_gte_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   integer_t lhs = cur_stack_load_pop(integer_t);
   cur_stack_push(bool, lhs >= rhs);
   run_next_op;
 }
-do_eq_integer : {
+do_eq_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   integer_t lhs = cur_stack_load_pop(integer_t);
   cur_stack_push(bool, lhs == rhs);
   run_next_op;
 }
-do_neq_integer : {
+do_neq_integer:
+{
   vm_fetch;
   integer_t rhs = cur_stack_load_pop(integer_t);
   integer_t lhs = cur_stack_load_pop(integer_t);
@@ -611,73 +527,107 @@ do_print_logical:
   vm_fetch;
   printf("%s", cur_stack_load_pop(bool) ? "true" : "false");
   run_next_op;
-do_print_float : {
+do_print_float:
+{
   vm_fetch;
   printf("%lf", cur_stack_load_pop(float_t));
   run_next_op;
 }
-do_print_integer : {
+do_print_integer:
+{
   vm_fetch;
   printf("%ld", cur_stack_load_pop(integer_t));
   run_next_op;
 }
-do_print_text : {
+do_print_text:
+{
   char *text = cur_stack_load_pop(char *);
-  if (text != NULL) {
+  if (text != NULL)
+  {
     printf("%s", text);
   }
   run_next_op;
 }
-do_jump : {
+do_jump:
+{
   cur_index = cur_bytecode_next(int);
   vm_fetch;
   run_next_op;
 }
-do_iftrue : {
-  if (cur_stack_load_pop(bool)) {
+do_iftrue:
+{
+  if (cur_stack_load_pop(bool))
+  {
     int res = cur_bytecode_next(int);
     cur_index = res;
-  } else {
+  }
+  else
+  {
     cur_bytecode_next(int);
   }
   vm_fetch;
   run_next_op;
 }
-do_iffalse : {
-  if (!cur_stack_load_pop(bool)) {
+do_iffalse:
+{
+  if (!cur_stack_load_pop(bool))
+  {
     int res = cur_bytecode_next(int);
     cur_index = res;
-  } else {
+  }
+  else
+  {
     cur_bytecode_next(int);
   }
   vm_fetch;
   run_next_op;
 }
-do_call : {
+do_call:
+{
   int arg_size = cur_bytecode_next(int);
   cur_stack -= arg_size;
   void *argv = cur_stack;
   func_t next_func = *cur_stack_load_pop(func_t *);
-  next = (stack_frame_t){
-      .func = next_func,
-      .argv = argv,
-      .index = 0,
-  };
-  goto rec_call;
+  vm_main_t *native = next_func.native;
+  if (native) {
+    native(cur_stack, argv);
+    vm_fetch;
+    run_next_op;
+  }
+  else
+  {
+    next = (stack_frame_t){
+        .func = next_func,
+        .argv = argv,
+        .index = 0,
+    };
+    goto rec_call;
+  }
 }
-do_call_static : {
+do_call_static:
+{
   int arg_size = cur_bytecode_next(int);
   cur_stack -= arg_size;
   void *argv = cur_stack;
   func_t next_func = *cur_bytecode_next(func_t *);
-  next = (stack_frame_t){
-      .func = next_func,
-      .argv = argv,
-      .index = 0,
-  };
-  goto rec_call;
+  vm_main_t *native = next_func.native;
+  if (native) {
+    native(cur_stack, argv);
+    vm_fetch;
+    run_next_op;
+  }
+  else
+  {
+    next = (stack_frame_t){
+        .func = next_func,
+        .argv = argv,
+        .index = 0,
+    };
+    goto rec_call;
+  }
 }
-do_rec : {
+do_rec:
+{
   int arg_size = cur_bytecode_next(int);
   cur_stack -= arg_size;
   next = (stack_frame_t){

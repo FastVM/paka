@@ -91,6 +91,7 @@ pragma(inline, false):
             func = lastFunc;
         }
         emit(block);
+        // vm_jit(newFunc);
     }
 
     int emit(BasicBlock block)
@@ -315,6 +316,7 @@ pragma(inline, false):
             argc += expected.size;
             // }
         }
+        assert(functy.impl);
         if (functy.impl is null)
         {
             func.add(Opcode.call);

@@ -41,6 +41,7 @@ struct Function
     void* bytecode;
     int stackSize;
     int localSize;
+    void function(void *res, void *argv) native;
     int bytecodeLength;
 
     static Function* empty()
@@ -49,6 +50,7 @@ struct Function
         ret.bytecode = new void[2 ^^ 16].ptr;
         ret.stackSize = 256;
         ret.localSize = 256;
+        ret.native = null;
         return ret;
     }
 }
