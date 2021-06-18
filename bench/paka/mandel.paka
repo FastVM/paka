@@ -1,0 +1,37 @@
+width = 1000
+height = width
+iters = 1000
+
+y = 0
+while y < height {
+    ci = y * 2.0 / height - 1.0
+    x = 0
+    while x < width {
+        zr = 0.0
+        zi = 0.0
+        zrq = 0.0
+        ziq = 0.0
+        cr = x * 2.0 / width - 1.5
+        i = 1
+        outside = 0
+        while i < iters {
+            zri = zr * zi
+            zr = zrq - ziq + cr
+            zi = zri + zri + ci
+            zrq = zr * zr
+            ziq = zi * zi
+            if zrq + ziq > 4.0 {
+                outside = 1
+            }
+            i = i + 1
+        }
+        if outside == 1 {
+            print(" ")
+        } else {
+            print("#")
+        }
+        x = x + 1
+    }
+    println()
+    y = y + 1
+}

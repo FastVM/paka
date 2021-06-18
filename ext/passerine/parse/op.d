@@ -55,7 +55,7 @@ BinaryOp parseBinaryOp(string[] ops)
         };
     case "->":
         return (Node lhs, Node rhs) {
-            return new Form("fun", lhs, rhs);
+            return new Form("lambda", new Form("args", lhs), rhs);
         };
     // case "->":
     //     return (Node lhs, Node rhs) {

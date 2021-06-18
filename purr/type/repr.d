@@ -2,7 +2,6 @@ module purr.type.repr;
 
 import purr.io;
 import std.conv;
-import purr.vm.bytecode;
 import purr.ast.ast;
 
 class Type
@@ -126,7 +125,7 @@ class Type
         return new Integer;
     }
 
-    static Type func(Bytecode bc)
+    static Type func(string bc = gen)
     {
         return Func.empty(bc);
     }
@@ -616,18 +615,24 @@ class Integer : Known
     }
 }
 
+int n = 0;
+string gen()
+{
+    return "fn_" ~ to!string(++n);
+}
+
 class Func : Known
 {
     Type ret;
     Type[] args;
-    Bytecode impl = null;
+    string impl;
 
-    static Func empty(Bytecode impl = Bytecode.empty)
+    static Func empty(string impl = gen)
     {
         return new Func([], Type.unk, impl);
     }
 
-    this(Type[] a, Type r, Bytecode ip)
+    this(Type[] a, Type r, string ip)
     {
         args = a;
         ret = r;

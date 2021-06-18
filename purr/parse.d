@@ -4,8 +4,6 @@ import std.conv;
 import purr.io;
 import purr.ast.ast;
 import purr.ir.walk;
-import purr.vm.bytecode;
-import purr.vm;
 import purr.srcloc;
 
 enum string bashLine = "#!";

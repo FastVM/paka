@@ -8,15 +8,14 @@ import std.typecons;
 import std.meta;
 import purr.io;
 import purr.srcloc;
-import purr.vm.bytecode;
 import purr.inter;
 import purr.ir.opt;
 import purr.type.repr;
 
-alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch, LabelBranch, JumpBranch,
+alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch,
         ReturnBranch, CallInstruction, PushInstruction, OperatorInstruction,
         LambdaInstruction, PopInstruction, PrintInstruction,
-        StoreInstruction, StoreIndexInstruction, LoadInstruction, RecInstruction);
+        StoreInstruction, StoreIndexInstruction, LoadInstruction);
 
 __gshared size_t nameCount;
 
@@ -118,35 +117,6 @@ class LogicalBranch : Branch
     }
 }
 
-class LabelBranch : Branch
-{
-    this(BasicBlock t)
-    {
-        target = [t];
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "label " ~ target[0].name ~ " \n";
-        return ret;
-    }
-}
-
-class JumpBranch : Branch
-{
-    this()
-    {
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "jump\n";
-        return ret;
-    }
-}
-
 class GotoBranch : Branch
 {
     this()
@@ -215,7 +185,7 @@ class PushInstruction : Instruction
     }
 
     this(T)(T v, Type r)
-            if (is(T == bool) || is(T == double) || is(T == Bytecode)
+            if (is(T == bool) || is(T == double)
                 || is(immutable(T) == immutable(char*)))
     {
         void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
@@ -240,24 +210,6 @@ class PushInstruction : Instruction
         return ret;
     }
 }
-
-class RecInstruction : Instruction
-{
-    int argc;
-
-    this(int a)
-    {
-        argc = a;
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "rec argc=" ~ argc.to!string ~ "\n";
-        return ret;
-    }
-}
-
 enum string[] numops = ["add", "mod", "neg", "sub", "mul", "div"];
 enum string[] logicops = ["lt", "gt", "lte", "gte", "neq", "eq"];
 enum string[] operators = numops ~ logicops;
@@ -289,9 +241,9 @@ class LambdaInstruction : Instruction
     BasicBlock entry;
     Type[string] types;
     string[] args;
-    Bytecode impl;
+    string impl;
 
-    this(BasicBlock bb, string[] a, Type[string] t, Bytecode ip)
+    this(BasicBlock bb, string[] a, Type[string] t, string ip)
     {
         entry = bb;
         types = t;

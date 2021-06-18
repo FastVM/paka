@@ -4,13 +4,11 @@ import purr.io;
 import purr.ir.repr;
 import purr.ir.opt;
 import purr.ir.walk;
-import purr.vm;
 import purr.srcloc;
 import purr.ast.ast;
 import purr.parse;
 import purr.inter;
 import purr.io;
-import purr.vm.bytecode;
 import purr.ir.walk;
 import std.uuid;
 import std.path;
@@ -26,6 +24,7 @@ import std.datetime.stopwatch;
 import core.memory;
 import core.time;
 import core.stdc.stdlib;
+import std.process;
 
 extern (C) __gshared string[] rt_options = [];
 
@@ -48,19 +47,55 @@ Thunk cliFileHandler(immutable string filename)
             langNameDefault = "passerine";
         }
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        // string cdir = getcwd;
-        // scope (exit)
-        // {
-        //     cdir.chdir;
-        // }
-        // filename.dirName.chdir;
-        eval(code);
+        File output = File("bin/out.d", "w");
+        output.writeln(eval(code));
+        output.close();
+        if ("bin/out".exists)
+        {
+            "bin/out".remove;
+        }
+        auto res = executeShell("ldc2 bin/out.d -O -of=bin/out");
+        if (res.status != 0)
+        {
+            writeln(res.output);
+            throw new Exception("Compile#2 Failed");
+        }
+        Pid pid = spawnProcess(["./bin/out"]);
+        pid.wait;
     };
 }
 
-Thunk cliEvalHandler(immutable string code)
+Thunk cliCompileHandler(immutable string filename)
 {
-    return { eval(SrcLoc(1, 1, "__main__", code)); };
+    return {
+        string oldLang = langNameDefault;
+        scope (exit)
+        {
+            langNameDefault = oldLang;
+        }
+        if (filename.endsWith(".paka"))
+        {
+            langNameDefault = "paka";
+        }
+        if (filename.endsWith(".pn"))
+        {
+            langNameDefault = "passerine";
+        }
+        SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
+        File output = File("bin/out.d", "w");
+        output.writeln(eval(code));
+        output.close();
+        if ("bin/out".exists)
+        {
+            "bin/out".remove;
+        }
+        auto res = executeShell("ldc2 bin/out.d -O -of=bin/out");
+        if (res.status != 0)
+        {
+            writeln(res.output);
+            throw new Exception("Compile#2 Failed");
+        }
+    };
 }
 
 Thunk cliParseHandler(immutable string code)
@@ -77,14 +112,11 @@ Thunk cliValidateHandler(immutable string code)
         BasicBlock func = walker.walkBasicBlock(node);
     };
 }
-
-Thunk cliCompileHandler(immutable string code)
+Thunk cliRunHandler()
 {
     return {
-        SrcLoc loc = SrcLoc(1, 1, "__main__", code);
-        Node node = loc.parse;
-        Walker walker = new Walker;
-        Bytecode func = walker.walkProgram(node);
+        Pid pid = spawnProcess(["./bin/out"]);
+        pid.wait;
     };
 }
 
@@ -206,8 +238,8 @@ void domain(string[] args)
         case "--compile":
             todo ~= part1.cliCompileHandler;
             break;
-        case "--eval":
-            todo ~= part1.cliEvalHandler;
+        case "--run":
+            todo ~= cliRunHandler;
             break;
         case "--lang":
             todo ~= part1.cliLangHandler;

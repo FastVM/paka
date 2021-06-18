@@ -9,7 +9,6 @@ import std.functional;
 import std.ascii;
 import std.string;
 import std.algorithm;
-import purr.vm;
 import purr.inter;
 import purr.srcloc;
 import purr.inter;

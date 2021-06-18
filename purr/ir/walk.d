@@ -8,10 +8,9 @@ import std.algorithm;
 import std.ascii;
 import purr.ast.ast;
 import purr.srcloc;
-import purr.vm.bytecode;
 import purr.ir.repr;
-import purr.ir.bytecode;
 import purr.ir.opt;
+import purr.backend.dlang;
 import purr.type.repr;
 import purr.type.err;
 
@@ -52,7 +51,7 @@ final class Walker
         return entry;
     }
 
-    Bytecode walkProgram(Node node)
+    string walkProgram(Node node)
     {
         holes = false;
         localTypes ~= [
@@ -94,14 +93,17 @@ final class Walker
             todos[$ - 1].length--;
             runTodo(first);
         }
-        Bytecode func = Bytecode.empty;
-        BytecodeEmitter emitter = new BytecodeEmitter;
-        if (holes)
-        {
-            throw new Exception("compilation stopped, ?? hole found");
-        }
-        emitter.emitInFunc(func, start);
-        return func;
+        Compiler compiler = new Compiler;
+        string src = compiler.compile(globals);
+        return src;
+        // Bytecode func = Bytecode.empty;
+        // BytecodeEmitter emitter = new BytecodeEmitter;
+        // if (holes)
+        // {
+        //     throw new Exception("compilation stopped, ?? hole found");
+        // }
+        // emitter.emitInFunc(func, start);
+        // return func;
     }
 
     Type walk(Node node)
@@ -208,7 +210,7 @@ final class Walker
                     {
                         if (func.impl !is null)
                         {
-                            emit(new PushInstruction(func.impl, ty));
+                            emit(new PushInstruction(*cast(void[func.impl.sizeof]*)&func.impl, ty));
                             return ty;
                         }
                     }
@@ -693,7 +695,11 @@ final class Walker
             {
                 t1.getUnk.set(trk);
             }
-            if (!t1.check(t2))
+            if (t1.fits(Type.float_) || t2.fits(Type.float_))
+            {
+                tr = Type.float_;
+            }
+            else if (!t1.check(t2))
             {
                 throw new FailedBinaryOperatorArms!op(t1, t2);
             }
@@ -793,17 +799,6 @@ final class Walker
         }
     }
 
-    // Type walkRec(Node[] args)
-    // {
-    //     int size;
-    //     foreach (arg; args)
-    //     {
-    //         Type argty = walk(arg);
-    //         size += argty.size;
-    //     }
-    //     emit(new RecInstruction(size));
-    //     return curFunc.ret;
-    // }
 
     Type walkPrint(Node[] args)
     {
@@ -814,23 +809,6 @@ final class Walker
         }
         return Type.nil;
     }
-
-    // Type walkLabel(Node[] args)
-    // {
-    //     BasicBlock after = new BasicBlock;
-    //     emitDefault(new LabelBranch(after));
-    //     block = after;
-    //     return Type.frame;
-    // }
-
-    // Type walkJump(Node[] args)
-    // {
-    //     walk(args[0]);
-    //     BasicBlock after = new BasicBlock;
-    //     emitDefault(new JumpBranch);
-    //     block = after;
-    //     return Type.nil;
-    // }
 
     Type walkTuple(Node[] args)
     {
