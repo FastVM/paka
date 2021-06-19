@@ -118,7 +118,7 @@ const rereq = async function (src, cb) {
 let ty2s = function (obj) {
     if (Array.isArray(obj)) {
         obj = {
-            type: 'union',
+            type: 'tuple',
             elems: obj,
         };
     }
@@ -141,14 +141,15 @@ let ty2s = function (obj) {
         case 'function':
             let argf = obj.args.map(ty2s);
             return `(${argf}) -> ${ty2s(obj.return)}`;
-        case 'union':
-            let uret = '';
+        case 'tuple':
+            let uret = '(';
             for (let i = 0; i < obj.elems.length; i++) {
                 if (i != 0) {
-                    uret += ' | ';
+                    uret += ', ';
                 }
                 uret += ty2s(obj.elems[i]);
             }
+            uret += ')';
             return uret;
         case 'generic':
             let opts = new Set();
@@ -185,7 +186,7 @@ require(['vs/editor/editor.main'], function () {
             let res = await rereq(model.getValue());
             let found = '???';
             let best = null;
-            for (let pair of res) {
+            for (let pair of res.pairs) {
                 let first = pair.span.first;
                 let last = pair.span.last;
                 let low = scorePosition(first.line, first.col);

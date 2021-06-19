@@ -32,7 +32,7 @@ final class Walker
     BasicBlock globals;
     BasicBlock funcblk;
     Func curFunc;
-    bool holes;
+    Type[string] holes;
     Type[string][] localTypes = [];
     Value[string][] localDefs = [];
     Todo[][] todos = [];
@@ -54,7 +54,7 @@ final class Walker
 
     string walkProgram(Node node)
     {
-        holes = false;
+        holes = null;
         localTypes ~= [
             "Text": Type.higher(Type.text),
             "Int": Type.higher(Type.integer),
@@ -68,7 +68,7 @@ final class Walker
             localTypes.length--;
             localDefs.length--;
             todos.length--;
-        } 
+        }
         curFunc = Func.empty;
         if (dumpast)
         {
@@ -92,6 +92,9 @@ final class Walker
             Todo first = todos[$ - 1][$ - 1];
             todos[$ - 1].length--;
             runTodo(first);
+        }
+        if (holes.length != 0) {
+            return null;
         }
         Compiler compiler = new Compiler;
         string src = compiler.compile(globals);
@@ -134,7 +137,12 @@ final class Walker
         default:
             assert(false);
         }
-        if (node.span !in editInfo) {
+        if (Type* last = node.span in editInfo)
+        {
+            editInfo[node.span] = Type.join([*last, ret]);
+        }
+        else
+        {
             editInfo[node.span] = ret;
         }
         return ret;
@@ -173,22 +181,22 @@ final class Walker
         }
         else if (ident[0] == '?')
         {
-            ident = ident[1..$];
+            ident = ident[1 .. $];
             bool debugging = false;
             if (ident[0] == '?')
             {
-                holes = true;
+                holes[ident] = Type.unk;
                 // ident = ident[1..$];
                 debugging = true;
             }
             Type ret = Type.unk();
-            localTypes[$-1][ident] = Type.higher(ret);
+            localTypes[$ - 1][ident] = Type.higher(ret);
             PushInstruction push = new PushInstruction(new void[0], ret);
             emit(push);
             ret.then((Known known) {
                 if (debugging)
                 {
-                    writeln("type ", ident, " = ", known);
+                    holes[ident].getUnk.set(known);
                 }
                 push.value = new void[known.size];
                 push.res = known;
@@ -218,7 +226,8 @@ final class Walker
                     {
                         if (func.impl !is null)
                         {
-                            emit(new PushInstruction(*cast(void[func.impl.sizeof]*)&func.impl, ty));
+                            emit(new PushInstruction(*cast(void[func.impl.sizeof]*)&func.impl,
+                                    ty));
                             return ty;
                         }
                     }
@@ -249,14 +258,15 @@ final class Walker
                 throw new Exception("arms of if of different types");
             }
         }
-        br1.then((Known kn){
+
+        br1.then((Known kn) {
             if (br2.isUnk)
             {
                 br2.getUnk.set(kn);
             }
             check;
         });
-        br2.then((Known kn){
+        br2.then((Known kn) {
             if (br1.isUnk)
             {
                 br1.getUnk.set(kn);
@@ -346,7 +356,7 @@ final class Walker
         Form call = cast(Form) defArgs[0];
         assert(call !is null);
         assert(call.form == "args" || call.form == "call");
-        Node funForm = new Form("lambda", new Form("args", call.args[1..$]), defArgs[1..$]);
+        Node funForm = new Form("lambda", new Form("args", call.args[1 .. $]), defArgs[1 .. $]);
         Node setForm = new Form("set", call.args[0], funForm);
         return walk(setForm);
     }
@@ -395,7 +405,7 @@ final class Walker
             }
             string[] argNames;
             localTypes.length++;
-            scope(exit)
+            scope (exit)
             {
                 localTypes.length--;
             }
@@ -408,7 +418,7 @@ final class Walker
                         throw new Exception("too few args");
                     }
                     Type type = argTypes[i];
-                    localTypes[$-1][name.repr] = type;
+                    localTypes[$ - 1][name.repr] = type;
                     argNames ~= name.repr;
                 }
             }
@@ -436,7 +446,7 @@ final class Walker
                                     "generic arg got: " ~ got.to!string
                                     ~ ", wanted: " ~ want.to!string);
                         }
-                        localTypes[$-1][name.repr] = got;
+                        localTypes[$ - 1][name.repr] = got;
                         argNames ~= name.repr;
                     }
                 }
@@ -446,8 +456,9 @@ final class Walker
             functy.args = argTypes;
             if (globals !is null)
             {
-                globals.instrs ~= new LambdaInstruction(lambda, argNames, localTypes[$-1], functy.impl);
-                todos[$ - 1] ~= Todo(lambda, defArgs, argNames, localTypes[$-1], functy);
+                globals.instrs ~= new LambdaInstruction(lambda, argNames,
+                        localTypes[$ - 1], functy.impl);
+                todos[$ - 1] ~= Todo(lambda, defArgs, argNames, localTypes[$ - 1], functy);
             }
             done.getUnk.set(cast(Type) functy);
             return done;
@@ -467,9 +478,9 @@ final class Walker
         {
             Type ty = walk(args[1]);
             emit(new StoreInstruction(id.repr, ty));
-            if (Type *pty = id.repr in localTypes[$ - 1])
+            if (Type* pty = id.repr in localTypes[$ - 1])
             {
-                pty.then((Known kn){
+                pty.then((Known kn) {
                     if (ty.isUnk)
                     {
                         ty.getUnk.set(kn);
@@ -516,7 +527,7 @@ final class Walker
                 Func func = Type.func(null).as!Func;
                 func.ret = walkType(form.args[1]);
                 Form args = cast(Form) form.args[0];
-                if (args is null || (args.form != "array" && args.form != "join"))
+                if (args is null || (args.form != "tuple" && args.form != "array"))
                 {
                     throw new Exception("arrow type must take a join as agument representation");
                 }
@@ -651,9 +662,10 @@ final class Walker
     {
         if (args.length == 0)
         {
-            assert(false);
+            emitReturn(Type.nil);
         }
         Type ret = walk(args[0]);
+        emitReturn(ret);
         return Type.never;
     }
 
@@ -667,7 +679,9 @@ final class Walker
         t1.then((Known t1k) {
             if (!t1k.check(Type.integer, Type.float_))
             {
-                throw new FailedBinaryOperatorLeft!op(t1k, [Type.integer, Type.float_], t2);
+                throw new FailedBinaryOperatorLeft!op(t1k, [
+                        Type.integer, Type.float_
+                    ], t2);
             }
             if (t2.isUnk)
             {
@@ -681,7 +695,9 @@ final class Walker
         t2.then((Known t2k) {
             if (!t2k.check(Type.integer, Type.float_))
             {
-                throw new FailedBinaryOperatorRight!op(t2k, [Type.integer, Type.float_], t1);
+                throw new FailedBinaryOperatorRight!op(t2k, [
+                        Type.integer, Type.float_
+                    ], t1);
             }
             if (t1.isUnk)
             {
@@ -692,7 +708,7 @@ final class Walker
                 tr.getUnk.set(t2k);
             }
         });
-        tr.then((Known trk){
+        tr.then((Known trk) {
             if (t1.isUnk)
             {
                 t1.getUnk.set(trk);
@@ -768,7 +784,7 @@ final class Walker
                 case "println":
                     walkPrint(args);
                     Type type = walk(new Value("\n"));
-                    emit(new PrintInstruction(type)); 
+                    emit(new PrintInstruction(type));
                     return Type.nil;
                 case "init":
                     return emitInit(walk(args[0]));
@@ -805,13 +821,12 @@ final class Walker
         }
     }
 
-
     Type walkPrint(Node[] args)
     {
         foreach (arg; args)
         {
             Type type = walk(arg);
-            emit(new PrintInstruction(type)); 
+            emit(new PrintInstruction(type));
         }
         return Type.nil;
     }
@@ -870,7 +885,7 @@ final class Walker
         case "call":
             return walkCall(args[0], args[1 .. $]);
         case "return":
-            throw new Exception("return is broken");
+            return walkReturn(args);
         case "index":
             return walkIndex(args);
         case "::":
@@ -908,8 +923,8 @@ final class Walker
             return walkBinary!"neq"(args);
         case "==":
             return walkBinary!"eq"(args);
-        // case "static":
-        //     return walkStatic(args);
+            // case "static":
+            //     return walkStatic(args);
         }
     }
 

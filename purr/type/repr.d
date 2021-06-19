@@ -1,7 +1,9 @@
 module purr.type.repr;
 
-import purr.io;
 import std.conv;
+import std.array;
+import std.algorithm;
+import purr.io;
 import purr.ast.ast;
 
 class Type
@@ -410,7 +412,10 @@ class Generic : Known
         string str;
         foreach (i; 0..cases.length)
         {
-            str ~= "\n";
+            if (i != 0)
+            {
+                str ~= ", ";
+            }
             Type ret = rets[i];
             Type[] args = cases[i];
             str ~= "case (";
@@ -420,18 +425,8 @@ class Generic : Known
         }
         string ret;
         ret ~= "Generic {";
-        foreach (chr; str)
-        {
-            if (chr == '\n')
-            {
-                ret ~= "\n    ";
-            }
-            else
-            {
-                ret ~= chr;
-            }
-        }
-        ret ~= "\n}";
+        ret ~= str;
+        ret ~= "}";
         return ret;
     }
 }
@@ -715,6 +710,6 @@ class Join : Known
 
     override string toString()
     {
-        return "[" ~ elems.to!string[1 .. $ - 1] ~ "]";
+        return `[` ~ elems.map!(to!string).join(`, `) ~ `]`;
     }
 }

@@ -103,7 +103,7 @@ Thunk cliValidateHandler(immutable string filename)
             langNameDefault = "passerine";
         }
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        assert(eval(code).length != 0);
+        eval(code);
     };
 }
 

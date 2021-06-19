@@ -17,7 +17,7 @@ const runCompiler = function(src, method, callback) {
         .then(function() {
             fs.writeFile(workdir + '/input', src, function() {
                 try {
-                    proc.execFile(workdir + '/bin/purr', ['--' + method + '=' + workdir + '/input', '--wasm=wasmer'], {
+                    proc.execFile(workdir + '/bin/purr', ['--debug', '--' + method + '=' + workdir + '/input', '--wasm=wasmer'], {
                         cwd: workdir,
                         env: {'PATH': workdir + '/bin'},
                         timeout: 2000,

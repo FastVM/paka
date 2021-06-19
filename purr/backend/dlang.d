@@ -162,8 +162,13 @@ class Compiler
         src ~= "(";
         foreach (arg; call.args)
         {
-            src ~= pop;
-            src ~= ",";
+            if (arg.size != 0) {
+                src ~= pop;
+                src ~= ",";
+            }
+            else {
+                src ~= "null,";
+            }
         }
         src ~= ")";
         push(src);
@@ -171,7 +176,10 @@ class Compiler
 
     void emit(PushInstruction instr)
     {
-        if (instr.res.fits(Type.nil))
+        if (instr.res.size == 0)
+        {
+        }
+        else if (instr.res.fits(Type.nil))
         {
         }
         else if (instr.res.fits(Type.integer))
@@ -315,6 +323,13 @@ class Compiler
 
     void emit(PrintInstruction instr)
     {
-        output ~= "drt.write(" ~ pop ~ ");";
+        if (Higher h = instr.type.as!Higher)
+        {
+            output ~= "drt.write(`" ~ h.type.to!string ~ "`);";
+        }
+        else
+        {
+            output ~= "drt.write(" ~ pop ~ ");";
+        }
     }
 }

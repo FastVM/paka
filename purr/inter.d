@@ -33,8 +33,10 @@ string json(Type unk)
     {
         done.length--;
     }
+    if (unk.isUnk) {
+        return `{"type": "unknown"}`;
+    }
     Known ty = unk.as!Known;
-    assert(ty !is null);
     if (ty.as!Never)
     {
         return `{"type": "never"}`;
@@ -78,7 +80,7 @@ string json(Type unk)
     }
     if (Join j = ty.as!Join)
     {
-        return `{"type": "union", "elems": [` ~ j.elems.map!json.join(`,`) ~ `]}`;
+        return `{"type": "tuple", "elems": [` ~ j.elems.map!json.join(`,`) ~ `]}`;
     }
     if (Generic g = ty.as!Generic)
     {
@@ -96,7 +98,8 @@ string eval(SrcLoc code)
     Node node = code.parse;
     Walker walker = new Walker;
     string prog = walker.walkProgram(node);
-    string json = `[`;
+    string json = `{`;
+    json ~= `"pairs": [`;
     bool first = true;
     foreach (span, type; walker.editInfo)
     {
@@ -110,7 +113,22 @@ string eval(SrcLoc code)
         }
         json ~= `{"span": ` ~ span.json ~ `, "type": ` ~ type.json ~ `}`;
     }
-    json ~= `]`;
+    json ~= `],`;
+    json ~= `"holes": {`;
+    first = true;
+    foreach (name, type; walker.holes) {
+        if (!first)
+        {
+            json ~= `, `;
+        }
+        else
+        {
+            first = false;
+        }
+        json ~= `"` ~ name ~ `": ` ~ type.json;
+    }
+    json ~= `}`;
+    json ~= `}`;
     if (dumpedit == null) {
         File("bin/editor.json", "w").write(json);
     }
