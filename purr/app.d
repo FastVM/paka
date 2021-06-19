@@ -124,15 +124,6 @@ Thunk cliParseHandler(immutable string code)
     return { SrcLoc loc = SrcLoc(1, 1, "__main__", code); Node res = loc.parse; };
 }
 
-Thunk cliValidateHandler(immutable string code)
-{
-    return {
-        SrcLoc loc = SrcLoc(1, 1, "__main__", code);
-        Node node = loc.parse;
-        Walker walker = new Walker;
-        BasicBlock func = walker.walkBasicBlock(node);
-    };
-}
 Thunk cliRunHandler()
 {
     return {

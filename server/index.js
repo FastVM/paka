@@ -14,14 +14,32 @@ app.use(body.text({
 app.post('/api/wasm', (req, res) => {
     const workdir = __dirname + '/wasm/' + uuid.v4();
     fs.copy(__dirname + '/base', workdir)
-        .then(done => {
+        .then(function() {
             fs.writeFile(workdir + '/input', req.body, function() {
             proc.execFile(workdir + '/bin/purr', ['--compile=' + workdir + '/input', '--wasm=wasmer'], {
-                cwd: undefined,
-                env: {},
-                timeout: 500,
-            }, function(proc) {
-                res.sendFile(workdir + '/bin/out');
+                cwd: workdir,
+                env: {'PATH': workdir + '/bin'},
+                timeout: 2000,
+            }, function(err, stdout, stderr) {
+                console.log(stdout, stderr);
+                if (err != null) {
+                    res.status(400);
+                    try {
+                        throw err;
+                    }
+                    catch (e) {
+                        console.log(e);
+                    }
+                    fs.rm(workdir, {recursive: true});
+                    res.end();
+                    return;
+                }
+                res.contentType('application/wasm');
+                res.sendFile(workdir + '/bin/out', function() {
+                    fs.rm(workdir, {recursive: true});
+                });
+                res.status(200);
+                res.end();
             });
         });
     });

@@ -328,12 +328,12 @@ Node readPostExprImpl(TokenArray tokens)
     else if (tokens.first.isKeyword("true"))
     {
         tokens.nextIs(Token.Type.keyword, "true");
-        last = new Value(true);
+        last = new Value(1L);
     }
     else if (tokens.first.isKeyword("false"))
     {
         tokens.nextIs(Token.Type.keyword, "false");
-        last = new Value(false);
+        last = new Value(0L);
     }
     else if (tokens.first.isKeyword("nil"))
     {

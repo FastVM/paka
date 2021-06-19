@@ -2,8 +2,22 @@
 <html>
     <head>
         <title>My WASM App</title>
-        <script src="./index.js"></script>
+        <link rel="stylesheet" href="style.css">
+        <script src="/vs/loader.js"></script>
     </head>
     <body>
+        <script src="/wasm.js"></script>
+        <script src="/edit.js"></script>
+        <div class="paka-main">
+            <div class="paka-config">
+                <select onchange="loadFile(this)">
+                    <option value="empty.paka">empty.paka</option>
+                    <option value="hello.paka">hello.paka</option>
+                    <option value="mandel.paka">mandel.paka</option>
+                </select>
+            </div>
+            <div class="paka-input" id="paka-main-input"></div>
+            <div class="paka-output" id="paka-main-output"></div>
+        </div>
     </body>
 </html>

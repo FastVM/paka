@@ -40,9 +40,9 @@ class Compiler
     {
         output = null;
         opt.opt(block);
-        output ~= "static import drt;extern(C) void main() {";
+        output ~= "static import drt;auto main2() {";
         emit(block);
-        output ~= "}";
+        output ~= "}extern(C)void main(){cast(void)main2();}";
         return funcs.values.join ~ output;
     }
 
@@ -120,7 +120,7 @@ class Compiler
     {
         if (branch.type.size == 0)
         {
-            output ~= "return;";
+            output ~= "return null;";
         }
         else
         {
@@ -264,13 +264,13 @@ class Compiler
         stack = null;
         output ~= "auto " ~ lambda.impl;
         output ~= "(";
-        foreach (name, _; lambda.types)
+        foreach (name; lambda.args)
         {
             output ~= "T_" ~ name ~ ",";
         }
         output ~= ")";
         output ~= "(";
-        foreach (name, _; lambda.types)
+        foreach (name; lambda.args)
         {
             output ~= "T_" ~ name ~ " ";
             output ~= name;

@@ -36,6 +36,7 @@ final class Walker
     Type[string][] localTypes = [];
     Value[string][] localDefs = [];
     Todo[][] todos = [];
+    Type[Span] editInfo;
 
     BasicBlock walkBasicBlock(Node node)
     {
@@ -55,7 +56,6 @@ final class Walker
     {
         holes = false;
         localTypes ~= [
-            "Frame": Type.higher(Type.frame),
             "Text": Type.higher(Type.text),
             "Int": Type.higher(Type.integer),
             "Nil": Type.higher(Type.nil),
@@ -119,17 +119,23 @@ final class Walker
                 nodes.length--;
             }
         }
+        Type ret = null;
         switch (node.id)
         {
         case NodeKind.call:
-            return walkExact(cast(Form) node);
+            ret = walkExact(cast(Form) node);
+            break;
         case NodeKind.ident:
-            return walkExact(cast(Ident) node);
+            ret = walkExact(cast(Ident) node);
+            break;
         case NodeKind.value:
-            return walkExact(cast(Value) node);
+            ret = walkExact(cast(Value) node);
+            break;
         default:
             assert(false);
         }
+        editInfo[node.span] = ret;
+        return ret;
     }
 
     bool inspecting = false;
@@ -535,8 +541,6 @@ final class Walker
                     }
                 }
                 throw new Exception("type not found " ~ id.repr);
-            case "Frame":
-                return Type.frame;
             case "Text":
                 return Type.text;
             case "Int":

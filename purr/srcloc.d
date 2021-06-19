@@ -47,6 +47,11 @@ struct SrcLoc
         assert(false);
     }
 
+    string json()
+    {
+        return `{"line": ` ~ line.to!string ~ `, "col": ` ~ column.to!string ~ `}`;
+    }
+
     bool isAt(SrcLoc other)
     {
         return line == other.line && column == other.column;
@@ -66,6 +71,11 @@ struct Span
     string src()
     {
         return first.src[first.where..last.where];
+    }
+
+    string json()
+    {
+        return `{"first": ` ~ first.json ~ `, "last": ` ~ last.json ~ `}`;
     }
 
     Span dup()

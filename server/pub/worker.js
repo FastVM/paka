@@ -1,17 +1,5 @@
-const runFile = function(stream) {
+const runFile = function(stream, putchar) {
     var stdout='';
-
-    const putchar = function(code) {
-        if (code === 10) {
-            console.log(stdout);
-            stdout = '';
-        }
-        else
-        {
-            stdout += String.fromCharCode(code);
-        }
-        return 0;
-    };
 
     let mem;
     const fd_write = function(fd, iovs, iovsLen, nwritten) {
@@ -40,13 +28,15 @@ const runFile = function(stream) {
         return 0;
     };
 
-    WebAssembly.instantiateStreaming(stream, {wasi_unstable: {fd_write}}).then(res => {
+    return WebAssembly.instantiateStreaming(stream, {wasi_unstable: {fd_write}}).then(res => {
         mem = res.instance.exports.memory;
+        putchar('__BEGIN__');
         res.instance.exports._start();
+        putchar('__END__');
     });
 }
 
-function compile(src) {
+function compile(src, putchar) {
     const stream = fetch('/api/wasm', {
         method: 'POST',
         mode: 'cors',
@@ -57,5 +47,11 @@ function compile(src) {
         redirect: 'follow',
         body: src,
     })
-    runFile(stream);
+    runFile(stream, putchar);
 }
+
+onmessage = function(e) {
+    compile(e.data, function(c) {
+        postMessage(c);
+    });
+};

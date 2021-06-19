@@ -155,11 +155,6 @@ class Type
         return new Nil;
     }
 
-    static Type frame()
-    {
-        return new Frame;
-    }
-
     static Type unk()
     {
         return new Unk;
@@ -517,24 +512,6 @@ class Nil : Known
     override size_t size()
     {
         return 0;
-    }
-
-    override string toString()
-    {
-        return "Nil";
-    }
-}
-
-class Frame : Known
-{
-    override bool fits(Type other)
-    {
-        return other.as!Frame is null || other.as!Never !is null;
-    }
-
-    override size_t size()
-    {
-        return (Frame*).sizeof;
     }
 
     override string toString()
