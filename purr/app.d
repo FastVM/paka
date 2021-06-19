@@ -28,40 +28,61 @@ import std.process;
 
 extern (C) __gshared string[] rt_options = [];
 
+string dflags;
+string wasmFlags = " -mtriple=wasm32-unknown-unknown-wasm -L--no-entry bin/crt.o";
+string outfile = "./bin/out";
+string runCommand = "";
+
 alias Thunk = void delegate();
 
-Thunk cliFileHandler(immutable string filename)
+string drtd = import("drt.d");
+string crtc = import("crt.c");
+
+void extractRuntime()
 {
-    return {
-        string oldLang = langNameDefault;
-        scope (exit)
-        {
-            langNameDefault = oldLang;
-        }
-        if (filename.endsWith(".paka"))
-        {
-            langNameDefault = "paka";
-        }
-        if (filename.endsWith(".pn"))
-        {
-            langNameDefault = "passerine";
-        }
-        SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        File output = File("bin/out.d", "w");
-        output.writeln(eval(code));
-        output.close();
-        if ("bin/out".exists)
-        {
-            "bin/out".remove;
-        }
-        auto res = executeShell("ldc2 bin/out.d -O -of=bin/out");
+    if (!"bin/drt.d".exists)
+    {
+        File drtf = File("bin/drt.d", "w");
+        drtf.write(drtd);
+        drtf.close();
+    }
+    if (!"bin/crt.c".exists)
+    {
+        File crtf = File("bin/crt.c", "w");
+        crtf.write(crtc);
+        crtf.close();
+    }
+    if (!"bin/crt.o".exists)
+    {
+        string cmd = "clang -Ibin bin/crt.c -o bin/crt.o --target=wasm32-undefined-undefined-wasm -c";
+        auto res = executeShell(cmd);
         if (res.status != 0)
         {
             writeln(res.output);
-            throw new Exception("Compile#2 Failed");
+            throw new Exception("could not build runtime");
         }
-        Pid pid = spawnProcess(["./bin/out"]);
-        pid.wait;
+    }
+}
+
+Thunk cliCleanHandler()
+{
+    return {
+        foreach (filename; ["bin/crt.c", "bin/drt.d", "bin/crt.o"])
+        {
+            if (filename.exists)
+            {
+                filename.remove;
+            }
+        }
+    };
+}
+
+Thunk cliWasmHandler(string run)
+{
+    return {
+        extractRuntime;
+        runCommand = run;
+        dflags ~= wasmFlags;
     };
 }
 
@@ -85,11 +106,11 @@ Thunk cliCompileHandler(immutable string filename)
         File output = File("bin/out.d", "w");
         output.writeln(eval(code));
         output.close();
-        if ("bin/out".exists)
+        if (outfile.exists)
         {
-            "bin/out".remove;
+            outfile.remove;
         }
-        auto res = executeShell("ldc2 bin/out.d -O -of=bin/out");
+        auto res = executeShell("ldc2 bin/out.d bin/drt -O -of=" ~ outfile ~ " -betterC " ~ dflags);
         if (res.status != 0)
         {
             writeln(res.output);
@@ -115,8 +136,16 @@ Thunk cliValidateHandler(immutable string code)
 Thunk cliRunHandler()
 {
     return {
-        Pid pid = spawnProcess(["./bin/out"]);
-        pid.wait;
+        if (runCommand.length == 0)
+        {
+            Pid pid = spawnProcess([outfile]);
+            pid.wait;
+        }
+        else
+        {
+            Pid pid = spawnProcess([runCommand, outfile]);
+            pid.wait;
+        }
     };
 }
 
@@ -219,7 +248,9 @@ void domain(string[] args)
         switch (parts[0])
         {
         default:
-            throw new Exception("use --file=" ~ parts[0]);
+            todo ~= cliRunHandler;
+            todo ~= parts[0].cliCompileHandler;
+            break;
         case "--time":
             todo[$ - 1] = todo[$ - 1].cliTimeHandler;
             break;
@@ -230,7 +261,8 @@ void domain(string[] args)
             todo[$ - 1] = cliBenchHandler(part1.to!size_t, todo[$ - 1]);
             break;
         case "--file":
-            todo ~= part1.cliFileHandler;
+            todo ~= cliRunHandler;
+            todo ~= part1.cliCompileHandler;
             break;
         case "--parse":
             todo ~= part1.cliParseHandler;
@@ -254,7 +286,13 @@ void domain(string[] args)
             todo ~= cliIrHandler;
             break;
         case "--debug":
-            todo ~= cliDebugHandler;
+            cliDebugHandler()();
+            break;
+        case "--wasm":
+            cliWasmHandler(part1)();
+            break;
+        case "--clean":
+            cliCleanHandler()();
             break;
         }
     }

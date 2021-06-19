@@ -1,6 +1,6 @@
-width = 1000
-height = width
-iters = 1000
+width = 150
+height = width / 2
+iters = 100000
 
 y = 0
 while y < height {

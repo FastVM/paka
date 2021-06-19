@@ -1,7 +1,6 @@
-
-local width = 1000
-local height = width
-local iters = 1000
+local width = 150
+local height = width / 2
+local iters = 100000
 local write = io.write
 
 for y=0, height-1 do

@@ -2,12 +2,12 @@ OPT_D=0
 BIN=bin
 TMP=tmp
 DFILES:=$(shell find ext purr -type f -name '*.d')
-ifdef LLVM
-DC=ldc2
-LOUT=-of=
-else
+ifdef GCC
 DC=gdc
 LOUT=-o
+else
+DC=ldc2
+LOUT=-of=
 endif
 
 all: build
@@ -18,7 +18,7 @@ opt: $(BIN)
 build: $(BIN) $(BIN)/purr 
 
 $(BIN)/purr: $(DFILES)
-	$(DC) $(DFILES) -O$(OPT_D) -Jtmp $(DFLAGS) $(LFLAGS) $(LOUT)$@
+	$(DC) $(DFILES) -O$(OPT_D) -J. $(DFLAGS) $(LFLAGS) $(LOUT)$@
 
 $(TMP):
 	@mkdir -p $(TMP)

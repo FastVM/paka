@@ -40,9 +40,9 @@ class Compiler
     {
         output = null;
         opt.opt(block);
-        output ~= "import std.stdio : write;shared static this() {";
+        output ~= "static import drt;extern(C) void main() {";
         emit(block);
-        output ~= "}void main(){}";
+        output ~= "}";
         return funcs.values.join ~ output;
     }
 
@@ -315,6 +315,6 @@ class Compiler
 
     void emit(PrintInstruction instr)
     {
-        output ~= "write(" ~ pop ~ ");";
+        output ~= "drt.write(" ~ pop ~ ");";
     }
 }
