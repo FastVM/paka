@@ -100,7 +100,8 @@ void stripNewlines(TokenArray tokens)
     }
 }
 
-Node readPostCallExtend(TokenArray tokens, Node last)
+alias readPostCallExtend = Spanning!(readPostCallExtendImpl, Node);
+Node readPostCallExtendImpl(TokenArray tokens, Node last)
 {
     Node[][] args = tokens.readOpen!"()";
     while (tokens.first.isOperator("->"))
@@ -281,11 +282,10 @@ size_t escapeNumber(ref string input)
     }
 }
 
-/// reads first element of postfix expression
-alias readPostExpr = Spanning!readPostExprImpl;
-Node readPostExprImpl(TokenArray tokens)
+alias readSingle = Spanning!readSingleImpl;
+Node readSingleImpl(TokenArray tokens)
 {
-    Node last = void;
+    Node last = null;
     if (tokens.first.isKeyword("lambda"))
     {
         tokens.nextIs(Token.Type.keyword, "lambda");
@@ -371,6 +371,15 @@ Node readPostExprImpl(TokenArray tokens)
         last = new Ident(tokens.first.value);
         tokens.nextIs(Token.Type.ident);
     }
+    assert(last !is null);
+    return last;
+}
+
+/// reads first element of postfix expression
+alias readPostExpr = Spanning!readPostExprImpl;
+Node readPostExprImpl(TokenArray tokens)
+{
+    Node last = tokens.readSingle;
     return tokens.readPostExtend(last);
 }
 

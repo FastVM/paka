@@ -134,7 +134,9 @@ final class Walker
         default:
             assert(false);
         }
-        editInfo[node.span] = ret;
+        if (node.span !in editInfo) {
+            editInfo[node.span] = ret;
+        }
         return ret;
     }
 

@@ -86,6 +86,27 @@ Thunk cliWasmHandler(string run)
     };
 }
 
+Thunk cliValidateHandler(immutable string filename)
+{
+    return {
+        string oldLang = langNameDefault;
+        scope (exit)
+        {
+            langNameDefault = oldLang;
+        }
+        if (filename.endsWith(".paka"))
+        {
+            langNameDefault = "paka";
+        }
+        if (filename.endsWith(".pn"))
+        {
+            langNameDefault = "passerine";
+        }
+        SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
+        assert(eval(code).length != 0);
+    };
+}
+
 Thunk cliCompileHandler(immutable string filename)
 {
     return {
@@ -260,6 +281,9 @@ void domain(string[] args)
             break;
         case "--compile":
             todo ~= part1.cliCompileHandler;
+            break;
+        case "--validate":
+            todo ~= part1.cliValidateHandler;
             break;
         case "--run":
             todo ~= cliRunHandler;

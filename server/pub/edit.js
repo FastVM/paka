@@ -63,11 +63,6 @@ const pakaLang = function () {
                     }
                 }],
 
-                // @ annotations.
-                // As an example, we emit a debugging log message on these tokens.
-                // Note: message are supressed during the first load -- change some lines to see them.
-                [/@\s*[a-zA-Z_\$][\w\$]*/, { token: 'annotation', log: 'annotation token: $0' }],
-
                 // numbers
                 [/\d*\.\d+([eE][\-+]?\d+)?/, 'number.float'],
                 [/0[xX][0-9a-fA-F]+/, 'number.hex'],
@@ -106,16 +101,109 @@ const pakaLang = function () {
     };
 
 }
+const rereq = async function (src, cb) {
+    let res = await fetch('/api/info', {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-cache',
+        headers: {
+            'Content-Type': 'text/plain',
+        },
+        redirect: 'follow',
+        body: src,
+    });
+    return res.json();
+};
+
+let ty2s = function (obj) {
+    if (Array.isArray(obj)) {
+        obj = {
+            type: 'union',
+            elems: obj,
+        };
+    }
+    switch (obj.type) {
+        case 'nil':
+            return 'Nil';
+        case 'logical':
+            return 'Logical';
+        case 'int':
+            return 'Int';
+        case 'float':
+            return 'Float';
+        case 'text':
+            return 'Text';
+        case 'higher':
+            return `type(${ty2s(obj.of)})`;
+        case 'lambda':
+            let argl = obj.args.map(ty2s);
+            return `(${argl}) -> ${ty2s(obj.return)}`;
+        case 'function':
+            let argf = obj.args.map(ty2s);
+            return `(${argf}) -> ${ty2s(obj.return)}`;
+        case 'union':
+            let uret = '';
+            for (let i = 0; i < obj.elems.length; i++) {
+                if (i != 0) {
+                    uret += ' | ';
+                }
+                uret += ty2s(obj.elems[i]);
+            }
+            return uret;
+        case 'generic':
+            let opts = new Set();
+            for (let i = 0; i < obj.rets.length; i++) {
+                let retn = obj.rets[i];
+                let casen = obj.cases[i];
+                let me = '' + ty2s(casen) + ': ' + ty2s(retn);
+                opts.add(me);
+            }
+            return `generic {${Array.from(opts)}}`;
+        case 'rec':
+            return '...';
+    }
+    throw obj;
+};
+
+const scorePosition = function(line, col) {
+    return line * 65536 + col;
+};
 
 require(['vs/editor/editor.main'], function () {
-    monaco.languages.register({ id: 'paka' });
-    monaco.languages.setMonarchTokensProvider('paka', pakaLang());
-
     const editor = monaco.editor.create(document.getElementById('paka-main-input'), {
         value: '',
         language: 'paka',
         theme: 'vs-dark',
         automaticLayout: true,
+    });
+
+    monaco.languages.register({ id: 'paka' });
+    monaco.languages.setMonarchTokensProvider('paka', pakaLang());
+    monaco.languages.registerHoverProvider('paka', {
+        provideHover: async function (model, position) {
+            let middle = scorePosition(position.lineNumber, position.column);
+            let res = await rereq(model.getValue());
+            let found = '???';
+            let best = null;
+            for (let pair of res) {
+                let first = pair.span.first;
+                let last = pair.span.last;
+                let low = scorePosition(first.line, first.col);
+                let high = scorePosition(last.line, last.col);
+                if (low <= middle && middle <= high) {
+                    if (best == null || high - low < best) {
+                        best = high - low;
+                        found = ty2s(pair.type);
+                    }
+                }
+            }
+            return {
+                contents: [
+                    { value: '**TYPE**' },
+                    { value: found || '???' },
+                ]
+            }
+        },
     });
 
     const result = monaco.editor.create(document.getElementById('paka-main-output'), {
@@ -125,7 +213,7 @@ require(['vs/editor/editor.main'], function () {
         modal: true,
         readOnly: true,
         automaticLayout: true,
-    })
+    });
 
     const run = function () {
         let src = editor.getModel().getValue();
@@ -190,6 +278,7 @@ require(['vs/editor/editor.main'], function () {
         editor.getModel().setValue(text);
         run();
     };
+
     editor.createContextKey('myCondition1')
     editor.addAction({
         id: 'paka-code-run',

@@ -61,7 +61,7 @@ string json(Type unk)
     }
     if (Higher h = ty.as!Higher)
     {
-        return `{"type": "higher", "type": ` ~ h.json ~ `}`;
+        return `{"type": "higher", "of": ` ~ h.type.json ~ `}`;
     }
     if (Func f = ty.as!Func)
     {
@@ -78,7 +78,7 @@ string json(Type unk)
     }
     if (Join j = ty.as!Join)
     {
-        return `{"type": "union", "type": [` ~ j.elems.map!json.join(`,`) ~ `]}`;
+        return `{"type": "union", "elems": [` ~ j.elems.map!json.join(`,`) ~ `]}`;
     }
     if (Generic g = ty.as!Generic)
     {
