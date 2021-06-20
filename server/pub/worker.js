@@ -31,7 +31,7 @@ const runFile = function(stream, putchar) {
     return WebAssembly.instantiateStreaming(stream, {wasi_unstable: {fd_write}}).then(res => {
         mem = res.instance.exports.memory;
         putchar('__BEGIN__');
-        res.instance.exports._start();
+        res.instance.exports.main();
         putchar('__END__');
     });
 }

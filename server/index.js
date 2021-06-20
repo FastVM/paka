@@ -2,6 +2,7 @@ const express = require('express');
 const body = require('body-parser')
 const fs = require('fs-extra');
 const uuid = require('uuid');
+var https = require('https');
 const proc = require('child_process');
 
 const app = express();
@@ -17,9 +18,9 @@ const runCompiler = function(src, method, callback) {
         .then(function() {
             fs.writeFile(workdir + '/input', src, function() {
                 try {
-                    proc.execFile(workdir + '/bin/purr', ['--debug', '--' + method + '=' + workdir + '/input', '--wasm=wasmer'], {
+                    proc.execFile(__dirname + '/bin/purr', ['--debug', '--' + method + '=' + workdir + '/input', '--wasm=wasmer'], {
                         cwd: workdir,
-                        env: {'PATH': workdir + '/bin'},
+                        env: {'PATH': __dirname + '/bin'},
                         timeout: 2000,
                     }, (err, stdout, stderr) => {
                         callback(err, stdout, stderr, workdir);
@@ -33,6 +34,11 @@ const runCompiler = function(src, method, callback) {
         .catch(e => console.log(e));
 };
 
+app.get('/index.html', (req, res) => {
+    res.sendFile('pub/index.html');
+    res.status(200);
+});
+
 app.post('/api/wasm', (req, res) => {
     const thens = function(err, stdout, stderr, workdir) {
         console.log(stdout, stderr);
@@ -44,12 +50,9 @@ app.post('/api/wasm', (req, res) => {
             catch (e) {
                 console.log(e);
             }
-            fs.rm(workdir, {recursive: true});
         } else {
             res.contentType('application/wasm');
-            res.sendFile(workdir + '/bin/out', function() {
-                fs.rm(workdir, {recursive: true});
-            });
+            res.sendFile(workdir + '/bin/out', function() {});
             res.status(200);
         }
 }
@@ -69,15 +72,19 @@ app.post('/api/info', (req, res) => {
             res.status(400);
         } else {
             res.contentType('application/json');
-            res.sendFile(workdir + '/bin/editor.json', function() {
-                fs.rm(workdir, {recursive: true});
-            });
+            res.sendFile(workdir + '/bin/editor.json', function() {});
             res.status(200);
         }
     }
     runCompiler(req.body, 'validate', thens);
 });
 
-app.listen(8000, () => {
-    console.log('app started');
+var server = https.createServer({}, app);
+
+app.listen(80, () => {
+    console.log('http started');
+})
+
+server.listen(443, () => {
+    console.log('https started');
 })

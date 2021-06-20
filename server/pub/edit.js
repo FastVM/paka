@@ -1,4 +1,4 @@
-require.config({ paths: { 'vs': '/vs' } });
+require.config({ paths: { 'vs': '/lib/monaco-editor/min/vs' } });
 
 let updateFile = function () { };
 

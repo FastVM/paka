@@ -42,7 +42,7 @@ class Compiler
         opt.opt(block);
         output ~= "static import drt;auto main2() {";
         emit(block);
-        output ~= "}extern(C)void main(){cast(void)main2();}";
+        output ~= "}extern(C)int main(int argc, char** argv){cast(void)main2();return 0;}";
         return funcs.values.join ~ output;
     }
 

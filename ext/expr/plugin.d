@@ -1,6 +1,9 @@
 module ext.expr.plugin;
 
-import purr;
+import purr.plugin.plugins;
+import purr.plugin.plugin;
+import purr.srcloc;
+import purr.ast.ast;
 
 shared static this()
 {

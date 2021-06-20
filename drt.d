@@ -1,14 +1,16 @@
 module drt;
 
 extern (C) int putchar(int code);
-extern(C) void main();
+extern(C) int main(int argc, char** argv);
 
-extern(C) void _start()
-{
-    main();
+version(WebAssembly) {
+    extern(C) void _start()
+    {
+        main(0, null);
+    }
 }
 
-pragma(mangle, "rt.write(Text)") void write(string src)
+void write(string src)
 {
     foreach (chr; src)
     {
@@ -16,7 +18,7 @@ pragma(mangle, "rt.write(Text)") void write(string src)
     }
 }
 
-pragma(mangle, "rt.write(Int)") void write(long src)
+void write(long src)
 {
     if (src >= 10)
     {
@@ -25,12 +27,33 @@ pragma(mangle, "rt.write(Int)") void write(long src)
     putchar(cast(char)('0' + src % 10));
 }
 
-pragma(mangle, "rt.write(Float)") void write(double src)
+void write(double src)
 {
-    long nsrc = cast(long) src;
-    write(nsrc);
+    if (src<0)
+    {
+        putchar('-');
+        src *= -1;
+    }
+    ulong d = cast(ulong) src;
+    write(d);
     putchar('.');
-    double ddec = src - cast(double) nsrc;
-    long dsrc = cast(long)(ddec * 10 ^^ 6);
-    write(dsrc);
+    foreach (p; 0..16)
+    {
+        src -= d;
+        if (src <= 0.001) {
+            if (p == 0) {
+                putchar('0');
+            }
+            break;
+        }
+        if (src >= 0.999) {
+            if (p == 0) {
+                putchar('0');
+            }
+            break;
+        }
+        src *= 10;
+        d = cast(ulong) src;
+        putchar(cast(char)('0'+d));
+    }
 }

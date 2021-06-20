@@ -46,5 +46,5 @@ const fd_write = function(fd, iovs, iovsLen, nwritten) {
 
 WebAssembly.instantiate(src, {wasi_unstable: {fd_write}}).then(res => {
     mem = res.instance.exports.memory;
-    res.instance.exports._start();
+    res.instance.exports.main();
 });
