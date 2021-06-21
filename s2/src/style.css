@@ -1,0 +1,37 @@
+body {
+    margin: 0%;
+    padding: 0%;
+    width: 100vw;
+    height: 100vh;
+}
+
+.paka-main {
+    width: 100vw;
+    height: 100vh;
+}
+
+.paka-config {
+    display: none;
+    height: 3em;
+}
+
+select {
+    height: 3em;
+}
+
+.paka-input {
+    width: 50%;
+    height: 100%;
+    float: left;
+}
+
+.paka-output {
+    width: 50%;
+    height: 100%;
+    float: left;
+}
+
+.monaco-editor {
+    width: max-content;
+    height: max-content;
+}

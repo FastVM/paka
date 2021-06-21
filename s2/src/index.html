@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>purr.run</title>
+    </head>
+    <body>
+        <div class="paka-main">
+            <div class="paka-config">
+                <select onchange="loadFile(this)">
+                    <option value="empty.paka">empty.paka</option>
+                    <option value="hello.paka">hello.paka</option>
+                    <option value="mandel.paka">mandel.paka</option>
+                </select>
+            </div>
+            <div class="paka-input" id="paka-main-input"></div>
+            <div class="paka-output" id="paka-main-output"></div>
+        </div>
+    </body>
+    <script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker
+                    .register("service-worker.js")
+                    .then((registration) => {
+                        console.log("Service Worker registered: ", registration);
+                    })
+                    .catch((registrationError) => {
+                        console.error("Service Worker registration failed: ", registrationError);
+                    });
+            });
+        }
+    </script>
+</html>
