@@ -20,13 +20,12 @@ const runCompiler = function(src, method, callback) {
                 try {
                     proc.execFile(__dirname + '/bin/purr', ['--debug', '--' + method + '=' + workdir + '/input', '--wasm=wasmer'], {
                         cwd: workdir,
-                        env: {'PATH': __dirname + '/bin'},
+                        env: { 'PATH': __dirname + '/bin' },
                         timeout: 2000,
                     }, (err, stdout, stderr) => {
                         callback(err, stdout, stderr, workdir);
                     });
-                }
-                catch(e) {
+                } catch (e) {
                     console.log(e);
                 }
             });
@@ -41,8 +40,7 @@ app.post('/api/wasm', (req, res) => {
             res.status(400);
             try {
                 throw err;
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         } else {
@@ -50,7 +48,7 @@ app.post('/api/wasm', (req, res) => {
             res.sendFile(workdir + '/bin/out', function() {});
             res.status(200);
         }
-}
+    }
     runCompiler(req.body, 'compile', thens);
 });
 
@@ -60,8 +58,7 @@ app.post('/api/info', (req, res) => {
         if (err != null) {
             try {
                 throw err;
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
             res.status(400);
@@ -76,10 +73,14 @@ app.post('/api/info', (req, res) => {
 
 var server = https.createServer({}, app);
 
-app.listen(80, () => {
-    console.log('http started');
-})
+// app.listen(80, () => {
+//     console.log('http started');
+// })
 
-server.listen(443, () => {
-    console.log('https started');
+// server.listen(443, () => {
+//     console.log('https started');
+// })
+
+server.listen(8000, () => {
+    console.log('dev started');
 })

@@ -9,14 +9,15 @@ function compile(src, putchar) {
         putchar('__TERM__');
         worker.terminate();
     }
-    worker = new Worker(new URL('./worker.js', import.meta.url));
+    worker = new Worker(new URL('./worker.js',
+        import.meta.url));
     worker.postMessage(src);
     worker.onmessage = function(e) {
         putchar(e.data);
     };
 }
 
-const pakaLang = function () {
+const pakaLang = function() {
     return {
         keywords: [
             "if", "else", "def", "lambda",
@@ -29,9 +30,13 @@ const pakaLang = function () {
         ],
 
         operators: [
-            ["::"], ["->"],
-            ["+=", "~=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"],
-            ["or", "and"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"],
+            ["::"],
+            ["->"],
+            ["+=", "~=", "*=", "/=", "%=", "-=", "="],
+            ["|>", "<|"],
+            ["or", "and"],
+            ["<=", ">=", "<", ">", "!=", "=="],
+            ["+", "-"],
             ["*", "/", "%"]
         ].flat(),
 
@@ -52,7 +57,7 @@ const pakaLang = function () {
                         '@default': 'identifier'
                     }
                 }],
-                [/[A-Z][\w\$]*/, 'type.identifier'],  // to show class names nicely
+                [/[A-Z][\w\$]*/, 'type.identifier'], // to show class names nicely
 
                 // whitespace
                 { include: '@whitespace' },
@@ -76,7 +81,7 @@ const pakaLang = function () {
                 [/[;,.]/, 'delimiter'],
 
                 // strings
-                [/"([^"\\]|\\.)*$/, 'string.invalid'],  // non-teminated string
+                [/"([^"\\]|\\.)*$/, 'string.invalid'], // non-teminated string
                 [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
 
                 // characters
@@ -98,14 +103,14 @@ const pakaLang = function () {
 
             whitespace: [
                 [/[ \t\r\n]+/, 'white'],
-                [/\/\*/, 'comment', '@comment'],
-                [/\/\/.*$/, 'comment'],
+                [/##*/, 'comment', '@comment'],
+                [/##.*$/, 'comment'],
             ],
         },
     };
 
 }
-const rereq = async function (src, cb) {
+const rereq = async function(src, cb) {
     let res = await fetch('/api/info', {
         method: 'POST',
         mode: 'cors',
@@ -119,7 +124,7 @@ const rereq = async function (src, cb) {
     return res.json();
 };
 
-let ty2s = function (obj) {
+let ty2s = function(obj) {
     if (Array.isArray(obj)) {
         obj = {
             type: 'tuple',
@@ -174,7 +179,7 @@ const scorePosition = function(line, col) {
     return line * 65536 + col;
 };
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     const editor = monaco.editor.create(document.getElementById('paka-main-input'), {
         value: '',
         language: 'paka',
@@ -185,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
     monaco.languages.register({ id: 'paka' });
     monaco.languages.setMonarchTokensProvider('paka', pakaLang());
     monaco.languages.registerHoverProvider('paka', {
-        provideHover: async function (model, position) {
+        provideHover: async function(model, position) {
             let middle = scorePosition(position.lineNumber, position.column);
             let res = await rereq(model.getValue());
             let found = '???';
@@ -220,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function () {
         automaticLayout: true,
     });
 
-    const run = function () {
+    const run = function() {
         let src = editor.getModel().getValue();
         let matches = src.match(/##\s*pragma\s+bench/g);
         let runBench = matches !== null;
@@ -228,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
             vars: {
                 stdout: '',
             },
-            format: function () {
+            format: function() {
                 let res = state.vars.stdout;
                 if (runBench) {
                     if (state.vars.endTime !== undefined) {
@@ -246,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return res;
             }
         });
-        const putchar = function (chr) {
+        const putchar = function(chr) {
             if (typeof chr === 'number') {
                 if (chr === 0) {
                     state.vars.stdout = '';
@@ -255,18 +260,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             } else {
                 switch (chr) {
-                    default:
-                        state.vars.stdout += chr;
-                        break;
+                    default: state.vars.stdout += chr;
+                    break;
                     case '__BEGIN__':
-                        state.vars.beginTime = new Date();
+                            state.vars.beginTime = new Date();
                         break;
                     case '__END__':
-                        state.vars.endTime = new Date();
+                            state.vars.endTime = new Date();
                         state.vars.status = 'SIGTERM';
                         break;
                     case '__TERM__':
-                        state.vars.endTime = new Date();
+                            state.vars.endTime = new Date();
                         state.vars.status = 'SIGKILL';
                         break;
                 }
@@ -293,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function () {
         id: 'save-stdout',
         label: 'Save',
         keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S],
-        run: function () {
+        run: function() {
             const text = result.getModel().getValue();
             const element = document.createElement('a');
             element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
@@ -305,13 +309,13 @@ document.addEventListener('DOMContentLoaded', function () {
         },
     });
 
-    editor.onKeyDown(function (event) {
+    editor.onKeyDown(function(event) {
         if (event.ctrlKey && event.keyCode === monaco.KeyCode.KEY_S) {
             event.preventDefault();
         }
     });
 
-    editor.onKeyUp(function (event) {
+    editor.onKeyUp(function(event) {
         if (event.ctrlKey && event.keyCode === monaco.KeyCode.KEY_S) {
             event.preventDefault();
         }

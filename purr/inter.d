@@ -41,6 +41,10 @@ string json(Type unk)
     {
         return `{"type": "never"}`;
     }
+    if (ty.as!Dynamic)
+    {
+        return `{"type": "dynamic"}`;
+    }
     if (ty.as!Nil)
     {
         return `{"type": "nil"}`;

@@ -18,6 +18,7 @@ opt: $(BIN)
 build: $(BIN) $(BIN)/purr 
 
 $(BIN)/purr: $(DFILES)
+	cp drt.d bin/drt.d
 	$(DC) $(DFILES) -O$(OPT) -J. $(DFLAGS) $(LFLAGS) $(LOUT)$@
 
 $(TMP):

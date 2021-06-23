@@ -84,8 +84,8 @@ class Compiler
     {
         output ~= "{";
         output ~= "if (" ~ pop ~ ")";
-        output ~= "{ goto " ~ branch.target[0].name ~ ";}"; 
-        output ~= "else { goto " ~ branch.target[1].name ~ ";}"; 
+        output ~= "{ goto " ~ branch.target[0].name ~ ";}";
+        output ~= "else { goto " ~ branch.target[1].name ~ ";}";
         output ~= "}";
         int pl = branch.target[1].place;
         branch.target[1].place = 1;
@@ -139,7 +139,14 @@ class Compiler
         {
             return;
         }
-        push(locals[instr.var]);
+        if (instr.type.fits(Type.dynamic) && instr.var == ".globalThis")
+        {
+            push("drt.GlobalThis.init");
+        }
+        else
+        {
+            push(locals[instr.var]);
+        }
     }
 
     void emit(CallInstruction call)
@@ -149,29 +156,52 @@ class Compiler
         {
             basety = generic.specialize(call.args);
         }
-        Func functy = basety.as!Func;
-        if (functy is null)
+        if (Dynamic dyn = basety.as!Dynamic)
+        {
+            string src;
+            src ~= "(";
+            foreach (arg; call.args)
+            {
+                if (arg.size != 0)
+                {
+                    src ~= pop;
+                    src ~= ",";
+                }
+                else
+                {
+                    src ~= "null,";
+                }
+            }
+            src ~= ")";
+            push(pop ~ src);
+        }
+        else if (Func functy = basety.as!Func)
+        {
+            if (functy.impl is null)
+            {
+                assert(false);
+            }
+            string src = functy.impl.dup;
+            src ~= "(";
+            foreach (arg; call.args)
+            {
+                if (arg.size != 0)
+                {
+                    src ~= pop;
+                    src ~= ",";
+                }
+                else
+                {
+                    src ~= "null,";
+                }
+            }
+            src ~= ")";
+            push(src);
+        }
+        else
         {
             throw new Exception("cannot call: " ~ call.func.to!string);
         }
-        if (functy.impl is null)
-        {
-            assert(false);
-        }
-        string src = functy.impl.dup;
-        src ~= "(";
-        foreach (arg; call.args)
-        {
-            if (arg.size != 0) {
-                src ~= pop;
-                src ~= ",";
-            }
-            else {
-                src ~= "null,";
-            }
-        }
-        src ~= ")";
-        push(src);
     }
 
     void emit(PushInstruction instr)
@@ -216,8 +246,19 @@ class Compiler
     {
         string rhs = pop;
         string lhs = pop;
+        if (op.op != "index" && op.inputTypes[1].fits(Type.dynamic))
+        {
+            rhs = rhs ~ ".as!double"; 
+        }
+        if (op.op != "index" && op.inputTypes[0].fits(Type.dynamic))
+        {
+            lhs = lhs ~ ".as!double"; 
+        }
         switch (op.op)
         {
+        case "index":
+            push(lhs ~ "[" ~ rhs ~ "]");
+            break;
         case "add":
             push(lhs ~ "+" ~ rhs);
             break;
@@ -261,7 +302,7 @@ class Compiler
         string lasto = output;
         string[string] lastl = locals;
         string[] lasts = stack;
-        scope(exit)
+        scope (exit)
         {
             output = lasto;
             locals = lastl;

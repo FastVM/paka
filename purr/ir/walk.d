@@ -93,7 +93,8 @@ final class Walker
             todos[$ - 1].length--;
             runTodo(first);
         }
-        if (holes.length != 0) {
+        if (holes.length != 0)
+        {
             return null;
         }
         Compiler compiler = new Compiler;
@@ -669,7 +670,30 @@ final class Walker
         return Type.never;
     }
 
-    alias walkIndex = walkBinary!"index";
+    // alias walkIndex = walkBinary!"index";
+
+    Type walkIndex(Node[] args)
+    {
+        Type t1 = walk(args[0]);
+        Type t2 = walk(args[1]);
+        Type tr = Type.unk;
+        t1.then((Known t1k) {
+            if (!t1k.check(Type.dynamic))
+            {
+                throw new Exception("cannot index: " ~ t1k.to!string);
+            }
+
+            t2.then((Known t2k) {
+                if (!t2k.check(Type.text))
+                {
+                throw new Exception("cannot use index: " ~ t2k.to!string);
+                }
+                tr.getUnk.set(Type.dynamic);
+            });
+        });
+        emit(new OperatorInstruction("index", tr, [t1, t2]));
+        return tr;
+    }
 
     Type walkBinary(string op)(Node[] args)
     {
@@ -677,7 +701,7 @@ final class Walker
         Type t2 = walk(args[1]);
         Type tr = Type.unk;
         t1.then((Known t1k) {
-            if (!t1k.check(Type.integer, Type.float_))
+            if (!t1k.check(Type.integer, Type.float_, Type.dynamic))
             {
                 throw new FailedBinaryOperatorLeft!op(t1k, [
                         Type.integer, Type.float_
@@ -693,7 +717,7 @@ final class Walker
             }
         });
         t2.then((Known t2k) {
-            if (!t2k.check(Type.integer, Type.float_))
+            if (!t2k.check(Type.integer, Type.float_, Type.dynamic))
             {
                 throw new FailedBinaryOperatorRight!op(t2k, [
                         Type.integer, Type.float_
@@ -717,7 +741,11 @@ final class Walker
             {
                 t1.getUnk.set(trk);
             }
-            if (t1.fits(Type.float_) || t2.fits(Type.float_))
+            if (t1.fits(Type.dynamic) || t2.fits(Type.dynamic))
+            {
+                tr = Type.float_;
+            }
+            else if (t1.fits(Type.float_) || t2.fits(Type.float_))
             {
                 tr = Type.float_;
             }
@@ -788,6 +816,13 @@ final class Walker
                     return Type.nil;
                 case "init":
                     return emitInit(walk(args[0]));
+                case "import":
+                    emit(new LoadInstruction(".globalThis", Type.dynamic));
+                    Type rhs = walk(args[0]);
+                    emit(new OperatorInstruction("index", Type.dynamic, [
+                                Type.dynamic, rhs
+                            ]));
+                    return Type.dynamic;
                 }
             }
             Type ty = walk(fun);
@@ -814,6 +849,10 @@ final class Walker
             }
             emit(new CallInstruction(ty, argTypes));
             return Type.lambda({
+                if (ty.as!Dynamic)
+                {
+                    return Type.dynamic;
+                }
                 Func func = ty.as!Func;
                 assert(func, fun.to!string);
                 return func.ret;

@@ -29,14 +29,13 @@ import std.process;
 extern (C) __gshared string[] rt_options = [];
 
 string dflags;
-string wasmFlags = " -mtriple=wasm32-unknown-unknown-wasm -L--no-entry bin/crt.o";
+string wasmFlags = " -Os -L-s -mtriple=wasm32-unknown-unknown-wasm -L--allow-undefined -L--no-entry bin/crt.o";
 string outfile = "./bin/out";
 string runCommand = "";
 
 alias Thunk = void delegate();
 
 string drtd = import("drt.d");
-string crtc = import("crt.c");
 
 void extractRuntime()
 {
@@ -46,28 +45,12 @@ void extractRuntime()
         drtf.write(drtd);
         drtf.close();
     }
-    if (!"bin/crt.c".exists)
-    {
-        File crtf = File("bin/crt.c", "w");
-        crtf.write(crtc);
-        crtf.close();
-    }
-    if (!"bin/crt.o".exists)
-    {
-        string cmd = "clang -Ibin bin/crt.c -o bin/crt.o --target=wasm32-undefined-undefined-wasm -c";
-        auto res = executeShell(cmd);
-        if (res.status != 0)
-        {
-            writeln(res.output);
-            throw new Exception("could not build runtime");
-        }
-    }
 }
 
 Thunk cliCleanHandler()
 {
     return {
-        foreach (filename; ["bin/crt.c", "bin/drt.d", "bin/crt.o"])
+        foreach (filename; ["bin/drt.d"])
         {
             if (filename.exists)
             {

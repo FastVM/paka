@@ -152,6 +152,11 @@ class Type
         return new Generic(spec);
     }
 
+    static Type dynamic()
+    {
+        return new Dynamic;
+    }
+
     static Type nil()
     {
         return new Nil;
@@ -494,6 +499,24 @@ class Never : Known
     override string toString()
     {
         return "Never";
+    }
+}
+
+class Dynamic : Known
+{
+    override bool fits(Type other)
+    {
+        return other.as!Dynamic !is null || other.as!Never !is null;
+    }
+
+    override size_t size()
+    {
+        return 8;
+    }
+
+    override string toString()
+    {
+        return "Dynamic";
     }
 }
 
