@@ -1,2 +1,7 @@
-evaljs = import("eval")
-evaljs("[!+[]+!+[]+!+[]+!+[]]+[!+[]+!+[]+!+[]+!+[]+!+[]+!+[]+!+[]+!+[]+!+[]]") |> println
+self = import("globalThis")
+
+arr = self::Array(10).fill(0)
+arr = arr.map(lambda (v, k, a) {
+    k
+})
+self::console::log(arr)

@@ -14,7 +14,7 @@ import purr.type.repr;
 
 alias InstrTypes = AliasSeq!(LogicalBranch, GotoBranch,
         ReturnBranch, CallInstruction, PushInstruction, OperatorInstruction,
-        LambdaInstruction, PopInstruction, PrintInstruction,
+        LambdaInstruction, PopInstruction,
         StoreInstruction, StoreIndexInstruction, LoadInstruction);
 
 __gshared size_t nameCount;
@@ -225,7 +225,7 @@ class OperatorInstruction : Instruction
         op = oper;
         resType = rt;
         inputTypes = its;
-        assert(operators.canFind(oper) || oper == "index");
+        assert(operators.canFind(oper) || oper == "index" || oper == "bind");
     }
 
     override string toString()
@@ -242,13 +242,15 @@ class LambdaInstruction : Instruction
     Type[string] types;
     string[] args;
     string impl;
+    Type ret;
 
-    this(BasicBlock bb, string[] a, Type[string] t, string ip)
+    this(BasicBlock bb, string[] a, Type[string] t, string ip, Type r)
     {
         entry = bb;
         types = t;
         args = a;
         impl = ip;
+        ret = r;
     }
 
     override string toString()
@@ -276,23 +278,6 @@ class PopInstruction : Instruction
     }
 }
 
-class PrintInstruction : Instruction
-{
-    Type type;
-
-    this(Type t)
-    {
-        type = t;
-    }
-
-    override string toString()
-    {
-        string ret;
-        ret ~= "print\n";
-        return ret;
-    }
-}
-
 class StoreInstruction : Instruction
 {
     string var;
@@ -314,14 +299,17 @@ class StoreInstruction : Instruction
 
 class StoreIndexInstruction : Instruction
 {
-    this()
+    Type type;
+
+    this(Type t)
     {
+        type = t;
     }
 
     override string toString()
     {
         string ret;
-        ret ~= "store-index\n";
+        ret ~= "store-index: " ~ type.to!string ~ "\n";
         return ret;
     }
 }

@@ -21,7 +21,7 @@ const runCompiler = function(src, method, callback) {
                     proc.execFile(__dirname + '/bin/purr', ['--debug', '--' + method + '=' + workdir + '/input', '--wasm=wasmer'], {
                         cwd: workdir,
                         env: { 'PATH': __dirname + '/bin' },
-                        timeout: 2000,
+                        timeout: 4000,
                     }, (err, stdout, stderr) => {
                         callback(err, stdout, stderr, workdir);
                     });
@@ -81,6 +81,6 @@ var server = https.createServer({}, app);
 //     console.log('https started');
 // })
 
-server.listen(8000, () => {
-    console.log('dev started');
+app.listen(8000, () => {
+    console.log('dev started 8000');
 })

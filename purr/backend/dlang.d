@@ -16,6 +16,7 @@ class Compiler
     string[string] locals;
     Opt opt;
     string[string] funcs;
+    Type retty;
 
     this()
     {
@@ -42,8 +43,8 @@ class Compiler
         opt.opt(block);
         output ~= "static import drt;auto main2() {";
         emit(block);
-        output ~= "}extern(C)int main(int argc, char** argv){cast(void)main2();return 0;}";
-        return funcs.values.join ~ output;
+        output ~= "}int main(int argc, char** argv){cast(void)main2();return 0;}";
+        return "extern(C):" ~ funcs.values.join ~ output;
     }
 
     string emit(BasicBlock block)
@@ -121,16 +122,36 @@ class Compiler
         if (branch.type.size == 0)
         {
             output ~= "return null;";
+            return;
         }
-        else
+        string val = pop;
+        if (retty.as!Dynamic)
         {
-            output ~= "return " ~ pop ~ ";";
+            // if (!branch.type.as!Dynamic)
+            // {
+            //     output ~= "return drt.Value(" ~ val ~ ").ptr;";
+            // }
+            // else
+            // {
+                output ~= "return " ~ val ~ ".ptr;";
+            // }
+        }
+        else {
+            output ~= "return " ~ val ~ ";";
         }
     }
 
     void emit(StoreIndexInstruction store)
     {
-        assert(false);
+        if (store.type.size == 0)
+        {
+            return;
+        }
+        string val = pop;
+        string ind = pop;
+        string var = pop;
+        output ~= var ~ "[" ~ ind ~ "]" ~ "= typeof("~ var ~ "[" ~ ind ~ "])(" ~ val ~ ");";
+        push(var ~ "[" ~ ind ~ "]");
     }
 
     void emit(LoadInstruction instr)
@@ -165,12 +186,67 @@ class Compiler
                 if (arg.size != 0)
                 {
                     src ~= pop;
-                    src ~= ",";
+                }
+                else if (Generic g = arg.as!Generic)
+                {
+                    Type[] largs = new Type[g.args.length];
+                    largs[] = Type.dynamic;
+                    Type t = g.specialize(largs);
+                    Func f = t.as!Func;
+                    assert(f);
+                    if (f.ret.as!Dynamic)
+                    {
+                        src ~= "function(";
+                        foreach (n; 0..g.args.length)
+                        {
+                            src ~= "double _a_" ~ to!string(g.args.length-1-n) ~ ",";
+                        }
+                        src ~= "){return ";
+                        src ~= "" ~ f.impl;
+                        src ~= "!(";
+                        foreach (n; 0..g.args.length)
+                        {
+                            src ~= "drt.Value,";
+                        }
+                        src ~= ")(";
+                        foreach (n; 0..g.args.length)
+                        {
+                            src ~= "drt.Value.from(_a_" ~ n.to!string ~ "),";
+                        }
+                        src ~= ");}";
+                    }
+                    else
+                    {
+                        src ~= "function(";
+                        foreach (n; 0..g.args.length)
+                        {
+                            src ~= "double _a_" ~ to!string(g.args.length-1-n) ~ ",";
+                        }
+                        src ~= "){return drt.Value(";
+                        src ~= "" ~ f.impl;
+                        src ~= "!(";
+                        foreach (n; 0..g.args.length)
+                        {
+                            src ~= "drt.Value,";
+                        }
+                        src ~= ")(";
+                        foreach (n; 0..g.args.length)
+                        {
+                            src ~= "drt.Value.from(_a_" ~ to!string(n) ~ "),";
+                        }
+                        src ~= ")).ptr;}";
+                    }
+
+                }
+                else if (Func f = arg.as!Func)
+                {
+                    src ~= "&" ~ f.impl;
                 }
                 else
                 {
-                    src ~= "null,";
+                    src ~= "null";
                 }
+                src ~= ",";
             }
             src ~= ")";
             push(pop ~ src);
@@ -246,11 +322,11 @@ class Compiler
     {
         string rhs = pop;
         string lhs = pop;
-        if (op.op != "index" && op.inputTypes[1].fits(Type.dynamic))
+        if (op.op != "index" && op.op != "bind" && op.inputTypes[1].fits(Type.dynamic))
         {
             rhs = rhs ~ ".as!double"; 
         }
-        if (op.op != "index" && op.inputTypes[0].fits(Type.dynamic))
+        if (op.op != "index" && op.op != "bind" && op.inputTypes[0].fits(Type.dynamic))
         {
             lhs = lhs ~ ".as!double"; 
         }
@@ -258,6 +334,9 @@ class Compiler
         {
         case "index":
             push(lhs ~ "[" ~ rhs ~ "]");
+            break;
+        case "bind":
+            push(lhs ~ ".opBind(" ~rhs ~")");
             break;
         case "add":
             push(lhs ~ "+" ~ rhs);
@@ -302,29 +381,41 @@ class Compiler
         string lasto = output;
         string[string] lastl = locals;
         string[] lasts = stack;
+        Type lastr = retty;
         scope (exit)
         {
             output = lasto;
             locals = lastl;
             stack = lasts;
+            retty = lastr;
         }
         locals = null;
         output = null;
         stack = null;
-        output ~= "auto " ~ lambda.impl;
+        retty = lambda.ret;
+        output ~= "auto";
+        output ~= " ";
+        output ~= lambda.impl;
         output ~= "(";
         foreach (name; lambda.args)
         {
-            output ~= "T_" ~ name ~ ",";
+            output ~= "_T_" ~ name ~ ",";
         }
         output ~= ")";
         output ~= "(";
         foreach (name; lambda.args)
         {
-            output ~= "T_" ~ name ~ " ";
+            output ~= "_T_" ~ name ~ " ";
             output ~= name;
             output ~= ",";
-            locals[name] = name;
+            if (lambda.types[name].as!Dynamic)
+            {
+                locals[name] = name;
+            }
+            else
+            {
+                locals[name] = name;
+            }
         }
         output ~= ")";
         output ~= "{";
@@ -352,25 +443,12 @@ class Compiler
         if (string* pname = name in locals)
         {
             name = *pname;
-            // output ~= name ~ "= cast(typeof(" ~ name~ "))(" ~ pop ~ ");";
-            output ~= name ~ " = " ~ pop ~ ";";
+            output ~= name ~ "= typeof(" ~ name~ ")(" ~ pop ~ ");";
         }
         else
         {
             output ~= "auto " ~ name ~ "=" ~ pop ~ ";";
             locals[name] = name;
-        }
-    }
-
-    void emit(PrintInstruction instr)
-    {
-        if (Higher h = instr.type.as!Higher)
-        {
-            output ~= "drt.write(`" ~ h.type.to!string ~ "`);";
-        }
-        else
-        {
-            output ~= "drt.write(" ~ pop ~ ");";
         }
     }
 }

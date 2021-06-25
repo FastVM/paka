@@ -28,8 +28,7 @@ import std.process;
 
 extern (C) __gshared string[] rt_options = [];
 
-string dflags;
-string wasmFlags = " -Os -L-s -mtriple=wasm32-unknown-unknown-wasm -L--allow-undefined -L--no-entry bin/crt.o";
+string dflags = " -g -L-s -L-exort-dynamic -L--export-table -mtriple=wasm32-unknown-unknown-wasm -L--allow-undefined -L--no-entry";
 string outfile = "./bin/out";
 string runCommand = "";
 
@@ -65,7 +64,6 @@ Thunk cliWasmHandler(string run)
     return {
         extractRuntime;
         runCommand = run;
-        dflags ~= wasmFlags;
     };
 }
 

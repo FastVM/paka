@@ -458,13 +458,15 @@ final class Walker
             if (globals !is null)
             {
                 globals.instrs ~= new LambdaInstruction(lambda, argNames,
-                        localTypes[$ - 1], functy.impl);
-                todos[$ - 1] ~= Todo(lambda, defArgs, argNames, localTypes[$ - 1], functy);
+                        localTypes[$ - 1], functy.impl, functy.ret);
+                Todo td = Todo(lambda, defArgs, argNames, localTypes[$ - 1], functy);
+                todos[$-1] ~= td;
             }
             done.getUnk.set(cast(Type) functy);
             return done;
         }
 
+        gen.args = call.args;
         gen.runme = &specialize;
 
         return ret;
@@ -502,6 +504,14 @@ final class Walker
             if (call.form == "args" || call.form == "call")
             {
                 return walkStoreFun(call.args[0], call.args[1 .. $], args[1]);
+            }
+            else if (call.form == "index")
+            {
+                walk(call.args[0]);
+                walk(call.args[1]);
+                Type ret = walk(args[1]);
+                emit(new StoreIndexInstruction(ret));
+                return ret;
             }
             else
             {
@@ -637,7 +647,7 @@ final class Walker
         Func functy = Func.empty;
         functy.args = argTypes;
         // functy.ret = Type.nil;
-        emit(new LambdaInstruction(lambda, argNames, locals, functy.impl));
+        emit(new LambdaInstruction(lambda, argNames, locals, functy.impl, functy.ret));
         todos[$ - 1] ~= Todo(lambda, args, argNames, locals, functy);
         return cast(Type) functy;
     }
@@ -670,9 +680,7 @@ final class Walker
         return Type.never;
     }
 
-    // alias walkIndex = walkBinary!"index";
-
-    Type walkIndex(Node[] args)
+    Type walkIndex(string op)(Node[] args)
     {
         Type t1 = walk(args[0]);
         Type t2 = walk(args[1]);
@@ -691,7 +699,7 @@ final class Walker
                 tr.getUnk.set(Type.dynamic);
             });
         });
-        emit(new OperatorInstruction("index", tr, [t1, t2]));
+        emit(new OperatorInstruction(op, tr, [t1, t2]));
         return tr;
     }
 
@@ -806,14 +814,6 @@ final class Walker
                     globals = null;
                     Type ret = walk(args[0]);
                     return Type.higher(ret);
-                case "print":
-                    walkPrint(args);
-                    return Type.nil;
-                case "println":
-                    walkPrint(args);
-                    Type type = walk(new Value("\n"));
-                    emit(new PrintInstruction(type));
-                    return Type.nil;
                 case "init":
                     return emitInit(walk(args[0]));
                 case "import":
@@ -842,6 +842,14 @@ final class Walker
                 {
                     throw new Exception("type error in function arguments");
                 }
+                argTypes[argno].then((Known kn) {
+                    if (Generic g = kn.as!Generic)
+                    {
+                        Type[] largs = new Type[g.args.length];
+                        largs[] = Type.dynamic;
+                        g.specialize(largs);
+                    }
+                });
             }
             if (Generic generic = ty.as!Generic)
             {
@@ -858,16 +866,6 @@ final class Walker
                 return func.ret;
             });
         }
-    }
-
-    Type walkPrint(Node[] args)
-    {
-        foreach (arg; args)
-        {
-            Type type = walk(arg);
-            emit(new PrintInstruction(type));
-        }
-        return Type.nil;
     }
 
     Type walkTuple(Node[] args)
@@ -925,8 +923,10 @@ final class Walker
             return walkCall(args[0], args[1 .. $]);
         case "return":
             return walkReturn(args);
+        case "bind":
+            return walkIndex!"bind"(args);
         case "index":
-            return walkIndex(args);
+            return walkIndex!"index"(args);
         case "::":
             return walk(new Value(walk(args[0]).fits(walkType(args[1]))));
         case "->":

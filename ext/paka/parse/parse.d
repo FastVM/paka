@@ -152,15 +152,27 @@ Node readPostExtendImpl(TokenArray tokens, Node last)
     else if (tokens.first.isOperator("."))
     {
         tokens.nextIs(Token.Type.operator, ".");
-        Node index = new Value(tokens.first.value);
-        tokens.nextIs(Token.Type.ident);
-        return tokens.readPostExtend(new Form("index", last, index));
+        Node index = void;
+        if (tokens.first.isOpen("(")) {
+            index = new Form("do", tokens.readOpen1!"()");
+        }
+        else {
+            index = new Value(tokens.first.value);
+            tokens.nextIs(Token.Type.ident);
+        }
+        return tokens.readPostExtend(new Form("bind", last, index));
     }
     else if (tokens.first.isOperator("::"))
     {
         tokens.nextIs(Token.Type.operator, "::");
-        Node index = new Value(tokens.first.value);
-        tokens.nextIs(Token.Type.ident);
+        Node index = void;
+        if (tokens.first.isOpen("(")) {
+            index = new Form("do", tokens.readOpen1!"()");
+        }
+        else {
+            index = new Value(tokens.first.value);
+            tokens.nextIs(Token.Type.ident);
+        }
         return tokens.readPostExtend(new Form("index", last, index));
     }
     else

@@ -57,6 +57,8 @@ enum string nameToOp(string name)
     case "neg":
         return ".";
     case "index":
+        return "::";
+    case "bind":
         return ".";
     }
 }

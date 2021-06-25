@@ -381,6 +381,7 @@ class Generic : Known
 {
     Type[] rets;
     Type[][] cases;
+    Node[] args;
     Type delegate(Type[]) runme;
 
     this(Type delegate(Type[]) spec)
