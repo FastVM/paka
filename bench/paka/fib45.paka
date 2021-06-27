@@ -4,4 +4,4 @@ def fib(n):
     else:
         fib(n - 2) + fib(n - 1)
 
-println(fib(45))
+import("console").log(fib(45))

@@ -16,7 +16,7 @@ string[][] prec = [
 ];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "::", "not", ",", "\\", "!", "#", ":", "..."];
+string[] nops = [".", "::", "not", ",", "!", ":", "..."];
 
 /// language keywords
 string[] keywords = [
@@ -201,7 +201,8 @@ Token readToken(ref SrcLoc location)
     }
 
 redo:
-    if (peek == '#' && code.length >= 2 && code[1] == '#')
+    // if (peek == '#' && code.length >= 2 && code[1] == '#')
+    if (peek == '#')
     {
         while (code.length != 0 && peek != '\n')
         {
@@ -287,22 +288,6 @@ redo:
                 case 's':
                     ret ~= ' ';
                     break;
-                // case 'f':
-                //     goto case;
-                // case 'u':
-                //     ret ~= '\\';
-                //     ret ~= got;
-                //     while (got != '}')
-                //     {
-                //         got = read;
-                //         if (got == '\0')
-                //         {
-                //             throw new Exception("parse error: end of file with unclosed string");
-                //         }
-                //         ret ~= got;
-                //     }
-                //     ret ~= '\\';
-                //     break;
                 default:
                     throw new Exception("parse error: unknown escape '" ~ got ~ "'");
                 }

@@ -30,11 +30,12 @@ extern (C) __gshared string[] rt_options = [];
 
 string dflags = " -g -L-s -L-exort-dynamic -L--export-table -mtriple=wasm32-unknown-unknown-wasm -L--allow-undefined -L--no-entry";
 string outfile = "./bin/out";
-string runCommand = "";
+string runCommand = "./bin/run.js";
 
 alias Thunk = void delegate();
 
 string drtd = import("drt.d");
+string runjs = import("run.js");
 
 void extractRuntime()
 {
@@ -129,6 +130,10 @@ Thunk cliParseHandler(immutable string code)
 Thunk cliRunHandler()
 {
     return {
+        File file = File("./bin/run.js", "w");
+        file.write(runjs);
+        file.close();
+        "./bin/run.js".setAttributes("./bin/run.js".getAttributes | octal!700);
         if (runCommand.length == 0)
         {
             Pid pid = spawnProcess([outfile]);

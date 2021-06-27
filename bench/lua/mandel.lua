@@ -1,4 +1,4 @@
-local width = 150
+local width = 100
 local height = width / 2
 local iters = 100000
 local write = io.write

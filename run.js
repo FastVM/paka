@@ -5,12 +5,24 @@ const filename = process.argv[2];
 const src = fs.readFileSync(filename);
 
 let ctx = globalThis;
-let objs = new Map();
+let objs = Object.create(null);
 let nobjs = 0;
 let tmpstr = '';
 let tmpargs = [];
 let stdout = '';
 let tbl;
+
+ctx.objs = objs;
+
+ctx.require = require;
+
+ctx.purr_array_cons = function() {
+    return Array.from(arguments);
+};
+
+ctx.purr_array_length = function(arr) {
+    return arr.length;
+};
 
 const putchar = function(code) {
     if (code === 10) {
@@ -20,6 +32,10 @@ const putchar = function(code) {
         stdout += String.fromCharCode(code);
     }
     return 0;
+};
+
+const objrm = function(ptr) {
+    delete objs[ptr];
 };
 
 const alloc = function() {
@@ -38,16 +54,17 @@ const allocf = function(f) {
     nobjs += 1;
     let fun = tbl.get(f);
     objs[nobjs] = function() {
+        if (arguments.length != fun.length) {
+            throw new Error(`argc errro: given ${arguments.length}, expected ${fun.length}`)
+        }
         let args = Array.prototype.map.call(arguments, function(a) {
             nobjs += 1;
             objs[nobjs] = a;
             return nobjs;
         });
         let res = fun.apply(null, args);
-        // args.forEach(function(a) {
-        //     delete objs[a];
-        // });
-        return objs[res];
+        let ret = objs[res];
+        return ret;
     };
     return nobjs;
 };
@@ -63,10 +80,6 @@ const objdup = function(ptr) {
     objs[nobjs] = objs[ptr];
     return nobjs;
 };
-
-const objrm = function(ptr) {
-    delete objs[ptr];
-}
 
 const loadjs = function() {
     nobjs += 1;
@@ -109,7 +122,6 @@ const objgetval = function(ptr) {
 const objbind = function(ptr) {
     let obj = objs[ptr];
     let fun = obj[tmpstr];
-    // let res = fun;
     let res = fun.bind(obj);
     nobjs += 1;
     objs[nobjs] = res;
@@ -130,12 +142,12 @@ const objcall = function(ptr) {
 
 const env = {
     putchar,
+    objrm,
     alloc,
     allocf,
     allocn,
     allocs,
     objdup,
-    objrm,
     loadjs,
     tmpadd,
     tmpdel,
@@ -152,4 +164,7 @@ const env = {
 WebAssembly.instantiate(src, { env }).then(res => {
     tbl = res.instance.exports.__indirect_function_table;
     res.instance.exports._start();
+    for (let _ in objs) {
+        throw new Error(`leaked: ${Object.keys(objs).length} objects`);
+    }
 });

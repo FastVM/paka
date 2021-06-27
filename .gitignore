@@ -39,3 +39,4 @@ gwion-benchmark
 .DS_Store
 profile.raw
 profile.data
+node_modules

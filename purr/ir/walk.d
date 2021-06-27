@@ -89,8 +89,8 @@ final class Walker
         }
         while (todos[$ - 1].length != 0)
         {
-            Todo first = todos[$ - 1][$ - 1];
-            todos[$ - 1].length--;
+            Todo first = todos[$ - 1][0];
+            todos[$ - 1] = todos[$-1][1..$];
             runTodo(first);
         }
         if (holes.length != 0)
@@ -878,6 +878,20 @@ final class Walker
         return Type.join(types);
     }
 
+    Type walkArray(Node[] args)
+    {
+        Node cons = new Form("call", new Ident("import"), new Value("purr_array_cons"));
+        Node call = new Form("call", cons, args);
+        return walk(call);
+    }
+
+    Type walkLength(Node[] args)
+    {
+        Node len = new Form("call", new Ident("import"), new Value("purr_array_length"));
+        Node call = new Form("call", len, args);
+        return walk(call);
+    }
+
     // Type walkStatic(Node[] args)
     // {
     //     BasicBlock lastBlock = block;
@@ -913,6 +927,10 @@ final class Walker
             return walkDef(args);
         case "tuple":
             return walkTuple(args);
+        case "array":
+            return walkArray(args);
+        case "length":
+            return walkLength(args);
         case "lambda":
             return walkLambda(args);
         case "set":

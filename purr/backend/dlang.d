@@ -8,6 +8,38 @@ import purr.ir.opt;
 import purr.ir.repr;
 import purr.type.repr;
 
+string typeFormat(Type t)
+{
+    if (t.as!Dynamic)
+    {
+        return "double";
+    }
+    else if (t.as!Integer)
+    {
+        return "double";
+    }
+    else if (t.as!Float)
+    {
+        return "double";
+    }
+    else if (t.as!Nil)
+    {
+        return "typeof(null)";
+    }
+    else if (t.as!Logical)
+    {
+        return "bool";
+    }
+    else if (t.as!Text)
+    {
+        return "string";
+    }
+    else
+    {
+        throw new Exception("cannot return " ~ t.to!string);
+    }
+}
+
 class Compiler
 {
     string output;
@@ -127,17 +159,24 @@ class Compiler
         string val = pop;
         if (retty.as!Dynamic)
         {
-            // if (!branch.type.as!Dynamic)
-            // {
-            //     output ~= "return drt.Value(" ~ val ~ ").ptr;";
-            // }
-            // else
-            // {
-                output ~= "return " ~ val ~ ".ptr;";
-            // }
+            if (branch.type.as!Dynamic)
+            {
+                output ~= "return " ~ val ~ ".dup;";
+            }
+            else
+            {
+                output ~= "return drt.Value(" ~ val ~ ").dup;";
+            }
         }
         else {
-            output ~= "return " ~ val ~ ";";
+            if (branch.type.as!Dynamic)
+            {
+                output ~= "return drt.Value("~ val~").as!double;";
+            }
+            else
+            {
+                output ~= "return "~ val~";";
+            }
         }
     }
 
@@ -181,7 +220,7 @@ class Compiler
         {
             string src;
             src ~= "(";
-            foreach (arg; call.args)
+            foreach_reverse (arg; call.args)
             {
                 if (arg.size != 0)
                 {
@@ -209,7 +248,7 @@ class Compiler
                             src ~= "drt.Value,";
                         }
                         src ~= ")(";
-                        foreach (n; 0..g.args.length)
+                        foreach_reverse (n; 0..g.args.length)
                         {
                             src ~= "drt.Value.from(_a_" ~ n.to!string ~ "),";
                         }
@@ -230,7 +269,7 @@ class Compiler
                             src ~= "drt.Value,";
                         }
                         src ~= ")(";
-                        foreach (n; 0..g.args.length)
+                        foreach_reverse (n; 0..g.args.length)
                         {
                             src ~= "drt.Value.from(_a_" ~ to!string(n) ~ "),";
                         }
@@ -250,6 +289,7 @@ class Compiler
             }
             src ~= ")";
             push(pop ~ src);
+            // push("drt.Value.from(" ~ pop ~ ")");
         }
         else if (Func functy = basety.as!Func)
         {
@@ -259,20 +299,29 @@ class Compiler
             }
             string src = functy.impl.dup;
             src ~= "(";
-            foreach (arg; call.args)
+            string[] strs;
+            foreach_reverse (arg; call.args)
             {
                 if (arg.size != 0)
                 {
-                    src ~= pop;
-                    src ~= ",";
+                    strs ~= pop;
                 }
                 else
                 {
-                    src ~= "null,";
+                    strs ~= "null";
                 }
+            }
+            foreach_reverse (arg; strs)
+            {
+                src ~= arg;
+                src ~= ",";
             }
             src ~= ")";
             push(src);
+            if (functy.ret.as!Dynamic)
+            {
+                push("drt.Value.from(" ~ pop ~ ")");
+            }
         }
         else
         {
@@ -393,7 +442,7 @@ class Compiler
         output = null;
         stack = null;
         retty = lambda.ret;
-        output ~= "auto";
+        output ~= typeFormat(lambda.ret);
         output ~= " ";
         output ~= lambda.impl;
         output ~= "(";
@@ -443,7 +492,7 @@ class Compiler
         if (string* pname = name in locals)
         {
             name = *pname;
-            output ~= name ~ "= typeof(" ~ name~ ")(" ~ pop ~ ");";
+            output ~= name ~ "= cast(typeof(" ~ name~ "))(" ~ pop ~ ");";
         }
         else
         {

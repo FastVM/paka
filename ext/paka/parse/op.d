@@ -14,11 +14,7 @@ UnaryOp parseUnaryOp(string[] ops)
         return (Node rhs) { return now(next(rhs)); };
     }
     string opName = ops[0];
-    if (opName == "#")
-    {
-        return (Node rhs) { return new Form("length", [rhs]); };
-    }
-    else if (opName == "not")
+    if (opName == "not")
     {
         return (Node rhs) { return new Form("not", rhs); };
     }

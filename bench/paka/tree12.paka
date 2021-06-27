@@ -1,0 +1,44 @@
+def bottom_up_tree(item, depth) {
+    if depth > 0 {
+        i = item + item
+        left = bottom_up_tree(i-1, depth - 1)
+        right = bottom_up_tree(i, depth - 1)
+        return [item, left, right]
+    } else {
+        return [item]
+    }
+} 
+
+def item_check(tree) {
+    if tree::length == 3 {
+        return tree::0 + item_check(tree::1) - item_check(tree::2)
+    } else {
+        return tree::0
+    }
+}
+
+console = import("console")
+math = import("Math")
+
+min_depth = 4
+max_depth = 12
+
+stretch_depth = max_depth + 1
+stretch_tree = bottom_up_tree(0, stretch_depth)
+console.log("stretch tree of depth", stretch_depth, "check:", item_check(stretch_tree))
+
+long_lived_tree = bottom_up_tree(0, max_depth)
+depth = min_depth
+while depth <= max_depth {
+    iterations = math.pow(2, max_depth - depth + min_depth)
+    check = 0
+    i = 1
+    while i <= iterations {
+        check = check + item_check(bottom_up_tree(1, depth)) +
+            item_check(bottom_up_tree(0-1, depth))
+        i = i + 1
+    }
+    depth = depth + 2
+    console.log(iterations * 2, "trees of depth", depth, "check:", check)
+}
+console.log("long lived tree of depth", max_depth, "check:", item_check(long_lived_tree))

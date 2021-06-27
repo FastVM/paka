@@ -9,8 +9,11 @@ extern (C)
     double allocn(double n);
     double allocf(void function() f);
     double objdup(double obj);
-    void objrm(double ptr);
     double loadjs();
+
+    void objrm(double ptr);
+    void increfc(double ptr);
+    void decrefc(double ptr);
 
     void tmpadd(int c);
     void tmpdel();
@@ -46,42 +49,43 @@ struct GlobalThis
 {
     static Value opIndex(string src)
     {
-        Value ret = void;
         setstr(src);
-        ret.ptr = loadjs();
+        double js = loadjs();
+        Value ret = Value.from(js);
         return ret;
     }
-
-    // static Value opDispatch(string member)()
-    // {
-    //     return GlobalThis[member];
-    // }
 }
 
 struct Value
 {
 align(1):
-    double ptr;
-    // int refc = 1;
+    double ptr = double.init;
+    int refc = 0;
 
     static Value from(double vptr)
     {
         Value ret;
-        ret.ptr = objdup(vptr);
+        ret.ptr = vptr;
         return ret;
     }
 
-    // this(this)
-    // {
-    //     double last = ptr;
-    //     ptr = objdup(last);
-    //     objrm(last);
-    // }
+    double dup()
+    {
+        return objdup(ptr);
+    }
 
-    // ~this()
-    // {
-    //     objrm(ptr);
-    // }
+    this(this)
+    {
+        refc++;
+    }
+
+    ~this()
+    {
+        if (refc == 0) {
+            objrm(ptr);
+        }
+        refc--;
+    }
 
     this(double n)
     {
@@ -101,7 +105,7 @@ align(1):
 
     this(Value other)
     {
-        ptr = objdup(other.ptr);
+        ptr = other.dup;
     }
 
     this(T)(T v) if (is(typeof(*v) == function))
@@ -193,11 +197,12 @@ align(1):
 
     Value opCall(Args...)(Args args)
     {
-        Value[args.length] vals;
-        static foreach (index; 1 .. args.length + 1)
+        static foreach_reverse (ind, arg; args)
         {
-            vals[index - 1] = Value(args[$ - index]);
-            objcallarg(vals[index - 1].ptr);
+            {
+                Value val = Value(arg);
+                objcallarg(val.ptr);
+            }
         }
         double got = objcall(ptr);
         return Value.from(got);
@@ -218,66 +223,4 @@ align(1):
         setstr(method);
         return Value.from(objbind(ptr));
     }
-
-    // Value opDispatch(string member)()
-    // {
-    //     return this[member];
-    // }
-
-    // Value opDispatch(string member, Args...)(Args args)
-    // {
-    //     return this[member](args);
-    // }
 }
-
-// void write(string src)
-// {
-//     foreach (chr; src)
-//     {
-//         putchar(chr);
-//     }
-// }
-
-// void write(long src)
-// {
-//     if (src >= 10)
-//     {
-//         write(src / 10);
-//     }
-//     putchar(cast(char)('0' + src % 10));
-// }
-
-// void write(double src)
-// {
-//     if (src < 0)
-//     {
-//         putchar('-');
-//         src *= -1;
-//     }
-//     ulong d = cast(ulong) src;
-//     write(d);
-//     putchar('.');
-//     foreach (p; 0 .. 16)
-//     {
-//         src -= d;
-//         if (src <= 0.001)
-//         {
-//             if (p == 0)
-//             {
-//                 putchar('0');
-//             }
-//             break;
-//         }
-//         if (src >= 0.999)
-//         {
-//             if (p == 0)
-//             {
-//                 putchar('0');
-//             }
-//             break;
-//         }
-//         src *= 10;
-//         d = cast(ulong) src;
-//         putchar(cast(char)('0' + d));
-//     }
-// }

@@ -1,6 +1,8 @@
-width = 150
+width = 100
 height = width / 2
 iters = 100000
+
+stdout = import("process")::stdout
 
 y = 0
 while y < height {
@@ -26,12 +28,12 @@ while y < height {
             i = i + 1
         }
         if outside == 1 {
-            print(" ")
+            stdout.write(" ")
         } else {
-            print("#")
+            stdout.write("#")
         }
         x = x + 1
     }
-    println()
+    stdout.write("\n")
     y = y + 1
 }
