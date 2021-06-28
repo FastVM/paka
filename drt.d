@@ -4,31 +4,30 @@ extern (C) int main(int argc, char** argv);
 
 extern (C)
 {
-    double alloc();
-    double allocs();
-    double allocn(double n);
-    double allocf(void function() f);
-    double objdup(double obj);
-    double loadjs();
+    int alloco();
+    int alloca();
+    int allocs(size_t len, immutable(char) * src);
+    int allocn(double n);
+    int allocf(void function() f);
+    int objdup(int obj);
+    int loadjs(size_t len, immutable(char) * src);
 
-    void objrm(double ptr);
-    void increfc(double ptr);
-    void decrefc(double ptr);
+    void objrm(int ptr);
+    void increfc(int ptr);
+    void decrefc(int ptr);
 
-    void tmpadd(int c);
-    void tmpdel();
+    void settmpstr(size_t len, immutable(char) * src);
 
-    void objsetptr(double dest, double src);
-    void objsetn(double dest, double src, double n);
+    void objsetptr(int dest, int src, size_t len, immutable(char) * src);
+    void objsetn(int dest, int src, int n);
 
-    double objgetptr(double src);
-    double objgetn(double src, double n);
+    int objgetptr(int src, size_t len, immutable(char) * src);
+    int objgetn(int src, double n);
 
-    double objgetval(double src);
+    int objgetval(int src);
 
-    double objbind(double src);
-    double objcall(double src);
-    void objcallarg(double arg);
+    int objbind(int src, size_t len, immutable(char) * src);
+
 }
 
 extern (C) void _start()
@@ -36,12 +35,24 @@ extern (C) void _start()
     main(0, null);
 }
 
-void setstr(string str)
+template objcall(Args...)
 {
-    tmpdel();
-    foreach (c; str)
+    template objcallnargs(int n)
     {
-        tmpadd(c);
+        static if (n == 0)
+        {
+            enum string objcallnargs = "int";
+        }
+        else
+        {
+            enum string objcallnargs = objcallnargs!(n - 1) ~ ",int";
+        }
+    }
+    enum string objcallf = "objcall" ~ num2str!(Args.length);
+    mixin("pragma(mangle, `" ~ objcallf ~ "`) int " ~ objcallf ~ "(" ~ objcallnargs!(Args.length) ~ ");");
+    int objcall(int ptr, Args args)
+    {
+        return mixin(objcallf)(ptr, args);
     }
 }
 
@@ -49,8 +60,7 @@ struct GlobalThis
 {
     static Value opIndex(string src)
     {
-        setstr(src);
-        double js = loadjs();
+        int js = loadjs(src.length, src.ptr);
         Value ret = Value.from(js);
         return ret;
     }
@@ -59,19 +69,19 @@ struct GlobalThis
 struct Value
 {
 align(1):
-    double ptr = double.init;
+    int ptr = 0;
     int refc = 0;
 
-    static Value from(double vptr)
+    static Value from(int vptr)
     {
         Value ret;
         ret.ptr = vptr;
         return ret;
     }
 
-    double dup()
+    Value dup()
     {
-        return objdup(ptr);
+        return Value.from(objdup(ptr));
     }
 
     this(this)
@@ -81,7 +91,8 @@ align(1):
 
     ~this()
     {
-        if (refc == 0) {
+        if (refc == 0)
+        {
             objrm(ptr);
         }
         refc--;
@@ -99,13 +110,7 @@ align(1):
 
     this(string s)
     {
-        setstr(s);
-        ptr = allocs();
-    }
-
-    this(Value other)
-    {
-        ptr = other.dup;
+        ptr = allocs(s.length, s.ptr);
     }
 
     this(T)(T v) if (is(typeof(*v) == function))
@@ -113,6 +118,12 @@ align(1):
         extern (C) void function() f;
         f = cast(typeof(f)) v;
         ptr = allocf(f);
+    }
+
+    this(Value v)
+    {
+        ptr = v.ptr;
+        refc = -1;
     }
 
     Value opBinary(string op)(Value other)
@@ -133,8 +144,7 @@ align(1):
 
     Value opIndex(string ind)
     {
-        setstr(ind);
-        return Value.from(objgetptr(ptr));
+        return Value.from(objgetptr(ptr, ind.length, ind.ptr));
     }
 
     Value opIndex(Value v)
@@ -161,7 +171,7 @@ align(1):
         return 1;
     }
 
-    int opCmp(Value arg) 
+    int opCmp(Value arg)
     {
         double lhs = as!double;
         double rhs = arg.as!double;
@@ -191,20 +201,27 @@ align(1):
     void opIndexAssign(Arg)(Arg arg, string index)
     {
         Value other = Value(arg);
-        setstr(index);
-        objsetptr(ptr, other.ptr);
+        objsetptr(ptr, other.ptr, index.length, index.ptr);
     }
 
     Value opCall(Args...)(Args args)
     {
-        static foreach_reverse (ind, arg; args)
+        template objcallargs(int n)
         {
+            static if (n == 0)
             {
-                Value val = Value(arg);
-                objcallarg(val.ptr);
+                enum string objcallargs = "";
+            }
+            else static if (n == 1)
+            {
+                enum string objcallargs = "Value(args[0]).ptr";
+            }
+            else
+            {
+                enum string objcallargs = objcallargs!(n - 1) ~ ",Value(args[" ~ num2str!(n - 1) ~ "]).ptr";
             }
         }
-        double got = objcall(ptr);
+        int got = mixin("objcall(" ~ objcallargs!(Args.length) ~ ", ptr)");
         return Value.from(got);
     }
 
@@ -220,7 +237,18 @@ align(1):
 
     Value opBind(string method)
     {
-        setstr(method);
-        return Value.from(objbind(ptr));
+        return Value.from(objbind(ptr, method.length, method.ptr));
+    }
+}
+
+template num2str(int n)
+{
+    static if (n < 10)
+    {
+        enum string num2str = ['0' + n];
+    }
+    else
+    {
+        enum string num2str = num2str!(n / 10) ~ cast(char)('0' + (n % 10));
     }
 }

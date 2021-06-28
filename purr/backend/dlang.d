@@ -12,7 +12,7 @@ string typeFormat(Type t)
 {
     if (t.as!Dynamic)
     {
-        return "double";
+        return "drt.Value";
     }
     else if (t.as!Integer)
     {
@@ -171,7 +171,7 @@ class Compiler
         else {
             if (branch.type.as!Dynamic)
             {
-                output ~= "return drt.Value("~ val~").as!double;";
+                output ~= "return "~ val~".as!double;";
             }
             else
             {
@@ -238,7 +238,7 @@ class Compiler
                         src ~= "function(";
                         foreach (n; 0..g.args.length)
                         {
-                            src ~= "double _a_" ~ to!string(g.args.length-1-n) ~ ",";
+                            src ~= "drt.Value _a_" ~ to!string(g.args.length-1-n) ~ ",";
                         }
                         src ~= "){return ";
                         src ~= "" ~ f.impl;
@@ -250,7 +250,7 @@ class Compiler
                         src ~= ")(";
                         foreach_reverse (n; 0..g.args.length)
                         {
-                            src ~= "drt.Value.from(_a_" ~ n.to!string ~ "),";
+                            src ~= "_a_" ~ n.to!string ~ ",";
                         }
                         src ~= ");}";
                     }
@@ -259,7 +259,7 @@ class Compiler
                         src ~= "function(";
                         foreach (n; 0..g.args.length)
                         {
-                            src ~= "double _a_" ~ to!string(g.args.length-1-n) ~ ",";
+                            src ~= "drt.Value _a_" ~ to!string(g.args.length-1-n) ~ ",";
                         }
                         src ~= "){return drt.Value(";
                         src ~= "" ~ f.impl;
@@ -271,7 +271,7 @@ class Compiler
                         src ~= ")(";
                         foreach_reverse (n; 0..g.args.length)
                         {
-                            src ~= "drt.Value.from(_a_" ~ to!string(n) ~ "),";
+                            src ~= "_a_" ~ to!string(n) ~ ",";
                         }
                         src ~= ")).ptr;}";
                     }
@@ -318,10 +318,6 @@ class Compiler
             }
             src ~= ")";
             push(src);
-            if (functy.ret.as!Dynamic)
-            {
-                push("drt.Value.from(" ~ pop ~ ")");
-            }
         }
         else
         {

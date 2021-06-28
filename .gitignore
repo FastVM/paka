@@ -5,6 +5,7 @@
 *.obj
 *.so
 .dub
+*.log
 .history
 .purr
 .vscode
