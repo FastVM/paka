@@ -1,0 +1,5 @@
+def check(T, a) {
+    a :: T
+}
+
+Int.check(10).println

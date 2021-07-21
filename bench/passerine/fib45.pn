@@ -1,3 +1,0 @@
-fib = n -> magic "if" (n < 2, n, fib(n-2) + fib(n-1))
-
-println (fib 45)

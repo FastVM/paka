@@ -10,8 +10,7 @@ import purr.type.repr;
 /// all possible node types
 alias NodeTypes = AliasSeq!(Form, Value, Ident);
 
-enum NodeKind
-{
+enum NodeKind {
     base,
     call,
     ident,
@@ -19,38 +18,31 @@ enum NodeKind
 }
 
 /// any node, not valid in the ast
-class Node
-{
+class Node {
     Span span;
 
-    NodeKind id()
-    {
+    NodeKind id() {
         return NodeKind.base;
     }
 }
 
 /// call of function or operator call
-final class Form : Node
-{
+final class Form : Node {
     string form;
     Node[] args;
 
-    this(Args...)(string f, Args as)
-    {
-        static foreach (a; as)
-        {
+    this(Args...)(string f, Args as) {
+        static foreach (a; as) {
             args ~= a;
         }
         form = f;
     }
 
-    override string toString()
-    {
+    override string toString() {
         char[] ret;
         ret ~= "(";
         ret ~= form;
-        foreach (i, v; args)
-        {
+        foreach (i, v; args) {
             ret ~= " ";
             ret ~= v.to!string;
         }
@@ -58,16 +50,13 @@ final class Form : Node
         return cast(string) ret;
     }
 
-    override NodeKind id()
-    {
+    override NodeKind id() {
         return NodeKind.call;
     }
 
-    override bool opEquals(Object arg)
-    {
+    override bool opEquals(Object arg) {
         Form other = cast(Form) arg;
-        if (other is null)
-        {
+        if (other is null) {
             return false;
         }
         return form == other.form && args == other.args;
@@ -76,122 +65,84 @@ final class Form : Node
 
 size_t usedSyms;
 
-Ident genSym()
-{
+Ident genSym() {
     usedSyms++;
     return new Ident("_purr_" ~ to!string(usedSyms - 1));
 }
 
-template ident(string name)
-{
+template ident(string name) {
     Ident value;
 
-    shared static this()
-    {
+    shared static this() {
         value = new Ident(name);
     }
 
-    Ident ident()
-    {
+    Ident ident() {
         return value;
     }
 }
 
 /// ident or number, detects at runtime
-final class Ident : Node
-{
+final class Ident : Node {
     string repr;
 
-    this(string s)
-    {
+    this(string s) {
         repr = s;
     }
 
-    override NodeKind id()
-    {
+    override NodeKind id() {
         return NodeKind.ident;
     }
 
-    override string toString()
-    {
+    override string toString() {
         return repr;
     }
 
-    override bool opEquals(Object arg)
-    {
+    override bool opEquals(Object arg) {
         Ident other = cast(Ident) arg;
-        if (other is null)
-        {
+        if (other is null) {
             return false;
         }
         return repr == other.repr;
     }
 }
 
-final class Value : Node
-{
-    Type type;
-    void[] value;
+final class Value : Node {
+    void* value;
+    TypeInfo info;
 
-    this(T)(T v)
-    {
-        static if (is(T == bool))
-        {
-            type = Type.logical;
-            void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
-            value = arr.dup;
-        }
-        else static if (is(T == double))
-        {
-            type = Type.float_;
-            void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
-            value = arr.dup;
-        }
-        else static if (is(T == long))
-        {
-            type = Type.integer;
-            void[T.sizeof] arr = *cast(void[T.sizeof]*)&v;
-            value = arr.dup;
-        }
-        else static if (is(T == void[0]) || is(T == typeof(null)))
-        {
-            type = Type.nil;
-            value = null;
-        }
-        else static if (is(T == string))
-        {
-            type = Type.text;
-            immutable(char)* str = v.toStringz;
-            void[size_t.sizeof] arr = *cast(void[size_t.sizeof]*)&str;
-            value = arr.dup;
-        }
-        else
-        {
-            static assert(false, T.stringof);
-        }
+    this(T)(T v) {
+        info = typeid(T);
+        value = cast(void*)[v].ptr;
     }
 
-    static Value empty()
-    {
-        void[0] e;
-        return new Value(e);
+    static Value empty() {
+        return new Value(null);
     }
 
-    override string toString()
-    {
-        return to!string(cast(ubyte[]) value);
+    override string toString() {
+        if (info == typeid(double)) {
+            return to!string(*cast(double*) value);
+        }
+        if (info == typeid(bool)) {
+            return to!string(*cast(bool*) value);
+        }
+        if (info == typeid(null)) {
+            return "null";
+        }
+        if (info == typeid(string)) {
+            return *cast(string*) value;
+        }
+        throw new Exception("bad info");
     }
 
-    override NodeKind id()
-    {
+    override NodeKind id() {
         return NodeKind.value;
     }
 
-    override bool opEquals(Object arg)
-    {
+    override bool opEquals(Object arg) {
         Value other = cast(Value) arg;
-        if (other is null)
-        {
+        if (other is null) {
             return false;
         }
         return value == other.value;

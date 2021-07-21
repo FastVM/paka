@@ -1,0 +1,15 @@
+def call1(f, a1) {
+    f(a1)
+}
+
+def call2(f, a1, a2) {
+    f(a1, a2)
+}
+
+def show(arg) {
+    println(arg)
+}
+
+call2(call1, show, 10)
+call2(call1, show, 7.5)
+

@@ -1,0 +1,17 @@
+sum = 0
+cur = 2
+while cur < 10000 {
+    test = 2
+    is_prime = true
+    while test < cur {
+        if cur % test == 0 {
+            is_prime = false   
+        }
+        test = test + 1
+    }
+    if is_prime {
+        sum = sum + cur
+    }
+    cur = cur + 1
+}
+println(sum)

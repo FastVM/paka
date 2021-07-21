@@ -4,12 +4,10 @@ import purr.ast.ast;
 import std.conv;
 import purr.srcloc;
 
-final class Plugin
-{
+final class Plugin {
     Node function(SrcLoc code)[string] parsers;
 
-    version(repr) override string toString()
-    {
+    version (repr) override string toString() {
         string ret;
         ret ~= "Plugin(langs: ";
         ret ~= parsers.length.to!string;

@@ -7,4 +7,4 @@ def ack(m, n):
         else:
             ack(m-1, ack(m, n-1))
 
-import("console").log(ack(3,10))
+println(ack(3,10))

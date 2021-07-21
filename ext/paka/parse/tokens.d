@@ -9,25 +9,23 @@ import purr.srcloc;
 
 /// operator precidence
 string[][] prec = [
-    ["::"], ["->"],
-    ["+=", "~=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"],
-    ["or", "and"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"],
-    ["*", "/", "%"]
+    ["::"], ["->"], ["+=", "~=", "*=", "/=", "%=", "-=", "="], ["|>", "<|"],
+    ["or", "and"], ["<=", ">=", "<", ">", "!=", "=="], ["+", "-"], [
+        "*", "/", "%"
+    ]
 ];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "::", "not", ",", "!", ":", "..."];
+string[] nops = [".", "not", ",", "\\", "!", "#", ":", "..."];
 
 /// language keywords
 string[] keywords = [
-    "if", "else", "def", "lambda",
-    "true", "false", "nil", "table",
+    "if", "else", "def", "lambda", "import", "true", "false", "nil", "table",
     "while", "static", "return"
 ];
 
 /// gets the operators by length not precidence
-string[] levels()
-{
+string[] levels() {
     return join(prec ~ nops).sort!"a.length > b.length".array;
 }
 
@@ -36,11 +34,9 @@ version = nanorc;
 Token.Type[] noFollow = [Token.Type.ident, Token.Type.string, Token.Type.format];
 
 /// simple token
-struct Token
-{
+struct Token {
     /// the type of the token
-    enum Type
-    {
+    enum Type {
         /// invalid token
         none,
         /// some operator, not keyword
@@ -69,123 +65,97 @@ struct Token
     Span span;
     /// only constructor
 pragma(inline, true):
-    this(T)(Span s, Type t, T v = null)
-    {
+    this(T)(Span s, Type t, T v = null) {
         type = t;
         value = cast(string) v;
         span = s;
     }
 
-
     /// shows token along with location
-    string toString()
-    {
+    string toString() {
         return span.pretty ~ " -> \"" ~ value ~ "\"";
     }
 
-    bool exists()
-    {
+    bool exists() {
         return type != Type.none;
     }
 
-    bool isIdent()
-    {
+    bool isIdent() {
         return type == Type.ident;
     }
 
-    bool isString()
-    {
+    bool isString() {
         return type == Type.string;
     }
 
-    bool isKeyword(string name)
-    {
+    bool isKeyword(string name) {
         return type == Type.keyword && name == value;
     }
 
-    bool isKeyword()
-    {
+    bool isKeyword() {
         return type == Type.keyword;
     }
 
-    bool isOperator(string name)
-    {
+    bool isOperator(string name) {
         return type == Type.operator && name == value;
     }
 
-    bool isOperator()
-    {
+    bool isOperator() {
         return type == Type.operator;
     }
 
-    bool isOpen(string name)
-    {
+    bool isOpen(string name) {
         return type == Type.open && name == value;
     }
 
-    bool isOpen()
-    {
+    bool isOpen() {
         return type == Type.open;
     }
 
-    bool isClose(string name)
-    {
+    bool isClose(string name) {
         return type == Type.close && name == value;
     }
 
-    bool isClose()
-    {
+    bool isClose() {
         return type == Type.close;
     }
 
-    bool isSemicolon()
-    {
+    bool isSemicolon() {
         return type == Type.semicolon;
     }
 
-    bool isComma()
-    {
+    bool isComma() {
         return type == Type.comma;
     }
 }
 
 /// reads a single token from a string
-Token readToken(ref SrcLoc location)
-{
-    ref string code()
-    {
-        return location.src;   
+Token readToken(ref SrcLoc location) {
+    ref string code() {
+        return location.src;
     }
 
-    char peek()
-    {
-        if (code.length == 0)
-        {
+    char peek() {
+        if (code.length == 0) {
             return '\0';
         }
         return code[0];
     }
 
-    void consume()
-    {
-        if (code.length == 0)
-        {
+    void consume() {
+        if (code.length == 0) {
             return;
         }
-        if (code[0] == '\n')
-        {
+        if (code[0] == '\n') {
             location.line += 1;
             location.column = 1;
-        }
-        else
-        {
+        } else {
             location.column += 1;
         }
         code = code[1 .. $];
     }
 
-    char read()
-    {
+    char read() {
         char ret = peek;
         consume;
         return ret;
@@ -193,86 +163,66 @@ Token readToken(ref SrcLoc location)
 
     SrcLoc begin = location;
 
-    Token consToken(T)(Token.Type t, T v)
-    {
+    Token consToken(T)(Token.Type t, T v) {
         SrcLoc end = location.dup;
         Span span = Span(begin, end);
         return Token(span, t, v);
     }
 
 redo:
-    // if (peek == '#' && code.length >= 2 && code[1] == '#')
-    if (peek == '#')
-    {
-        while (code.length != 0 && peek != '\n')
-        {
+    if (peek == '#' && code.length >= 2 && code[1] == '#') {
+        while (code.length != 0 && peek != '\n') {
             consume;
         }
         goto redo;
     }
-    if (peek.isWhite)
-    {
+    if (peek.isWhite) {
         consume;
         goto redo;
     }
-    if (peek == ';')
-    {
+    if (peek == ';') {
         return consToken(Token.Type.semicolon, [read]);
     }
-    if (peek == ',')
-    {
+    if (peek == ',') {
         return consToken(Token.Type.comma, [read]);
     }
-    foreach (i; levels)
-    {
-        if (code.startsWith(i) && !i[$-1].isAlphaNum)
-        {
-            foreach (_; 0 .. i.length)
-            {
+    foreach (i; levels) {
+        if (code.startsWith(i) && !i[$ - 1].isAlphaNum) {
+            foreach (_; 0 .. i.length) {
                 consume;
             }
             return consToken(Token.Type.operator, i);
         }
     }
-    if (peek.isAlphaNum || peek == '_' || peek == '@' || peek == '?')
-    {
+    if (peek.isAlphaNum || peek == '_' || peek == '@' || peek == '?') {
         bool isNumber = true;
         char[] ret;
-        while (peek.isAlphaNum || peek == '_' || peek == '@'
-                || peek == '?' || (isNumber && peek == '.'))
-        {
+        while (peek.isAlphaNum || peek == '_' || peek == '@' || peek == '?'
+                || (isNumber && peek == '.')) {
             isNumber = isNumber && (peek.isDigit || peek == '.');
             ret ~= read;
         }
-        if (levels.canFind(ret))
-        {
+        if (levels.canFind(ret)) {
             return consToken(Token.Type.operator, ret);
         }
-        if (keywords.canFind(ret))
-        {
+        if (keywords.canFind(ret)) {
             return consToken(Token.Type.keyword, ret);
         }
         return consToken(Token.Type.ident, ret);
     }
-    if ("{[(".canFind(peek))
-    {
+    if ("{[(".canFind(peek)) {
         return consToken(Token.Type.open, [read]);
     }
-    if ("}])".canFind(peek))
-    {
+    if ("}])".canFind(peek)) {
         return consToken(Token.Type.close, [read]);
     }
-    if (peek == '"')
-    {
+    if (peek == '"') {
         char got = read;
         char[] ret;
-        while (peek != '"')
-        {
+        while (peek != '"') {
             got = read;
-            if (got == '\\')
-            {
-                switch (got = read)
-                {
+            if (got == '\\') {
+                switch (got = read) {
                 case 'n':
                     ret ~= '\n';
                     break;
@@ -288,25 +238,38 @@ redo:
                 case 's':
                     ret ~= ' ';
                     break;
+                    // case 'f':
+                    //     goto case;
+                    // case 'u':
+                    //     ret ~= '\\';
+                    //     ret ~= got;
+                    //     while (got != '}')
+                    //     {
+                    //         got = read;
+                    //         if (got == '\0')
+                    //         {
+                    //             throw new Exception("parse error: end of file with unclosed string");
+                    //         }
+                    //         ret ~= got;
+                    //     }
+                    //     ret ~= '\\';
+                    //     break;
                 default:
                     throw new Exception("parse error: unknown escape '" ~ got ~ "'");
                 }
-            }
-            else
-            {
+            } else {
                 ret ~= got;
             }
-            if (code.length == 0)
-            {
+            if (code.length == 0) {
                 throw new Exception("parse error: end of file found in string");
             }
         }
         consume;
         return consToken(Token.Type.string, ret);
     }
-    if (peek == '\0')
-    {
+    if (peek == '\0') {
         return consToken(Token.Type.none, "");
     }
-    throw new Exception("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
+    throw new Exception("parse error: bad char " ~ peek ~ "(code: " ~ to!string(
+            cast(ubyte) peek) ~ ")");
 }

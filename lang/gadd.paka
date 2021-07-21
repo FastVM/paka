@@ -1,0 +1,6 @@
+def add(x, y) {
+    x + y
+}
+
+println(add(10, 20))
+println(add(1.0, 2.0))

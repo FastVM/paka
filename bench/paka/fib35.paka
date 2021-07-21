@@ -1,7 +1,9 @@
-def fib(n):
-    if n < 2:
-        n
-    else:
-        fib(n - 2) + fib(n - 1)
+def fib(n, a, b, c) {
+    if n < 2 {
+        return n
+    } else {
+        return rec(n-1) + rec(n-2)
+    }
+}
 
-import("console").log(fib(35))
+fib(35) |> println

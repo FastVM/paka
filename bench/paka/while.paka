@@ -1,7 +1,7 @@
 x = 0
 s = 0
-while x <= 1000000000 {
+while x <= 100000000 {
     s = s + x
     x = x + 1
 }
-import("console").log(s)
+println(s)

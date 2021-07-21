@@ -1,62 +1,47 @@
 module ext.expr.plugin;
 
-import purr.plugin.plugins;
-import purr.plugin.plugin;
-import purr.srcloc;
-import purr.ast.ast;
+import purr;
 
-shared static this()
-{
+shared static this() {
     Plugin lisp = new Plugin;
     lisp.parsers["expr"] = &parser;
     lisp.addPlugin;
 }
 
-void skip(ref string code, size_t n = 1)
-{
+void skip(ref string code, size_t n = 1) {
     code = code[n .. $];
 }
 
-void strip(ref string code)
-{
-    import std.ascii: isWhite;
+void strip(ref string code) {
+    import std.ascii : isWhite;
 
-    while (code[0].isWhite)
-    {
+    while (code[0].isWhite) {
         code.skip;
     }
 }
 
 enum string[string] forms = [
-    "define": "set", "rec": "rec", "lambda": "lambda",
-    "+": "+", "-": "-", "*": "*", "/": "/", "%": "%",
-    "do": "do", "if": "if", 
-    "<": "<", "<=": "<=", ">": ">", ">=": ">=",
-    "!=": "!=", "==": "==",
-    "and": "&&", "or": "||"
-];
+        "define" : "set", "lambda" : "lambda", "+" : "+", "-" : "-", "*" : "*",
+        "/" : "/", "%" : "%", "do" : "do", "if" : "if", "<" : "<", "<=" : "<=",
+        ">" : ">", ">=" : ">=", "!=" : "!=", "==" : "==", "and" : "&&", "or" : "||"
+    ];
 
-Node read(ref string code)
-{
+Node read(ref string code) {
     import std.algorithm : startsWith, canFind;
 
     code.strip;
-    if (code[0] == '(')
-    {
+    if (code[0] == '(') {
         code.skip;
         code.strip;
         string form = "call";
-        static foreach (test, name; forms)
-        {
-            if (code.startsWith(test))
-            {
+        static foreach (test, name; forms) {
+            if (code.startsWith(test)) {
                 code.skip(test.length);
                 form = name;
             }
         }
         Node[] args;
-        while (code[0] != ')')
-        {
+        while (code[0] != ')') {
             args ~= code.read;
             code.strip;
         }
@@ -76,13 +61,11 @@ Node read(ref string code)
     //     return new Value(name);
     // }
     string name;
-    while (!"()\t\r\n ".canFind(code[0]))
-    {
+    while (!"()\t\r\n ".canFind(code[0])) {
         name ~= code[0];
         code.skip;
     }
-    switch (name)
-    {
+    switch (name) {
     default:
         return new Ident(name);
     case "true":
@@ -92,8 +75,7 @@ Node read(ref string code)
     }
 }
 
-Node parser(SrcLoc code)
-{
+Node parser(SrcLoc code) {
     string src = "(do " ~ code.src ~ ")";
     return src.read;
 }

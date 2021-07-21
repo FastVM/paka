@@ -1,29 +1,22 @@
 module purr.utest;
 
-bool ok(Err, T)(lazy T run)
-{
+bool ok(Err, T)(lazy T run) {
     bool okay;
-    try
-    {
+    try {
         cast(void) run;
         okay = true;
-    }
-    catch (Err err)
-    {
+    } catch (Err err) {
         okay = false;
     }
     return okay;
 }
 
-version(unittest)
-{
-    void fail()
-    {
+version (unittest) {
+    void fail() {
         throw new Exception("oops");
     }
 
-    void nofail()
-    {
+    void nofail() {
     }
 }
 

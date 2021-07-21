@@ -1,15 +1,15 @@
 module purr.app;
 
 import purr.io;
-import purr.ir.repr;
-import purr.ir.opt;
-import purr.ir.walk;
+import purr.ast.walk;
+import purr.vm;
 import purr.srcloc;
 import purr.ast.ast;
 import purr.parse;
 import purr.inter;
 import purr.io;
-import purr.ir.walk;
+import purr.vm.bytecode;
+import purr.ast.walk;
 import std.uuid;
 import std.path;
 import std.array;
@@ -24,146 +24,64 @@ import std.datetime.stopwatch;
 import core.memory;
 import core.time;
 import core.stdc.stdlib;
-import std.process;
 
 extern (C) __gshared string[] rt_options = [];
 
-string dflags = " -g -L-s -L-exort-dynamic -L--export-table -mtriple=wasm32-unknown-unknown-wasm -L--allow-undefined -L--no-entry";
-string outfile = "./bin/out";
-string runCommand = "./bin/run.js";
-
 alias Thunk = void delegate();
 
-string drtd = import("drt.d");
-string runjs = import("run.js");
-
-void extractRuntime()
-{
-    if (!"bin/drt.d".exists)
-    {
-        File drtf = File("bin/drt.d", "w");
-        drtf.write(drtd);
-        drtf.close();
-    }
-}
-
-Thunk cliCleanHandler()
-{
-    return {
-        foreach (filename; ["bin/drt.d"])
-        {
-            if (filename.exists)
-            {
-                filename.remove;
-            }
-        }
-    };
-}
-
-Thunk cliWasmHandler(string run)
-{
-    return {
-        extractRuntime;
-        runCommand = run;
-    };
-}
-
-Thunk cliValidateHandler(immutable string filename)
-{
+Thunk cliFileHandler(immutable string filename) {
     return {
         string oldLang = langNameDefault;
-        scope (exit)
-        {
+        scope (exit) {
             langNameDefault = oldLang;
         }
-        if (filename.endsWith(".paka"))
-        {
+        if (filename.endsWith(".paka")) {
             langNameDefault = "paka";
         }
-        if (filename.endsWith(".pn"))
-        {
+        if (filename.endsWith(".pn")) {
             langNameDefault = "passerine";
         }
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
+        // string cdir = getcwd;
+        // scope (exit)
+        // {
+        //     cdir.chdir;
+        // }
+        // filename.dirName.chdir;
         eval(code);
     };
 }
 
-Thunk cliCompileHandler(immutable string filename)
-{
-    return {
-        string oldLang = langNameDefault;
-        scope (exit)
-        {
-            langNameDefault = oldLang;
-        }
-        if (filename.endsWith(".paka"))
-        {
-            langNameDefault = "paka";
-        }
-        if (filename.endsWith(".pn"))
-        {
-            langNameDefault = "passerine";
-        }
-        SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        File output = File("bin/out.d", "w");
-        output.writeln(eval(code));
-        output.close();
-        if (outfile.exists)
-        {
-            outfile.remove;
-        }
-        auto res = executeShell("ldc2 bin/out.d bin/drt -O -of=" ~ outfile ~ " -betterC " ~ dflags);
-        if (res.status != 0)
-        {
-            writeln(res.output);
-            throw new Exception("Compile#2 Failed");
-        }
-    };
+Thunk cliEvalHandler(immutable string code) {
+    return { eval(SrcLoc(1, 1, "__main__", code)); };
 }
 
-Thunk cliParseHandler(immutable string code)
-{
+Thunk cliParseHandler(immutable string code) {
     return { SrcLoc loc = SrcLoc(1, 1, "__main__", code); Node res = loc.parse; };
 }
 
-Thunk cliRunHandler()
-{
+Thunk cliCompileHandler(immutable string code) {
     return {
-        File file = File("./bin/run.js", "w");
-        file.write(runjs);
-        file.close();
-        "./bin/run.js".setAttributes("./bin/run.js".getAttributes | octal!700);
-        if (runCommand.length == 0)
-        {
-            Pid pid = spawnProcess([outfile]);
-            pid.wait;
-        }
-        else
-        {
-            Pid pid = spawnProcess([runCommand, outfile]);
-            pid.wait;
-        }
+        SrcLoc loc = SrcLoc(1, 1, "__main__", code);
+        Node node = loc.parse;
+        Walker walker = new Walker;
+        Bytecode func = walker.walkProgram(node);
     };
 }
 
-Thunk cliLangHandler(immutable string langname)
-{
+Thunk cliLangHandler(immutable string langname) {
     return { langNameDefault = langname; };
 }
 
-Thunk cliAstHandler()
-{
+Thunk cliAstHandler() {
     return { dumpast = !dumpast; };
 }
 
-Thunk cliIrHandler()
-{
+Thunk cliIrHandler() {
     return { dumpir = !dumpir; };
 }
 
-Thunk cliTimeHandler(Thunk next)
-{
+Thunk cliTimeHandler(Thunk next) {
     return {
         StopWatch watch = StopWatch(AutoStart.no);
         watch.start();
@@ -173,12 +91,10 @@ Thunk cliTimeHandler(Thunk next)
     };
 }
 
-Thunk cliBenchHandler(size_t n, Thunk next)
-{
+Thunk cliBenchHandler(size_t n, Thunk next) {
     return {
         Duration all;
-        foreach (_; 0 .. n)
-        {
+        foreach (_; 0 .. n) {
             StopWatch watch = StopWatch(AutoStart.no);
             watch.start();
             next();
@@ -189,65 +105,48 @@ Thunk cliBenchHandler(size_t n, Thunk next)
     };
 }
 
-Thunk cliRepeatHandler(size_t n, Thunk next)
-{
+Thunk cliRepeatHandler(size_t n, Thunk next) {
     return {
-        foreach (_; 0 .. n)
-        {
+        foreach (_; 0 .. n) {
             next();
         }
     };
 }
 
-Thunk cliOptHandler(size_t n)
-{
-    return { defaultOptLevel = n; };
-}
-
 bool debugging;
 
-Thunk cliDebugHandler()
-{
+Thunk cliDebugHandler() {
     return { debugging = !debugging; };
 }
 
-void domain(string[] args)
-{
+void domain(string[] args) {
     args = args[1 .. $];
     Thunk[] todo;
     langNameDefault = "paka";
-    foreach_reverse (arg; args)
-    {
+    foreach_reverse (arg; args) {
         string[] parts = arg.split("=").array;
-        string part1()
-        {
+        string part1() {
             assert(parts.length != 0);
-            if (parts.length == 1)
-            {
+            if (parts.length == 1) {
                 throw new Exception(parts[0] ~ " takes an argument using " ~ parts[0] ~ "=argument");
             }
             return parts[1 .. $].join("=");
         }
 
         bool runNow = parts[0][$ - 1] == ':';
-        scope (exit)
-        {
-            if (runNow)
-            {
+        scope (exit) {
+            if (runNow) {
                 Thunk last = todo[$ - 1];
                 todo.length--;
                 last();
             }
         }
-        if (runNow)
-        {
+        if (runNow) {
             parts[0].length--;
         }
-        switch (parts[0])
-        {
+        switch (parts[0]) {
         default:
-            todo ~= cliRunHandler;
-            todo ~= parts[0].cliCompileHandler;
+            todo ~= parts[0].cliFileHandler;
             break;
         case "--time":
             todo[$ - 1] = todo[$ - 1].cliTimeHandler;
@@ -259,8 +158,7 @@ void domain(string[] args)
             todo[$ - 1] = cliBenchHandler(part1.to!size_t, todo[$ - 1]);
             break;
         case "--file":
-            todo ~= cliRunHandler;
-            todo ~= part1.cliCompileHandler;
+            todo ~= part1.cliFileHandler;
             break;
         case "--parse":
             todo ~= part1.cliParseHandler;
@@ -268,17 +166,11 @@ void domain(string[] args)
         case "--compile":
             todo ~= part1.cliCompileHandler;
             break;
-        case "--validate":
-            todo ~= part1.cliValidateHandler;
-            break;
-        case "--run":
-            todo ~= cliRunHandler;
+        case "--eval":
+            todo ~= part1.cliEvalHandler;
             break;
         case "--lang":
             todo ~= part1.cliLangHandler;
-            break;
-        case "--opt":
-            todo ~= cliOptHandler(part1.to!size_t);
             break;
         case "--ast":
             todo ~= cliAstHandler;
@@ -287,52 +179,34 @@ void domain(string[] args)
             todo ~= cliIrHandler;
             break;
         case "--debug":
-            cliDebugHandler()();
-            break;
-        case "--wasm":
-            cliWasmHandler(part1)();
-            break;
-        case "--clean":
-            cliCleanHandler()();
+            todo ~= cliDebugHandler;
             break;
         }
     }
-    foreach_reverse (fun; todo)
-    {
+    foreach_reverse (fun; todo) {
         fun();
     }
 }
 
-void thrown(Err)(Err e)
-{
-    if (debugging)
-    {
+void thrown(Err)(Err e) {
+    if (debugging) {
         throw e;
-    }
-    else
-    {
+    } else {
         writeln(e.msg);
     }
 }
 
 /// the main function that handles runtime errors
-void trymain(string[] args)
-{
-    try
-    {
+void trymain(string[] args) {
+    try {
         domain(args);
-    }
-    catch (Error e)
-    {
+    } catch (Error e) {
         e.thrown;
-    }
-    catch (Exception e)
-    {
+    } catch (Exception e) {
         e.thrown;
     }
 }
 
-void main(string[] args)
-{
+void main(string[] args) {
     trymain(args);
 }

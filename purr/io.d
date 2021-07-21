@@ -18,45 +18,36 @@ alias stderr = std.stdio.stderr;
 __gshared Mutex ioLock;
 __gshared Mutex ioLineLock;
 
-shared static this()
-{
+shared static this() {
 	ioLock = new Mutex;
 	ioLineLock = new Mutex;
 }
 
-char getchar()
-{
+char getchar() {
 	char ret;
 	stdin.readf!"%c"(ret);
 	return ret;
 }
 
-string readln(string prompt)
-{
+string readln(string prompt) {
 	write(prompt);
 	return cast(string) stdin.readln ~ "\n";
 }
 
-void write1s(string str)
-{
-	foreach (chr; str)
-	{
-		synchronized(ioLock)
-		{
+void write1s(string str) {
+	foreach (chr; str) {
+		synchronized (ioLock) {
 			stdout.write(chr);
 		}
 	}
 }
 
-void write(Args...)(Args args)
-{
-	static foreach (arg; args)
-	{
+void write(Args...)(Args args) {
+	static foreach (arg; args) {
 		write1s(arg.to!string);
 	}
 }
 
-void writeln(Args...)(Args args)
-{
+void writeln(Args...)(Args args) {
 	write(args, '\n');
 }
