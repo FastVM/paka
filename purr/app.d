@@ -42,12 +42,6 @@ Thunk cliFileHandler(immutable string filename) {
             langNameDefault = "passerine";
         }
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        // string cdir = getcwd;
-        // scope (exit)
-        // {
-        //     cdir.chdir;
-        // }
-        // filename.dirName.chdir;
         eval(code);
     };
 }
@@ -60,10 +54,20 @@ Thunk cliParseHandler(immutable string code) {
     return { SrcLoc loc = SrcLoc(1, 1, "__main__", code); Node res = loc.parse; };
 }
 
-Thunk cliCompileHandler(immutable string code) {
+Thunk cliCompileHandler(immutable string filename) {
     return {
-        SrcLoc loc = SrcLoc(1, 1, "__main__", code);
-        Node node = loc.parse;
+        string oldLang = langNameDefault;
+        scope (exit) {
+            langNameDefault = oldLang;
+        }
+        if (filename.endsWith(".paka")) {
+            langNameDefault = "paka";
+        }
+        if (filename.endsWith(".pn")) {
+            langNameDefault = "passerine";
+        }
+        SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
+        Node node = code.parse;
         Walker walker = new Walker;
         walker.walkProgram(node);
         File outmvm = File("out.minivm", "w");
