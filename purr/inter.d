@@ -21,6 +21,6 @@ __gshared bool dumpir = false;
 void eval(SrcLoc code) {
     Node node = code.parse;
     Walker walker = new Walker;
-    Bytecode func = walker.walkProgram(node);
-    run(func);
+    walker.walkProgram(node);
+    run(walker.bytecode);
 }

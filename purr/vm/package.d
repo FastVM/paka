@@ -6,8 +6,8 @@ import std.stdio;
 import core.memory;
 import core.stdc.stdlib;
 
-void run(Bytecode func) {
+void run(void[] func) {
     GC.disable;
-    vm_run(func);
+    vm_run(func.ptr);
     GC.enable;
 }

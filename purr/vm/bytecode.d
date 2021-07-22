@@ -6,7 +6,7 @@ import core.memory;
 alias Number = double;
 alias String = immutable(char)*;
 
-extern (C) void vm_run(Function* func);
+extern (C) void vm_run(void* func);
 
 struct Frame {
     int index;
@@ -26,7 +26,6 @@ enum Capture {
     arg,
 }
 
-alias Bytecode = Function*;
 struct Function {
     void* bytecode;
 
@@ -85,6 +84,8 @@ enum Opcode : char {
     mod_num,
     call,
     rec,
+    tail_call,
+    tail_rec,
     ret,
     println,
     max1,

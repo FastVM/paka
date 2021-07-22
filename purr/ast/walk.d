@@ -15,26 +15,28 @@ import purr.type.err;
 __gshared bool dumpast = false;
 
 class Reg {
-    int num;
+    ubyte reg;
     string sym;
 
     this(T)(T n, string s = null) {
-        num = cast(int) n;
+        if (n >= 256) {
+            throw new Exception("reg too high");
+        }
+        if (n < 0) {
+            throw new Exception("reg too low");
+        }
+        reg = cast(ubyte) n;
         sym = s;
     }
 
     override bool opEquals(Object other) {
         Reg oreg = cast(Reg) other;
-        return oreg !is null && num == oreg.num;
-    }
-
-    ubyte[4] ubytes() {
-        return (cast(ubyte*)&num)[0 .. 4];
+        return oreg !is null && reg == oreg.reg;
     }
 
     override string toString() {
         if (sym.length == 0) {
-            return "." ~ num.to!string;
+            return "." ~ reg.to!string;
         } else {
             return sym;
         }
@@ -50,16 +52,13 @@ final class Walker {
 
     Reg[] targets;
 
-    Bytecode walkProgram(Node program) {
+    void walkProgram(Node program) {
         if (dumpast) {
             writeln(program);
         }
-        Bytecode bytecodeFunction = Bytecode.empty;
         bytecode = null;
         walk(program);
         bytecode ~= Opcode.exit;
-        bytecodeFunction.bytecode = cast(void*) bytecode.ptr;
-        return bytecodeFunction;
     }
 
     ubyte[1] ubytes(bool val) {
@@ -70,8 +69,10 @@ final class Walker {
         return (cast(ubyte*)&val)[0 .. 4];
     }
 
-    ubyte[8] ubytes(double val) {
-        return (cast(ubyte*)&val)[0 .. 8];
+    ubyte[4] ubytes(double val) {
+        assert(val % 1 == 0, "floats are broken, sadly");
+        int inum = cast(int) val;
+        return (cast(ubyte*)&inum)[0 .. 4];
     }
 
     int n;
@@ -145,7 +146,7 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= rhs.reg;
                     bytecode ~= ubytes(*cast(double*) valueLeft.value);
                     return ret;
                 } else if (Value valueRight = cast(Value) form.args[1]) {
@@ -158,7 +159,7 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= lhs.ubytes;
+                    bytecode ~= lhs.reg;
                     bytecode ~= ubytes(*cast(double*) valueRight.value);
                     return ret;
                 } else {
@@ -171,8 +172,8 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= lhs.ubytes;
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= lhs.reg;
+                    bytecode ~= rhs.reg;
                     return ret;
                 }
             }
@@ -187,7 +188,7 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= rhs.reg;
                     bytecode ~= ubytes(*cast(double*) valueLeft.value);
                     return ret;
                 } else if (Value valueRight = cast(Value) form.args[1]) {
@@ -200,7 +201,7 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= lhs.ubytes;
+                    bytecode ~= lhs.reg;
                     bytecode ~= ubytes(*cast(double*) valueRight.value);
                     return ret;
                 } else {
@@ -213,8 +214,8 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= lhs.ubytes;
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= lhs.reg;
+                    bytecode ~= rhs.reg;
                     return ret;
                 }
             }
@@ -229,7 +230,7 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= rhs.reg;
                     bytecode ~= ubytes(*cast(double*) valueLeft.value);
                     return ret;
                 } else if (Value valueRight = cast(Value) form.args[1]) {
@@ -242,7 +243,7 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= lhs.ubytes;
+                    bytecode ~= lhs.reg;
                     bytecode ~= ubytes(*cast(double*) valueRight.value);
                     return ret;
                 } else {
@@ -255,8 +256,8 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= lhs.ubytes;
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= lhs.reg;
+                    bytecode ~= rhs.reg;
                     return ret;
                 }
             }
@@ -271,7 +272,7 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= rhs.reg;
                     bytecode ~= ubytes(*cast(double*) valueLeft.value);
                     return ret;
                 } else if (Value valueRight = cast(Value) form.args[1]) {
@@ -284,7 +285,7 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= lhs.ubytes;
+                    bytecode ~= lhs.reg;
                     bytecode ~= ubytes(*cast(double*) valueRight.value);
                     return ret;
                 } else {
@@ -297,8 +298,8 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= lhs.ubytes;
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= lhs.reg;
+                    bytecode ~= rhs.reg;
                     return ret;
                 }
             }
@@ -313,7 +314,7 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= rhs.reg;
                     bytecode ~= ubytes(*cast(double*) valueLeft.value);
                     return ret;
                 } else if (Value valueRight = cast(Value) form.args[1]) {
@@ -326,7 +327,7 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= lhs.ubytes;
+                    bytecode ~= lhs.reg;
                     bytecode ~= ubytes(*cast(double*) valueRight.value);
                     return ret;
                 } else {
@@ -339,8 +340,8 @@ final class Walker {
                     }
                     int ret = cast(int) bytecode.length;
                     bytecode ~= ubytes(ret);
-                    bytecode ~= lhs.ubytes;
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= lhs.reg;
+                    bytecode ~= rhs.reg;
                     return ret;
                 }
             }
@@ -353,7 +354,7 @@ final class Walker {
         }
         int ret = cast(int) bytecode.length;
         bytecode ~= ubytes(where);
-        bytecode ~= cmp.ubytes;
+        bytecode ~= cmp.reg;
         return ret;
     }
 
@@ -381,8 +382,8 @@ final class Walker {
                 Reg from = walk(form.args[1], target);
                 if (target != from) {
                     bytecode ~= Opcode.store_reg;
-                    bytecode ~= target.ubytes;
-                    bytecode ~= from.ubytes;
+                    bytecode ~= target.reg;
+                    bytecode ~= from.reg;
                 }
                 Reg outreg = allocOutMaybe;
                 if (outreg is null || outreg == target) {
@@ -391,8 +392,8 @@ final class Walker {
                     return from;
                 } else {
                     bytecode ~= Opcode.store_reg;
-                    bytecode ~= outreg.ubytes;
-                    bytecode ~= from.ubytes;
+                    bytecode ~= outreg.reg;
+                    bytecode ~= from.reg;
                     return outreg;
                 }
             } else {
@@ -435,11 +436,11 @@ final class Walker {
                 Reg res = allocOut;
                 if (res == rhs) {
                     bytecode ~= Opcode.inc_num;
-                    bytecode ~= res.ubytes;
+                    bytecode ~= res.reg;
                 } else {
                     bytecode ~= Opcode.add_num;
-                    bytecode ~= res.ubytes;
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= res.reg;
+                    bytecode ~= rhs.reg;
                 }
                 assert(valueLeft.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
@@ -449,11 +450,11 @@ final class Walker {
                 Reg res = allocOut;
                 if (res == lhs) {
                     bytecode ~= Opcode.inc_num;
-                    bytecode ~= res.ubytes;
+                    bytecode ~= res.reg;
                 } else {
                     bytecode ~= Opcode.add_num;
-                    bytecode ~= res.ubytes;
-                    bytecode ~= lhs.ubytes;
+                    bytecode ~= res.reg;
+                    bytecode ~= lhs.reg;
                 }
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
@@ -464,17 +465,17 @@ final class Walker {
                 Reg res = allocOut;
                 if (lhs == res) {
                     bytecode ~= Opcode.inc;
-                    bytecode ~= res.ubytes;
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= res.reg;
+                    bytecode ~= rhs.reg;
                 } else if (rhs == res) {
                     bytecode ~= Opcode.inc;
-                    bytecode ~= res.ubytes;
-                    bytecode ~= lhs.ubytes;
+                    bytecode ~= res.reg;
+                    bytecode ~= lhs.reg;
                 } else {
                     bytecode ~= Opcode.add;
-                    bytecode ~= res.ubytes;
-                    bytecode ~= lhs.ubytes;
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= res.reg;
+                    bytecode ~= lhs.reg;
+                    bytecode ~= rhs.reg;
                 }
                 return res;
             }
@@ -484,11 +485,11 @@ final class Walker {
                 Reg res = allocOut;
                 if (lhs == res) {
                     bytecode ~= Opcode.dec_num;
-                    bytecode ~= res.ubytes;
+                    bytecode ~= res.reg;
                 } else {
                     bytecode ~= Opcode.sub_num;
-                    bytecode ~= res.ubytes;
-                    bytecode ~= lhs.ubytes;
+                    bytecode ~= res.reg;
+                    bytecode ~= lhs.reg;
                 }
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
@@ -499,13 +500,13 @@ final class Walker {
                 Reg res = allocOut;
                 if (lhs == res) {
                     bytecode ~= Opcode.dec;
-                    bytecode ~= res.ubytes;
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= res.reg;
+                    bytecode ~= rhs.reg;
                 } else {
                     bytecode ~= Opcode.sub;
-                    bytecode ~= res.ubytes;
-                    bytecode ~= lhs.ubytes;
-                    bytecode ~= rhs.ubytes;
+                    bytecode ~= res.reg;
+                    bytecode ~= lhs.reg;
+                    bytecode ~= rhs.reg;
                 }
                 return res;
             }
@@ -514,8 +515,8 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.mul_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= rhs.reg;
                 assert(valueLeft.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
@@ -523,8 +524,8 @@ final class Walker {
                 Reg lhs = walk(form.args[0]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.mul_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
@@ -533,9 +534,9 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.mul;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
                 return res;
             }
         case "/":
@@ -543,8 +544,8 @@ final class Walker {
                 Reg lhs = walk(form.args[0]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.div_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
@@ -553,9 +554,9 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.div;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
                 return res;
             }
         case "%":
@@ -563,8 +564,8 @@ final class Walker {
                 Reg lhs = walk(form.args[0]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.mod_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
@@ -573,9 +574,9 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.mod;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
                 return res;
             }
         case "==":
@@ -583,8 +584,8 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.equal_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= rhs.reg;
                 assert(valueLeft.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
@@ -592,8 +593,8 @@ final class Walker {
                 Reg lhs = walk(form.args[0]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.equal_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
@@ -602,9 +603,9 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.equal;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
                 return res;
             }
         case "!=":
@@ -612,8 +613,8 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.not_equal_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= rhs.reg;
                 assert(valueLeft.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
@@ -621,8 +622,8 @@ final class Walker {
                 Reg lhs = walk(form.args[0]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.not_equal_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
@@ -631,9 +632,9 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.not_equal;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
                 return res;
             }
         case "<":
@@ -641,8 +642,8 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= rhs.reg;
                 assert(valueLeft.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
@@ -650,8 +651,8 @@ final class Walker {
                 Reg lhs = walk(form.args[0]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.less_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
@@ -660,9 +661,9 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.less;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
                 return res;
             }
         case ">":
@@ -670,8 +671,8 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.less_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= rhs.reg;
                 assert(valueLeft.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
@@ -679,8 +680,8 @@ final class Walker {
                 Reg lhs = walk(form.args[0]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
@@ -689,9 +690,9 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
                 return res;
             }
         case "<=":
@@ -699,8 +700,8 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater_than_equal_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= rhs.reg;
                 assert(valueLeft.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
@@ -708,8 +709,8 @@ final class Walker {
                 Reg lhs = walk(form.args[0]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.less_than_equal_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
@@ -718,9 +719,9 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.less_than_equal;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
                 return res;
             }
         case ">=":
@@ -728,8 +729,8 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.less_than_equal_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= rhs.reg;
                 assert(valueLeft.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
@@ -737,8 +738,8 @@ final class Walker {
                 Reg lhs = walk(form.args[0]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater_than_equal_num;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
                 assert(valueRight.info == typeid(double));
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
@@ -747,68 +748,11 @@ final class Walker {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater_than_equal;
-                bytecode ~= res.ubytes;
-                bytecode ~= lhs.ubytes;
-                bytecode ~= rhs.ubytes;
+                bytecode ~= res.reg;
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
                 return res;
             }
-        case "call":
-            bool isRec = false;
-            if (Ident func = cast(Ident) form.args[0]) {
-                if (func.repr == "println") {
-                    Reg outreg = walk(form.args[1]);
-                    bytecode ~= Opcode.println;
-                    bytecode ~= outreg.ubytes;
-                    return null;
-                }
-                if (func.repr == "rec") {
-                    isRec = true;
-                }
-            }
-            Reg funreg;
-            if (!isRec) {
-                funreg = walk(form.args[0]);
-            }
-            int firstSubCall = -1;
-            int lastSubCall = -1;
-            foreach (index, arg; form.args[1 .. $]) {
-                if (Form argForm = cast(Form) arg) {
-                    if (form.form == "call") {
-                        lastSubCall = firstSubCall;
-                        if (firstSubCall < 0) {
-                            firstSubCall = cast(int) index;
-                        }
-                        break;
-                    }
-                }
-            }
-            Reg[2][] moves;
-            foreach (index, arg; form.args[1 .. $]) {
-                Reg outreg = new Reg(256 - 1 - index);
-                if (index >= lastSubCall) {
-                    Reg res = walk(arg, outreg);
-                    if (res != outreg) {
-                        throw new Exception("reg alloc failed for: " ~ arg.to!string);
-                    }
-                } else {
-                    Reg res = walk(arg);
-                    moves ~= [outreg, res];
-                }
-            }
-            foreach (pair; moves) {
-                bytecode ~= Opcode.store_reg;
-                bytecode ~= pair[0].ubytes;
-                bytecode ~= pair[1].ubytes;
-            }
-            Reg outreg = allocOut;
-            if (isRec) {
-                bytecode ~= Opcode.rec;
-            } else {
-                bytecode ~= Opcode.call;
-                bytecode ~= funreg.ubytes;
-            }
-            bytecode ~= outreg.ubytes;
-            return outreg;
         case "lambda":
             Form argsForm = cast(Form) form.args[0];
             assert(argsForm !is null, "function must take args");
@@ -822,34 +766,98 @@ final class Walker {
             }
             Reg outLambdaReg = allocOut;
             bytecode ~= Opcode.store_fun;
-            bytecode ~= outLambdaReg.ubytes;
+            bytecode ~= outLambdaReg.reg;
             int refLength = cast(int) bytecode.length;
             bytecode ~= ubytes(-1);
             Reg[string] oldRegs = regs;
-            ubyte[] oldBytecode = bytecode;
             regs = null;
-            bytecode = null;
             foreach (index, arg; argnames) {
-                regs[arg] = new Reg(-1 - index);
+                regs[arg] = new Reg(index);
             }
+            n = cast(int) argnames.length;
             Reg retreg = walk(form.args[1]);
             if (retreg !is null) {
                 bytecode ~= Opcode.ret;
-                bytecode ~= retreg.ubytes;
+                bytecode ~= retreg.reg;
             } else {
                 bytecode ~= Opcode.ret;
-                bytecode ~= alloc().ubytes;
+                bytecode ~= alloc().reg;
             }
             regs = oldRegs;
-            int functionLength = cast(int) bytecode.length;
-            oldBytecode ~= bytecode;
-            bytecode = oldBytecode;
-            bytecode[refLength .. refLength + 4] = ubytes(functionLength);
+            int funcEnd = cast(int) bytecode.length;
+            bytecode[refLength .. refLength + 4] = ubytes(funcEnd);
             return outLambdaReg;
+        case "call":
+            bool isRec = false;
+            if (Ident func = cast(Ident) form.args[0]) {
+                if (func.repr == "println") {
+                    Reg outreg = walk(form.args[1]);
+                    bytecode ~= Opcode.println;
+                    bytecode ~= outreg.reg;
+                    return null;
+                }
+                if (func.repr == "rec") {
+                    isRec = true;
+                }
+            }
+            Reg funreg;
+            if (!isRec) {
+                funreg = walk(form.args[0]);
+            }
+            Reg[] argRegs;
+            foreach (index, arg; form.args[1 .. $]) {
+                argRegs ~= walk(arg);
+            }
+            Reg outreg = allocOut;
+            if (isRec) {
+                bytecode ~= Opcode.rec;
+            } else {
+                bytecode ~= Opcode.call;
+                bytecode ~= funreg.reg;
+            }
+            bytecode ~= outreg.reg;
+            bytecode ~= cast(ubyte) argRegs.length;
+            foreach (reg; argRegs) {
+                bytecode ~= reg.reg;
+            }
+            return outreg;
         case "return":
+            if (Form callForm = cast(Form) form.args[0]) {
+                if (callForm.form == "call") {
+                    bool isRec = false;
+                    if (Ident func = cast(Ident) callForm.args[0]) {
+                        if (func.repr == "println") {
+                            goto noTailCallPossible;
+                        }
+                        if (func.repr == "rec") {
+                            isRec = true;
+                        }
+                    }
+                    Reg funreg;
+                    if (!isRec) {
+                        funreg = walk(callForm.args[0]);
+                    }
+                    Reg[] argRegs;
+                    foreach (index, arg; callForm.args[1 .. $]) {
+                        argRegs ~= walk(arg);
+                    }
+                    if (isRec) {
+                        bytecode ~= Opcode.tail_rec;
+                    } else {
+                        bytecode ~= Opcode.tail_call;
+                        bytecode ~= funreg.reg;
+                    }
+                    bytecode ~= cast(ubyte) argRegs.length;
+                    foreach (reg; argRegs) {
+                        bytecode ~= reg.reg;
+                    }
+                    return null;
+                }
+            }
+        noTailCallPossible:
             Reg res = walk(form.args[0]);
             bytecode ~= Opcode.ret;
-            bytecode ~= res.ubytes;
+            bytecode ~= res.reg;
             return res;
         }
 
@@ -866,8 +874,8 @@ final class Walker {
             return fromreg;
         } else {
             bytecode ~= Opcode.store_reg;
-            bytecode ~= outreg.ubytes;
-            bytecode ~= fromreg.ubytes;
+            bytecode ~= outreg.reg;
+            bytecode ~= fromreg.reg;
             return outreg;
         }
     }
@@ -878,13 +886,13 @@ final class Walker {
         } else if (val.info == typeid(bool)) {
             Reg ret = allocOut;
             bytecode ~= Opcode.store_log;
-            bytecode ~= ret.ubytes;
+            bytecode ~= ret.reg;
             bytecode ~= ubytes(*cast(bool*) val.value);
             return ret;
         } else if (val.info == typeid(double)) {
             Reg ret = allocOut;
             bytecode ~= Opcode.store_num;
-            bytecode ~= ret.ubytes;
+            bytecode ~= ret.reg;
             bytecode ~= ubytes(*cast(double*) val.value);
             return ret;
         } else {

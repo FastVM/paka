@@ -5,10 +5,7 @@
 #include <math.h>
 
 #define VM_REG_NUM ((256))
-#define VM_FRAME_NUM ((256))
-
-union vm_value_t;
-typedef union vm_value_t vm_value_t;
+#define VM_FRAME_NUM ((16))
 
 #ifdef __clang__
 #define vm_assume(expr) (__builtin_assume(expr))
@@ -16,19 +13,16 @@ typedef union vm_value_t vm_value_t;
 #define vm_assume(expr) (__builtin_expect(expr, true))
 #endif
 
-#define vm_fetch (next_op_value = ptrs[cur_func.bytecode[cur_index]])
-// #define vm_fetch ((void)0)
+#define vm_fetch (next_op_value = ptrs[basefunc[cur_index]])
 #define next_op (cur_index++, next_op_value)
 
-typedef double number_t;
+typedef int number_t;
 typedef char opcode_t;
 
-struct func_t;
-union value_t;
+struct value_t;
 enum errro_t;
 
-typedef struct func_t func_t;
-typedef union value_t value_t;
+typedef struct value_t value_t;
 typedef enum error_t error_t;
 
 enum error_t
@@ -44,17 +38,14 @@ enum local_flags_t
   LOCAL_FLAGS_ARG = 1,
 };
 
-struct func_t
+struct value_t
 {
-  opcode_t *bytecode;
-};
-
-union value_t
-{
-  bool logical;
-  number_t number;
-  const char *text;
-  func_t bytecode;
+  union
+  {
+    bool logical;
+    number_t number;
+    int bytecode;
+  };
 };
 
 enum opcode_t
@@ -107,6 +98,8 @@ enum opcode_t
   OPCODE_MOD_NUM,
   OPCODE_CALL,
   OPCODE_REC,
+  OPCODE_TAIL_CALL,
+  OPCODE_TAIL_REC,
   OPCODE_RETURN,
   OPCODE_PRINTLN,
   OPCODE_MAX1,
@@ -114,7 +107,7 @@ enum opcode_t
 };
 
 #ifdef VM_DEBUG
-#define debug_op vm_print_opcode(cur_index, cur_func.bytecode);
+#define debug_op vm_print_opcode(cur_index, basefunc);
 #else
 #define debug_op
 #endif
@@ -122,8 +115,8 @@ enum opcode_t
 typedef struct
 {
   int index;
-  func_t func;
-  opcode_t *bytecode;
+  int func;
+  int bytecode;
   int outreg;
 } stack_frame_t;
 
@@ -135,18 +128,24 @@ typedef struct
         cur_func = frame.func;           \
       })
 
-#define run_next_op                                      \
-  vm_assume(cur_func.bytecode[cur_index] < OPCODE_MAX1); \
-  vm_assume(cur_func.bytecode[cur_index] >= 0);          \
+#define run_next_op                             \
+  vm_assume(basefunc[cur_index] < OPCODE_MAX1); \
+  vm_assume(basefunc[cur_index] >= 0);          \
   debug_op goto *next_op;
 
-#define cur_bytecode_next(Type)                            \
-  (                                                        \
-      {                                                    \
-        Type ret = *(Type *)&cur_func.bytecode[cur_index]; \
-        cur_index += sizeof(Type);                         \
-        ret;                                               \
+#define cur_bytecode_next(Type)                   \
+  (                                               \
+      {                                           \
+        Type ret = *(Type *)&basefunc[cur_index]; \
+        cur_index += sizeof(Type);                \
+        ret;                                      \
       })
+
+#define read_reg (cur_bytecode_next(unsigned char))
+#define read_bool (cur_bytecode_next(bool))
+#define read_int (cur_bytecode_next(int))
+#define read_num (cur_bytecode_next(number_t))
+#define read_loc (cur_bytecode_next(int))
 
 void vm_error(error_t err)
 {
@@ -254,7 +253,11 @@ const char *vm_opcode_internal_name(opcode_t op)
   case OPCODE_CALL:
     return "call";
   case OPCODE_REC:
-    return "redo";
+    return "rec";
+  case OPCODE_TAIL_CALL:
+    return "tail_call";
+  case OPCODE_TAIL_REC:
+    return "tail_rec";
   case OPCODE_RETURN:
     return "return";
   case OPCODE_PRINTLN:
@@ -364,6 +367,10 @@ const char *vm_opcode_name(opcode_t op)
     return "call";
   case OPCODE_REC:
     return "rec";
+  case OPCODE_TAIL_CALL:
+    return "tcall";
+  case OPCODE_TAIL_REC:
+    return "trec";
   case OPCODE_RETURN:
     return "ret";
   case OPCODE_PRINTLN:
@@ -470,9 +477,13 @@ const char *vm_opcode_format(opcode_t op)
   case OPCODE_MOD_NUM:
     return "rrn";
   case OPCODE_CALL:
-    return "rr";
+    return "rrc";
   case OPCODE_REC:
-    return "r";
+    return "rc";
+  case OPCODE_TAIL_CALL:
+    return "rc";
+  case OPCODE_TAIL_REC:
+    return "c";
   case OPCODE_RETURN:
     return "r";
   case OPCODE_PRINTLN:
@@ -501,48 +512,79 @@ void vm_print_opcode(int index, opcode_t *bytecode)
     switch (fmt[index])
     {
     case 'r':
-      printf("r%i", *(int *)head);
-      head += 4;
+    {
+      printf("r%i", *(unsigned char *)head);
+      head += 1;
       break;
+    }
     case 'j':
+    {
       printf("[%i]", *(int *)head);
       head += 4;
       break;
+    }
     case 'l':
+    {
       printf("%s", *(bool *)head ? "1" : "0");
       head += 1;
       break;
+    }
+    case 'c':
+    {
+      int nargs = *(unsigned char *)head;
+      head += 1;
+      printf("(");
+      for (int argno = 0; argno < nargs; argno++)
+      {
+        if (argno != 0)
+        {
+          printf(", ");
+        }
+        printf("r%i", *(unsigned char *)head);
+        head += 1;
+      }
+      printf(")");
+      break;
+    }
     case 'n':
+    {
       if (fmod(*(number_t *)head, 1) == 0)
       {
-        printf("%.0f", *(number_t *)head);
+        printf("%i", *(number_t *)head);
       }
       else
       {
-        printf("%f", *(number_t *)head);
+        printf("%i", *(number_t *)head);
       }
       head += 8;
       break;
+    }
     case 'a':
+    {
       printf("{%i}", *(int *)head);
       head += *(int *)head + 4;
       break;
-    case 'e':
+    }
+    default:
+    {
       printf("error");
+    }
     }
   }
   printf("\n");
 }
 
-void vm_run(func_t *basefunc)
+void vm_run(opcode_t *basefunc)
 {
-  stack_frame_t *frames_base = malloc(sizeof(stack_frame_t) * VM_FRAME_NUM);
-  stack_frame_t *frames = frames_base;
+  stack_frame_t *frames_base = calloc(1, sizeof(stack_frame_t) * VM_FRAME_NUM);
   int allocn = VM_FRAME_NUM - 4;
-  value_t *locals_base = malloc(sizeof(value_t) * VM_REG_NUM * VM_FRAME_NUM);
+  value_t *locals_base = calloc(1, sizeof(value_t) * VM_REG_NUM * VM_FRAME_NUM);
+
+  stack_frame_t *cur_frame = frames_base;
   value_t *cur_locals = locals_base;
-  int cur_index;
-  func_t cur_func;
+  int cur_index = 0;
+  int cur_func = 0;
+
   void *next_op_value;
   void *ptrs[OPCODE_MAX2P] = {NULL};
   ptrs[OPCODE_EXIT] = &&do_exit;
@@ -593,12 +635,10 @@ void vm_run(func_t *basefunc)
   ptrs[OPCODE_MOD_NUM] = &&do_mod_num;
   ptrs[OPCODE_CALL] = &&do_call;
   ptrs[OPCODE_REC] = &&do_rec;
+  ptrs[OPCODE_TAIL_CALL] = &&do_tail_call;
+  ptrs[OPCODE_TAIL_REC] = &&do_tail_rec;
   ptrs[OPCODE_RETURN] = &&do_return;
   ptrs[OPCODE_PRINTLN] = &&do_println;
-  vm_set_frame(((stack_frame_t){
-      .func = *basefunc,
-      .index = 0,
-  }));
   vm_fetch;
   run_next_op;
 do_exit:
@@ -609,106 +649,146 @@ do_exit:
 }
 do_return:
 {
-  int from = cur_bytecode_next(int);
+  unsigned char from = read_reg;
   value_t val = cur_locals[from];
-  frames--;
-  int outreg = frames->outreg;
-  cur_func = frames->func;
-  cur_index = frames->index;
+  cur_frame--;
+  int outreg = cur_frame->outreg;
+  cur_func = cur_frame->func;
+  cur_index = cur_frame->index;
   cur_locals -= VM_REG_NUM;
   cur_locals[outreg] = val;
-  // printf("return %g (%i -> %i)\n", val.number, from, outreg);
   vm_fetch;
   run_next_op;
 }
 do_call:
 {
-  if (frames - frames_base >= allocn)
+  if (cur_frame - frames_base >= allocn)
   {
-    int len = frames - frames_base;
-    int alloc = allocn * 2 + 4;
+    int len = cur_frame - frames_base;
+    int alloc = allocn * 2 + 8;
     frames_base = realloc(frames_base, sizeof(stack_frame_t) * alloc);
-    frames = frames_base + len;
+    cur_frame = frames_base + len;
     allocn = alloc - 4;
     int nlocals = cur_locals - locals_base;
     locals_base = realloc(locals_base, sizeof(value_t) * VM_REG_NUM * alloc);
     cur_locals = locals_base + nlocals;
   }
-  int func = cur_bytecode_next(int);
-  int outreg = cur_bytecode_next(int);
-  func_t next_func = cur_locals[func].bytecode;
-  frames->index = cur_index;
-  frames->func = cur_func;
-  frames->outreg = outreg;
-  frames++;
-  cur_index = 0;
+  unsigned char func = read_reg;
+  unsigned char outreg = read_reg;
+  unsigned char nargs = read_reg;
+  value_t *next_locals = cur_locals + VM_REG_NUM;
+  for (int argno = 0; argno < nargs; argno++)
+  {
+    unsigned char regno = read_reg;
+    next_locals[argno] = cur_locals[regno];
+  }
+  int next_func = cur_locals[func].bytecode;
+  cur_locals = next_locals;
+  cur_frame->index = cur_index;
+  cur_frame->func = cur_func;
+  cur_frame->outreg = outreg;
+  cur_frame++;
+  cur_index = next_func;
   cur_func = next_func;
-  cur_locals += VM_REG_NUM;
   vm_fetch;
   run_next_op;
 }
 do_rec:
 {
-  if (frames - frames_base >= allocn)
+  if (cur_frame - frames_base >= allocn)
   {
-    int len = frames - frames_base;
-    int alloc = allocn * 2 + 4;
+    int len = cur_frame - frames_base;
+    int alloc = allocn * 2 + 8;
     frames_base = realloc(frames_base, sizeof(stack_frame_t) * alloc);
-    frames = frames_base + len;
+    cur_frame = frames_base + len;
     allocn = alloc - 4;
     int nlocals = cur_locals - locals_base;
     locals_base = realloc(locals_base, sizeof(value_t) * VM_REG_NUM * alloc);
     cur_locals = locals_base + nlocals;
   }
-  int outreg = cur_bytecode_next(int);
-  frames->index = cur_index;
-  frames->func = cur_func;
-  frames->outreg = outreg;
-  frames++;
-  cur_index = 0;
-  cur_locals += VM_REG_NUM;
+  unsigned char outreg = read_reg;
+  unsigned char nargs = read_reg;
+  value_t *next_locals = cur_locals + VM_REG_NUM;
+  for (int argno = 0; argno < nargs; argno++)
+  {
+    unsigned char regno = read_reg;
+    next_locals[argno] = cur_locals[regno];
+  }
+  cur_locals = next_locals;
+  cur_frame->index = cur_index;
+  cur_frame->func = cur_func;
+  cur_frame->outreg = outreg;
+  cur_frame++;
+  cur_index = cur_func;
+  vm_fetch;
+  run_next_op;
+}
+do_tail_call:
+{
+  unsigned char func = read_reg;
+  unsigned char nargs = read_reg;
+  for (int argno = 0; argno < nargs; argno++)
+  {
+    unsigned char from = read_reg;
+    cur_locals[argno] = cur_locals[from];
+  }
+  int next_func = cur_locals[func].bytecode;
+  cur_index = next_func;
+  cur_func = next_func;
+  vm_fetch;
+  run_next_op;
+}
+do_tail_rec:
+{
+  unsigned char nargs = read_reg;
+  for (int argno = 0; argno < nargs; argno++)
+  {
+    unsigned char from = read_reg;
+    cur_locals[argno] = cur_locals[from];
+  }
+  cur_index = cur_func;
   vm_fetch;
   run_next_op;
 }
 do_store_reg:
 {
-  int to = cur_bytecode_next(int);
-  int from = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char from = read_reg;
   vm_fetch;
   cur_locals[to] = cur_locals[from];
   run_next_op;
 }
 do_store_num:
 {
-  int to = cur_bytecode_next(int);
-  number_t from = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  number_t from = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){.number = from};
   run_next_op;
 }
 do_store_log:
 {
-  int to = cur_bytecode_next(int);
-  bool from = cur_bytecode_next(bool);
+  unsigned char to = read_reg;
+  bool from = read_bool;
   vm_fetch;
   cur_locals[to] = (value_t){.logical = from};
   run_next_op;
 }
 do_store_fun:
 {
-  int to = cur_bytecode_next(int);
-  int len = cur_bytecode_next(int);
-  opcode_t *head = &cur_func.bytecode[cur_index];
-  cur_index += len;
+  unsigned char to = read_reg;
+  int func_end = read_loc;
+  int head = cur_index;
+  cur_index = func_end;
   vm_fetch;
-  cur_locals[to] = (value_t){.bytecode = (func_t){.bytecode = head}};
+  cur_locals[to] = (value_t){.bytecode = head};
   run_next_op;
 }
 do_equal_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number == rhs,
@@ -717,9 +797,9 @@ do_equal_num:
 }
 do_not_equal:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number != cur_locals[rhs].number,
@@ -728,9 +808,9 @@ do_not_equal:
 }
 do_not_equal_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number != rhs,
@@ -739,9 +819,9 @@ do_not_equal_num:
 }
 do_less:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number < cur_locals[rhs].number,
@@ -750,9 +830,9 @@ do_less:
 }
 do_less_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number < rhs,
@@ -761,9 +841,9 @@ do_less_num:
 }
 do_greater:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number > cur_locals[rhs].number,
@@ -772,9 +852,9 @@ do_greater:
 }
 do_greater_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number > rhs,
@@ -783,9 +863,9 @@ do_greater_num:
 }
 do_equal:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number == cur_locals[rhs].number,
@@ -794,9 +874,9 @@ do_equal:
 }
 do_less_than_equal:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number <= cur_locals[rhs].number,
@@ -805,9 +885,9 @@ do_less_than_equal:
 }
 do_less_than_equal_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number <= rhs,
@@ -816,9 +896,9 @@ do_less_than_equal_num:
 }
 do_greater_than_equal:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number >= cur_locals[rhs].number,
@@ -827,9 +907,9 @@ do_greater_than_equal:
 }
 do_greater_than_equal_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .logical = cur_locals[lhs].number >= rhs,
@@ -838,15 +918,15 @@ do_greater_than_equal_num:
 }
 do_jump_always:
 {
-  int to = cur_bytecode_next(int);
+  int to = read_loc;
   cur_index = to;
   vm_fetch;
   run_next_op;
 }
 do_jump_if_false:
 {
-  int to = cur_bytecode_next(int);
-  int from = cur_bytecode_next(int);
+  int to = read_loc;
+  unsigned char from = read_reg;
   if (cur_locals[from].logical == false)
   {
     cur_index = to;
@@ -856,8 +936,8 @@ do_jump_if_false:
 }
 do_jump_if_true:
 {
-  int to = cur_bytecode_next(int);
-  int from = cur_bytecode_next(int);
+  int to = read_loc;
+  unsigned char from = read_reg;
   if (cur_locals[from].logical == true)
   {
     cur_index = to;
@@ -867,9 +947,9 @@ do_jump_if_true:
 }
 do_jump_if_equal:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   if (cur_locals[lhs].number == cur_locals[rhs].number)
   {
     cur_index = to;
@@ -879,9 +959,9 @@ do_jump_if_equal:
 }
 do_jump_if_equal_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   if (cur_locals[lhs].number == rhs)
   {
     cur_index = to;
@@ -891,9 +971,9 @@ do_jump_if_equal_num:
 }
 do_jump_if_not_equal:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   if (cur_locals[lhs].number != cur_locals[rhs].number)
   {
     cur_index = to;
@@ -903,10 +983,9 @@ do_jump_if_not_equal:
 }
 do_jump_if_not_equal_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
-  // printf("%g != %g\n", cur_locals[lhs].number, rhs);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   if (cur_locals[lhs].number != rhs)
   {
     cur_index = to;
@@ -916,9 +995,9 @@ do_jump_if_not_equal_num:
 }
 do_jump_if_less:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   if (cur_locals[lhs].number < cur_locals[rhs].number)
   {
     cur_index = to;
@@ -928,9 +1007,9 @@ do_jump_if_less:
 }
 do_jump_if_less_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   if (cur_locals[lhs].number < rhs)
   {
     cur_index = to;
@@ -940,9 +1019,9 @@ do_jump_if_less_num:
 }
 do_jump_if_less_than_equal:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   if (cur_locals[lhs].number <= cur_locals[rhs].number)
   {
     cur_index = to;
@@ -952,9 +1031,9 @@ do_jump_if_less_than_equal:
 }
 do_jump_if_less_than_equal_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   if (cur_locals[lhs].number <= rhs)
   {
     cur_index = to;
@@ -964,9 +1043,9 @@ do_jump_if_less_than_equal_num:
 }
 do_jump_if_greater:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   if (cur_locals[lhs].number > cur_locals[rhs].number)
   {
     cur_index = to;
@@ -976,9 +1055,9 @@ do_jump_if_greater:
 }
 do_jump_if_greater_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   if (cur_locals[lhs].number > rhs)
   {
     cur_index = to;
@@ -988,9 +1067,9 @@ do_jump_if_greater_num:
 }
 do_jump_if_greater_than_equal:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   if (cur_locals[lhs].number >= cur_locals[rhs].number)
   {
     cur_index = to;
@@ -1000,9 +1079,9 @@ do_jump_if_greater_than_equal:
 }
 do_jump_if_greater_than_equal_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  int to = read_loc;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   if (cur_locals[lhs].number >= rhs)
   {
     cur_index = to;
@@ -1012,8 +1091,8 @@ do_jump_if_greater_than_equal_num:
 }
 do_inc:
 {
-  int target = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char target = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[target] = (value_t){
       .number = cur_locals[target].number + cur_locals[rhs].number,
@@ -1022,8 +1101,8 @@ do_inc:
 }
 do_inc_num:
 {
-  int target = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char target = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[target] = (value_t){
       .number = cur_locals[target].number + rhs,
@@ -1032,8 +1111,8 @@ do_inc_num:
 }
 do_dec:
 {
-  int target = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char target = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[target] = (value_t){
       .number = cur_locals[target].number - cur_locals[rhs].number,
@@ -1042,8 +1121,8 @@ do_dec:
 }
 do_dec_num:
 {
-  int target = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char target = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[target] = (value_t){
       .number = cur_locals[target].number - rhs,
@@ -1052,9 +1131,9 @@ do_dec_num:
 }
 do_add:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .number = cur_locals[lhs].number + cur_locals[rhs].number,
@@ -1063,9 +1142,9 @@ do_add:
 }
 do_add_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .number = cur_locals[lhs].number + rhs,
@@ -1074,9 +1153,9 @@ do_add_num:
 }
 do_mul:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .number = cur_locals[lhs].number * cur_locals[rhs].number,
@@ -1085,9 +1164,9 @@ do_mul:
 }
 do_mul_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .number = cur_locals[lhs].number * rhs,
@@ -1096,9 +1175,9 @@ do_mul_num:
 }
 do_sub:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .number = cur_locals[lhs].number - cur_locals[rhs].number,
@@ -1107,9 +1186,9 @@ do_sub:
 }
 do_sub_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .number = cur_locals[lhs].number - rhs,
@@ -1118,9 +1197,9 @@ do_sub_num:
 }
 do_div:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .number = cur_locals[lhs].number / cur_locals[rhs].number,
@@ -1129,9 +1208,9 @@ do_div:
 }
 do_div_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .number = cur_locals[lhs].number / rhs,
@@ -1140,9 +1219,9 @@ do_div_num:
 }
 do_mod:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  int rhs = cur_bytecode_next(int);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  unsigned char rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
       .number = fmod(cur_locals[lhs].number, cur_locals[rhs].number),
@@ -1151,9 +1230,9 @@ do_mod:
 }
 do_mod_num:
 {
-  int to = cur_bytecode_next(int);
-  int lhs = cur_bytecode_next(int);
-  number_t rhs = cur_bytecode_next(number_t);
+  unsigned char to = read_reg;
+  unsigned char lhs = read_reg;
+  number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
       .number = fmod(cur_locals[lhs].number, rhs),
@@ -1162,16 +1241,16 @@ do_mod_num:
 }
 do_println:
 {
-  int from = cur_bytecode_next(int);
+  unsigned char from = read_reg;
   vm_fetch;
   number_t num = cur_locals[from].number;
   if (fmod(num, 1) == 0)
   {
-    printf("%.0f\n", num);
+    printf("%i\n", num);
   }
   else
   {
-    printf("%f\n", num);
+    printf("%i\n", num);
   }
   run_next_op;
 }

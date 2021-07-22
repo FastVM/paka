@@ -65,7 +65,10 @@ Thunk cliCompileHandler(immutable string code) {
         SrcLoc loc = SrcLoc(1, 1, "__main__", code);
         Node node = loc.parse;
         Walker walker = new Walker;
-        Bytecode func = walker.walkProgram(node);
+        walker.walkProgram(node);
+        File outmvm = File("out.minivm", "w");
+        outmvm.rawWrite(walker.bytecode);
+        outmvm.close();
     };
 }
 
