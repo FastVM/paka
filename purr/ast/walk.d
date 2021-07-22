@@ -2,7 +2,7 @@ module purr.ast.walk;
 
 import core.memory;
 import std.conv;
-import purr.io;
+import std.stdio;
 import std.string;
 import std.algorithm;
 import std.ascii;
@@ -769,32 +769,46 @@ final class Walker {
             if (!isRec) {
                 funreg = walk(form.args[0]);
             }
+            int firstSubCall = -1;
+            int lastSubCall = -1;
             foreach (index, arg; form.args[1 .. $]) {
-                Reg outreg = new Reg(256 - 1 - index);
-                Reg res = walk(arg, outreg);
-                if (res != outreg) {
-                    throw new Exception("reg alloc failed for: " ~ arg.to!string);
+                if (Form argForm = cast(Form) arg) {
+                    if (form.form == "call") {
+                        lastSubCall = firstSubCall;
+                        if (firstSubCall < 0) {
+                            firstSubCall = cast(int) index;
+                        }
+                        break;
+                    }
                 }
             }
+            Reg[2][] moves;
+            foreach (index, arg; form.args[1 .. $]) {
+                Reg outreg = new Reg(256 - 1 - index);
+                if (index >= lastSubCall) {
+                    Reg res = walk(arg, outreg);
+                    if (res != outreg) {
+                        throw new Exception("reg alloc failed for: " ~ arg.to!string);
+                    }
+                } else {
+                    Reg res = walk(arg);
+                    moves ~= [outreg, res];
+                }
+            }
+            foreach (pair; moves) {
+                bytecode ~= Opcode.store_reg;
+                bytecode ~= pair[0].ubytes;
+                bytecode ~= pair[1].ubytes;
+            }
+            Reg outreg = allocOut;
             if (isRec) {
                 bytecode ~= Opcode.rec;
             } else {
                 bytecode ~= Opcode.call;
                 bytecode ~= funreg.ubytes;
             }
-            Reg outreg = allocOutMaybe;
-            if (outreg is null) {
-                Reg res = alloc;
-                bytecode ~= Opcode.store_reg;
-                bytecode ~= res.ubytes;
-                bytecode ~= new Reg(256 - 1).ubytes;
-                return res;
-            } else {
-                bytecode ~= Opcode.store_reg;
-                bytecode ~= outreg.ubytes;
-                bytecode ~= new Reg(256 - 1).ubytes;
-                return outreg;
-            }
+            bytecode ~= outreg.ubytes;
+            return outreg;
         case "lambda":
             Form argsForm = cast(Form) form.args[0];
             assert(argsForm !is null, "function must take args");

@@ -1,7 +1,7 @@
 module purr.vm;
 
 import purr.vm.bytecode;
-import purr.io;
+import std.stdio;
 
 import core.memory;
 import core.stdc.stdlib;

@@ -1,6 +1,6 @@
 module ext.passerine.parse.op;
 
-import purr.io;
+import std.stdio;
 import std.conv;
 import purr.ast.ast;
 import ext.passerine.parse.util;

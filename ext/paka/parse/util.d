@@ -1,6 +1,6 @@
 module ext.paka.parse.util;
 
-import purr.io;
+import std.stdio;
 import std.conv;
 import purr.srcloc;
 import purr.ast.ast;

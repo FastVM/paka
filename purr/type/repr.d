@@ -3,7 +3,7 @@ module purr.type.repr;
 import std.conv;
 import std.array;
 import std.algorithm;
-import purr.io;
+import std.stdio;
 import purr.vm.bytecode;
 import purr.ast.ast;
 

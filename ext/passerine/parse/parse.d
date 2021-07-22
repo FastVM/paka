@@ -1,6 +1,6 @@
 module ext.passerine.parse.parse;
 
-import purr.io;
+import std.stdio;
 import std.conv;
 import std.file;
 import std.array;

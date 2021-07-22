@@ -2,7 +2,7 @@ module purr.inter;
 
 import std.typecons;
 import std.traits;
-import purr.io;
+import std.stdio;
 import std.functional;
 import std.conv;
 import std.algorithm;

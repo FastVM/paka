@@ -1,6 +1,6 @@
 module purr.vm.bytecode;
 
-import purr.io;
+import std.stdio;
 import core.memory;
 
 alias Number = double;

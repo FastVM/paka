@@ -1,13 +1,13 @@
 module purr.app;
 
-import purr.io;
+import std.stdio;
 import purr.ast.walk;
 import purr.vm;
 import purr.srcloc;
 import purr.ast.ast;
 import purr.parse;
 import purr.inter;
-import purr.io;
+import std.stdio;
 import purr.vm.bytecode;
 import purr.ast.walk;
 import std.uuid;
@@ -25,7 +25,7 @@ import core.memory;
 import core.time;
 import core.stdc.stdlib;
 
-extern (C) __gshared string[] rt_options = [];
+extern (C) __gshared string[] rt_options = ["gcopt=gc:manual"];
 
 alias Thunk = void delegate();
 

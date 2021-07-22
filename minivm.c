@@ -5,8 +5,7 @@
 #include <math.h>
 
 #define VM_REG_NUM ((256))
-
-int vm_reg_num = VM_REG_NUM;
+#define VM_FRAME_NUM ((256))
 
 union vm_value_t;
 typedef union vm_value_t vm_value_t;
@@ -25,14 +24,10 @@ typedef double number_t;
 typedef char opcode_t;
 
 struct func_t;
-struct vm_t;
-struct cont_t;
 union value_t;
 enum errro_t;
 
-typedef struct vm_t vm_t;
 typedef struct func_t func_t;
-typedef struct cont_t cont_t;
 typedef union value_t value_t;
 typedef enum error_t error_t;
 
@@ -127,9 +122,9 @@ enum opcode_t
 typedef struct
 {
   int index;
-  value_t *locals;
   func_t func;
   opcode_t *bytecode;
+  int outreg;
 } stack_frame_t;
 
 #define vm_set_frame(frame_arg)          \
@@ -137,30 +132,8 @@ typedef struct
       {                                  \
         stack_frame_t frame = frame_arg; \
         cur_index = frame.index;         \
-        cur_locals = frame.locals;       \
         cur_func = frame.func;           \
       })
-
-#define vm_get_frame()    \
-  (stack_frame_t)         \
-  {                       \
-    .index = cur_index,   \
-    .locals = cur_locals, \
-    .func = cur_func,     \
-  }
-
-struct vm_t
-{
-  value_t *linear;
-  stack_frame_t *frames;
-};
-
-struct cont_t
-{
-  vm_t vm;
-  stack_frame_t frame;
-  int frame_number;
-};
 
 #define run_next_op                                      \
   vm_assume(cur_func.bytecode[cur_index] < OPCODE_MAX1); \
@@ -281,7 +254,7 @@ const char *vm_opcode_internal_name(opcode_t op)
   case OPCODE_CALL:
     return "call";
   case OPCODE_REC:
-    return "rec";
+    return "redo";
   case OPCODE_RETURN:
     return "return";
   case OPCODE_PRINTLN:
@@ -342,7 +315,7 @@ const char *vm_opcode_name(opcode_t op)
   case OPCODE_JUMP_IF_NOT_EQUAL:
     return "jmpneq";
   case OPCODE_JUMP_IF_NOT_EQUAL_NUM:
-    return "jmpeq";
+    return "jmpneq";
   case OPCODE_JUMP_IF_LESS:
     return "jmplt";
   case OPCODE_JUMP_IF_LESS_NUM:
@@ -497,9 +470,9 @@ const char *vm_opcode_format(opcode_t op)
   case OPCODE_MOD_NUM:
     return "rrn";
   case OPCODE_CALL:
-    return "r";
+    return "rr";
   case OPCODE_REC:
-    return "";
+    return "r";
   case OPCODE_RETURN:
     return "r";
   case OPCODE_PRINTLN:
@@ -513,7 +486,7 @@ void vm_print_opcode(int index, opcode_t *bytecode)
   opcode_t opcode = *head;
   head++;
   printf("[%i]: ", index);
-  printf("%-6s", vm_opcode_name(opcode));
+  printf("%s", vm_opcode_name(opcode));
   const char *fmt = vm_opcode_format(opcode);
   for (int index = 0; fmt[index] != '\0'; index++)
   {
@@ -542,11 +515,11 @@ void vm_print_opcode(int index, opcode_t *bytecode)
     case 'n':
       if (fmod(*(number_t *)head, 1) == 0)
       {
-        printf("%li", (long)*(number_t *)head);
+        printf("%.0f", *(number_t *)head);
       }
       else
       {
-        printf("%g", *(number_t *)head);
+        printf("%f", *(number_t *)head);
       }
       head += 8;
       break;
@@ -563,22 +536,16 @@ void vm_print_opcode(int index, opcode_t *bytecode)
 
 void vm_run(func_t *basefunc)
 {
-  vm_t vm = (vm_t){
-      .linear = malloc(sizeof(value_t) * VM_REG_NUM * 256),
-      .frames = malloc(sizeof(stack_frame_t) * 256),
-  };
-  int frame_number = 0;
-  stack_frame_t next = (stack_frame_t){
-      .func = *basefunc,
-      .index = 0,
-  };
+  stack_frame_t *frames_base = malloc(sizeof(stack_frame_t) * VM_FRAME_NUM);
+  stack_frame_t *frames = frames_base;
+  int allocn = VM_FRAME_NUM - 4;
+  value_t *locals_base = malloc(sizeof(value_t) * VM_REG_NUM * VM_FRAME_NUM);
+  value_t *cur_locals = locals_base;
   int cur_index;
   func_t cur_func;
-  value_t *cur_locals;
   void *next_op_value;
   void *ptrs[OPCODE_MAX2P] = {NULL};
   ptrs[OPCODE_EXIT] = &&do_exit;
-  ptrs[OPCODE_RETURN] = &&do_exit;
   ptrs[OPCODE_STORE_REG] = &&do_store_reg;
   ptrs[OPCODE_STORE_LOG] = &&do_store_log;
   ptrs[OPCODE_STORE_NUM] = &&do_store_num;
@@ -628,48 +595,80 @@ void vm_run(func_t *basefunc)
   ptrs[OPCODE_REC] = &&do_rec;
   ptrs[OPCODE_RETURN] = &&do_return;
   ptrs[OPCODE_PRINTLN] = &&do_println;
-  goto first_call;
-rec_call:
-  vm.frames[frame_number++] = vm_get_frame();
-first_call:
-  vm_set_frame(next);
-  cur_locals = vm.linear;
-  vm.linear += VM_REG_NUM;
+  vm_set_frame(((stack_frame_t){
+      .func = *basefunc,
+      .index = 0,
+  }));
   vm_fetch;
   run_next_op;
 do_exit:
 {
-  free(vm.linear);
-  free(vm.frames);
+  free(locals_base);
+  free(frames_base);
   return;
 }
 do_return:
 {
   int from = cur_bytecode_next(int);
   value_t val = cur_locals[from];
-  vm.linear -= VM_REG_NUM;
-  vm_set_frame(vm.frames[--frame_number]);
+  frames--;
+  int outreg = frames->outreg;
+  cur_func = frames->func;
+  cur_index = frames->index;
+  cur_locals -= VM_REG_NUM;
+  cur_locals[outreg] = val;
+  // printf("return %g (%i -> %i)\n", val.number, from, outreg);
   vm_fetch;
-  cur_locals[VM_REG_NUM - 1] = val;
   run_next_op;
 }
 do_call:
 {
+  if (frames - frames_base >= allocn)
+  {
+    int len = frames - frames_base;
+    int alloc = allocn * 2 + 4;
+    frames_base = realloc(frames_base, sizeof(stack_frame_t) * alloc);
+    frames = frames_base + len;
+    allocn = alloc - 4;
+    int nlocals = cur_locals - locals_base;
+    locals_base = realloc(locals_base, sizeof(value_t) * VM_REG_NUM * alloc);
+    cur_locals = locals_base + nlocals;
+  }
   int func = cur_bytecode_next(int);
+  int outreg = cur_bytecode_next(int);
   func_t next_func = cur_locals[func].bytecode;
-  next = (stack_frame_t){
-      .index = 0,
-      .func = next_func,
-  };
-  goto rec_call;
+  frames->index = cur_index;
+  frames->func = cur_func;
+  frames->outreg = outreg;
+  frames++;
+  cur_index = 0;
+  cur_func = next_func;
+  cur_locals += VM_REG_NUM;
+  vm_fetch;
+  run_next_op;
 }
 do_rec:
 {
-  next = (stack_frame_t){
-      .index = 0,
-      .func = cur_func,
-  };
-  goto rec_call;
+  if (frames - frames_base >= allocn)
+  {
+    int len = frames - frames_base;
+    int alloc = allocn * 2 + 4;
+    frames_base = realloc(frames_base, sizeof(stack_frame_t) * alloc);
+    frames = frames_base + len;
+    allocn = alloc - 4;
+    int nlocals = cur_locals - locals_base;
+    locals_base = realloc(locals_base, sizeof(value_t) * VM_REG_NUM * alloc);
+    cur_locals = locals_base + nlocals;
+  }
+  int outreg = cur_bytecode_next(int);
+  frames->index = cur_index;
+  frames->func = cur_func;
+  frames->outreg = outreg;
+  frames++;
+  cur_index = 0;
+  cur_locals += VM_REG_NUM;
+  vm_fetch;
+  run_next_op;
 }
 do_store_reg:
 {
@@ -907,6 +906,7 @@ do_jump_if_not_equal_num:
   int to = cur_bytecode_next(int);
   int lhs = cur_bytecode_next(int);
   number_t rhs = cur_bytecode_next(number_t);
+  // printf("%g != %g\n", cur_locals[lhs].number, rhs);
   if (cur_locals[lhs].number != rhs)
   {
     cur_index = to;
@@ -1164,7 +1164,15 @@ do_println:
 {
   int from = cur_bytecode_next(int);
   vm_fetch;
-  printf("%g\n", cur_locals[from].number);
+  number_t num = cur_locals[from].number;
+  if (fmod(num, 1) == 0)
+  {
+    printf("%.0f\n", num);
+  }
+  else
+  {
+    printf("%f\n", num);
+  }
   run_next_op;
 }
 }
