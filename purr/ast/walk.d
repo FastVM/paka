@@ -15,7 +15,7 @@ import purr.type.err;
 __gshared bool dumpast = false;
 
 class Reg {
-    ubyte reg;
+    int repr;
     string sym;
 
     this(T)(T n, string s = null) {
@@ -25,18 +25,22 @@ class Reg {
         if (n < 0) {
             throw new Exception("reg too low");
         }
-        reg = cast(ubyte) n;
+        repr = cast(int) n;
         sym = s;
+    }
+
+    ubyte[4] reg() {
+        return (cast(ubyte*)&repr)[0 .. 4];
     }
 
     override bool opEquals(Object other) {
         Reg oreg = cast(Reg) other;
-        return oreg !is null && reg == oreg.reg;
+        return oreg !is null && repr == oreg.repr;
     }
 
     override string toString() {
         if (sym.length == 0) {
-            return "." ~ reg.to!string;
+            return "." ~ repr.to!string;
         } else {
             return sym;
         }
@@ -58,7 +62,9 @@ final class Walker {
         }
         bytecode = null;
         walk(program);
-        bytecode ~= Opcode.exit;
+        foreach (_; 0 .. 8) {
+            bytecode ~= Opcode.exit;
+        }
     }
 
     ubyte[1] ubytes(bool val) {
@@ -794,7 +800,7 @@ final class Walker {
                     Reg outreg = walk(form.args[1]);
                     bytecode ~= Opcode.println;
                     bytecode ~= outreg.reg;
-                    return null;
+                    return allocOut;
                 }
                 if (func.repr == "rec") {
                     isRec = true;
@@ -816,7 +822,7 @@ final class Walker {
                 bytecode ~= funreg.reg;
             }
             bytecode ~= outreg.reg;
-            bytecode ~= cast(ubyte) argRegs.length;
+            bytecode ~= ubytes(cast(int) argRegs.length);
             foreach (reg; argRegs) {
                 bytecode ~= reg.reg;
             }
@@ -847,7 +853,7 @@ final class Walker {
                         bytecode ~= Opcode.tail_call;
                         bytecode ~= funreg.reg;
                     }
-                    bytecode ~= cast(ubyte) argRegs.length;
+                    bytecode ~= ubytes(cast(int) argRegs.length);
                     foreach (reg; argRegs) {
                         bytecode ~= reg.reg;
                     }

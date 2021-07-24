@@ -39,3 +39,9 @@ gwion-benchmark
 .DS_Store
 profile.raw
 profile.data
+cosmopolitan.a
+cosmopolitan.h
+ape.lds
+ape.o
+ape-no-modify-self.o
+crt.o
