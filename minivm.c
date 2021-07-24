@@ -25,13 +25,6 @@ enum errro_t;
 typedef struct value_t value_t;
 typedef enum error_t error_t;
 
-enum error_t
-{
-  VM_ERROR_UNKNOWN,
-  VM_ERROR_OOM,
-  VM_ERROR_OPCODE,
-};
-
 enum local_flags_t
 {
   LOCAL_FLAGS_NONE = 0,
@@ -147,11 +140,7 @@ typedef struct
 #define read_num (cur_bytecode_next(number_t))
 #define read_loc (cur_bytecode_next(int))
 
-void vm_error(error_t err)
-{
-  printf("error: (todo)");
-}
-
+#ifdef VM_DEBUG
 const char *vm_opcode_internal_name(opcode_t op)
 {
   switch (op)
@@ -573,6 +562,7 @@ void vm_print_opcode(int index, opcode_t *bytecode)
   }
   printf("\n");
 }
+#endif
 
 void vm_run(opcode_t *basefunc)
 {
