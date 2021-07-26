@@ -9,7 +9,7 @@ I will write a readme. I will write a good readme. I will write this readme, one
 Paka currently has
 - a virtual machine
 - static typing
-- (a friend)[#passerine] 
+- [a friend](##passerine) 
 
 
 ## Aspirations

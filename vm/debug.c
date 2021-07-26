@@ -1,3 +1,5 @@
+#include <vm/debug.h>
+#define vm_mod(lhs, rhs) (__builtin_fmod(lhs, rhs))
 
 const char *vm_opcode_internal_name(opcode_t op)
 {
@@ -119,7 +121,7 @@ const char *vm_opcode_name(opcode_t op)
     default:
         return "error";
     case OPCODE_EXIT:
-        return "halt";
+        return "exit";
     case OPCODE_STORE_REG:
         return "mov";
     case OPCODE_STORE_LOG:
@@ -240,7 +242,7 @@ const char *vm_opcode_format(opcode_t op)
     case OPCODE_STORE_NUM:
         return "rn";
     case OPCODE_STORE_FUN:
-        return "ra";
+        return "rf";
     case OPCODE_EQUAL:
         return "rrr";
     case OPCODE_EQUAL_NUM:
@@ -395,26 +397,26 @@ void vm_print_opcode(int index, opcode_t *bytecode)
         }
         case 'n':
         {
-            if (vm_mod(*(int *)head, 1) == 0)
+            if (vm_mod(*(integer_t *)head, 1) == 0)
             {
-                printf("%i", *(int *)head);
+                printf("%i", *(integer_t *)head);
             }
             else
             {
-                printf("%i", *(int *)head);
+                printf("%i", *(integer_t *)head);
             }
             head += sizeof(integer_t);
             break;
         }
-        case 'a':
+        case 'f':
         {
-            printf("{%i}", *(int *)head);
-            head += *(int *)head + sizeof(int);
+            printf("{%i}", *(reg_t *)head);
+            head += *(reg_t *)head + sizeof(reg_t);
             break;
         }
         default:
         {
-            printf("error");
+            printf("error: opcode %c\n", fmt[index]);
         }
         }
     }

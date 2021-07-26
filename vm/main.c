@@ -1,13 +1,4 @@
-#ifdef VM_USE_COSMO
-#include "cosmopolitan.h"
-#else
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#endif
-
-#include "vm.h"
+#include <vm/vm.h>
 
 int vm_main_file_length(FILE *input)
 {

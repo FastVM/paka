@@ -1,3 +1,14 @@
+#pragma once
+
+#ifdef VM_USE_COSMO
+#include "cosmopolitan.h"
+#else
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+#include <string.h>
+#endif
 
 typedef int reg_t;
 typedef int integer_t;

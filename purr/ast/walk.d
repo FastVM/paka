@@ -62,7 +62,7 @@ final class Walker {
         }
         bytecode = null;
         walk(program);
-        foreach (_; 0 .. 8) {
+        foreach (_; 0 .. 16) {
             bytecode ~= Opcode.exit;
         }
     }

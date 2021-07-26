@@ -1,13 +1,4 @@
-#ifdef VM_USE_COSMO
-#include "cosmopolitan.h"
-#else
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <math.h>
-#endif
-
-#include "vm.h"
+#include <vm/vm.h>
 
 #define VM_REG_NUM ((256))
 #define VM_FRAME_NUM ((16))
