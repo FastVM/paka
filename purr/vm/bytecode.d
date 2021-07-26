@@ -8,38 +8,12 @@ alias String = immutable(char)*;
 
 extern (C) void vm_run(void* func);
 
-struct Frame {
-    int index;
-    void* argv;
-    void* stack;
-    void* locals;
-    Function func;
-}
-
-enum Local {
-    none = 0,
-    arg = 1,
-}
-
-enum Capture {
-    local,
-    arg,
-}
-
-struct Function {
-    void* bytecode;
-
-    static Function* empty() {
-        Function* ret = cast(Function*) GC.calloc(Function.sizeof);
-        return ret;
-    }
-}
-
-enum Opcode : char {
+enum Opcode : ubyte {
     exit,
     store_reg,
     store_log,
     store_num,
+    store_str,
     store_fun,
     equal,
     equal_num,

@@ -1,22 +1,36 @@
 BIN=bin
-OPT_PGO=$(OPT_C)
-DFILES:=$(shell find ext purr -type f -name '*.d')
-CC=gcc
+LIB=lib
+
+CC=clang
 DC=ldc2
+LD=gcc
 
-$(shell mkdir -p $(BIN))
+PHOBOS=phobos2-ldc-shared
 
-all: $(BIN) $(BIN)/minivm $(BIN)/purr $(BIN)/asm
+OPT_C=-Ofast
+OPT_D=-O
 
-minivm $(BIN)/minivm: vm/main.c vm/minivm.c
-	$(CC) --std=gnu11 -Ofast -o$(BIN)/minivm $^ $(CFLAGS) -lm -I./
+DDIRS:=$(shell find ext/paka purr -type d)
+DFILES:=$(shell find ext/paka purr -type f -name '*.d')
+OBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 
-asm $(BIN)/asm: vm/asm.c vm/debug.c vm/minivm.c
-	$(CC) --std=gnu11 -Ofast -o$(BIN)/asm $^ $(CFLAGS) -lm -I./
+$(shell mkdir -p $(BIN) $(LIB))
 
-purr $(BIN)/purr: $(DFILES) $(BIN)/libminivm.o
-	$(DC) -Os -of=$(BIN)/purr $^ $(LFLAGS)
+all: $(BIN) $(BIN)/minivm $(BIN)/purr
 
-$(BIN)/libminivm.o: vm/minivm.c
-	$(CC) -c -fPIC --std=gnu11 -Ofast -o$@ $^ $(CFLAGS) -I./
+minivm $(BIN)/minivm: vm/main.c $(LIB)/libminivm.o
+	$(CC) $(OPT_C) -o$(BIN)/minivm $^ $(CFLAGS) -lm -I./
 
+asm $(BIN)/asm: vm/asm.c vm/debug.c $(LIB)/libminivm.o
+	$(CC) $(OPT_C) -o$(BIN)/asm $^ $(CFLAGS) -lm -I./
+
+purr $(BIN)/purr: $(OBJS) $(LIB)/libminivm.o
+	$(LD) $^ -o $(BIN)/purr -lc -lm -l$(PHOBOS) -ldruntime-ldc-shared -lpthread -lrt $(LFLAGS)
+
+$(OBJS): $(patsubst $(LIB)/%.o,%.d,$@)
+	$(DC) -c $(OPT_D) -of=$@ $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS)
+
+$(LIB)/libminivm.o: vm/minivm.c
+	$(CC) -c -fPIC $(OPT_C) -o$@ $^ $(CFLAGS) -I./
+
+.dummy:

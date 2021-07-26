@@ -9,7 +9,6 @@
 #define vm_assume(expr) (__builtin_expect(expr, true))
 #endif
 
-#define vm_mod(lhs, rhs) (__builtin_fmod(lhs, rhs))
 #define vm_fetch (next_op_value = ptrs[basefunc[cur_index]])
 #define next_op (cur_index++, next_op_value)
 
@@ -61,6 +60,7 @@ void vm_run(opcode_t *basefunc)
   ptrs[OPCODE_STORE_REG] = &&do_store_reg;
   ptrs[OPCODE_STORE_LOG] = &&do_store_log;
   ptrs[OPCODE_STORE_NUM] = &&do_store_num;
+  ptrs[OPCODE_STORE_STR] = &&do_store_str;
   ptrs[OPCODE_STORE_FUN] = &&do_store_fun;
   ptrs[OPCODE_EQUAL] = &&do_equal;
   ptrs[OPCODE_EQUAL_NUM] = &&do_equal_num;
@@ -242,6 +242,16 @@ do_store_log:
   bool from = read_bool;
   vm_fetch;
   cur_locals[to] = (value_t){.logical = from};
+  run_next_op;
+}
+do_store_str:
+{
+  reg_t to = read_reg;
+  int str_end = read_loc;
+  const char *head = (const char *)(basefunc + cur_index);
+  cur_index = str_end;
+  vm_fetch;
+  cur_locals[to] = (value_t){.text = head};
   run_next_op;
 }
 do_store_fun:
@@ -694,7 +704,7 @@ do_mod:
   reg_t rhs = read_reg;
   vm_fetch;
   cur_locals[to] = (value_t){
-      .number = vm_mod(cur_locals[lhs].number, cur_locals[rhs].number),
+      .number = fmod(cur_locals[lhs].number, cur_locals[rhs].number),
   };
   run_next_op;
 }
@@ -705,7 +715,7 @@ do_mod_num:
   number_t rhs = read_num;
   vm_fetch;
   cur_locals[to] = (value_t){
-      .number = vm_mod(cur_locals[lhs].number, rhs),
+      .number = fmod(cur_locals[lhs].number, rhs),
   };
   run_next_op;
 }
@@ -713,7 +723,7 @@ do_println:
 {
   reg_t from = read_reg;
   number_t num = cur_locals[from].number;
-  if (vm_mod(num, 1) == 0)
+  if (fmod(num, 1) == 0)
   {
     printf("%.0f\n", num);
   }

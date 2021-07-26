@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <string.h>
+#include <stdint.h>
 #endif
 
 typedef int reg_t;
@@ -25,6 +26,7 @@ struct value_t
     {
         bool logical;
         number_t number;
+        const char *text;
         int bytecode;
     };
 };
@@ -35,6 +37,7 @@ enum opcode_t
     OPCODE_STORE_REG,
     OPCODE_STORE_LOG,
     OPCODE_STORE_NUM,
+    OPCODE_STORE_STR,
     OPCODE_STORE_FUN,
     OPCODE_EQUAL,
     OPCODE_EQUAL_NUM,
