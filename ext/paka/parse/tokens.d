@@ -1,10 +1,9 @@
 module ext.paka.parse.tokens;
 
 import std.ascii;
-import std.conv;
+import std.conv : to;
 import std.algorithm;
 import std.array;
-import std.stdio;
 import purr.srcloc;
 
 /// operator precidence

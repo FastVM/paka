@@ -1,7 +1,7 @@
 module purr.ast.walk;
 
 import core.memory;
-import std.conv;
+import std.conv : to;
 import std.stdio;
 import std.string;
 import std.algorithm;

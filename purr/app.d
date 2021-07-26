@@ -1,29 +1,23 @@
 module purr.app;
 
-import std.stdio;
 import purr.ast.walk;
-import purr.vm;
+import purr.parse;
 import purr.srcloc;
 import purr.ast.ast;
-import purr.parse;
 import purr.inter;
-import std.stdio;
 import purr.vm.bytecode;
 import purr.ast.walk;
+import std.stdio;
 import std.uuid;
 import std.path;
 import std.array;
 import std.file;
-import std.json;
-import std.ascii;
 import std.algorithm;
-import std.conv;
+import std.conv : to;
 import std.string;
 import std.getopt;
 import std.datetime.stopwatch;
 import core.memory;
-import core.time;
-import core.stdc.stdlib;
 
 extern (C) __gshared string[] rt_options = ["gcopt=gc:manual"];
 

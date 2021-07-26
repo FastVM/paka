@@ -1,6 +1,6 @@
 module ext.expr.plugin;
 
-import purr;
+import purr.srcloc;
 
 shared static this() {
     Plugin lisp = new Plugin;

@@ -1,7 +1,6 @@
 module ext.paka.parse.parse;
 
-import std.stdio;
-import std.conv;
+import std.conv : to;
 import std.file;
 import std.array;
 import std.utf;

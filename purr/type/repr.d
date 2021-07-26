@@ -1,9 +1,8 @@
 module purr.type.repr;
 
-import std.conv;
+import std.conv : to;
 import std.array;
 import std.algorithm;
-import std.stdio;
 import purr.vm.bytecode;
 import purr.ast.ast;
 

@@ -4,8 +4,6 @@ import purr.type.repr;
 import purr.ast.ast;
 import purr.srcloc;
 
-import std.stdio;
-
 class FailedTypeCheck : Exception {
     this() {
         super("Internal Error");

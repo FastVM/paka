@@ -1,7 +1,7 @@
 module purr.ast.ast;
 
 import std.algorithm;
-import std.conv;
+import std.conv : to;
 import std.meta;
 import std.string;
 import purr.srcloc;

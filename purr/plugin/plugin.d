@@ -1,7 +1,7 @@
 module purr.plugin.plugin;
 
 import purr.ast.ast;
-import std.conv;
+import std.conv : to;
 import purr.srcloc;
 
 final class Plugin {

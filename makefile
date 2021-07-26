@@ -16,7 +16,7 @@ OBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 
 $(shell mkdir -p $(BIN) $(LIB))
 
-all: $(BIN) $(BIN)/minivm $(BIN)/purr
+all: $(BIN) $(BIN)/minivm $(BIN)/asm $(BIN)/purr
 
 minivm $(BIN)/minivm: vm/main.c $(LIB)/libminivm.o
 	$(CC) $(OPT_C) -o$(BIN)/minivm $^ $(CFLAGS) -lm -I./

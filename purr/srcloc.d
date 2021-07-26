@@ -1,6 +1,6 @@
 module purr.srcloc;
 
-import std.conv;
+import std.conv : to;
 
 struct SrcLoc {
     size_t line = 0;

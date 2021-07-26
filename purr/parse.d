@@ -1,7 +1,6 @@
 module purr.parse;
 
-import std.conv;
-import std.stdio;
+import std.conv : to;
 import purr.ast.ast;
 import purr.ast.walk;
 import purr.vm.bytecode;
