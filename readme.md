@@ -9,14 +9,14 @@ I will write a readme. I will write a good readme. I will write this readme, one
 Paka currently has
 - a virtual machine
 - static typing
-- [a friend](##passerine) 
+- [a friend](#passerine) 
 
 
 ## Aspirations
 
-Paka aspires to be the language that i want to write.
+Paka aspires to be the language that I want to write.
 
 ## Passerine
 
-passerine is a work in progress, including it's docs.
+passerine is a work in progress, including its docs.
 
