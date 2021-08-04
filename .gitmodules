@@ -1,0 +1,3 @@
+[submodule "minivm"]
+	path = minivm
+	url = https://github.com/shawsumma/minivm
