@@ -9,6 +9,7 @@ import std.string;
 import std.algorithm;
 import std.functional;
 import purr.vm;
+import purr.err;
 import purr.inter;
 import purr.srcloc;
 import purr.ast.walk;
@@ -42,7 +43,7 @@ Node[][] readOpen(string v)(TokenArray tokens) if (v == "()") {
 Node[] readOpen1(string v)(TokenArray tokens) if (v == "()") {
     Node[][] ret = tokens.readOpen!"()";
     if (ret.length > 1) {
-        throw new Exception("unexpected semicolon in (...)");
+        vmError("unexpected semicolon in (...)");
     }
     return ret[0];
 }
@@ -114,7 +115,7 @@ Node readPostExtendImpl(TokenArray tokens, Node last) {
         }
         return tokens.readPostExtend(index.call(args));
     } else {
-        return last; // throw new Exception("parse error " ~ tokens.to!string);
+        return last; // vmError("parse error " ~ tokens.to!string);
     }
 }
 
@@ -165,7 +166,8 @@ bool isDigitInBase(char c, long base) {
         bool isLetterDigit = val >= 10 && val < base;
         return isLetterDigit || c.isDigitInBase(10);
     }
-    throw new Exception("base not valud: " ~ base.to!string);
+    vmError("base not valud: " ~ base.to!string);
+    assert(false);
 }
 
 long parseNumberOnly(ref string input, size_t base) {
@@ -175,7 +177,7 @@ long parseNumberOnly(ref string input, size_t base) {
         input = input[1 .. $];
     }
     if (str.length == 0) {
-        throw new Exception("found no digits when parse escape in base " ~ base.to!string);
+        vmError("found no digits when parse escape in base " ~ base.to!string);
     }
     return str.to!size_t(cast(uint) base);
 }
@@ -193,7 +195,7 @@ size_t escapeNumber(ref string input) {
             size_t base = input.escapeNumber;
             if (input.length < 1 || input[0] != ':') {
                 string why = "0n" ~ base.to!string ~ " must be followd by a colon (:)";
-                throw new Exception("cannot have escape: " ~ why);
+                vmError("cannot have escape: " ~ why);
             }
             input = input[1 .. $];
             if (base == 1) {
@@ -205,14 +207,15 @@ size_t escapeNumber(ref string input) {
             }
             if (base > 36) {
                 string why = "0n must be followed by a number 1 to 36 inclusive";
-                throw new Exception("cannot have escape: " ~ why);
+                vmError("cannot have escape: " ~ why);
             }
             return input.parseNumberOnly(base);
         case 'x':
             return input.parseNumberOnly(16);
         default:
             string why = "0 must be followed by one of: nbox";
-            throw new Exception("cannot have escape: " ~ why);
+            vmError("cannot have escape: " ~ why);
+            assert(false);
         }
     } else {
         return input.parseNumberOnly(10);
@@ -235,7 +238,7 @@ Node readPostExprImpl(TokenArray tokens) {
     } else if (tokens.first.isOpen("(")) {
         Node[] nodes = tokens.readOpen1!"()";
         if (nodes.length != 1) {
-            throw new Exception("no tuples yet");
+            vmError("no tuples yet");
         }
         last = nodes[0];
     } else if (tokens.first.isOpen("[")) {
@@ -393,32 +396,32 @@ alias parsePaka = parsePakaValue;
 /// parses code as the paka programming language
 Node parsePakaAs(alias parser)(SrcLoc loc) {
     TokenArray tokens = new TokenArray(loc);
-    try {
-        Node node = parser(tokens);
-        return node;
-    } catch (Error e) {
-        string[] lines = loc.src.split("\n");
-        size_t[] nums;
-        size_t ml = 0;
-        foreach (i; locs) {
-            if (nums.length == 0 || nums[$ - 1] < i.line) {
-                nums ~= i.line;
-                ml = max(ml, i.line.to!string.length);
-            }
-        }
-        string ret;
-        foreach (i; nums) {
-            string s = i.to!string;
-            foreach (j; 0 .. ml - s.length) {
-                ret ~= ' ';
-            }
-            if (i > 0 && i < lines.length) {
-                ret ~= i.to!string ~ ": " ~ lines[i - 1].to!string ~ "\n";
-            }
-        }
-        e.msg = ret ~ e.msg;
-        throw e;
-    }
+    // try {
+    Node node = parser(tokens);
+    return node;
+    // } catch (Error e) {
+    //     string[] lines = loc.src.split("\n");
+    //     size_t[] nums;
+    //     size_t ml = 0;
+    //     foreach (i; locs) {
+    //         if (nums.length == 0 || nums[$ - 1] < i.line) {
+    //             nums ~= i.line;
+    //             ml = max(ml, i.line.to!string.length);
+    //         }
+    //     }
+    //     string ret;
+    //     foreach (i; nums) {
+    //         string s = i.to!string;
+    //         foreach (j; 0 .. ml - s.length) {
+    //             ret ~= ' ';
+    //         }
+    //         if (i > 0 && i < lines.length) {
+    //             ret ~= i.to!string ~ ": " ~ lines[i - 1].to!string ~ "\n";
+    //         }
+    //     }
+    //     e.msg = ret ~ e.msg;
+    //     throw e;
+    // }
 }
 
 alias parseCached = memoize!parseUncached;

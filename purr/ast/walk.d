@@ -8,9 +8,8 @@ import std.algorithm;
 import std.ascii;
 import purr.ast.ast;
 import purr.srcloc;
+import purr.err;
 import purr.vm.bytecode;
-import purr.type.repr;
-import purr.type.err;
 
 __gshared bool dumpast = false;
 
@@ -20,10 +19,10 @@ class Reg {
 
     this(T)(T n, string s = null) {
         if (n >= 256) {
-            throw new Exception("reg too high");
+            vmError("reg too high");
         }
         if (n < 0) {
-            throw new Exception("reg too low");
+            vmError("reg too low");
         }
         repr = cast(int) n;
         sym = s;
@@ -56,6 +55,9 @@ final class Walker {
 
     Reg[] targets;
 
+    int[string] funcs;
+    int[][string] replaces;
+
     void walkProgram(Node program) {
         if (dumpast) {
             writeln(program);
@@ -64,6 +66,12 @@ final class Walker {
         walk(program);
         foreach (_; 0 .. 16) {
             bytecode ~= Opcode.exit;
+        }
+        foreach (name, locs; replaces) {
+            int setto = funcs[name];
+            foreach (n; locs) {
+                bytecode[n .. n + 4] = ubytes(setto);
+            }
         }
     }
 
@@ -378,12 +386,32 @@ final class Walker {
                 }
                 Reg last = walk(form.args[$ - 1], ret);
                 if (ret !is null && last !is null && ret != last) {
-                    throw new Exception("reg alloc fail for: " ~ form.to!string);
+                    vmError("reg alloc fail for: " ~ form.to!string);
                 }
                 return last;
             }
+        case "array":
+            Reg outreg = allocOut;
+            Reg[] regs;
+            foreach (arg; form.args) {
+                Reg reg = walk(arg);
+                regs ~= reg;
+            }
+            bytecode ~= Opcode.array;
+            bytecode ~= outreg.reg;
+            bytecode ~= ubytes(cast(int) form.args.length);
+            foreach (reg; regs) {
+                bytecode ~= reg.reg;
+            }
+            return outreg;
         case "set":
             if (Ident id = cast(Ident) form.args[0]) {
+                if (Form lambda = cast(Form) form.args[1]) {
+                    if (lambda.form == "lambda") {
+                        string name = id.repr;
+                        funcs[id.repr] = cast(int)(bytecode.length + 9);
+                    }
+                }
                 Reg target = local(id.repr);
                 Reg from = walk(form.args[1], target);
                 if (target != from) {
@@ -403,7 +431,8 @@ final class Walker {
                     return outreg;
                 }
             } else {
-                break;
+                vmError("set to bad value");
+                assert(false);
             }
         case "if":
             int jumpFalseFrom = ifFalse(form.args[0]);
@@ -795,19 +824,23 @@ final class Walker {
             return outLambdaReg;
         case "call":
             bool isRec = false;
+            bool isStatic = false;
+            string staticName;
             if (Ident func = cast(Ident) form.args[0]) {
                 if (func.repr == "println") {
                     Reg outreg = walk(form.args[1]);
                     bytecode ~= Opcode.println;
                     bytecode ~= outreg.reg;
                     return allocOut;
-                }
-                if (func.repr == "rec") {
+                } else if (func.repr == "rec") {
                     isRec = true;
+                } else {
+                    isStatic = true;
+                    staticName = func.repr;
                 }
             }
             Reg funreg;
-            if (!isRec) {
+            if (!isRec && !isStatic) {
                 funreg = walk(form.args[0]);
             }
             Reg[] argRegs;
@@ -818,6 +851,15 @@ final class Walker {
             if (isRec) {
                 bytecode ~= Opcode.rec;
                 bytecode ~= outreg.reg;
+            } else if (isStatic) {
+                bytecode ~= Opcode.static_call;
+                bytecode ~= outreg.reg;
+                if (int[]* preps = staticName in replaces) {
+                    *preps ~= cast(int)(bytecode.length);
+                } else {
+                    replaces[staticName] = [cast(int)(bytecode.length)];
+                }
+                bytecode ~= ubytes(-1);
             } else {
                 bytecode ~= Opcode.call;
                 bytecode ~= outreg.reg;
@@ -835,13 +877,15 @@ final class Walker {
             return res;
         }
 
-        throw new Exception("Form: " ~ form.to!string);
+        vmError("Form: " ~ form.to!string);
+        assert(false);
     }
 
     Reg walkExact(Ident id) {
         Reg outreg = allocOutMaybe;
         if (id.repr !in regs) {
-            throw new Exception("name resolution fail for: " ~ id.to!string);
+            vmError("name resolution fail for: " ~ id.to!string);
+            assert(false);
         }
         Reg fromreg = local(id.repr);
         if (outreg is null || outreg == fromreg) {
@@ -870,7 +914,8 @@ final class Walker {
             bytecode ~= ubytes(*cast(double*) val.value);
             return ret;
         } else {
-            throw new Exception("value type not supported yet: " ~ val.info.to!string);
+            vmError("value type not supported yet: " ~ val.info.to!string);
+            assert(false);
         }
     }
 }

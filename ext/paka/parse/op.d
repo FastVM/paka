@@ -1,6 +1,7 @@
 module ext.paka.parse.op;
 
 import std.conv : to;
+import purr.err;
 import purr.ast.ast;
 import ext.paka.parse.util;
 
@@ -16,11 +17,11 @@ UnaryOp parseUnaryOp(string[] ops) {
     } else if (opName == "not") {
         return (Node rhs) { return new Form("not", rhs); };
     } else if (opName == "-") {
-        throw new Exception("parse error: not a unary operator: " ~ opName
-                ~ " (consider 0- instead)");
+        vmError("parse error: not a unary operator: " ~ opName ~ " (consider 0- instead)");
     } else {
-        throw new Exception("parse error: not a unary operator: " ~ opName);
+        vmError("parse error: not a unary operator: " ~ opName);
     }
+    assert(false);
 }
 
 Node call(Node fun, Node[] args) {
@@ -39,7 +40,8 @@ BinaryOp parseBinaryOp(string[] ops) {
     case "*=":
     case "/=":
     case "%=":
-        throw new Exception("no operator assignment");
+        vmError("no operator assignment");
+        assert(false);
     default:
         if (opName == "|>") {
             return (Node lhs, Node rhs) { return rhs.call([lhs]); };

@@ -5,6 +5,7 @@ import std.conv : to;
 import std.algorithm;
 import std.array;
 import purr.srcloc;
+import purr.err;
 
 /// operator precidence
 string[][] prec = [
@@ -247,20 +248,20 @@ redo:
                     //         got = read;
                     //         if (got == '\0')
                     //         {
-                    //             throw new Exception("parse error: end of file with unclosed string");
+                    //             vmError("parse error: end of file with unclosed string");
                     //         }
                     //         ret ~= got;
                     //     }
                     //     ret ~= '\\';
                     //     break;
                 default:
-                    throw new Exception("parse error: unknown escape '" ~ got ~ "'");
+                    vmError("parse error: unknown escape '" ~ got ~ "'");
                 }
             } else {
                 ret ~= got;
             }
             if (code.length == 0) {
-                throw new Exception("parse error: end of file found in string");
+                vmError("parse error: end of file found in string");
             }
         }
         consume;
@@ -269,6 +270,6 @@ redo:
     if (peek == '\0') {
         return consToken(Token.Type.none, "");
     }
-    throw new Exception("parse error: bad char " ~ peek ~ "(code: " ~ to!string(
-            cast(ubyte) peek) ~ ")");
+    vmError("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
+    assert(false);
 }

@@ -4,6 +4,7 @@ import std.conv : to;
 import purr.srcloc;
 import purr.ast.ast;
 import ext.paka.parse.tokens;
+import purr.err;
 
 alias UnaryOp = Node delegate(Node rhs);
 alias BinaryOp = Node delegate(Node lhs, Node rhs);
@@ -81,7 +82,7 @@ pragma(inline, true):
     /// wraps match, it throws a nice error when it does not match
     void nextIs(Token...)(Token a) {
         if (!match(a)) {
-            throw new Exception("expected " ~ a[$ - 1].to!string ~ " got " ~ first.to!string);
+            vmError("expected " ~ a[$ - 1].to!string ~ " got " ~ first.to!string);
         }
     }
 

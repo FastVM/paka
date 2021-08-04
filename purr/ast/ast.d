@@ -4,8 +4,8 @@ import std.algorithm;
 import std.conv : to;
 import std.meta;
 import std.string;
+import purr.err;
 import purr.srcloc;
-import purr.type.repr;
 
 /// all possible node types
 alias NodeTypes = AliasSeq!(Form, Value, Ident);
@@ -78,7 +78,7 @@ template ident(string name) {
     }
 
     Ident ident() {
-        return value;
+        return new Ident(name);
     }
 }
 
@@ -133,7 +133,8 @@ final class Value : Node {
         if (info == typeid(string)) {
             return *cast(string*) value;
         }
-        throw new Exception("bad info");
+        vmError("bad info");
+        assert(false);
     }
 
     override NodeKind id() {

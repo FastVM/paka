@@ -2,6 +2,7 @@ module purr.app;
 
 import purr.ast.walk;
 import purr.parse;
+import purr.err;
 import purr.srcloc;
 import purr.ast.ast;
 import purr.inter;
@@ -129,7 +130,7 @@ void domain(string[] args) {
         string part1() {
             assert(parts.length != 0);
             if (parts.length == 1) {
-                throw new Exception(parts[0] ~ " takes an argument using " ~ parts[0] ~ "=argument");
+                vmError(parts[0] ~ " takes an argument using " ~ parts[0] ~ "=argument");
             }
             return parts[1 .. $].join("=");
         }
@@ -189,23 +190,24 @@ void domain(string[] args) {
     }
 }
 
-void thrown(Err)(Err e) {
-    if (debugging) {
-        throw e;
-    } else {
-        writeln(e.msg);
-    }
-}
+// void thrown(Err)(Err e) {
+//     if (debugging) {
+//         throw e;
+//     } else {
+//         writeln(e.msg);
+//     }
+// }
 
 /// the main function that handles runtime errors
 void trymain(string[] args) {
-    try {
-        domain(args);
-    } catch (Error e) {
-        e.thrown;
-    } catch (Exception e) {
-        e.thrown;
-    }
+    // try {
+    domain(args);
+    // }
+    //  catch (Error e) {
+    //     e.thrown;
+    // } catch (Exception e) {
+    //     e.thrown;
+    // }
 }
 
 void main(string[] args) {

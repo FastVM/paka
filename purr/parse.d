@@ -4,6 +4,7 @@ import std.conv : to;
 import purr.ast.ast;
 import purr.ast.walk;
 import purr.vm.bytecode;
+import purr.err;
 import purr.vm;
 import purr.srcloc;
 
@@ -30,6 +31,7 @@ Node parse(SrcLoc code, string langname = langNameDefault) {
     if (auto i = langname in parsers) {
         return (*i)(code);
     } else {
-        throw new Exception("language not found: " ~ langname);
+        vmError("language not found: " ~ langname);
+        assert(false);
     }
 }
