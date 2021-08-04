@@ -817,50 +817,18 @@ final class Walker {
             Reg outreg = allocOut;
             if (isRec) {
                 bytecode ~= Opcode.rec;
+                bytecode ~= outreg.reg;
             } else {
                 bytecode ~= Opcode.call;
+                bytecode ~= outreg.reg;
                 bytecode ~= funreg.reg;
             }
-            bytecode ~= outreg.reg;
             bytecode ~= ubytes(cast(int) argRegs.length);
             foreach (reg; argRegs) {
                 bytecode ~= reg.reg;
             }
             return outreg;
         case "return":
-            if (Form callForm = cast(Form) form.args[0]) {
-                if (callForm.form == "call") {
-                    bool isRec = false;
-                    if (Ident func = cast(Ident) callForm.args[0]) {
-                        if (func.repr == "println") {
-                            goto noTailCallPossible;
-                        }
-                        if (func.repr == "rec") {
-                            isRec = true;
-                        }
-                    }
-                    Reg funreg;
-                    if (!isRec) {
-                        funreg = walk(callForm.args[0]);
-                    }
-                    Reg[] argRegs;
-                    foreach (index, arg; callForm.args[1 .. $]) {
-                        argRegs ~= walk(arg);
-                    }
-                    if (isRec) {
-                        bytecode ~= Opcode.tail_rec;
-                    } else {
-                        bytecode ~= Opcode.tail_call;
-                        bytecode ~= funreg.reg;
-                    }
-                    bytecode ~= ubytes(cast(int) argRegs.length);
-                    foreach (reg; argRegs) {
-                        bytecode ~= reg.reg;
-                    }
-                    return null;
-                }
-            }
-        noTailCallPossible:
             Reg res = walk(form.args[0]);
             bytecode ~= Opcode.ret;
             bytecode ~= res.reg;
