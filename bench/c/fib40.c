@@ -12,7 +12,7 @@ double fib(double n)
     }
 }
 
-int main()
+int main(void)
 {
     printf("%g\n", fib(40));
 }

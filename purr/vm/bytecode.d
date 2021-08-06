@@ -59,6 +59,7 @@ enum Opcode : ubyte {
     rec,
     ret,
     println,
+    putchar,
     alloca,
     array,
     length,

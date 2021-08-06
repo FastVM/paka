@@ -29,8 +29,7 @@ if maxdepth < N then maxdepth = N end
 do
   local stretchdepth = maxdepth + 1
   local stretchtree = BottomUpTree(0, stretchdepth)
-  io.write(string.format("stretch tree of depth %d check: %d\n",
-    stretchdepth, ItemCheck(stretchtree)))
+  print(ItemCheck(stretchtree))
 end
 
 local longlivedtree = BottomUpTree(0, maxdepth)
@@ -42,9 +41,7 @@ for depth=mindepth,maxdepth,2 do
     check = check + ItemCheck(BottomUpTree(1, depth)) +
             ItemCheck(BottomUpTree(-1, depth))
   end
-  io.write(string.format("%d trees of depth %d check: %d\n",
-    iterations*2, depth, check))
+  print(check)
 end
 
-io.write(string.format("long lived tree of depth %d check: %d\n",
-  maxdepth, ItemCheck(longlivedtree)))
+print(ItemCheck(longlivedtree))

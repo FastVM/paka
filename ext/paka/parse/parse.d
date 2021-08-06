@@ -105,6 +105,10 @@ Node readPostExtendImpl(TokenArray tokens, Node last) {
     }
     if (tokens.first.isOpen("(")) {
         return tokens.readPostExtend(tokens.readPostCallExtend(last));
+    } else if (tokens.first.isOpen("[")) {
+        Node[] arg = tokens.readOpen!"[]";
+        Node cur = new Form("index", last, arg);
+        return tokens.readPostExtend(cur);
     } else if (tokens.first.isOperator(".")) {
         tokens.nextIs(Token.Type.operator, ".");
         Node index = new Value(tokens.first.value);

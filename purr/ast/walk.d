@@ -404,6 +404,22 @@ final class Walker {
                 bytecode ~= reg.reg;
             }
             return outreg;
+        case "index":
+            Reg outreg = allocOut;
+            Reg objreg = walk(form.args[0]);
+            Reg index = walk(form.args[1]);
+            bytecode ~= Opcode.index;
+            bytecode ~= outreg.reg;
+            bytecode ~= objreg.reg;
+            bytecode ~= index.reg;
+            return outreg;
+        case "length":
+            Reg outreg = allocOut;
+            Reg objreg = walk(form.args[0]);
+            bytecode ~= Opcode.length;
+            bytecode ~= outreg.reg;
+            bytecode ~= objreg.reg;
+            return outreg;
         case "set":
             if (Ident id = cast(Ident) form.args[0]) {
                 if (Form lambda = cast(Form) form.args[1]) {
@@ -832,17 +848,31 @@ final class Walker {
                     bytecode ~= Opcode.println;
                     bytecode ~= outreg.reg;
                     return allocOut;
+                } else if (func.repr == "putchar") {
+                    Reg outreg = walk(form.args[1]);
+                    bytecode ~= Opcode.putchar;
+                    bytecode ~= outreg.reg;
+                    return allocOut;
                 } else if (func.repr == "rec") {
                     isRec = true;
+                } else if (func.repr == "length") {
+                    Reg outreg = allocOut;
+                    Reg objreg = walk(form.args[1]);
+                    bytecode ~= Opcode.length;
+                    bytecode ~= outreg.reg;
+                    bytecode ~= objreg.reg;
+                    return outreg;
                 } else {
                     isStatic = true;
                     staticName = func.repr;
                 }
             }
+
             Reg funreg;
             if (!isRec && !isStatic) {
                 funreg = walk(form.args[0]);
             }
+
             Reg[] argRegs;
             foreach (index, arg; form.args[1 .. $]) {
                 argRegs ~= walk(arg);
@@ -913,6 +943,24 @@ final class Walker {
             bytecode ~= ret.reg;
             bytecode ~= ubytes(*cast(double*) val.value);
             return ret;
+        } else if (val.info == typeid(string)) {
+            string src = *cast(string*) val.value;
+            Reg outreg = allocOut;
+            Reg[] regs;
+            foreach (chr; src) {
+                Reg reg = alloc;
+                bytecode ~= Opcode.store_num;
+                bytecode ~= reg.reg;
+                bytecode ~= ubytes(cast(int) chr);
+                regs ~= reg;
+            }
+            bytecode ~= Opcode.array;
+            bytecode ~= outreg.reg;
+            bytecode ~= ubytes(cast(int) src.length);
+            foreach (reg; regs) {
+                bytecode ~= reg.reg;
+            }
+            return outreg;
         } else {
             vmError("value type not supported yet: " ~ val.info.to!string);
             assert(false);

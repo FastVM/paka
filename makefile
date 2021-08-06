@@ -26,6 +26,6 @@ $(OBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	$(DC) -c $(OPT_D) -of=$@ $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS)
 
 minivm $(LIB)/libminivm.so: $(CFILES)
-	$(CC) -shared -o $(LIB)/libminivm.so $^ -Iminivm -lm -O$(OPT_C) $(CFLAGS)
+	$(CC) -fPIC -shared -o $(LIB)/libminivm.so $^ -Iminivm -lm $(OPT_C) $(CFLAGS)
 
 .dummy:
