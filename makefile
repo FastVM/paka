@@ -1,31 +1,39 @@
 BIN=bin
 LIB=lib
 
-CC=clang
+CC=gcc
 DC=ldc2
-LD=gcc
 
-PHOBOS=phobos2-ldc
+LL=-L-l
+LO=-of
 
 OPT_C=-Ofast
 OPT_D=-O
 
+NOTOUCH=vm/main.c
+NOTNAMEFLAGS=$(patsubst %,-not -path '*%',$(NOTOUCH))
+
+$(info $(NOTNAMEFLAGS))
+
 DDIRS:=$(shell find ext/paka purr -type d)
-DFILES:=$(shell find ext/paka purr -type f -name '*.d')
-CFILES:=minivm/vm/minivm.c minivm/vm/gc.c minivm/vm/debug.c
-OBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
+DFILES:=$(shell find ext/paka purr -type f -name '*.d' $(NOTNAMEFLAGS))
+CFILES:=$(shell find minivm/vm -type f -name '*.c' $(NOTNAMEFLAGS))
+DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
+COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
+OBJS=$(DOBJS) $(COBJS)
 
 $(shell mkdir -p $(BIN) $(LIB))
 
 default: purr
 
 purr $(BIN)/purr: $(OBJS) $(LIB)/libminivm.so
-	$(LD) $^ -o $(BIN)/purr -lc -lm -l$(PHOBOS) -ldruntime-ldc -lpthread $(LFLAGS)
+	$(DC) $^ -of=$(BIN)/purr $(LFLAGS)
 
-$(OBJS): $(patsubst $(LIB)/%.o,%.d,$@)
+$(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	$(DC) -c $(OPT_D) -of=$@ $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS)
 
-minivm $(LIB)/libminivm.so: $(CFILES)
-	$(CC) -fPIC -shared -o $(LIB)/libminivm.so $^ -Iminivm -lm $(OPT_C) $(CFLAGS)
+$(COBJS): $(patsubst $(LIB)/%.o,%.c,$@)
+	$(shell mkdir -p $(dir $@))
+	$(CC) -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS)
 
 .dummy:

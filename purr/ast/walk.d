@@ -46,7 +46,8 @@ class Reg {
 final class Walker {
     Node[] nodes = [];
 
-    Reg[string] regs;
+    Reg[string] locals;
+    Reg[] regs;
 
     ubyte[] bytecode;
 
@@ -86,12 +87,6 @@ final class Walker {
         return (cast(ubyte*)&inum)[0 .. 4];
     }
 
-    int nregs;
-    string symbol() {
-        nregs += 1;
-        return "." ~ nregs.to!string;
-    }
-
     Reg allocOut() {
         if (targets[$ - 1]!is null) {
             return targets[$ - 1];
@@ -108,16 +103,17 @@ final class Walker {
 
     Reg alloc(Node isFor = null) {
         Reg reg = new Reg(regs.length);
-        regs[symbol] = reg;
+        regs ~= reg;
         return reg;
     }
 
     Reg local(string name) {
-        if (Reg* ret = name in regs) {
+        if (Reg* ret = name in locals) {
             return *ret;
         } else {
             Reg reg = new Reg(regs.length, name);
-            regs[name] = reg;
+            locals[name] = reg;
+            regs ~= reg;
             return reg;
         }
     }
@@ -861,13 +857,13 @@ final class Walker {
             bytecode ~= ubytes(-1);
             int refRegc = cast(int) bytecode.length;
             bytecode ~= ubytes(256);
-            Reg[string] oldRegs = regs;
+            Reg[string] oldLocals = locals;
+            Reg[] oldRegs = regs;
             regs = null;
+            locals = null;
             foreach (index, arg; argnames) {
-                regs[arg] = new Reg(index);
+                local(arg);
             }
-            int nregsOld = nregs;
-            nregs = cast(int) argnames.length;
             Reg retreg = walk(form.args[1]);
             if (retreg !is null) {
                 bytecode ~= Opcode.ret;
@@ -876,11 +872,10 @@ final class Walker {
                 bytecode ~= Opcode.ret;
                 bytecode ~= alloc().reg;
             }
-            bytecode[refRegc .. refRegc + 4] = ubytes(nregs);
+            bytecode[refRegc .. refRegc + 4] = ubytes(regs.length);
             regs = oldRegs;
-            nregs = nregsOld;
-            int funcEnd = cast(int) bytecode.length;
-            bytecode[refLength .. refLength + 4] = ubytes(funcEnd);
+            locals = oldLocals;
+            bytecode[refLength .. refLength + 4] = ubytes(cast(int) bytecode.length);
             return outLambdaReg;
         case "call":
             bool isRec = false;
@@ -957,7 +952,7 @@ final class Walker {
 
     Reg walkExact(Ident id) {
         Reg outreg = allocOutMaybe;
-        if (id.repr !in regs) {
+        if (id.repr !in locals) {
             vmError("name resolution fail for: " ~ id.to!string);
             assert(false);
         }
