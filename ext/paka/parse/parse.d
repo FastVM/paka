@@ -329,6 +329,12 @@ Node readExprImpl(TokenArray tokens, size_t level) {
     while (tokens.first.isAnyOperator(prec[level])) {
         opers ~= [tokens.first.value];
         tokens.nextIs(Token.Type.operator);
+        while (tokens.first.isAnyOperator(["<", ">"])) {
+            opers[$ - 1] ~= tokens.first.value;
+            tokens.nextIs(Token.Type.operator);
+            opers[$ - 1] ~= tokens.first.value;
+            tokens.nextIs(Token.Type.operator);
+        }
         subNodes ~= tokens.readExpr(level + 1);
     }
     Node ret = subNodes[0];

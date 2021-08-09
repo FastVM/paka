@@ -18,9 +18,6 @@ class Reg {
     string sym;
 
     this(T)(T n, string s = null) {
-        if (n >= 256) {
-            vmError("reg too high");
-        }
         if (n < 0) {
             vmError("reg too low");
         }
@@ -89,10 +86,10 @@ final class Walker {
         return (cast(ubyte*)&inum)[0 .. 4];
     }
 
-    int n;
+    int nregs;
     string symbol() {
-        n += 1;
-        return "." ~ n.to!string;
+        nregs += 1;
+        return "." ~ nregs.to!string;
     }
 
     Reg allocOut() {
@@ -275,6 +272,48 @@ final class Walker {
                     return ret;
                 }
             }
+            if (form.form == ">") {
+                if (Value valueLeft = cast(Value) form.args[0]) {
+                    assert(valueLeft.info == typeid(double));
+                    Reg rhs = walk(form.args[1]);
+                    static if (doNotNegate) {
+                        bytecode ~= Opcode.jump_if_less_num;
+                    } else {
+                        bytecode ~= Opcode.jump_if_greater_than_equal_num;
+                    }
+                    int ret = cast(int) bytecode.length;
+                    bytecode ~= ubytes(ret);
+                    bytecode ~= rhs.reg;
+                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                    return ret;
+                } else if (Value valueRight = cast(Value) form.args[1]) {
+                    assert(valueRight.info == typeid(double));
+                    Reg lhs = walk(form.args[0]);
+                    static if (doNotNegate) {
+                        bytecode ~= Opcode.jump_if_greater_num;
+                    } else {
+                        bytecode ~= Opcode.jump_if_less_than_equal_num;
+                    }
+                    int ret = cast(int) bytecode.length;
+                    bytecode ~= ubytes(ret);
+                    bytecode ~= lhs.reg;
+                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    return ret;
+                } else {
+                    Reg lhs = walk(form.args[0]);
+                    Reg rhs = walk(form.args[1]);
+                    static if (doNotNegate) {
+                        bytecode ~= Opcode.jump_if_greater;
+                    } else {
+                        bytecode ~= Opcode.jump_if_less_than_equal;
+                    }
+                    int ret = cast(int) bytecode.length;
+                    bytecode ~= ubytes(ret);
+                    bytecode ~= lhs.reg;
+                    bytecode ~= rhs.reg;
+                    return ret;
+                }
+            }
             if (form.form == "<=") {
                 if (Value valueLeft = cast(Value) form.args[0]) {
                     assert(valueLeft.info == typeid(double));
@@ -399,7 +438,7 @@ final class Walker {
             }
             bytecode ~= Opcode.array;
             bytecode ~= outreg.reg;
-            bytecode ~= ubytes(cast(int) form.args.length);
+            bytecode ~= ubytes(cast(int) regs.length);
             foreach (reg; regs) {
                 bytecode ~= reg.reg;
             }
@@ -820,12 +859,15 @@ final class Walker {
             bytecode ~= outLambdaReg.reg;
             int refLength = cast(int) bytecode.length;
             bytecode ~= ubytes(-1);
+            int refRegc = cast(int) bytecode.length;
+            bytecode ~= ubytes(256);
             Reg[string] oldRegs = regs;
             regs = null;
             foreach (index, arg; argnames) {
                 regs[arg] = new Reg(index);
             }
-            n = cast(int) argnames.length;
+            int nregsOld = nregs;
+            nregs = cast(int) argnames.length;
             Reg retreg = walk(form.args[1]);
             if (retreg !is null) {
                 bytecode ~= Opcode.ret;
@@ -834,7 +876,9 @@ final class Walker {
                 bytecode ~= Opcode.ret;
                 bytecode ~= alloc().reg;
             }
+            bytecode[refRegc .. refRegc + 4] = ubytes(nregs);
             regs = oldRegs;
+            nregs = nregsOld;
             int funcEnd = cast(int) bytecode.length;
             bytecode[refLength .. refLength + 4] = ubytes(funcEnd);
             return outLambdaReg;

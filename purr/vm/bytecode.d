@@ -60,7 +60,6 @@ enum Opcode : ubyte {
     ret,
     println,
     putchar,
-    alloca,
     array,
     length,
     index,

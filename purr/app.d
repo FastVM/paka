@@ -65,7 +65,7 @@ Thunk cliCompileHandler(immutable string filename) {
         Node node = code.parse;
         Walker walker = new Walker;
         walker.walkProgram(node);
-        File outmvm = File("out.minivm", "w");
+        File outmvm = File("out.bc", "w");
         outmvm.rawWrite(walker.bytecode);
         outmvm.close();
     };
