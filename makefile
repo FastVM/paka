@@ -20,14 +20,18 @@ DFILES:=$(shell find ext/paka purr -type f -name '*.d' $(NOTNAMEFLAGS))
 CFILES:=$(shell find minivm/vm -type f -name '*.c' $(NOTNAMEFLAGS))
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
-OBJS=$(DOBJS) $(COBJS)
+OBJS=$(DOBJS) $(COBJS) $(LIB)/libmimalloc.a
 
 $(shell mkdir -p $(BIN) $(LIB))
 
 default: purr
 
-purr $(BIN)/purr: $(OBJS) $(LIB)/libminivm.so
+purr $(BIN)/purr: $(OBJS)
 	$(DC) $^ $(DO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(DLFLAGS)
+
+$(LIB)/libmimalloc.a:
+	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak
+	cp minivm/lib/libmimalloc.a $@
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	$(DC) -c $(OPT_D) $(DO)$@ $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS)

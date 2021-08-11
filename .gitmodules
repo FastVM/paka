@@ -2,6 +2,3 @@
 	path = minivm
 	url = https://github.com/shawsumma/minivm
 	branch = main
-[submodule "mimalloc"]
-	path = mimalloc
-	url = https://github.com/microsoft/mimalloc.git
