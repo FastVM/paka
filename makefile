@@ -1,21 +1,21 @@
 BIN=bin
 LIB=lib
 
-CC=gcc
+CC=clang
 DC=ldc2
 
-LL=-L-l
-LO=-of
+ifeq ($(DC),gdc)
+DO=-o
+else
+DO=-of=
+endif
 
 OPT_C=-Ofast
-OPT_D=-O
+OPT_D=
 
 NOTOUCH=vm/main.c
 NOTNAMEFLAGS=$(patsubst %,-not -path '*%',$(NOTOUCH))
 
-$(info $(NOTNAMEFLAGS))
-
-DDIRS:=$(shell find ext/paka purr -type d)
 DFILES:=$(shell find ext/paka purr -type f -name '*.d' $(NOTNAMEFLAGS))
 CFILES:=$(shell find minivm/vm -type f -name '*.c' $(NOTNAMEFLAGS))
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
@@ -27,13 +27,13 @@ $(shell mkdir -p $(BIN) $(LIB))
 default: purr
 
 purr $(BIN)/purr: $(OBJS) $(LIB)/libminivm.so
-	$(DC) $^ -of=$(BIN)/purr $(LFLAGS)
+	$(DC) $^ $(DO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(DLFLAGS)
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
-	$(DC) -c $(OPT_D) -of=$@ $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS)
+	$(DC) -c $(OPT_D) $(DO)$@ $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS)
 
 $(COBJS): $(patsubst $(LIB)/%.o,%.c,$@)
 	$(shell mkdir -p $(dir $@))
-	$(CC) -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS)
-
+	$(CC) -fPIE -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS)
+	
 .dummy:
