@@ -48,18 +48,6 @@ Node read(ref string code) {
         code.skip;
         return new Form(form, args);
     }
-    // if (code[0] == '"')
-    // {
-    //     string name;
-    //     code.skip;
-    //     while (code[0] != '"')
-    //     {
-    //         name ~= code[0];
-    //         code.skip;
-    //     }
-    //     code.skip;
-    //     return new Value(name);
-    // }
     string name;
     while (!"()\t\r\n ".canFind(code[0])) {
         name ~= code[0];
