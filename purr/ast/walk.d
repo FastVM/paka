@@ -486,17 +486,18 @@ final class Walker {
                 assert(false);
             }
         case "if":
+            Reg outreg = allocOut;
             int jumpFalseFrom = ifFalse(form.args[0]);
-            walk(form.args[1]);
+            walk(form.args[1], outreg);
             bytecode ~= Opcode.jump_always;
             int jumpOutFrom = cast(int) bytecode.length;
             bytecode ~= ubytes(-1);
             int jumpFalseTo = cast(int) bytecode.length;
-            walk(form.args[2]);
+            walk(form.args[2], outreg);
             int jumpOutTo = cast(int) bytecode.length;
             bytecode[jumpOutFrom .. jumpOutFrom + 4] = ubytes(jumpOutTo);
             bytecode[jumpFalseFrom .. jumpFalseFrom + 4] = ubytes(jumpFalseTo);
-            return null;
+            return outreg;
         case "while":
             bytecode ~= Opcode.jump_always;
             int jumpCondFrom = cast(int) bytecode.length;
@@ -508,14 +509,6 @@ final class Walker {
             bytecode[jumpCondFrom .. jumpCondFrom + 4] = ubytes(jumpCondTo);
             bytecode[jumpRedoFrom .. jumpRedoFrom + 4] = ubytes(jumpRedoTo);
             return null;
-            // int redoLoop = cast(int) bytecode.length;
-            // int jumpTarget = ifFalse(form.args[0]);
-            // walk(form.args[1]);
-            // bytecode ~= Opcode.jump_always;
-            // bytecode ~= ubytes(redoLoop);
-            // int exitPoint = cast(int) bytecode.length;
-            // bytecode[jumpTarget .. jumpTarget + 4] = ubytes(exitPoint);
-            // return null;
         case "+":
             if (Value valueLeft = cast(Value) form.args[0]) {
                 Reg rhs = walk(form.args[1]);
@@ -943,7 +936,7 @@ final class Walker {
             Reg res = walk(form.args[0]);
             bytecode ~= Opcode.ret;
             bytecode ~= res.reg;
-            return res;
+            return null;
         }
 
         vmError("Form: " ~ form.to!string);

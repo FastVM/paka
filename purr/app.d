@@ -25,20 +25,7 @@ extern (C) __gshared string[] rt_options = ["gcopt=gc:manual"];
 alias Thunk = void delegate();
 
 Thunk cliFileHandler(immutable string filename) {
-    return {
-        string oldLang = langNameDefault;
-        scope (exit) {
-            langNameDefault = oldLang;
-        }
-        if (filename.endsWith(".paka")) {
-            langNameDefault = "paka";
-        }
-        if (filename.endsWith(".pn")) {
-            langNameDefault = "passerine";
-        }
-        SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        eval(code);
-    };
+    return { SrcLoc code = SrcLoc(1, 1, filename, filename.readText); eval(code); };
 }
 
 Thunk cliEvalHandler(immutable string code) {
@@ -51,16 +38,6 @@ Thunk cliParseHandler(immutable string code) {
 
 Thunk cliCompileHandler(immutable string filename) {
     return {
-        string oldLang = langNameDefault;
-        scope (exit) {
-            langNameDefault = oldLang;
-        }
-        if (filename.endsWith(".paka")) {
-            langNameDefault = "paka";
-        }
-        if (filename.endsWith(".pn")) {
-            langNameDefault = "passerine";
-        }
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
         Node node = code.parse;
         Walker walker = new Walker;
@@ -69,10 +46,6 @@ Thunk cliCompileHandler(immutable string filename) {
         outmvm.rawWrite(walker.bytecode);
         outmvm.close();
     };
-}
-
-Thunk cliLangHandler(immutable string langname) {
-    return { langNameDefault = langname; };
 }
 
 Thunk cliAstHandler() {
@@ -124,7 +97,6 @@ Thunk cliDebugHandler() {
 void domain(string[] args) {
     args = args[1 .. $];
     Thunk[] todo;
-    langNameDefault = "paka";
     foreach_reverse (arg; args) {
         string[] parts = arg.split("=").array;
         string part1() {
@@ -171,9 +143,6 @@ void domain(string[] args) {
         case "--eval":
             todo ~= part1.cliEvalHandler;
             break;
-        case "--lang":
-            todo ~= part1.cliLangHandler;
-            break;
         case "--ast":
             todo ~= cliAstHandler;
             break;
@@ -190,24 +159,23 @@ void domain(string[] args) {
     }
 }
 
-// void thrown(Err)(Err e) {
-//     if (debugging) {
-//         throw e;
-//     } else {
-//         writeln(e.msg);
-//     }
-// }
+void thrown(Err)(Err e) {
+    if (debugging) {
+        throw e;
+    } else {
+        writeln(e.msg);
+    }
+}
 
 /// the main function that handles runtime errors
 void trymain(string[] args) {
-    // try {
-    domain(args);
-    // }
-    //  catch (Error e) {
-    //     e.thrown;
-    // } catch (Exception e) {
-    //     e.thrown;
-    // }
+    try {
+        domain(args);
+    } catch (Error e) {
+        e.thrown;
+    } catch (Exception e) {
+        e.thrown;
+    }
 }
 
 void main(string[] args) {

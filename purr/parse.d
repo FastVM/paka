@@ -11,8 +11,6 @@ import purr.srcloc;
 enum string bashLine = "#!";
 enum string langLine = "#?";
 
-__gshared string langNameDefault = "paka";
-
 __gshared Node function(SrcLoc code)[string] parsers;
 
 string readLine(ref string code) {
@@ -27,7 +25,7 @@ string readLine(ref string code) {
     return ret;
 }
 
-Node parse(SrcLoc code, string langname = langNameDefault) {
+Node parse(SrcLoc code, string langname = "paka") {
     if (auto i = langname in parsers) {
         return (*i)(code);
     } else {

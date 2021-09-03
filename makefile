@@ -10,10 +10,10 @@ else
 DO=-of=
 endif
 
-OPT_C=-Ofast
-OPT_D=
+OPT_C=-O3
+OPT_D=-Os
 
-NOTOUCH=vm/main.c vm/gc1.c
+NOTOUCH=vm/debug.c
 NOTNAMEFLAGS=$(patsubst %,-not -path '*%',$(NOTOUCH))
 
 DFILES:=$(shell find ext/paka purr -type f -name '*.d' $(NOTNAMEFLAGS))
@@ -29,8 +29,8 @@ default: purr
 purr $(BIN)/purr: $(OBJS)
 	$(DC) $^ $(DO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(DLFLAGS)
 
-$(LIB)/libmimalloc.a:
-	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak > /dev/null
+$(LIB)/libmimalloc.a: minivm/mimalloc
+	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak
 	cp minivm/lib/libmimalloc.a $@
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
@@ -38,6 +38,6 @@ $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 
 $(COBJS): $(patsubst $(LIB)/%.o,%.c,$@)
 	$(shell mkdir -p $(dir $@))
-	$(CC) -fPIE -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS)
+	$(CC) -fPIC -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS)
 	
 .dummy:

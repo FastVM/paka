@@ -119,7 +119,7 @@ Node readPostExtendImpl(TokenArray tokens, Node last) {
         }
         return tokens.readPostExtend(index.call(args));
     } else {
-        return last; // vmError("parse error " ~ tokens.to!string);
+        return last;
     }
 }
 
@@ -406,32 +406,32 @@ alias parsePaka = parsePakaValue;
 /// parses code as the paka programming language
 Node parsePakaAs(alias parser)(SrcLoc loc) {
     TokenArray tokens = new TokenArray(loc);
-    // try {
-    Node node = parser(tokens);
-    return node;
-    // } catch (Error e) {
-    //     string[] lines = loc.src.split("\n");
-    //     size_t[] nums;
-    //     size_t ml = 0;
-    //     foreach (i; locs) {
-    //         if (nums.length == 0 || nums[$ - 1] < i.line) {
-    //             nums ~= i.line;
-    //             ml = max(ml, i.line.to!string.length);
-    //         }
-    //     }
-    //     string ret;
-    //     foreach (i; nums) {
-    //         string s = i.to!string;
-    //         foreach (j; 0 .. ml - s.length) {
-    //             ret ~= ' ';
-    //         }
-    //         if (i > 0 && i < lines.length) {
-    //             ret ~= i.to!string ~ ": " ~ lines[i - 1].to!string ~ "\n";
-    //         }
-    //     }
-    //     e.msg = ret ~ e.msg;
-    //     throw e;
-    // }
+    try {
+        Node node = parser(tokens);
+        return node;
+    } catch (Error e) {
+        string[] lines = loc.src.split("\n");
+        size_t[] nums;
+        size_t ml = 0;
+        foreach (i; locs) {
+            if (nums.length == 0 || nums[$ - 1] < i.line) {
+                nums ~= i.line;
+                ml = max(ml, i.line.to!string.length);
+            }
+        }
+        string ret;
+        foreach (i; nums) {
+            string s = i.to!string;
+            foreach (j; 0 .. ml - s.length) {
+                ret ~= ' ';
+            }
+            if (i > 0 && i < lines.length) {
+                ret ~= i.to!string ~ ": " ~ lines[i - 1].to!string ~ "\n";
+            }
+        }
+        e.msg = ret ~ e.msg;
+        throw e;
+    }
 }
 
 alias parseCached = memoize!parseUncached;
