@@ -4,16 +4,24 @@ LIB=lib
 CC=clang
 DC=ldc2
 
+OPT_C=-O3
+OPT_D=-Os
+
+LIBFFI=/opt/homebrew/Cellar/libffi/3.3_3/lib/libffi.a
+INCFFI=-I/opt/homebrew/Cellar/libffi/3.3_3/include
+
+LFLAGS+=$(LIBFFI)
+
+MICC=$(CC)
+
 ifeq ($(DC),gdc)
 DO=-o
 else
 DO=-of=
 endif
 
-OPT_C=-O3
-OPT_D=-Os
 
-NOTOUCH=vm/debug.c
+NOTOUCH=
 NOTNAMEFLAGS=$(patsubst %,-not -path '*%',$(NOTOUCH))
 
 DFILES:=$(shell find ext/paka purr -type f -name '*.d' $(NOTNAMEFLAGS))
@@ -30,7 +38,7 @@ purr $(BIN)/purr: $(OBJS)
 	$(DC) $^ $(DO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(DLFLAGS)
 
 $(LIB)/libmimalloc.a: minivm/mimalloc
-	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak
+	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak CC=$(MICC)
 	cp minivm/lib/libmimalloc.a $@
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
@@ -38,6 +46,6 @@ $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 
 $(COBJS): $(patsubst $(LIB)/%.o,%.c,$@)
 	$(shell mkdir -p $(dir $@))
-	$(CC) -fPIC -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS)
+	$(CC) -fPIC -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(INCFFI) $(CFLAGS) 
 	
 .dummy:

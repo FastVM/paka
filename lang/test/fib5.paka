@@ -6,4 +6,4 @@ def fib(n) {
     }
 }
 
-fib(5) |> println
+fib(5) - 4 |> println

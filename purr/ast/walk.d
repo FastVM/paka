@@ -9,6 +9,7 @@ import std.ascii;
 import purr.ast.ast;
 import purr.srcloc;
 import purr.err;
+import purr.vm.ffi;
 import purr.vm.bytecode;
 
 __gshared bool dumpast = false;
@@ -48,6 +49,7 @@ final class Walker {
 
     Reg[string] locals;
     Reg[] regs;
+    double[string] constants;
 
     ubyte[] bytecode;
 
@@ -57,6 +59,7 @@ final class Walker {
     int[][string] replaces;
 
     void walkProgram(Node program) {
+        constants = ffi_data;
         if (dumpast) {
             writeln(program);
         }
@@ -894,6 +897,22 @@ final class Walker {
                     bytecode ~= outreg.reg;
                     bytecode ~= objreg.reg;
                     return outreg;
+                } else if (func.repr == "ffi_call") {
+                    if (form.args[1..$].length != 5) {
+                        vmError("ffi_call takes 5 arguments");
+                    } 
+                    Reg outreg = allocOut;
+                    Reg[] regs;
+                    foreach (index, arg; form.args[1..$])
+                    {
+                        regs ~= walk(arg);
+                    }
+                    bytecode ~= Opcode.ffi_call;
+                    bytecode ~= outreg.reg;
+                    foreach (reg; regs) {
+                        bytecode ~= reg.reg;
+                    }
+                    return outreg;
                 } else {
                     isStatic = true;
                     staticName = func.repr;
@@ -944,11 +963,18 @@ final class Walker {
     }
 
     Reg walkExact(Ident id) {
-        Reg outreg = allocOutMaybe;
+        if (double *pnum = id.repr in constants) {
+            Reg ret = allocOut;
+            bytecode ~= Opcode.store_num;
+            bytecode ~= ret.reg;
+            bytecode ~= ubytes(*pnum);
+            return ret;
+        } 
         if (id.repr !in locals) {
             vmError("name resolution fail for: " ~ id.to!string);
             assert(false);
         }
+        Reg outreg = allocOutMaybe;
         Reg fromreg = local(id.repr);
         if (outreg is null || outreg == fromreg) {
             return fromreg;

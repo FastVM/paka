@@ -1,0 +1,10 @@
+def sin(a) {
+    return ffi_call("", "sin", FFI_TYPE_FLOAT64, [FFI_TYPE_FLOAT64], [a])
+}
+
+def cos(a) {
+    return ffi_call("", "cos", FFI_TYPE_FLOAT64, [FFI_TYPE_FLOAT64], [a])
+}
+
+println(cos(0))
+println(sin(0))
