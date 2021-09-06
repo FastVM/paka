@@ -1,7 +1,9 @@
 module pur.vm.ffi;
 
 enum ffi_type: double {
-    cchar = 0,
+    void_ = 0,
+    bool_,
+    char_,
     schar,
     uchar,
     int8,
@@ -14,11 +16,13 @@ enum ffi_type: double {
     float32,
     float64,
     uint64,
-    text,
+    string_,
 }
 
 enum double[string] ffi_data = [
-    "FFI_TYPE_CHAR": ffi_type.cchar,
+    "FFI_TYPE_VOID": ffi_type.void_,
+    "FFI_TYPE_BOOL": ffi_type.bool_,
+    "FFI_TYPE_CHAR": ffi_type.char_,
     "FFI_TYPE_SCHAR": ffi_type.schar,
     "FFI_TYPE_UCHAR": ffi_type.uchar,
     "FFI_TYPE_INT8": ffi_type.int8,
@@ -31,5 +35,5 @@ enum double[string] ffi_data = [
     "FFI_TYPE_FLOAT32": ffi_type.float32,
     "FFI_TYPE_FLOAT64": ffi_type.float64,
     "FFI_TYPE_UINT64": ffi_type.uint64,
-    "FFI_TYPE_TEXT": ffi_type.text,
+    "FFI_TYPE_STRING": ffi_type.string_,
 ];

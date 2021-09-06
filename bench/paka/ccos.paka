@@ -1,0 +1,16 @@
+def sin(a) {
+    return ffi_call("", "sin", FFI_TYPE_FLOAT64, [FFI_TYPE_FLOAT64], [a])
+}
+
+def cos(a) {
+    return ffi_call("", "cos", FFI_TYPE_FLOAT64, [FFI_TYPE_FLOAT64], [a])
+}
+
+x = 0
+res = 0
+while x < 1000000 {
+    res = res + cos(res)
+    res = res - sin(res)
+    x = x + 1
+}
+println(res)

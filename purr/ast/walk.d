@@ -501,6 +501,19 @@ final class Walker {
             bytecode[jumpOutFrom .. jumpOutFrom + 4] = ubytes(jumpOutTo);
             bytecode[jumpFalseFrom .. jumpFalseFrom + 4] = ubytes(jumpFalseTo);
             return outreg;
+        case "unless":
+            Reg outreg = allocOut;
+            int jumpFalseFrom = ifTrue(form.args[0]);
+            walk(form.args[1], outreg);
+            bytecode ~= Opcode.jump_always;
+            int jumpOutFrom = cast(int) bytecode.length;
+            bytecode ~= ubytes(-1);
+            int jumpFalseTo = cast(int) bytecode.length;
+            walk(form.args[2], outreg);
+            int jumpOutTo = cast(int) bytecode.length;
+            bytecode[jumpOutFrom .. jumpOutFrom + 4] = ubytes(jumpOutTo);
+            bytecode[jumpFalseFrom .. jumpFalseFrom + 4] = ubytes(jumpFalseTo);
+            return outreg;
         case "while":
             bytecode ~= Opcode.jump_always;
             int jumpCondFrom = cast(int) bytecode.length;
@@ -509,6 +522,17 @@ final class Walker {
             walk(form.args[1]);
             int jumpCondTo = cast(int) bytecode.length;
             int jumpRedoFrom = ifTrue(form.args[0]);
+            bytecode[jumpCondFrom .. jumpCondFrom + 4] = ubytes(jumpCondTo);
+            bytecode[jumpRedoFrom .. jumpRedoFrom + 4] = ubytes(jumpRedoTo);
+            return null;
+        case "until":
+            bytecode ~= Opcode.jump_always;
+            int jumpCondFrom = cast(int) bytecode.length;
+            bytecode ~= ubytes(-1);
+            int jumpRedoTo = cast(int) bytecode.length;
+            walk(form.args[1]);
+            int jumpCondTo = cast(int) bytecode.length;
+            int jumpRedoFrom = ifFalse(form.args[0]);
             bytecode[jumpCondFrom .. jumpCondFrom + 4] = ubytes(jumpCondTo);
             bytecode[jumpRedoFrom .. jumpRedoFrom + 4] = ubytes(jumpRedoTo);
             return null;

@@ -144,6 +144,13 @@ Node readWhileImpl(TokenArray tokens) {
     Node block = tokens.readBlock;
     return new Form("while", cond, block);
 }
+/// read an if statement
+alias readUntil = Spanning!readUntilImpl;
+Node readUntilImpl(TokenArray tokens) {
+    Node cond = tokens.readExprBase;
+    Node block = tokens.readBlock;
+    return new Form("until", cond, block);
+}
 
 void skip1(ref string str, ref Span span) {
     if (str[0] == '\n') {
@@ -257,6 +264,9 @@ Node readPostExprImpl(TokenArray tokens) {
     } else if (tokens.first.isKeyword("while")) {
         tokens.nextIs(Token.Type.keyword, "while");
         last = tokens.readWhile;
+    } else if (tokens.first.isKeyword("until")) {
+        tokens.nextIs(Token.Type.keyword, "until");
+        last = tokens.readUntil;
     } else if (tokens.first.isKeyword("true")) {
         tokens.nextIs(Token.Type.keyword, "true");
         last = new Value(true);

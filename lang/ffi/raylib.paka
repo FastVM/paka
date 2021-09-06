@@ -1,0 +1,46 @@
+def init_window(width, height, title) {
+    return ffi_call("libraylib.dylib", "InitWindow", FFI_TYPE_VOID, [FFI_TYPE_INT32, FFI_TYPE_INT32, FFI_TYPE_STRING], [width, height, title])
+}
+
+def window_should_close() {
+    return ffi_call("libraylib.dylib", "WindowShouldClose", FFI_TYPE_BOOL, [], [])
+}
+
+def set_target_fps(fps) {
+    return ffi_call("libraylib.dylib", "SetTargetFPS", FFI_TYPE_VOID, [FFI_TYPE_INT32], [fps])
+}
+
+def clear_background(fps) {
+    return ffi_call("libraylib.dylib", "ClearBackground", FFI_TYPE_VOID, [FFI_TYPE_INT32], [fps])
+}
+
+def close_window() {
+    return ffi_call("libraylib.dylib", "CloseWindow", FFI_TYPE_VOID, [], [])
+}
+
+def begin_drawing() {
+    return ffi_call("libraylib.dylib", "BeginDrawing", FFI_TYPE_VOID, [], [])
+}
+
+def end_drawing() {
+    return ffi_call("libraylib.dylib", "EndDrawing", FFI_TYPE_VOID, [], [])
+}
+
+def rgb(r, g, b) {
+    ret = 0
+    ret = ret * 256 + b
+    ret = ret * 256 + g
+    ret = ret * 256 + r
+    return ret
+}
+
+init_window(640, 480, "simple raylib example")
+set_target_fps(60)
+i = 0
+until window_should_close() {
+    begin_drawing()
+    clear_background(rgb(255, i % 256, 0));
+    end_drawing()
+    i = i + 1
+}
+close_window()
