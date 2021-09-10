@@ -1,22 +1,32 @@
 
+# Paka & Purr
 
-# Paka
+Paka is a language designed to be everything that I want in a language.
+The default compiler for this language is called Purr, it targets MiniVM.
 
-I will write a readme. I will write a good readme. I will write this readme, one section a day.
+## Examples
 
-## Features
+TODO
 
-Paka currently has
-- a virtual machine
-- static typing
-- [a friend](#passerine) 
+## Development
 
+Paka and Purr are developed mainly by [Shaw Summa](#shaw-summa).
 
-## Aspirations
+All contributions are greatly welcome, from performance improvments, to doccumentation.
 
-Paka aspires to be the language that I want to write.
+### What needs work
 
-## Passerine
+Paka is evolving rapidly, it needs work in:
+- Tooling
+  - Highlighers
+  - Debuggers
+  - Compiler messages
+- Ideas
+  - Remove features that are not used or slow
+  - Change things to be simpler
+  - Add new features without minivm modifications
+- Replace println with putchar
 
-passerine is a work in progress, including its docs.
+### Shaw Summa
 
+I am Shaw Summa, a language developer from Pennsylvania.

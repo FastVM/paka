@@ -20,9 +20,9 @@ UnaryOp parseUnaryOp(string[] ops) {
     } else if (opName == "not") {
         return (Node rhs) { return new Form("not", rhs); };
     } else if (opName == "-") {
-        vmError("parse error: not a unary operator: " ~ opName ~ " (consider 0- instead)");
+        vmFail("parse error: not a unary operator: " ~ opName ~ " (consider 0- instead)");
     } else {
-        vmError("parse error: not a unary operator: " ~ opName);
+        vmFail("parse error: not a unary operator: " ~ opName);
     }
     assert(false);
 }
@@ -43,7 +43,7 @@ BinaryOp parseBinaryOp(string[] ops) {
                                 lhsForm.args[1 .. $]), rhs);
                         return parseBinaryOp(["="])(lhsForm.args[0], rhsLambda);
                     }
-                    vmError("assign to expression of type: " ~ lhsForm.form);
+                    vmFail("assign to expression of type: " ~ lhsForm.form);
                     assert(false);
                 } else {
                     return new Form("set", lhs, rhs);
@@ -69,7 +69,7 @@ BinaryOp parseBinaryOp(string[] ops) {
             }
         }
     } else {
-        vmError("no multi ops yet");
+        vmFail("no multi ops yet");
         assert(false);
     }
 }

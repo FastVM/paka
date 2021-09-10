@@ -1,10 +1,10 @@
 BIN=bin
 LIB=lib
 
-CC=clang
+CC=gcc
 DC=ldc2
 
-OPT_C=-O3
+OPT_C=-Ofast
 OPT_D=-Os
 
 P=-p
@@ -16,7 +16,7 @@ else
 LIBFFI=-lffi
 endif
 
-MICC=$(CC)
+MICC=gcc
 
 ifeq ($(DC),gdc)
 DO=-o
@@ -59,3 +59,6 @@ $(BIN) $(LIB):
 	mkdir $(P) $@
 
 .dummy:
+
+clean:
+	rm -r $(BIN) $(LIB)

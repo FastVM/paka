@@ -247,20 +247,20 @@ redo:
                     //         got = read;
                     //         if (got == '\0')
                     //         {
-                    //             vmError("parse error: end of file with unclosed string");
+                    //             vmFail("parse error: end of file with unclosed string");
                     //         }
                     //         ret ~= got;
                     //     }
                     //     ret ~= '\\';
                     //     break;
                 default:
-                    vmError("parse error: unknown escape '" ~ got ~ "'");
+                    vmFail("parse error: unknown escape '" ~ got ~ "'");
                 }
             } else {
                 ret ~= got;
             }
             if (code.length == 0) {
-                vmError("parse error: end of file found in string");
+                vmFail("parse error: end of file found in string");
             }
         }
         consume;
@@ -269,6 +269,6 @@ redo:
     if (peek == '\0') {
         return consToken(Token.Type.none, "");
     }
-    vmError("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
+    vmFail("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
     assert(false);
 }

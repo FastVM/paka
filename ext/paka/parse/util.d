@@ -82,7 +82,7 @@ pragma(inline, true):
     /// wraps match, it throws a nice error when it does not match
     void nextIs(Token...)(Token a) {
         if (!match(a)) {
-            vmError("expected " ~ a[$ - 1].to!string ~ " got " ~ first.to!string);
+            vmFail("expected " ~ a[$ - 1].to!string ~ " got " ~ first.to!string);
         }
     }
 

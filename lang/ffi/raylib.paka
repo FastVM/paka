@@ -51,6 +51,7 @@ set_target_fps(60)
 
 until window_should_close() {
     begin_drawing()
+    draw_rectangle(50, 50, 100, 100, rgb(20, 200, 10))
     clear_background(rgb(0, 127, 127))
     end_drawing()
 }

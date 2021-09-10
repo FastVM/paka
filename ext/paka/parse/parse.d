@@ -43,7 +43,7 @@ Node[][] readOpen(string v)(TokenArray tokens) if (v == "()") {
 Node[] readOpen1(string v)(TokenArray tokens) if (v == "()") {
     Node[][] ret = tokens.readOpen!"()";
     if (ret.length > 1) {
-        vmError("unexpected semicolon in (...)");
+        vmFail("unexpected semicolon in (...)");
     }
     return ret[0];
 }
@@ -177,7 +177,7 @@ bool isDigitInBase(char c, long base) {
         bool isLetterDigit = val >= 10 && val < base;
         return isLetterDigit || c.isDigitInBase(10);
     }
-    vmError("base not valud: " ~ base.to!string);
+    vmFail("base not valud: " ~ base.to!string);
     assert(false);
 }
 
@@ -188,7 +188,7 @@ long parseNumberOnly(ref string input, size_t base) {
         input = input[1 .. $];
     }
     if (str.length == 0) {
-        vmError("found no digits when parse escape in base " ~ base.to!string);
+        vmFail("found no digits when parse escape in base " ~ base.to!string);
     }
     return str.to!size_t(cast(uint) base);
 }
@@ -206,7 +206,7 @@ size_t escapeNumber(ref string input) {
             size_t base = input.escapeNumber;
             if (input.length < 1 || input[0] != ':') {
                 string why = "0n" ~ base.to!string ~ " must be followd by a colon (:)";
-                vmError("cannot have escape: " ~ why);
+                vmFail("cannot have escape: " ~ why);
             }
             input = input[1 .. $];
             if (base == 1) {
@@ -218,14 +218,14 @@ size_t escapeNumber(ref string input) {
             }
             if (base > 36) {
                 string why = "0n must be followed by a number 1 to 36 inclusive";
-                vmError("cannot have escape: " ~ why);
+                vmFail("cannot have escape: " ~ why);
             }
             return input.parseNumberOnly(base);
         case 'x':
             return input.parseNumberOnly(16);
         default:
             string why = "0 must be followed by one of: nbox";
-            vmError("cannot have escape: " ~ why);
+            vmFail("cannot have escape: " ~ why);
             assert(false);
         }
     } else {
@@ -249,7 +249,7 @@ Node readPostExprImpl(TokenArray tokens) {
     } else if (tokens.first.isOpen("(")) {
         Node[] nodes = tokens.readOpen1!"()";
         if (nodes.length != 1) {
-            vmError("no tuples yet");
+            vmFail("no tuples yet");
         }
         last = nodes[0];
     } else if (tokens.first.isOpen("[")) {
@@ -440,7 +440,8 @@ Node parsePakaAs(alias parser)(SrcLoc loc) {
             }
         }
         e.msg = ret ~ e.msg;
-        throw e;
+        vmFail(e.msg);
+        assert(false);
     }
 }
 

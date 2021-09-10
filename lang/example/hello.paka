@@ -1,0 +1,10 @@
+
+def puts(txt) {
+    index = 0
+    while index < length(txt) {
+        txt[index] |> putchar
+        index = index + 1
+    }
+}
+
+puts("Hello, World!\n")

@@ -8,3 +8,7 @@ void vmError(string src) {
     exit(1);
     assert(false);
 }
+
+void vmFail(string src) {
+    throw new Exception(src);
+}

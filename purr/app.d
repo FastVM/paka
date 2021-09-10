@@ -159,25 +159,6 @@ void domain(string[] args) {
     }
 }
 
-void thrown(Err)(Err e) {
-    if (debugging) {
-        throw e;
-    } else {
-        writeln(e.msg);
-    }
-}
-
-/// the main function that handles runtime errors
-void trymain(string[] args) {
-    try {
-        domain(args);
-    } catch (Error e) {
-        e.thrown;
-    } catch (Exception e) {
-        e.thrown;
-    }
-}
-
 void main(string[] args) {
-    trymain(args);
+    domain(args);
 }
