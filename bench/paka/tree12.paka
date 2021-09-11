@@ -1,5 +1,5 @@
 def bottom_up_tree(item, depth) {
-    if depth > 0 {
+    if depth != 0 {
         i = item + item
         left = rec(i-1, depth - 1)
         right = rec(i, depth - 1)
@@ -10,7 +10,7 @@ def bottom_up_tree(item, depth) {
 }
 
 def item_check(tree) {
-    if length(tree) == 3 {
+    if length(tree) != 1 {
         return tree[0] + rec(tree[1]) - rec(tree[2])
     } else {
         return tree[0]
@@ -21,7 +21,7 @@ def pow2(n) {
     if n == 0 {
         return 1
     }
-    return pow2(n-1) * 2
+    return rec(n-1) * 2
 }
 
 N = 12

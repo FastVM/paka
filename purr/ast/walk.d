@@ -45,11 +45,17 @@ class Reg {
 }
 
 final class Walker {
-    Node[] nodes = [];
-
-    Reg[string] locals;
-    Reg[] regs;
+    Node[] nodes;
     double[string] constants;
+
+    Node[][] captureValuess;
+    Reg[][] currentCaptures;
+    Reg[] captureRegs;
+    double[string][] inNthCaptures;
+
+    Reg[string][] localss;
+
+    Reg[] regs;
 
     ubyte[] bytecode;
 
@@ -58,7 +64,33 @@ final class Walker {
     int[string] funcs;
     int[][string] replaces;
 
+    ref Reg[string] locals() {
+        return localss[$ - 1];
+    }
+
+    ref Reg captureReg() {
+        return captureRegs[$ - 1];
+    }
+
+    ref Reg[] currentCapture() {
+        return currentCaptures[$ - 1];
+    }
+
+    ref Node[] captureValues() {
+        return captureValuess[$ - 1];
+    }
+
     void walkProgram(Node program) {
+        localss.length++;
+        captureValuess.length++;
+        currentCaptures.length++;
+        inNthCaptures.length++;
+        scope (exit) {
+            localss.length--;
+            captureValuess.length--;
+            currentCaptures.length--;
+            inNthCaptures.length--;
+        }
         constants = ffi_data;
         if (dumpast) {
             writeln(program);
@@ -870,20 +902,26 @@ final class Walker {
                 assert(id !is null, "malformed arg");
                 argnames ~= id.repr;
             }
-            Reg outLambdaReg = allocOut;
+            Reg lambdaReg = allocOut;
             bytecode ~= Opcode.store_fun;
-            bytecode ~= outLambdaReg.reg;
+            bytecode ~= lambdaReg.reg;
             int refLength = cast(int) bytecode.length;
             bytecode ~= ubytes(-1);
             int refRegc = cast(int) bytecode.length;
             bytecode ~= ubytes(256);
-            Reg[string] oldLocals = locals;
             Reg[] oldRegs = regs;
             regs = null;
-            locals = null;
+            localss.length++;
             foreach (index, arg; argnames) {
                 local(arg);
             }
+            captureRegs ~= alloc();
+            scope (exit) {
+                captureRegs.length--;
+            }
+            captureValuess.length++;
+            currentCaptures.length++;
+            inNthCaptures.length++;
             Reg retreg = walk(form.args[1]);
             if (retreg !is null) {
                 bytecode ~= Opcode.ret;
@@ -894,9 +932,23 @@ final class Walker {
             }
             bytecode[refRegc .. refRegc + 4] = ubytes(regs.length);
             regs = oldRegs;
-            locals = oldLocals;
+            localss.length--;
+            captureValuess.length--;
+            currentCaptures.length--;
+            inNthCaptures.length--;
             bytecode[refLength .. refLength + 4] = ubytes(cast(int) bytecode.length);
-            return outLambdaReg;
+            Reg[] regs = [lambdaReg];
+            foreach (arg; captureValues) {
+                Reg reg = walk(arg);
+                regs ~= reg;
+            }
+            bytecode ~= Opcode.array;
+            bytecode ~= lambdaReg.reg;
+            bytecode ~= ubytes(cast(int) regs.length);
+            foreach (reg; regs) {
+                bytecode ~= reg.reg;
+            }
+            return lambdaReg;
         case "call":
             bool isRec = false;
             bool isStatic = false;
@@ -922,13 +974,12 @@ final class Walker {
                     bytecode ~= objreg.reg;
                     return outreg;
                 } else if (func.repr == "ffi_call") {
-                    if (form.args[1..$].length != 5) {
+                    if (form.args[1 .. $].length != 5) {
                         vmError("ffi_call takes 5 arguments");
-                    } 
+                    }
                     Reg outreg = allocOut;
                     Reg[] regs;
-                    foreach (index, arg; form.args[1..$])
-                    {
+                    foreach (index, arg; form.args[1 .. $]) {
                         regs ~= walk(arg);
                     }
                     bytecode ~= Opcode.ffi_call;
@@ -937,42 +988,105 @@ final class Walker {
                         bytecode ~= reg.reg;
                     }
                     return outreg;
-                } else {
+                } else if (false) {
                     isStatic = true;
                     staticName = func.repr;
                 }
             }
 
             Reg funreg;
+            Reg outreg = allocOut;
             if (!isRec && !isStatic) {
                 funreg = walk(form.args[0]);
             }
-
             Reg[] argRegs;
             foreach (index, arg; form.args[1 .. $]) {
                 argRegs ~= walk(arg);
             }
-            Reg outreg = allocOut;
-            if (isRec) {
-                bytecode ~= Opcode.rec;
-                bytecode ~= outreg.reg;
-            } else if (isStatic) {
-                bytecode ~= Opcode.static_call;
-                bytecode ~= outreg.reg;
-                if (int[]* preps = staticName in replaces) {
-                    *preps ~= cast(int)(bytecode.length);
+            switch (argRegs.length) {
+            case 0:
+                if (isRec) {
+                    bytecode ~= Opcode.rec0;
+                    bytecode ~= outreg.reg;
+                } else if (isStatic) {
+                    bytecode ~= Opcode.static_call0;
+                    bytecode ~= outreg.reg;
+                    if (int[]* preps = staticName in replaces) {
+                        *preps ~= cast(int)(bytecode.length);
+                    } else {
+                        replaces[staticName] = [cast(int)(bytecode.length)];
+                    }
+                    bytecode ~= ubytes(-1);
                 } else {
-                    replaces[staticName] = [cast(int)(bytecode.length)];
+                    bytecode ~= Opcode.call0;
+                    bytecode ~= outreg.reg;
+                    bytecode ~= funreg.reg;
                 }
-                bytecode ~= ubytes(-1);
-            } else {
-                bytecode ~= Opcode.call;
-                bytecode ~= outreg.reg;
-                bytecode ~= funreg.reg;
-            }
-            bytecode ~= ubytes(cast(int) argRegs.length);
-            foreach (reg; argRegs) {
-                bytecode ~= reg.reg;
+                break;
+            case 1:
+                if (isRec) {
+                    bytecode ~= Opcode.rec1;
+                    bytecode ~= outreg.reg;
+                } else if (isStatic) {
+                    bytecode ~= Opcode.static_call1;
+                    bytecode ~= outreg.reg;
+                    if (int[]* preps = staticName in replaces) {
+                        *preps ~= cast(int)(bytecode.length);
+                    } else {
+                        replaces[staticName] = [cast(int)(bytecode.length)];
+                    }
+                    bytecode ~= ubytes(-1);
+                } else {
+                    bytecode ~= Opcode.call1;
+                    bytecode ~= outreg.reg;
+                    bytecode ~= funreg.reg;
+                }
+                bytecode ~= argRegs[0].reg;
+                break;
+            case 2:
+                if (isRec) {
+                    bytecode ~= Opcode.rec2;
+                    bytecode ~= outreg.reg;
+                } else if (isStatic) {
+                    bytecode ~= Opcode.static_call2;
+                    bytecode ~= outreg.reg;
+                    if (int[]* preps = staticName in replaces) {
+                        *preps ~= cast(int)(bytecode.length);
+                    } else {
+                        replaces[staticName] = [cast(int)(bytecode.length)];
+                    }
+                    bytecode ~= ubytes(-1);
+                } else {
+                    bytecode ~= Opcode.call2;
+                    bytecode ~= outreg.reg;
+                    bytecode ~= funreg.reg;
+                }
+                bytecode ~= argRegs[0].reg;
+                bytecode ~= argRegs[1].reg;
+                break;
+            default:
+                if (isRec) {
+                    bytecode ~= Opcode.rec;
+                    bytecode ~= outreg.reg;
+                } else if (isStatic) {
+                    bytecode ~= Opcode.static_call;
+                    bytecode ~= outreg.reg;
+                    if (int[]* preps = staticName in replaces) {
+                        *preps ~= cast(int)(bytecode.length);
+                    } else {
+                        replaces[staticName] = [cast(int)(bytecode.length)];
+                    }
+                    bytecode ~= ubytes(-1);
+                } else {
+                    bytecode ~= Opcode.call;
+                    bytecode ~= outreg.reg;
+                    bytecode ~= funreg.reg;
+                }
+                bytecode ~= ubytes(cast(int) argRegs.length);
+                foreach (reg; argRegs) {
+                    bytecode ~= reg.reg;
+                }
+                break;
             }
             return outreg;
         case "return":
@@ -980,33 +1094,68 @@ final class Walker {
             bytecode ~= Opcode.ret;
             bytecode ~= res.reg;
             return null;
+        case "capture":
+            Reg fromreg = captureReg;
+            Reg outreg = allocOutMaybe;
+            if (outreg is null || outreg == fromreg) {
+                return fromreg;
+            } else {
+                bytecode ~= Opcode.store_reg;
+                bytecode ~= outreg.reg;
+                bytecode ~= fromreg.reg;
+                return outreg;
+            }
         }
 
         vmError("Form: " ~ form.to!string);
         assert(false);
     }
 
+    Node path(string name) {
+        int where = -1;
+        foreach (index, lvl; localss[0 .. $ - 1]) {
+            if (name in lvl) {
+                where = cast(int) index;
+            }
+        }
+        assert(where >= 0);
+        currentCaptures[where] ~= localss[where][name];
+        captureValuess[where] ~= new Ident(name);
+        inNthCaptures[where + 1][name] = cast(int) captureValuess[where].length;
+        return new Form("index", new Form("capture"), new Value(cast(double) captureValuess[where].length));
+    }
+
     Reg walkExact(Ident id) {
-        if (double *pnum = id.repr in constants) {
+        if (double* pnum = id.repr in constants) {
             Reg ret = allocOut;
             bytecode ~= Opcode.store_num;
             bytecode ~= ret.reg;
             bytecode ~= ubytes(*pnum);
             return ret;
-        } 
-        if (id.repr !in locals) {
+        } else if (Reg* fromreg = id.repr in locals) {
+            Reg outreg = allocOutMaybe;
+            if (outreg is null || outreg == *fromreg) {
+                return *fromreg;
+            } else {
+                bytecode ~= Opcode.store_reg;
+                bytecode ~= outreg.reg;
+                bytecode ~= (*fromreg).reg;
+                return outreg;
+            }
+        } else if (Node lookup = path(id.repr)) {
+            Reg outreg = allocOutMaybe;
+            Reg fromreg = walk(lookup, outreg);
+            if (outreg is null || outreg == fromreg) {
+                return fromreg;
+            } else {
+                bytecode ~= Opcode.store_reg;
+                bytecode ~= outreg.reg;
+                bytecode ~= fromreg.reg;
+                return outreg;
+            }
+        } else {
             vmError("name resolution fail for: " ~ id.to!string);
             assert(false);
-        }
-        Reg outreg = allocOutMaybe;
-        Reg fromreg = local(id.repr);
-        if (outreg is null || outreg == fromreg) {
-            return fromreg;
-        } else {
-            bytecode ~= Opcode.store_reg;
-            bytecode ~= outreg.reg;
-            bytecode ~= fromreg.reg;
-            return outreg;
         }
     }
 
