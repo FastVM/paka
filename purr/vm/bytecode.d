@@ -72,7 +72,6 @@ enum Opcode : ubyte {
     length,
     index,
     index_num,
-    ffi_call,
     max1,
     max2p = 128,
 }

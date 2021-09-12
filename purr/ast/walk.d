@@ -9,7 +9,6 @@ import std.ascii;
 import purr.ast.ast;
 import purr.srcloc;
 import purr.err;
-import purr.vm.ffi;
 import purr.vm.bytecode;
 
 __gshared bool dumpast = false;
@@ -91,7 +90,6 @@ final class Walker {
             currentCaptures.length--;
             inNthCaptures.length--;
         }
-        constants = ffi_data;
         if (dumpast) {
             writeln(program);
         }
@@ -970,21 +968,6 @@ final class Walker {
                     bytecode ~= Opcode.length;
                     bytecode ~= outreg.reg;
                     bytecode ~= objreg.reg;
-                    return outreg;
-                } else if (func.repr == "ffi_call") {
-                    if (form.args[1 .. $].length != 5) {
-                        vmError("ffi_call takes 5 arguments");
-                    }
-                    Reg outreg = allocOut;
-                    Reg[] regs;
-                    foreach (index, arg; form.args[1 .. $]) {
-                        regs ~= walk(arg);
-                    }
-                    bytecode ~= Opcode.ffi_call;
-                    bytecode ~= outreg.reg;
-                    foreach (reg; regs) {
-                        bytecode ~= reg.reg;
-                    }
                     return outreg;
                 // } else {
                 //     isStatic = true;
