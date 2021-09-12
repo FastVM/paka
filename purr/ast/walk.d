@@ -97,9 +97,7 @@ final class Walker {
         }
         bytecode = null;
         walk(program);
-        foreach (_; 0 .. 16) {
-            bytecode ~= Opcode.exit;
-        }
+        bytecode ~= Opcode.exit;
         foreach (name, locs; replaces) {
             int setto = funcs[name];
             foreach (n; locs) {
@@ -988,9 +986,9 @@ final class Walker {
                         bytecode ~= reg.reg;
                     }
                     return outreg;
-                } else {
-                    isStatic = true;
-                    staticName = func.repr;
+                // } else {
+                //     isStatic = true;
+                //     staticName = func.repr;
                 }
             }
 
@@ -1118,7 +1116,7 @@ final class Walker {
                 where = cast(int) index;
             }
         }
-        assert(where >= 0);
+        assert(where >= 0, name);
         currentCaptures[where] ~= localss[where][name];
         captureValuess[where] ~= new Ident(name);
         inNthCaptures[where + 1][name] = cast(int) captureValuess[where].length;
@@ -1162,12 +1160,6 @@ final class Walker {
     Reg walkExact(Value val) {
         if (val.info == typeid(null)) {
             return null;
-        } else if (val.info == typeid(bool)) {
-            Reg ret = allocOut;
-            bytecode ~= Opcode.store_log;
-            bytecode ~= ret.reg;
-            bytecode ~= ubytes(*cast(bool*) val.value);
-            return ret;
         } else if (val.info == typeid(double)) {
             Reg ret = allocOut;
             bytecode ~= Opcode.store_num;

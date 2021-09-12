@@ -1,0 +1,33 @@
+
+def map(list, func) {
+    ret = nil
+    until empty(list) {
+        before = first(list)
+        after = func(before)
+        ret = push(after, ret)
+        list = pop(list)
+    }
+    return ret
+}
+
+def filter(init, list, func) {
+    ret = init
+    until empty(list) {
+        value = first(list)
+        ret = func(ret, value)
+        list = pop(list)
+    }
+    return ret
+}
+
+def range(low, high) {
+    ret = nil
+    cur = low
+    while cur < high {
+        ret = push(cur, ret)
+        cur = cur + 1
+    }
+    return ret
+}
+
+range(1, 10) |> println

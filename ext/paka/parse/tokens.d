@@ -15,12 +15,12 @@ string[][] prec = [
 ];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "not", ",", "\\", "!", "#", ":", "..."];
+string[] nops = [".", "not", ",", "\\", "!", "#", ":", "...", "->"];
 
 /// language keywords
 string[] keywords = [
-    "if", "else", "def", "lambda", "import", "true", "false", "nil", "table",
-    "while", "static", "return", "until", "unless"
+    "if", "else", "def", "lambda", "import", "true", "false", "table",
+    "while", "static", "return", "until", "unless", "nil", "self",
 ];
 
 /// gets the operators by length not precidence

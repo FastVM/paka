@@ -30,23 +30,27 @@ DL=-L
 endif
 
 
-DFILES:=$(shell find ext/paka ext/scheme purr -type f -name '*.d')
+DFILES:=$(shell find ext/paka purr -type f -name '*.d')
 CFILES:=$(shell find minivm/vm -type f -name '*.c')
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
-OBJS=$(DOBJS) $(COBJS) $(LIB)/libmimalloc.a
+OBJS=$(DOBJS) $(COBJS)
 
 default:
 	$(MAKE) $(BIN) $(LIB) P=$(P)
-	$(MAKE) purr
+	$(MAKE) purr minivm P=$(P)
 
 purr $(BIN)/purr: $(OBJS)
 	@mkdir $(P) $(BIN)
 	$(DC) $^ $(DO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(DL)$(LIBFFI) $(DLFLAGS)
 
-$(LIB)/libmimalloc.a: minivm/mimalloc
-	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak CC=$(MICC)
-	cp minivm/lib/libmimalloc.a $@
+minivm: $(CFILES) minivm/main/main.c
+	$(MAKE) --no-print-directory -C minivm BIN=bin CC="$(CC)" OPT="$(OPT_C)"
+	cp minivm/bin/minivm $(BIN)/minivm
+
+# $(LIB)/libmimalloc.a: minivm/mimalloc
+# 	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak CC=$(MICC)
+# 	cp minivm/lib/libmimalloc.a $@
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	@mkdir $(P) $(basename $@) $(LIB)

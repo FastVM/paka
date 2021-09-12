@@ -58,7 +58,7 @@ pragma(inline, true):
             return first.span.first;
         }
 
-        private void skip() {
+        void skip() {
             index += 1;
         }
     } else {
@@ -70,7 +70,7 @@ pragma(inline, true):
         }
 
         /// this just skips a token, often used for bracket matching
-        private void skip() {
+        void skip() {
             first = position.readToken;
         }
     }

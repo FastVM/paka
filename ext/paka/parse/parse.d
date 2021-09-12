@@ -49,17 +49,25 @@ Node[] readOpen1(string v)(TokenArray tokens) if (v == "()") {
 }
 
 /// reads square brackets
-Node[] readOpen(string v)(TokenArray tokens) if (v == "[]") {
+Node[][] readOpen(string v)(TokenArray tokens) if (v == "[]") {
+    Node[][] ret;
     Node[] args;
     tokens.nextIs(Token.Type.open, [v[0]]);
     while (!tokens.first.isClose([v[1]])) {
-        args ~= tokens.readExprBase;
-        if (tokens.first.isComma) {
-            tokens.nextIs(Token.Type.comma);
+        if (tokens.first.isSemicolon) {
+            tokens.nextIs(Token.Type.semicolon);
+            ret ~= args;
+            args = null;
+        } else {
+            args ~= tokens.readExprBase;
+            if (tokens.first.isComma) {
+                tokens.nextIs(Token.Type.comma);
+            }
         }
     }
     tokens.nextIs(Token.Type.close, [v[1]]);
-    return args;
+    ret ~= args;
+    return ret;
 }
 
 /// reads open curly brackets
@@ -87,9 +95,38 @@ void stripNewlines(TokenArray tokens) {
 
 Node readPostCallExtend(TokenArray tokens, Node last) {
     Node[][] args = tokens.readOpen!"()";
+    if (Ident id = cast(Ident) last) {
+        switch (id.repr) {
+        case "empty":
+            last = new Form("==", new Value(0.0), new Form("length", args[0]));
+            args = args[1 .. $];
+            break;
+        case "first":
+            last = new Form("index", args[0], new Value(1.0));
+            args = args[1 .. $];
+            break;
+        case "pop":
+            last = new Form("index", args[0], new Value(0.0));
+            args = args[1 .. $];
+            break;
+        case "push":
+            last = new Form("array", args[0]);
+            args = args[1 .. $];
+            break;
+        default:
+            break;
+        }
+    }
     while (tokens.first.isOperator("->")) {
         tokens.nextIs(Token.Type.operator, "->");
-        args[$ - 1] ~= new Form("lambda", [new Form("args"), tokens.readBlock]);
+        Node[] params;
+        while (tokens.first.isIdent) {
+            params ~= cast(Node) new Ident(tokens.first.value);
+            tokens.nextIs(Token.Type.ident);
+        }
+        args[$ - 1] ~= new Form("lambda", [
+                new Form("args", params), tokens.readBlock
+                ]);
     }
     foreach (argList; args) {
         last = last.call(argList);
@@ -106,8 +143,11 @@ Node readPostExtendImpl(TokenArray tokens, Node last) {
     if (tokens.first.isOpen("(")) {
         return tokens.readPostExtend(tokens.readPostCallExtend(last));
     } else if (tokens.first.isOpen("[")) {
-        Node[] arg = tokens.readOpen!"[]";
-        Node cur = new Form("index", last, arg);
+        Node[][] arg = tokens.readOpen!"[]";
+        if (arg.length != 1) {
+            vmError("semicolon not valid in index");
+        }
+        Node cur = new Form("index", last, arg[0]);
         return tokens.readPostExtend(cur);
     } else if (tokens.first.isOperator(".")) {
         tokens.nextIs(Token.Type.operator, ".");
@@ -253,8 +293,12 @@ Node readPostExprImpl(TokenArray tokens) {
         }
         last = nodes[0];
     } else if (tokens.first.isOpen("[")) {
-        Node[] nodes = tokens.readOpen!"[]";
-        last = new Form("array", nodes);
+        Node[][] nodes = tokens.readOpen!"[]";
+        Node ret = new Form("array", nodes[$ - 1]);
+        foreach_reverse (node; nodes[0 .. $ - 1]) {
+            ret = new Form("array", node, ret);
+        }
+        last = ret;
     } else if (tokens.first.isKeyword("static")) {
         tokens.nextIs(Token.Type.keyword, "static");
         last = new Form("static", tokens.readBlock);
@@ -269,13 +313,16 @@ Node readPostExprImpl(TokenArray tokens) {
         last = tokens.readUntil;
     } else if (tokens.first.isKeyword("true")) {
         tokens.nextIs(Token.Type.keyword, "true");
-        last = new Value(true);
+        last = new Value(1.0);
     } else if (tokens.first.isKeyword("false")) {
         tokens.nextIs(Token.Type.keyword, "false");
-        last = new Value(false);
+        last = new Value(0.0);
     } else if (tokens.first.isKeyword("nil")) {
         tokens.nextIs(Token.Type.keyword, "nil");
-        last = Value.empty;
+        last = new Form("array");
+    } else if (tokens.first.isKeyword("self")) {
+        tokens.nextIs(Token.Type.keyword, "self");
+        last = new Form("capture");
     } else if (tokens.first.isIdent) {
         if (tokens.first.value[0].isDigit) {
             if (tokens.first.value.canFind(".")) {
@@ -373,11 +420,14 @@ Node readStmtImpl(TokenArray tokens) {
     }
     if (tokens.first.isKeyword("def")) {
         tokens.nextIs(Token.Type.keyword, "def");
-        Form call = cast(Form) tokens.readExprBase;
-        Node name = call.args[0];
-        Node args = new Form("args", call.args[1 .. $]);
+        Ident id = new Ident(tokens.first.value);
+        tokens.skip;
+        Node[][] allArgs = tokens.readOpen!"()";
         Node then = tokens.readBlock;
-        return new Form("set", name, new Form("lambda", args, then));
+        foreach_reverse (args; allArgs) {
+            then = new Form("lambda", new Form("args", args), then);
+        }
+        return new Form("set", id, then);
     }
     return tokens.readExprBase;
 }
