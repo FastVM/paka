@@ -25,7 +25,14 @@ extern (C) __gshared string[] rt_options = ["gcopt=gc:manual"];
 alias Thunk = void delegate();
 
 Thunk cliFileHandler(immutable string filename) {
-    return { SrcLoc code = SrcLoc(1, 1, filename, filename.readText); eval(code); };
+    return {
+        SrcLoc code = SrcLoc(1, 1, filename, filename.readText); 
+        if (filename.endsWith(".scm")) {
+            eval(code, "scheme");
+        } else {
+            eval(code);
+        }
+    };
 }
 
 Thunk cliEvalHandler(immutable string code) {

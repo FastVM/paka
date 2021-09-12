@@ -17,8 +17,8 @@ import purr.ast.walk;
 
 __gshared bool dumpir = false;
 
-void eval(SrcLoc code) {
-    Node node = code.parse;
+void eval(SrcLoc code, string langName = "paka") {
+    Node node = code.parse(langName);
     Walker walker = new Walker;
     walker.walkProgram(node);
     run(walker.bytecode);

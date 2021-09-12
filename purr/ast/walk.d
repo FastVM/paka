@@ -988,7 +988,7 @@ final class Walker {
                         bytecode ~= reg.reg;
                     }
                     return outreg;
-                } else if (false) {
+                } else {
                     isStatic = true;
                     staticName = func.repr;
                 }
