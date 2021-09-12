@@ -32,8 +32,8 @@ if maxdepth < N {
 }
 
 stretchdepth = maxdepth + 1
-stretchtree = bottom_up_tree(0, stretchdepth)
-println(item_check(stretchtree))
+tree = bottom_up_tree(0, stretchdepth)
+println(item_check(tree))
 
 longlivedtree = bottom_up_tree(0, maxdepth)
 
@@ -43,8 +43,10 @@ while depth < maxdepth + 1 {
     check = 0
     checks = 0
     while check < iters {
-        cur = item_check(bottom_up_tree(1, depth)) + item_check(bottom_up_tree(0-1, depth))
-        checks = checks + cur
+        tree = bottom_up_tree(1, depth)
+        checks = checks + item_check(tree) 
+        tree = bottom_up_tree(0-1, depth)
+        checks = checks + item_check(tree)
         check = check + 1
     }
     println(checks)
