@@ -427,7 +427,7 @@ Node readStmtImpl(TokenArray tokens) {
         foreach_reverse (args; allArgs) {
             then = new Form("lambda", new Form("args", args), then);
         }
-        return new Form("set", id, then);
+        return new Form("var", id, then);
     }
     return tokens.readExprBase;
 }

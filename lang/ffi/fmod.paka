@@ -1,5 +1,0 @@
-def fmod(a, b) {
-    return ffi_call("", "fmod", FFI_TYPE_FLOAT64, [FFI_TYPE_FLOAT64, FFI_TYPE_FLOAT64], [a, b])
-}
-
-fmod(8, 5) |> println

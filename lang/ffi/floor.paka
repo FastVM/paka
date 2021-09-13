@@ -1,5 +1,0 @@
-def floor(n) {
-    return ffi_call("", "floor", FFI_TYPE_FLOAT64, [FFI_TYPE_FLOAT64], [n])
-}
-
-floor(16 / 3) |> println

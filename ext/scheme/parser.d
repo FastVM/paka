@@ -31,12 +31,12 @@ Node readExpr(ref string src) {
             case "define":
                 if (Form form = cast(Form) children[1]) {
                     if (form.form == "call") {
-                        return new Form("set", form.args[0], new Form("lambda",
+                        return new Form("var", form.args[0], new Form("lambda",
                                 new Form("args", form.args[1 .. $]),
                                 new Form("do", children[2 .. $])));
                     }
                 }
-                return new Form("set", children[1 .. $]);
+                return new Form("var", children[1 .. $]);
             case "lambda":
                 return new Form("lambda", new Form("args", (cast(Form) children[1]).args), new Form("do", children[2..$]));
             case "false":

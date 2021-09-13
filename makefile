@@ -37,8 +37,8 @@ purr $(BIN)/purr: $(OBJS)
 	@mkdir $(P) $(BIN)
 	$(DC) $^ $(DO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(DLFLAGS)
 
-$(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(LIB)/libmimalloc.a
-	$(CC) $^ -o $@ -I. -lm -lpthread $(LFLAGS) $(CLFLAGS)
+minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(LIB)/libmimalloc.a
+	$(CC) $^ -o $(BIN)/minivm -I. -lm -lpthread $(LFLAGS) $(CLFLAGS)
 
 $(LIB)/libmimalloc.a: minivm/mimalloc
 	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak CC=$(MICC) LIB=$(LIB)

@@ -24,7 +24,7 @@ class final Tree {
 }
 
 4 => var int minDepth;
-12 => var int maxDepth;
+16 => var int maxDepth;
 maxDepth + 1 => var int stretchDepth;
 
 <<< Tree.new_Tree(0, stretchDepth).check() >>>;

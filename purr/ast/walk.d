@@ -138,17 +138,6 @@ final class Walker {
         return reg;
     }
 
-    Reg local(string name) {
-        if (Reg* ret = name in locals) {
-            return *ret;
-        } else {
-            Reg reg = new Reg(regs.length, name);
-            locals[name] = reg;
-            regs ~= reg;
-            return reg;
-        }
-    }
-
     Reg walk(Node node, Reg target = null) {
         targets ~= target;
         nodes ~= node;
@@ -486,16 +475,59 @@ final class Walker {
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             return outreg;
-        case "set":
+        case "var":
             if (Ident id = cast(Ident) form.args[0]) {
+                bool isLambda = false;
                 if (Form lambda = cast(Form) form.args[1]) {
                     if (lambda.form == "lambda") {
                         string name = id.repr;
                         funcs[id.repr] = cast(int)(bytecode.length + 9);
+                        isLambda = true;
                     }
                 }
-                Reg target = local(id.repr);
-                Reg from = walk(form.args[1], target);
+                Reg target;
+                Reg from;     
+                target = alloc();
+                from = walk(form.args[1], target);
+                locals[id.repr] = target;
+                if (target != from) {
+                    bytecode ~= Opcode.store_reg;
+                    bytecode ~= target.reg;
+                    bytecode ~= from.reg;
+                }
+                Reg outreg = allocOutMaybe;
+                if (outreg is null || outreg == target) {
+                    return target;
+                } else if (outreg == from) {
+                    return from;
+                } else {
+                    bytecode ~= Opcode.store_reg;
+                    bytecode ~= outreg.reg;
+                    bytecode ~= from.reg;
+                    return outreg;
+                }
+            } else {
+                vmError("set to bad value");
+                assert(false);
+            }
+        case "set":
+            if (Ident id = cast(Ident) form.args[0]) {
+                bool isLambda = false;
+                if (Form lambda = cast(Form) form.args[1]) {
+                    if (lambda.form == "lambda") {
+                        string name = id.repr;
+                        funcs[id.repr] = cast(int)(bytecode.length + 9);
+                        isLambda = true;
+                    }
+                }
+                Reg target;
+                Reg from;     
+                if (Reg* ret = id.repr in locals) {
+                    target = *ret;
+                    from = walk(form.args[1], target);
+                } else {
+                    vmError("set to unknown variable: " ~ id.repr);
+                }
                 if (target != from) {
                     bytecode ~= Opcode.store_reg;
                     bytecode ~= target.reg;
@@ -909,7 +941,7 @@ final class Walker {
             regs = null;
             localss.length++;
             foreach (index, arg; argnames) {
-                local(arg);
+                locals[arg] = alloc();
             }
             captureRegs ~= alloc();
             scope (exit) {

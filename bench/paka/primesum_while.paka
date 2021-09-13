@@ -1,8 +1,8 @@
-sum = 0
-cur = 2
+sum := 0
+cur := 2
 while cur < 10000 {
-    test = 2
-    is_prime = true
+    test := 2
+    is_prime := true
     while test < cur {
         if cur % test == 0 {
             is_prime = false   

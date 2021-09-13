@@ -1,8 +1,8 @@
 def bottom_up_tree(item, depth) {
     if depth != 0 {
-        i = item + item
-        left = rec(i-1, depth - 1)
-        right = rec(i, depth - 1)
+        i := item + item
+        left := rec(i-1, depth - 1)
+        right := rec(i, depth - 1)
         return [item, left, right]
     } else {
         return [item]
@@ -24,24 +24,24 @@ def pow2(n) {
     return rec(n-1) * 2
 }
 
-N = 12
-mindepth = 4
-maxdepth = mindepth + 2
+N := 12
+mindepth := 4
+maxdepth := mindepth + 2
 if maxdepth < N {
     maxdepth = N
 }
 
-stretchdepth = maxdepth + 1
-tree = bottom_up_tree(0, stretchdepth)
+stretchdepth := maxdepth + 1
+tree := bottom_up_tree(0, stretchdepth)
 println(item_check(tree))
 
-longlivedtree = bottom_up_tree(0, maxdepth)
+longlivedtree := bottom_up_tree(0, maxdepth)
 
-depth = mindepth
+depth := mindepth
 while depth < maxdepth + 1 {
-    iters = pow2(maxdepth - depth + mindepth)
-    check = 0
-    checks = 0
+    iters := pow2(maxdepth - depth + mindepth)
+    check := 0
+    checks := 0
     while check < iters {
         tree = bottom_up_tree(1, depth)
         checks = checks + item_check(tree) 

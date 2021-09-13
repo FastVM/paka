@@ -1,7 +1,7 @@
 
 def avg(arr) {
-    save = 0
-    index = 0
+    save := 0
+    index := 0
     while index < length(arr) {
         save = save + arr[index]
         index = index + 1
@@ -9,9 +9,9 @@ def avg(arr) {
     return save / length(arr)
 }
 
-midf = "hello world" |> avg
+midf := "hello world" |> avg
 
-mid = midf - midf % 1
+mid := midf - midf % 1
 
 putchar(mid)
 putchar(10)
