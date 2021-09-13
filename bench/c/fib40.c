@@ -1,6 +1,6 @@
 int printf(const char *fmt, ...);
 
-double fib(double n)
+int fib(int n)
 {
     if (n < 2)
     {
@@ -14,5 +14,5 @@ double fib(double n)
 
 int main(void)
 {
-    printf("%g\n", fib(40));
+    printf("%i\n", fib(40));
 }

@@ -2,9 +2,9 @@ BIN=$(shell pwd)/bin
 LIB=$(shell pwd)/lib
 
 CC=gcc
-DC=ldc2
+DC=gdc
 
-OPT_C=-Ofast -ffast-math
+OPT_C=-Ofast
 OPT_C_GC=-O3 -ffast-math
 OPT_D=-Os
 
@@ -22,6 +22,8 @@ DO=-of=
 DL=-L
 endif
 
+CFLAGS ?= -flto
+DFLAGS ?= -flto
 
 DFILES:=$(shell find ext/paka purr -type f -name '*.d')
 CFILES:=$(shell find minivm/vm -type f -name '*.c')
@@ -38,10 +40,10 @@ purr $(BIN)/purr: $(OBJS)
 	$(DC) $^ $(DO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(DLFLAGS)
 
 minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(LIB)/libmimalloc.a
-	$(CC) $^ -o $(BIN)/minivm -I. -lm -lpthread $(LFLAGS) $(CLFLAGS)
+	$(CC) $^ -o $(BIN)/minivm -I. -lpthread $(LFLAGS) $(CLFLAGS)
 
 $(LIB)/libmimalloc.a: minivm/mimalloc
-	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak CC=$(MICC) LIB=$(LIB)
+	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak CC=$(MICC) LIB=$(LIB) CFLAGS=""
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	@mkdir $(P) $(basename $@) $(LIB)

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <gc.h>
 
 struct tree_s;
 typedef struct tree_s tree_s;
@@ -16,7 +17,7 @@ struct tree_s
 
 tree_t new_tree(tree_s value)
 {
-    tree_t ret = malloc(sizeof(tree_s));
+    tree_t ret = GC_malloc(sizeof(tree_s));
     *ret = value;
     return ret;
 }
@@ -57,20 +58,6 @@ int item_check(tree_t tree)
     }
 }
 
-void free_tree(tree_t tree)
-{
-    if (tree->is_leaf)
-    {
-        free(tree);
-    }
-    else
-    {
-        free_tree(tree->lhs);
-        free_tree(tree->rhs);
-        free(tree);
-    }
-}
-
 int main()
 {
     int n = 20;
@@ -84,7 +71,6 @@ int main()
     int stretch_depth = maxdepth + 1;
     tree_t stretch_tree = bottom_up_tree(0, stretch_depth);
     printf("%i\n", item_check(stretch_tree));
-    free_tree(stretch_tree);
 
     tree_t long_lived_tree = bottom_up_tree(0, maxdepth);
 
@@ -96,14 +82,11 @@ int main()
         {
             tree_t tree1 = bottom_up_tree(1, depth);
             check += item_check(tree1);
-            free_tree(tree1);
             tree_t tree2 = bottom_up_tree(-1, depth);
             check += item_check(tree2);
-            free_tree(tree2);
         }
         printf("%i\n", check);
     }
 
     printf("%i\n", item_check(long_lived_tree));
-    free_tree(long_lived_tree);
 }

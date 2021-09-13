@@ -1,6 +1,6 @@
 local sum = 0
 local cur = 2
-while cur < 10000 do
+while cur < 20000 do
     local test = 2
     local is_prime = true
     while test < cur do

@@ -1,7 +1,7 @@
 
 import std.stdio;
 
-double fib(double n)
+int fib(int n)
 {
     if (n < 2)
     {

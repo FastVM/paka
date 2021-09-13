@@ -1141,7 +1141,7 @@ final class Walker {
     Reg walkExact(Ident id) {
         if (double* pnum = id.repr in constants) {
             Reg ret = allocOut;
-            bytecode ~= Opcode.store_num;
+            bytecode ~= Opcode.store_int;
             bytecode ~= ret.reg;
             bytecode ~= ubytes(*pnum);
             return ret;
@@ -1177,7 +1177,7 @@ final class Walker {
             return null;
         } else if (val.info == typeid(double)) {
             Reg ret = allocOut;
-            bytecode ~= Opcode.store_num;
+            bytecode ~= Opcode.store_int;
             bytecode ~= ret.reg;
             bytecode ~= ubytes(*cast(double*) val.value);
             return ret;
@@ -1187,7 +1187,7 @@ final class Walker {
             Reg[] regs;
             foreach (chr; src) {
                 Reg reg = alloc;
-                bytecode ~= Opcode.store_num;
+                bytecode ~= Opcode.store_int;
                 bytecode ~= reg.reg;
                 bytecode ~= ubytes(cast(int) chr);
                 regs ~= reg;

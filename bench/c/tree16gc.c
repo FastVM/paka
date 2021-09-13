@@ -74,7 +74,7 @@ int main()
 
     tree_t long_lived_tree = bottom_up_tree(0, maxdepth);
 
-    for (int depth = mindepth; depth < maxdepth; depth += 2)
+    for (int depth = mindepth; depth < maxdepth + 1; depth += 2)
     {
         int iterations = 1 << (maxdepth - depth + mindepth);
         int check = 0;

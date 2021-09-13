@@ -1,6 +1,6 @@
 let sum = 0;
 let cur = 2;
-while (cur < 10000) {
+while (cur < 20000) {
     let test = 2;
     let is_prime = true;
     while (test < cur) {
