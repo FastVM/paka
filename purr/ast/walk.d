@@ -965,16 +965,18 @@ final class Walker {
             currentCaptures.length--;
             inNthCaptures.length--;
             bytecode[refLength .. refLength + 4] = ubytes(cast(int) bytecode.length);
-            Reg[] regs = [lambdaReg];
-            foreach (arg; captureValues) {
-                Reg reg = walk(arg);
-                regs ~= reg;
-            }
-            bytecode ~= Opcode.array;
-            bytecode ~= lambdaReg.reg;
-            bytecode ~= ubytes(cast(int) regs.length);
-            foreach (reg; regs) {
-                bytecode ~= reg.reg;
+            if (captureValues.length != 0) {
+                Reg[] regs = [lambdaReg];
+                foreach (arg; captureValues) {
+                    Reg reg = walk(arg);
+                    regs ~= reg;
+                }
+                bytecode ~= Opcode.array;
+                bytecode ~= lambdaReg.reg;
+                bytecode ~= ubytes(cast(int) regs.length);
+                foreach (reg; regs) {
+                    bytecode ~= reg.reg;
+                }
             }
             return lambdaReg;
         case "call":
@@ -1001,9 +1003,9 @@ final class Walker {
                     bytecode ~= outreg.reg;
                     bytecode ~= objreg.reg;
                     return outreg;
-                // } else {
-                //     isStatic = true;
-                //     staticName = func.repr;
+                } else {
+                    isStatic = true;
+                    staticName = func.repr;
                 }
             }
 

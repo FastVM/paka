@@ -10,3 +10,9 @@ void run(void[] func) {
     vm_run(func.ptr);
     GC.enable;
 }
+
+void vcompile(void[] func) {
+    GC.disable;
+    vm_bfc_compile(func.ptr);
+    GC.enable;
+}

@@ -1,6 +1,6 @@
 sum := 0
 cur := 2
-while cur < 20000 {
+while cur < 10000 {
     test := 2
     is_prime := true
     while test < cur {

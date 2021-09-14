@@ -1,0 +1,20 @@
+def check(num) {
+    test := 3
+    while test * test <= num {
+        if num % test == 0 {
+            return false
+        }
+        test = test + 2
+    }
+    return true
+}
+
+println(2)
+cur := 3
+count := 1
+while cur < 255 {
+    if check(cur) {
+        println(cur)
+    }
+    cur = cur + 2
+}

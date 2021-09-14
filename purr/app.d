@@ -8,6 +8,7 @@ import purr.ast.ast;
 import purr.inter;
 import purr.vm.bytecode;
 import purr.ast.walk;
+import purr.vm;
 import std.stdio;
 import std.uuid;
 import std.path;
@@ -52,6 +53,26 @@ Thunk cliCompileHandler(immutable string filename) {
         File outmvm = File("out.bc", "w");
         outmvm.rawWrite(walker.bytecode);
         outmvm.close();
+    };
+}
+
+Thunk cliConvHandler(immutable string code) {
+    return {
+        SrcLoc code = SrcLoc(1, 1, "__main__", code);
+        Node node = code.parse;
+        Walker walker = new Walker;
+        walker.walkProgram(node);
+        vcompile(walker.bytecode);
+    };
+}
+
+Thunk cliConvFileHandler(immutable string filename) {
+    return {
+        SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
+        Node node = code.parse;
+        Walker walker = new Walker;
+        walker.walkProgram(node);
+        vcompile(walker.bytecode);
     };
 }
 
@@ -149,6 +170,12 @@ void domain(string[] args) {
             break;
         case "--eval":
             todo ~= part1.cliEvalHandler;
+            break;
+        case "--conv":
+            todo ~= part1.cliConvHandler;
+            break;
+        case "--conv-file":
+            todo ~= part1.cliConvFileHandler;
             break;
         case "--ast":
             todo ~= cliAstHandler;
