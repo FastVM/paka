@@ -12,7 +12,7 @@ def check(num) {
 println(2)
 cur := 3
 count := 1
-while cur < 255 {
+while cur <= 255 {
     if check(cur) {
         println(cur)
     }

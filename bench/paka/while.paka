@@ -1,7 +1,0 @@
-x := 0
-s := 0
-while x <= 100000000 {
-    s = s + x
-    x = x + 1
-}
-println(s)

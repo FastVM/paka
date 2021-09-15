@@ -6,13 +6,13 @@ alias Number = double;
 alias String = immutable(char)*;
 
 extern (C) void vm_run(void* func);
-extern (C) void vm_bfc_compile(void* func);
 
 enum Opcode : ubyte {
     exit,
     store_reg,
     store_int,
     store_fun,
+    fun_done,
     equal,
     equal_num,
     not_equal,

@@ -23,6 +23,8 @@ import core.memory;
 
 extern (C) __gshared string[] rt_options = ["gcopt=gc:manual"];
 
+string outLang = "bf";
+
 alias Thunk = void delegate();
 
 Thunk cliFileHandler(immutable string filename) {
@@ -44,7 +46,7 @@ Thunk cliParseHandler(immutable string code) {
     return { SrcLoc loc = SrcLoc(1, 1, "__main__", code); Node res = loc.parse; };
 }
 
-Thunk cliCompileHandler(immutable string filename) {
+Thunk cliOutHandler(immutable string filename) {
     return {
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
         Node node = code.parse;
@@ -56,15 +58,29 @@ Thunk cliCompileHandler(immutable string filename) {
     };
 }
 
+Thunk cliLangHandler(immutable string lang) {
+    return {
+        outLang = lang.dup;
+    };
+}
+
 Thunk cliConvHandler(immutable string code) {
     return {
         SrcLoc code = SrcLoc(1, 1, "__main__", code);
         Node node = code.parse;
         Walker walker = new Walker;
         walker.walkProgram(node);
-        vcompile(walker.bytecode);
+        final switch (outLang) {
+        case "bf":
+            compile!"bf"(walker.bytecode);
+            break;
+        case "js":
+            compile!"js"(walker.bytecode);
+            break;
+        }
     };
 }
+
 
 Thunk cliConvFileHandler(immutable string filename) {
     return {
@@ -72,7 +88,14 @@ Thunk cliConvFileHandler(immutable string filename) {
         Node node = code.parse;
         Walker walker = new Walker;
         walker.walkProgram(node);
-        vcompile(walker.bytecode);
+        final switch (outLang) {
+        case "bf":
+            compile!"bf"(walker.bytecode);
+            break;
+        case "js":
+            compile!"js"(walker.bytecode);
+            break;
+        }
     };
 }
 
@@ -159,22 +182,22 @@ void domain(string[] args) {
         case "--bench":
             todo[$ - 1] = cliBenchHandler(part1.to!size_t, todo[$ - 1]);
             break;
-        case "--file":
-            todo ~= part1.cliFileHandler;
-            break;
         case "--parse":
             todo ~= part1.cliParseHandler;
             break;
-        case "--compile":
-            todo ~= part1.cliCompileHandler;
+        case "--check":
+            todo ~= part1.cliOutHandler;
             break;
         case "--eval":
             todo ~= part1.cliEvalHandler;
             break;
-        case "--conv":
+        case "--lang-out":
+            todo ~= part1.cliLangHandler;
+            break;
+        case "--compile-expr":
             todo ~= part1.cliConvHandler;
             break;
-        case "--conv-file":
+        case "--compile":
             todo ~= part1.cliConvFileHandler;
             break;
         case "--ast":

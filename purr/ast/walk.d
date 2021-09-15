@@ -964,6 +964,7 @@ final class Walker {
             captureValuess.length--;
             currentCaptures.length--;
             inNthCaptures.length--;
+            bytecode ~= Opcode.fun_done;
             bytecode[refLength .. refLength + 4] = ubytes(cast(int) bytecode.length);
             if (captureValues.length != 0) {
                 Reg[] regs = [lambdaReg];
