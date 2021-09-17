@@ -18,14 +18,47 @@ import std.algorithm;
 import std.conv : to;
 import std.string;
 import std.getopt;
+import std.process;
 import std.datetime.stopwatch;
 import core.memory;
 
 extern (C) __gshared string[] rt_options = ["gcopt=gc:manual"];
 
-string outLang = "bf";
+string outLang = "vm";
 
 alias Thunk = void delegate();
+
+string[] command = ["luajit", "-"];
+
+void doBytecode(void[] bc) {
+    final switch (outLang) {
+    case "js":
+        char[] src = compile!"js"(bc);
+        auto pipes = pipeProcess(command, Redirect.stdin);
+        pipes.stdin.write(src);
+        pipes.stdin.flush();
+        pipes.stdin.close();
+        wait(pipes.pid);
+        break;
+    case "lua":
+        char[] src = compile!"lua"(bc);
+        auto pipes = pipeProcess(command, Redirect.stdin);
+        pipes.stdin.write(src);
+        pipes.stdin.flush();
+        pipes.stdin.close();
+        wait(pipes.pid);
+        break;
+    case "vm":
+        run(bc);
+    }
+}
+
+Thunk cliCommandHandler(immutable string cmd)
+{
+    return {
+        command = cmd.idup.split;
+    };
+}
 
 Thunk cliFileHandler(immutable string filename) {
     return {
@@ -70,14 +103,7 @@ Thunk cliConvHandler(immutable string code) {
         Node node = code.parse;
         Walker walker = new Walker;
         walker.walkProgram(node);
-        final switch (outLang) {
-        case "bf":
-            compile!"bf"(walker.bytecode);
-            break;
-        case "js":
-            compile!"js"(walker.bytecode);
-            break;
-        }
+        doBytecode(walker.bytecode);
     };
 }
 
@@ -88,14 +114,7 @@ Thunk cliConvFileHandler(immutable string filename) {
         Node node = code.parse;
         Walker walker = new Walker;
         walker.walkProgram(node);
-        final switch (outLang) {
-        case "bf":
-            compile!"bf"(walker.bytecode);
-            break;
-        case "js":
-            compile!"js"(walker.bytecode);
-            break;
-        }
+        doBytecode(walker.bytecode);
     };
 }
 
@@ -170,8 +189,17 @@ void domain(string[] args) {
             parts[0].length--;
         }
         switch (parts[0]) {
+        // default:
+        //     todo ~= parts[0].cliFileHandler;
+        //     break;
+        // case "--eval":
+        //     todo ~= part1.cliEvalHandler;
+        //     break;
         default:
-            todo ~= parts[0].cliFileHandler;
+            todo ~= parts[0].cliConvFileHandler;
+            break;
+        case "--eval":
+            todo ~= part1.cliConvHandler;
             break;
         case "--time":
             todo[$ - 1] = todo[$ - 1].cliTimeHandler;
@@ -188,17 +216,8 @@ void domain(string[] args) {
         case "--check":
             todo ~= part1.cliOutHandler;
             break;
-        case "--eval":
-            todo ~= part1.cliEvalHandler;
-            break;
-        case "--lang-out":
+        case "--target":
             todo ~= part1.cliLangHandler;
-            break;
-        case "--compile-expr":
-            todo ~= part1.cliConvHandler;
-            break;
-        case "--compile":
-            todo ~= part1.cliConvFileHandler;
             break;
         case "--ast":
             todo ~= cliAstHandler;
@@ -206,6 +225,8 @@ void domain(string[] args) {
         case "--ir":
             todo ~= cliIrHandler;
             break;
+        case "--command":
+            todo ~= part1.cliCommandHandler;
         case "--debug":
             todo ~= cliDebugHandler;
             break;
