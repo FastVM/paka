@@ -28,7 +28,7 @@ string outLang = "vm";
 
 alias Thunk = void delegate();
 
-string[] command = ["luajit", "-"];
+string[] command;
 
 void doBytecode(void[] bc) {
     final switch (outLang) {
@@ -60,19 +60,30 @@ Thunk cliCommandHandler(immutable string cmd)
     };
 }
 
-Thunk cliFileHandler(immutable string filename) {
+Thunk cliTargetHandler(immutable string lang) {
     return {
-        SrcLoc code = SrcLoc(1, 1, filename, filename.readText); 
-        if (filename.endsWith(".scm")) {
-            eval(code, "scheme");
-        } else {
-            eval(code);
+        switch (lang)
+        {
+        case "js":
+            outLang = "js";
+            command = ["js"];
+            break;
+        case "node":
+            outLang = "js";
+            command = ["node"];
+            break;
+        case "lua":
+            outLang = "lua";
+            command = ["lua"];
+            break;
+        case "luajit":
+            outLang = "lua";
+            command = ["luajit"];
+            break;
+        default:
+            break;
         }
     };
-}
-
-Thunk cliEvalHandler(immutable string code) {
-    return { eval(SrcLoc(1, 1, "__main__", code)); };
 }
 
 Thunk cliParseHandler(immutable string code) {
@@ -88,12 +99,6 @@ Thunk cliOutHandler(immutable string filename) {
         File outmvm = File("out.bc", "w");
         outmvm.rawWrite(walker.bytecode);
         outmvm.close();
-    };
-}
-
-Thunk cliLangHandler(immutable string lang) {
-    return {
-        outLang = lang.dup;
     };
 }
 
@@ -189,12 +194,6 @@ void domain(string[] args) {
             parts[0].length--;
         }
         switch (parts[0]) {
-        // default:
-        //     todo ~= parts[0].cliFileHandler;
-        //     break;
-        // case "--eval":
-        //     todo ~= part1.cliEvalHandler;
-        //     break;
         default:
             todo ~= parts[0].cliConvFileHandler;
             break;
@@ -217,7 +216,7 @@ void domain(string[] args) {
             todo ~= part1.cliOutHandler;
             break;
         case "--target":
-            todo ~= part1.cliLangHandler;
+            todo ~= part1.cliTargetHandler;
             break;
         case "--ast":
             todo ~= cliAstHandler;

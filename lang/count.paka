@@ -9,12 +9,16 @@ def check(num) {
     return true
 }
 
-println(2)
-cur := 3
-count := 1
-while cur <= 255 {
-    if check(cur) {
-        println(cur)
+def main() {
+    cur := 3
+    count := 1
+    while cur <= 10000000 {
+        if check(cur) {
+            count = count + 1
+        }
+        cur = cur + 2
     }
-    cur = cur + 2
+    println(count)
 }
+
+main()
