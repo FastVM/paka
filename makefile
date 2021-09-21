@@ -22,9 +22,6 @@ DO=-of=
 DL=-L
 endif
 
-CFLAGS ?= -flto
-DFLAGS ?= -flto
-
 DFILES:=$(shell find ext/paka purr -type f -name '*.d')
 CFILES:=$(shell find minivm/vm -type f -name '*.c')
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))

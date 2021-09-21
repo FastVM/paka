@@ -31,7 +31,7 @@ alias Thunk = void delegate();
 string[] command;
 
 void doBytecode(void[] bc) {
-    final switch (outLang) {
+    switch (outLang) {
     case "js":
         char[] src = compile!"js"(bc);
         auto pipes = pipeProcess(command, Redirect.stdin);
@@ -50,6 +50,10 @@ void doBytecode(void[] bc) {
         break;
     case "vm":
         run(bc);
+        break;
+    default:
+        vmError("please select a backend with: --target=help");
+        break;
     }
 }
 
@@ -64,6 +68,9 @@ Thunk cliTargetHandler(immutable string lang) {
     return {
         switch (lang)
         {
+        case "vm":
+            outLang = "vm";
+            break;
         case "js":
             outLang = "js";
             command = ["js"];
@@ -80,7 +87,14 @@ Thunk cliTargetHandler(immutable string lang) {
             outLang = "lua";
             command = ["luajit"];
             break;
+        case "help":
+            vmError("--target=help: try --target=vm or --target=list");
+            break;
+        case "list":
+            vmError("full: vm js node lua luajit");
+            break;
         default:
+            vmError("invalid --target=" ~ lang);
             break;
         }
     };

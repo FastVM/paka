@@ -89,4 +89,5 @@ int main()
     }
 
     printf("%i\n", item_check(long_lived_tree));
+    return 0;
 }

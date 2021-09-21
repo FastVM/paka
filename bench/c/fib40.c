@@ -15,4 +15,5 @@ int fib(int n)
 int main(void)
 {
     printf("%i\n", fib(40));
+    return 0;
 }
