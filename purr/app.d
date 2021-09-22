@@ -5,7 +5,6 @@ import purr.parse;
 import purr.err;
 import purr.srcloc;
 import purr.ast.ast;
-import purr.inter;
 import purr.vm.bytecode;
 import purr.ast.walk;
 import purr.vm;
@@ -30,6 +29,8 @@ alias Thunk = void delegate();
 
 string[] command;
 
+string lang = "paka";
+
 void doBytecode(void[] bc) {
     switch (outLang) {
     case "js":
@@ -48,6 +49,9 @@ void doBytecode(void[] bc) {
         pipes.stdin.close();
         wait(pipes.pid);
         break;
+    case "bc":
+        File("out.bc", "wb").rawWrite(bc);
+        break;
     case "vm":
         run(bc);
         break;
@@ -64,10 +68,20 @@ Thunk cliCommandHandler(immutable string cmd)
     };
 }
 
+Thunk cliLangHandler(immutable string langName)
+{
+    return {
+        lang = langName.dup;
+    };
+}
+
 Thunk cliTargetHandler(immutable string lang) {
     return {
         switch (lang)
         {
+        case "bc":
+            outLang = "bc";
+            break;
         case "vm":
             outLang = "vm";
             break;
@@ -101,13 +115,13 @@ Thunk cliTargetHandler(immutable string lang) {
 }
 
 Thunk cliParseHandler(immutable string code) {
-    return { SrcLoc loc = SrcLoc(1, 1, "__main__", code); Node res = loc.parse; };
+    return { SrcLoc loc = SrcLoc(1, 1, "__main__", code); Node res = loc.parse(lang); };
 }
 
 Thunk cliOutHandler(immutable string filename) {
     return {
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        Node node = code.parse;
+        Node node = code.parse(lang);
         Walker walker = new Walker;
         walker.walkProgram(node);
         File outmvm = File("out.bc", "w");
@@ -119,7 +133,7 @@ Thunk cliOutHandler(immutable string filename) {
 Thunk cliConvHandler(immutable string code) {
     return {
         SrcLoc code = SrcLoc(1, 1, "__main__", code);
-        Node node = code.parse;
+        Node node = code.parse(lang);
         Walker walker = new Walker;
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
@@ -130,7 +144,7 @@ Thunk cliConvHandler(immutable string code) {
 Thunk cliConvFileHandler(immutable string filename) {
     return {
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        Node node = code.parse;
+        Node node = code.parse(lang);
         Walker walker = new Walker;
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
@@ -139,10 +153,6 @@ Thunk cliConvFileHandler(immutable string filename) {
 
 Thunk cliAstHandler() {
     return { dumpast = !dumpast; };
-}
-
-Thunk cliIrHandler() {
-    return { dumpir = !dumpir; };
 }
 
 Thunk cliTimeHandler(Thunk next) {
@@ -211,6 +221,9 @@ void domain(string[] args) {
         default:
             todo ~= parts[0].cliConvFileHandler;
             break;
+        case "--lang":
+            todo ~= part1.cliLangHandler;
+            break;
         case "--eval":
             todo ~= part1.cliConvHandler;
             break;
@@ -235,11 +248,9 @@ void domain(string[] args) {
         case "--ast":
             todo ~= cliAstHandler;
             break;
-        case "--ir":
-            todo ~= cliIrHandler;
-            break;
         case "--command":
             todo ~= part1.cliCommandHandler;
+            break;
         case "--debug":
             todo ~= cliDebugHandler;
             break;

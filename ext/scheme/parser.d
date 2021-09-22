@@ -1,6 +1,7 @@
 module ext.scheme.parser;
 
 import std.stdio;
+import std.conv;
 import purr.srcloc;
 import purr.ast.ast;
 import purr.plugin.plugin;

@@ -19,8 +19,8 @@ string[] nops = [".", "not", ",", "\\", "!", "#", ":", "...", "->"];
 
 /// language keywords
 string[] keywords = [
-    "if", "else", "def", "lambda", "import", "true", "false", "table",
-    "while", "static", "return", "until", "unless", "nil", "self",
+    "if", "else", "def", "lambda", "true", "false",
+    "while", "return", "until", "unless", "self",
 ];
 
 /// gets the operators by length not precidence

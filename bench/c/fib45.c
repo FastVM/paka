@@ -14,6 +14,6 @@ double fib(double n)
 
 int main(void)
 {
-    printf("%lf\n", fib(35));
+    printf("%lf\n", fib(45));
     return 0;
 }

@@ -10,7 +10,6 @@ import std.algorithm;
 import std.functional;
 import purr.vm;
 import purr.err;
-import purr.inter;
 import purr.srcloc;
 import purr.ast.walk;
 import purr.ast.ast;
