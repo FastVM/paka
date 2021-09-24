@@ -6,19 +6,22 @@ DC=gdc
 LD=$(DC)
 
 OPT_C=-Ofast
-OPT_C_GC=-O3 -ffast-math
+OPT_C_GC=-Ofast
 OPT_D=-Os
 
 P=-p
-
-GC_OBJ=$(LIB)/minivm/vm/gc.o
+FPIC=-fPIC
 
 MICC=$(CC)
 
 ifeq ($(LD),$(DC))
 XLFLAGS=$(DLFLAGS)
 else
+ifeq ($(DC),gdc)
+XLFLAGS=$(DL)-lgphobos $(DL)-lgdruntime $(DL)-lm $(DL)-lpthread
+else
 XLFLAGS=$(DL)-lphobos2-ldc-shared $(DL)-ldruntime-ldc-shared $(DL)-lm $(DL)-lpthread
+endif
 endif
 
 ifeq ($(DC),gdc)
@@ -40,12 +43,13 @@ LDO=-o
 endif
 endif
 
+
 DFILES:=$(shell find ext/paka ext/scheme purr -type f -name '*.d')
 CFILES:=$(shell find minivm/vm -type f -name '*.c')
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
 OBJS=$(DOBJS) $(COBJS) $(LIB)/libmimalloc.a
-FPIC=-fPIC
+GC_OBJ=$(LIB)/minivm/vm/gc.o
 
 default:
 	$(MAKE) $(BIN) $(LIB) P=$(P)
@@ -67,7 +71,7 @@ $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 
 $(COBJS) $(LIB)/minivm/main/main.o: $(patsubst $(LIB)/%.o,%.c,$@)
 	@mkdir $(P) $(basename $@) $(LIB)
-	$(CC) $(FPIC) -c $(if $(findstring $@,$(GC_OBJ)),$(OPT_C_GC),$(OPT_C)) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS) 
+	$(if $(findstring $@,$(GC_OBJ)),$(CC_GC),$(CC)) $(FPIC) -c $(if $(findstring $@,$(GC_OBJ)),$(OPT_C_GC),$(OPT_C)) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS) 
 
 $(BIN) $(LIB):
 	mkdir $(P) $@
