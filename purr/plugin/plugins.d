@@ -21,6 +21,15 @@ void pushPlugin(ref Node function(Node[])[string] tf, Node function(Node[])[stri
     }
 }
 
+string unparse(string name, Node node) {
+    foreach (p; plugins) {
+        if (auto v = name in p.undo) {
+            return (*v)(node) ~ '\n';
+        }
+    }
+    return node.to!string ~ '\n';
+}
+
 void addPlugin(Plugin plugin) {
     synchronized {
         plugins ~= plugin;

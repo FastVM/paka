@@ -423,10 +423,16 @@ Node readStmtImpl(TokenArray tokens) {
         tokens.skip;
         Node[][] allArgs = tokens.readOpen!"()";
         Node then = tokens.readBlock;
-        foreach_reverse (args; allArgs) {
-            then = new Form("lambda", new Form("args", args), then);
+        // foreach_reverse (args; allArgs) {
+        //     then = new Form("lambda", new Form("args", args), then);
+        // }
+        // return new Form("var", id, then);
+        if (Form thenForm = cast(Form) then) {
+            if (thenForm.form == "do") {
+                return new Form("def", new Form("call", id, allArgs[0]), thenForm.args);
+            }
         }
-        return new Form("var", id, then);
+        return new Form("def", new Form("call", id, allArgs[0]), then);
     }
     return tokens.readExprBase;
 }
@@ -443,7 +449,11 @@ Node readBlockBodyImpl(TokenArray tokens) {
             break;
         }
     }
-    return new Form("do", ret);
+    if (ret.length == 1) {
+        return ret[0];
+    } else {
+        return new Form("do", ret);
+    }
 }
 
 /// wraps the readblock and consumes curly braces

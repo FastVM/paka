@@ -9,6 +9,7 @@ import std.ascii;
 import purr.ast.ast;
 import purr.srcloc;
 import purr.err;
+import purr.plugin.plugins;
 import purr.vm.bytecode;
 
 __gshared bool dumpast = false;
@@ -89,9 +90,6 @@ final class Walker {
             captureValuess.length--;
             currentCaptures.length--;
             inNthCaptures.length--;
-        }
-        if (dumpast) {
-            writeln(program);
         }
         bytecode = null;
         walk(program);
@@ -489,6 +487,15 @@ final class Walker {
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             return outreg;
+        case "def":
+            if (Ident id = cast(Ident) form.args[0]) {
+                goto case "var";
+            } else if (Form call = cast(Form) form.args[0]) {
+                return walk(new Form("var", call.args[0], new Form("lambda", new Form("args", call.args[1..$]), form.args[1..$])));
+            } else {
+                vmError("def to bad value");
+                assert(false);
+            }
         case "var":
             if (Ident id = cast(Ident) form.args[0]) {
                 bool isLambda = false;

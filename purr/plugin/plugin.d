@@ -6,6 +6,7 @@ import purr.srcloc;
 
 final class Plugin {
     Node function(SrcLoc code)[string] parsers;
+    string function(Node)[string] undo;
 
     version (repr) override string toString() {
         string ret;

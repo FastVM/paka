@@ -44,7 +44,7 @@ endif
 endif
 
 
-DFILES:=$(shell find ext/paka ext/scheme purr -type f -name '*.d')
+DFILES:=$(shell find ext purr -type f -name '*.d')
 CFILES:=$(shell find minivm/vm -type f -name '*.c')
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))

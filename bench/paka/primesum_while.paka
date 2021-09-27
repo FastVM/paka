@@ -1,21 +1,17 @@
-def main() {
-    sum := 0
-    cur := 2
-    while cur < 20000 {
-        test := 2
-        is_prime := true
-        while test < cur {
-            if cur % test == 0 {
-                is_prime = false   
-            }
-            test = test + 1
+sum := 0
+cur := 2
+while cur < 20000 {
+    test := 2
+    is_prime := true
+    while test < cur {
+        if cur % test == 0 {
+            is_prime = false   
         }
-        if is_prime {
-            sum = sum + cur
-        }
-        cur = cur + 1
+        test = test + 1
     }
-    println(sum)
+    if is_prime {
+        sum = sum + cur
+    }
+    cur = cur + 1
 }
-
-main()
+println(sum)

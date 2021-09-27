@@ -7,6 +7,7 @@ import purr.srcloc;
 import purr.ast.ast;
 import purr.vm.bytecode;
 import purr.ast.walk;
+import purr.plugin.plugins;
 import purr.vm;
 import std.stdio;
 import std.uuid;
@@ -31,6 +32,9 @@ string[] command;
 
 string lang = "paka";
 
+string astLang = "zz";
+File astfile;
+
 void doBytecode(void[] bc) {
     switch (outLang) {
     case "js":
@@ -54,6 +58,8 @@ void doBytecode(void[] bc) {
         break;
     case "vm":
         run(bc);
+        break;
+    case "none":
         break;
     default:
         vmError("please select a backend with: --target=help");
@@ -115,13 +121,18 @@ Thunk cliTargetHandler(immutable string lang) {
 }
 
 Thunk cliParseHandler(immutable string code) {
-    return { SrcLoc loc = SrcLoc(1, 1, "__main__", code); Node res = loc.parse(lang); };
+    return {
+        SrcLoc loc = SrcLoc(1, 1, "__main__", code);
+        Node node = loc.parse(lang);  
+        if (dumpast) {astfile.write(astLang.unparse(node));}
+    };
 }
 
 Thunk cliOutHandler(immutable string filename) {
     return {
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
         Node node = code.parse(lang);
+        if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
         walker.walkProgram(node);
         File outmvm = File("out.bc", "w");
@@ -134,6 +145,7 @@ Thunk cliConvHandler(immutable string code) {
     return {
         SrcLoc code = SrcLoc(1, 1, "__main__", code);
         Node node = code.parse(lang);
+        if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
@@ -145,14 +157,23 @@ Thunk cliConvFileHandler(immutable string filename) {
     return {
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
         Node node = code.parse(lang);
+        if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
     };
 }
 
-Thunk cliAstHandler() {
-    return { dumpast = !dumpast; };
+Thunk cliAstHandler(string file) {
+    return {
+        dumpast = !dumpast;
+        if (file.length == 0) {
+            astfile = stdout;
+        } else {
+            astfile = File(file, "w");
+        }
+        outLang = "none";
+    };
 }
 
 Thunk cliTimeHandler(Thunk next) {
@@ -221,6 +242,9 @@ void domain(string[] args) {
         default:
             todo ~= parts[0].cliConvFileHandler;
             break;
+        case "--file":
+            todo ~= part1.cliConvFileHandler;
+            break;
         case "--lang":
             todo ~= part1.cliLangHandler;
             break;
@@ -246,7 +270,7 @@ void domain(string[] args) {
             todo ~= part1.cliTargetHandler;
             break;
         case "--ast":
-            todo ~= cliAstHandler;
+            todo ~= part1.cliAstHandler;
             break;
         case "--command":
             todo ~= part1.cliCommandHandler;
