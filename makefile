@@ -1,5 +1,5 @@
-BIN=$(shell pwd)/bin
-LIB=$(shell pwd)/lib
+BIN:=$(shell pwd)/bin
+LIB:=$(shell pwd)/lib
 
 CC=clang
 DC=gdc
@@ -45,7 +45,7 @@ endif
 
 
 DFILES:=$(shell find ext purr -type f -name '*.d')
-CFILES:=$(shell find minivm/vm -type f -name '*.c')
+CFILES:=$(shell find minivm/vm -type f -name '*.c' -not -name wasm.c)
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
 OBJS=$(DOBJS) $(COBJS) $(LIB)/libmimalloc.a

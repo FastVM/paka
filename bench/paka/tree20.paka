@@ -20,8 +20,9 @@ def item_check(tree) {
 def pow2(n) {
     if n == 0 {
         return 1
+    } else {
+        return rec(n-1) * 2
     }
-    return rec(n-1) * 2
 }
 
 N := 20
