@@ -24,7 +24,7 @@ import core.memory;
 
 extern (C) __gshared string[] rt_options = ["gcopt=gc:manual"];
 
-string outLang = "vm";
+string outLang = "xbc";
 
 alias Thunk = void delegate();
 
@@ -53,8 +53,11 @@ void doBytecode(void[] bc) {
         pipes.stdin.close();
         wait(pipes.pid);
         break;
-    case "bc":
-        File("out.bc", "wb").rawWrite(bc);
+    case "xbc":
+        File("out.xbc", "wb").rawWrite(bc);
+        break;
+    case "ubc":
+        File("out.ubc", "wb").rawWrite(bc);
         break;
     case "vm":
         run(bc);
@@ -85,8 +88,11 @@ Thunk cliTargetHandler(immutable string lang) {
     return {
         switch (lang)
         {
-        case "bc":
-            outLang = "bc";
+        case "xbc":
+            outLang = "xbc";
+            break;
+        case "ubc":
+            outLang = "ubc";
             break;
         case "vm":
             outLang = "vm";
@@ -134,6 +140,7 @@ Thunk cliOutHandler(immutable string filename) {
         Node node = code.parse(lang);
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
+        walker.xinstrs = outLang == "xbc";
         walker.walkProgram(node);
         File outmvm = File("out.bc", "w");
         outmvm.rawWrite(walker.bytecode);
@@ -147,6 +154,7 @@ Thunk cliConvHandler(immutable string code) {
         Node node = code.parse(lang);
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
+        walker.xinstrs = outLang == "xbc";
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
     };
@@ -159,6 +167,7 @@ Thunk cliConvFileHandler(immutable string filename) {
         Node node = code.parse(lang);
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
+        walker.xinstrs = outLang == "xbc";
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
     };

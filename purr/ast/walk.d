@@ -45,6 +45,8 @@ class Reg {
 }
 
 final class Walker {
+    bool xinstrs = false;
+
     Node[] nodes;
     double[string] constants;
 
@@ -175,256 +177,262 @@ final class Walker {
                 return ret;
             }
             if (form.form == "==") {
-                if (Value valueLeft = cast(Value) form.args[0]) {
-                    assert(valueLeft.info == typeid(double));
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_equal_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_not_equal_num;
+                if (xinstrs) {
+                    if (Value valueLeft = cast(Value) form.args[0]) {
+                        assert(valueLeft.info == typeid(double));
+                        Reg rhs = walk(form.args[1]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_equal_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_not_equal_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= rhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        return [ret];
+                    } else if (Value valueRight = cast(Value) form.args[1]) {
+                        assert(valueRight.info == typeid(double));
+                        Reg lhs = walk(form.args[0]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_equal_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_not_equal_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= lhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        return [ret];
                     }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= rhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
-                    return [ret];
-                } else if (Value valueRight = cast(Value) form.args[1]) {
-                    assert(valueRight.info == typeid(double));
-                    Reg lhs = walk(form.args[0]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_equal_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_not_equal_num;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
-                    return [ret];
-                } else {
-                    Reg lhs = walk(form.args[0]);
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_equal;
-                    } else {
-                        bytecode ~= Opcode.jump_if_not_equal;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= rhs.reg;
-                    return [ret];
                 }
+                Reg lhs = walk(form.args[0]);
+                Reg rhs = walk(form.args[1]);
+                static if (doNotNegate) {
+                    bytecode ~= Opcode.jump_if_equal;
+                } else {
+                    bytecode ~= Opcode.jump_if_not_equal;
+                }
+                int ret = cast(int) bytecode.length;
+                bytecode ~= ubytes(where);
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
+                return [ret];
             }
             if (form.form == "!=") {
-                if (Value valueLeft = cast(Value) form.args[0]) {
-                    assert(valueLeft.info == typeid(double));
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_not_equal_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_equal_num;
+                if (xinstrs) {
+                    if (Value valueLeft = cast(Value) form.args[0]) {
+                        assert(valueLeft.info == typeid(double));
+                        Reg rhs = walk(form.args[1]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_not_equal_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_equal_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= rhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        return [ret];
+                    } else if (Value valueRight = cast(Value) form.args[1]) {
+                        assert(valueRight.info == typeid(double));
+                        Reg lhs = walk(form.args[0]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_not_equal_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_equal_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= lhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        return [ret];
                     }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= rhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
-                    return [ret];
-                } else if (Value valueRight = cast(Value) form.args[1]) {
-                    assert(valueRight.info == typeid(double));
-                    Reg lhs = walk(form.args[0]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_not_equal_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_equal_num;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
-                    return [ret];
-                } else {
-                    Reg lhs = walk(form.args[0]);
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_not_equal;
-                    } else {
-                        bytecode ~= Opcode.jump_if_equal;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= rhs.reg;
-                    return [ret];
                 }
+                Reg lhs = walk(form.args[0]);
+                Reg rhs = walk(form.args[1]);
+                static if (doNotNegate) {
+                    bytecode ~= Opcode.jump_if_not_equal;
+                } else {
+                    bytecode ~= Opcode.jump_if_equal;
+                }
+                int ret = cast(int) bytecode.length;
+                bytecode ~= ubytes(where);
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
+                return [ret];
             }
             if (form.form == "<") {
-                if (Value valueLeft = cast(Value) form.args[0]) {
-                    assert(valueLeft.info == typeid(double));
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_greater_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_less_than_equal_num;
+                if (xinstrs) {
+                    if (Value valueLeft = cast(Value) form.args[0]) {
+                        assert(valueLeft.info == typeid(double));
+                        Reg rhs = walk(form.args[1]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_greater_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_less_than_equal_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= rhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        return [ret];
+                    } else if (Value valueRight = cast(Value) form.args[1]) {
+                        assert(valueRight.info == typeid(double));
+                        Reg lhs = walk(form.args[0]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_less_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_greater_than_equal_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= lhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        return [ret];
                     }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= rhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
-                    return [ret];
-                } else if (Value valueRight = cast(Value) form.args[1]) {
-                    assert(valueRight.info == typeid(double));
-                    Reg lhs = walk(form.args[0]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_less_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_greater_than_equal_num;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
-                    return [ret];
-                } else {
-                    Reg lhs = walk(form.args[0]);
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_less;
-                    } else {
-                        bytecode ~= Opcode.jump_if_greater_than_equal;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= rhs.reg;
-                    return [ret];
                 }
+                Reg lhs = walk(form.args[0]);
+                Reg rhs = walk(form.args[1]);
+                static if (doNotNegate) {
+                    bytecode ~= Opcode.jump_if_less;
+                } else {
+                    bytecode ~= Opcode.jump_if_greater_than_equal;
+                }
+                int ret = cast(int) bytecode.length;
+                bytecode ~= ubytes(where);
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
+                return [ret];
             }
             if (form.form == ">") {
-                if (Value valueLeft = cast(Value) form.args[0]) {
-                    assert(valueLeft.info == typeid(double));
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_less_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_greater_than_equal_num;
+                if (xinstrs) {
+                    if (Value valueLeft = cast(Value) form.args[0]) {
+                        assert(valueLeft.info == typeid(double));
+                        Reg rhs = walk(form.args[1]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_less_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_greater_than_equal_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= rhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        return [ret];
+                    } else if (Value valueRight = cast(Value) form.args[1]) {
+                        assert(valueRight.info == typeid(double));
+                        Reg lhs = walk(form.args[0]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_greater_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_less_than_equal_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= lhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        return [ret];
                     }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= rhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
-                    return [ret];
-                } else if (Value valueRight = cast(Value) form.args[1]) {
-                    assert(valueRight.info == typeid(double));
-                    Reg lhs = walk(form.args[0]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_greater_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_less_than_equal_num;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
-                    return [ret];
-                } else {
-                    Reg lhs = walk(form.args[0]);
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_greater;
-                    } else {
-                        bytecode ~= Opcode.jump_if_less_than_equal;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= rhs.reg;
-                    return [ret];
                 }
+                Reg lhs = walk(form.args[0]);
+                Reg rhs = walk(form.args[1]);
+                static if (doNotNegate) {
+                    bytecode ~= Opcode.jump_if_greater;
+                } else {
+                    bytecode ~= Opcode.jump_if_less_than_equal;
+                }
+                int ret = cast(int) bytecode.length;
+                bytecode ~= ubytes(where);
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
+                return [ret];
             }
             if (form.form == "<=") {
-                if (Value valueLeft = cast(Value) form.args[0]) {
-                    assert(valueLeft.info == typeid(double));
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_greater_than_equal_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_less_num;
+                if (xinstrs) {
+                    if (Value valueLeft = cast(Value) form.args[0]) {
+                        assert(valueLeft.info == typeid(double));
+                        Reg rhs = walk(form.args[1]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_greater_than_equal_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_less_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= rhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        return [ret];
+                    } else if (Value valueRight = cast(Value) form.args[1]) {
+                        assert(valueRight.info == typeid(double));
+                        Reg lhs = walk(form.args[0]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_less_than_equal_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_greater_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= lhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        return [ret];
                     }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= rhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
-                    return [ret];
-                } else if (Value valueRight = cast(Value) form.args[1]) {
-                    assert(valueRight.info == typeid(double));
-                    Reg lhs = walk(form.args[0]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_less_than_equal_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_greater_num;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
-                    return [ret];
-                } else {
-                    Reg lhs = walk(form.args[0]);
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_less_than_equal;
-                    } else {
-                        bytecode ~= Opcode.jump_if_greater;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= rhs.reg;
-                    return [ret];
                 }
+                Reg lhs = walk(form.args[0]);
+                Reg rhs = walk(form.args[1]);
+                static if (doNotNegate) {
+                    bytecode ~= Opcode.jump_if_less_than_equal;
+                } else {
+                    bytecode ~= Opcode.jump_if_greater;
+                }
+                int ret = cast(int) bytecode.length;
+                bytecode ~= ubytes(where);
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
+                return [ret];
             }
             if (form.form == ">=") {
-                if (Value valueLeft = cast(Value) form.args[0]) {
-                    assert(valueLeft.info == typeid(double));
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_less_than_equal_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_greater_num;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= rhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
-                    return [ret];
-                } else if (Value valueRight = cast(Value) form.args[1]) {
-                    assert(valueRight.info == typeid(double));
-                    Reg lhs = walk(form.args[0]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_greater_than_equal_num;
-                    } else {
-                        bytecode ~= Opcode.jump_if_less_num;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
-                    return [ret];
+                if (xinstrs) {
+                    if (Value valueLeft = cast(Value) form.args[0]) {
+                        assert(valueLeft.info == typeid(double));
+                        Reg rhs = walk(form.args[1]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_less_than_equal_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_greater_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= rhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        return [ret];
+                    } else if (Value valueRight = cast(Value) form.args[1]) {
+                        assert(valueRight.info == typeid(double));
+                        Reg lhs = walk(form.args[0]);
+                        static if (doNotNegate) {
+                            bytecode ~= Opcode.jump_if_greater_than_equal_num;
+                        } else {
+                            bytecode ~= Opcode.jump_if_less_num;
+                        }
+                        int ret = cast(int) bytecode.length;
+                        bytecode ~= ubytes(where);
+                        bytecode ~= lhs.reg;
+                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        return [ret];
+                    } 
+                } 
+                Reg lhs = walk(form.args[0]);
+                Reg rhs = walk(form.args[1]);
+                static if (doNotNegate) {
+                    bytecode ~= Opcode.jump_if_greater_than_equal;
                 } else {
-                    Reg lhs = walk(form.args[0]);
-                    Reg rhs = walk(form.args[1]);
-                    static if (doNotNegate) {
-                        bytecode ~= Opcode.jump_if_greater_than_equal;
-                    } else {
-                        bytecode ~= Opcode.jump_if_less;
-                    }
-                    int ret = cast(int) bytecode.length;
-                    bytecode ~= ubytes(where);
-                    bytecode ~= lhs.reg;
-                    bytecode ~= rhs.reg;
-                    return [ret];
+                    bytecode ~= Opcode.jump_if_less;
                 }
+                int ret = cast(int) bytecode.length;
+                bytecode ~= ubytes(where);
+                bytecode ~= lhs.reg;
+                bytecode ~= rhs.reg;
+                return [ret];
             }
         }
         Reg cmp = walk(node);
@@ -620,155 +628,168 @@ final class Walker {
             bytecode[jumpCondFrom .. jumpCondFrom + 4] = ubytes(jumpCondTo);
             return null;
         case "+":
-            if (Value valueLeft = cast(Value) form.args[0]) {
-                Reg rhs = walk(form.args[1]);
-                Reg res = allocOut;
-                if (res == rhs) {
-                    bytecode ~= Opcode.inc_num;
-                    bytecode ~= res.reg;
-                } else {
-                    bytecode ~= Opcode.add_num;
-                    bytecode ~= res.reg;
-                    bytecode ~= rhs.reg;
+            if (xinstrs) {
+                if (Value valueLeft = cast(Value) form.args[0]) {
+                    Reg rhs = walk(form.args[1]);
+                    Reg res = allocOut;
+                    if (res == rhs) {
+                        bytecode ~= Opcode.inc_num;
+                        bytecode ~= res.reg;
+                    } else {
+                        bytecode ~= Opcode.add_num;
+                        bytecode ~= res.reg;
+                        bytecode ~= rhs.reg;
+                    }
+                    assert(valueLeft.info == typeid(double));
+                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                    return res;
+                } else if (Value valueRight = cast(Value) form.args[1]) {
+                    Reg lhs = walk(form.args[0]);
+                    Reg res = allocOut;
+                    if (res == lhs) {
+                        bytecode ~= Opcode.inc_num;
+                        bytecode ~= res.reg;
+                    } else {
+                        bytecode ~= Opcode.add_num;
+                        bytecode ~= res.reg;
+                        bytecode ~= lhs.reg;
+                    }
+                    assert(valueRight.info == typeid(double));
+                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    return res;
                 }
-                assert(valueLeft.info == typeid(double));
-                bytecode ~= ubytes(*cast(double*) valueLeft.value);
-                return res;
-            } else if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
-                Reg res = allocOut;
-                if (res == lhs) {
-                    bytecode ~= Opcode.inc_num;
-                    bytecode ~= res.reg;
-                } else {
-                    bytecode ~= Opcode.add_num;
-                    bytecode ~= res.reg;
-                    bytecode ~= lhs.reg;
-                }
-                assert(valueRight.info == typeid(double));
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
-                return res;
-            } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
-                Reg res = allocOut;
+            }
+            Reg lhs = walk(form.args[0]);
+            Reg rhs = walk(form.args[1]);
+            Reg res = allocOut;
+            if (xinstrs) {
                 if (lhs == res) {
                     bytecode ~= Opcode.inc;
                     bytecode ~= res.reg;
                     bytecode ~= rhs.reg;
+                    return res;
                 } else if (rhs == res) {
                     bytecode ~= Opcode.inc;
                     bytecode ~= res.reg;
                     bytecode ~= lhs.reg;
-                } else {
-                    bytecode ~= Opcode.add;
-                    bytecode ~= res.reg;
-                    bytecode ~= lhs.reg;
-                    bytecode ~= rhs.reg;
-                }
-                return res;
+                    return res;
+                } 
             }
+            bytecode ~= Opcode.add;
+            bytecode ~= res.reg;
+            bytecode ~= lhs.reg;
+            bytecode ~= rhs.reg;
+            return res;
         case "-":
-            if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
-                Reg res = allocOut;
-                if (lhs == res) {
-                    bytecode ~= Opcode.dec_num;
-                    bytecode ~= res.reg;
-                } else {
-                    bytecode ~= Opcode.sub_num;
-                    bytecode ~= res.reg;
-                    bytecode ~= lhs.reg;
-                }
-                assert(valueRight.info == typeid(double));
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
-                return res;
-            } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
-                Reg res = allocOut;
+            if (xinstrs) {
+                if (Value valueRight = cast(Value) form.args[1]) {
+                    Reg lhs = walk(form.args[0]);
+                    Reg res = allocOut;
+                    if (lhs == res) {
+                        bytecode ~= Opcode.dec_num;
+                        bytecode ~= res.reg;
+                    } else {
+                        bytecode ~= Opcode.sub_num;
+                        bytecode ~= res.reg;
+                        bytecode ~= lhs.reg;
+                    }
+                    assert(valueRight.info == typeid(double));
+                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    return res;
+                } 
+            }
+            Reg lhs = walk(form.args[0]);
+            Reg rhs = walk(form.args[1]);
+            Reg res = allocOut;
+            if (xinstrs) {
                 if (lhs == res) {
                     bytecode ~= Opcode.dec;
                     bytecode ~= res.reg;
                     bytecode ~= rhs.reg;
-                } else {
-                    bytecode ~= Opcode.sub;
+                    return res;
+                } 
+            }
+            bytecode ~= Opcode.sub;
+            bytecode ~= res.reg;
+            bytecode ~= lhs.reg;
+            bytecode ~= rhs.reg;
+            return res;
+        case "*":
+            if (xinstrs) {
+                if (Value valueLeft = cast(Value) form.args[0]) {
+                    Reg rhs = walk(form.args[1]);
+                    Reg res = allocOut;
+                    bytecode ~= Opcode.mul_num;
+                    bytecode ~= res.reg;
+                    bytecode ~= rhs.reg;
+                    assert(valueLeft.info == typeid(double));
+                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                    return res;
+                } else if (Value valueRight = cast(Value) form.args[1]) {
+                    Reg lhs = walk(form.args[0]);
+                    Reg res = allocOut;
+                    bytecode ~= Opcode.mul_num;
                     bytecode ~= res.reg;
                     bytecode ~= lhs.reg;
-                    bytecode ~= rhs.reg;
-                }
-                return res;
+                    assert(valueRight.info == typeid(double));
+                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    return res;
+                } 
             }
-        case "*":
-            if (Value valueLeft = cast(Value) form.args[0]) {
-                Reg rhs = walk(form.args[1]);
-                Reg res = allocOut;
-                bytecode ~= Opcode.mul_num;
-                bytecode ~= res.reg;
-                bytecode ~= rhs.reg;
-                assert(valueLeft.info == typeid(double));
-                bytecode ~= ubytes(*cast(double*) valueLeft.value);
-                return res;
-            } else if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
-                Reg res = allocOut;
-                bytecode ~= Opcode.mul_num;
-                bytecode ~= res.reg;
-                bytecode ~= lhs.reg;
-                assert(valueRight.info == typeid(double));
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
-                return res;
-            } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
-                Reg res = allocOut;
-                bytecode ~= Opcode.mul;
-                bytecode ~= res.reg;
-                bytecode ~= lhs.reg;
-                bytecode ~= rhs.reg;
-                return res;
-            }
+            Reg lhs = walk(form.args[0]);
+            Reg rhs = walk(form.args[1]);
+            Reg res = allocOut;
+            bytecode ~= Opcode.mul;
+            bytecode ~= res.reg;
+            bytecode ~= lhs.reg;
+            bytecode ~= rhs.reg;
+            return res;
         case "/":
-            if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
-                Reg res = allocOut;
-                bytecode ~= Opcode.div_num;
-                bytecode ~= res.reg;
-                bytecode ~= lhs.reg;
-                assert(valueRight.info == typeid(double));
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
-                return res;
-            } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
-                Reg res = allocOut;
-                bytecode ~= Opcode.div;
-                bytecode ~= res.reg;
-                bytecode ~= lhs.reg;
-                bytecode ~= rhs.reg;
-                return res;
+            if (xinstrs) {
+                if (Value valueRight = cast(Value) form.args[1]) {
+                    Reg lhs = walk(form.args[0]);
+                    Reg res = allocOut;
+                    bytecode ~= Opcode.div_num;
+                    bytecode ~= res.reg;
+                    bytecode ~= lhs.reg;
+                    assert(valueRight.info == typeid(double));
+                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    return res;
+                } 
             }
+            Reg lhs = walk(form.args[0]);
+            Reg rhs = walk(form.args[1]);
+            Reg res = allocOut;
+            bytecode ~= Opcode.div;
+            bytecode ~= res.reg;
+            bytecode ~= lhs.reg;
+            bytecode ~= rhs.reg;
+            return res;
         case "%":
-            if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
-                Reg res = allocOut;
-                bytecode ~= Opcode.mod_num;
-                bytecode ~= res.reg;
-                bytecode ~= lhs.reg;
-                assert(valueRight.info == typeid(double));
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
-                return res;
-            } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
-                Reg res = allocOut;
-                bytecode ~= Opcode.mod;
-                bytecode ~= res.reg;
-                bytecode ~= lhs.reg;
-                bytecode ~= rhs.reg;
-                return res;
+            if (xinstrs) {
+                if (Value valueRight = cast(Value) form.args[1]) {
+                    Reg lhs = walk(form.args[0]);
+                    Reg res = allocOut;
+                    bytecode ~= Opcode.mod_num;
+                    bytecode ~= res.reg;
+                    bytecode ~= lhs.reg;
+                    assert(valueRight.info == typeid(double));
+                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    return res;
+                } 
             }
+            Reg lhs = walk(form.args[0]);
+            Reg rhs = walk(form.args[1]);
+            Reg res = allocOut;
+            bytecode ~= Opcode.mod;
+            bytecode ~= res.reg;
+            bytecode ~= lhs.reg;
+            bytecode ~= rhs.reg;
+            return res;
         case "==":
+            if (!xinstrs) {
+                return walk(new Form("if", form, new Value(1), new Value(0)));
+            }
             if (Value valueLeft = cast(Value) form.args[0]) {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
@@ -798,6 +819,9 @@ final class Walker {
                 return res;
             }
         case "!=":
+            if (!xinstrs) {
+                return walk(new Form("if", form, new Value(1), new Value(0)));
+            }
             if (Value valueLeft = cast(Value) form.args[0]) {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
@@ -827,6 +851,9 @@ final class Walker {
                 return res;
             }
         case "<":
+            if (!xinstrs) {
+                return walk(new Form("if", form, new Value(1), new Value(0)));
+            }
             if (Value valueLeft = cast(Value) form.args[0]) {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
@@ -856,6 +883,9 @@ final class Walker {
                 return res;
             }
         case ">":
+            if (!xinstrs) {
+                return walk(new Form("if", form, new Value(1), new Value(0)));
+            }
             if (Value valueLeft = cast(Value) form.args[0]) {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
@@ -885,6 +915,9 @@ final class Walker {
                 return res;
             }
         case "<=":
+            if (!xinstrs) {
+                return walk(new Form("if", form, new Value(1), new Value(0)));
+            }
             if (Value valueLeft = cast(Value) form.args[0]) {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
@@ -914,6 +947,9 @@ final class Walker {
                 return res;
             }
         case ">=":
+            if (!xinstrs) {
+                return walk(new Form("if", form, new Value(1), new Value(0)));
+            }
             if (Value valueLeft = cast(Value) form.args[0]) {
                 Reg rhs = walk(form.args[1]);
                 Reg res = allocOut;
@@ -1042,68 +1078,7 @@ final class Walker {
             foreach (index, arg; form.args[1 .. $]) {
                 argRegs ~= walk(arg);
             }
-            switch (argRegs.length) {
-            case 0:
-                if (isRec) {
-                    bytecode ~= Opcode.rec0;
-                    bytecode ~= outreg.reg;
-                } else if (isStatic) {
-                    bytecode ~= Opcode.static_call0;
-                    bytecode ~= outreg.reg;
-                    if (int[]* preps = staticName in replaces) {
-                        *preps ~= cast(int)(bytecode.length);
-                    } else {
-                        replaces[staticName] = [cast(int)(bytecode.length)];
-                    }
-                    bytecode ~= ubytes(-1);
-                } else {
-                    bytecode ~= Opcode.call0;
-                    bytecode ~= outreg.reg;
-                    bytecode ~= funreg.reg;
-                }
-                break;
-            case 1:
-                if (isRec) {
-                    bytecode ~= Opcode.rec1;
-                    bytecode ~= outreg.reg;
-                } else if (isStatic) {
-                    bytecode ~= Opcode.static_call1;
-                    bytecode ~= outreg.reg;
-                    if (int[]* preps = staticName in replaces) {
-                        *preps ~= cast(int)(bytecode.length);
-                    } else {
-                        replaces[staticName] = [cast(int)(bytecode.length)];
-                    }
-                    bytecode ~= ubytes(-1);
-                } else {
-                    bytecode ~= Opcode.call1;
-                    bytecode ~= outreg.reg;
-                    bytecode ~= funreg.reg;
-                }
-                bytecode ~= argRegs[0].reg;
-                break;
-            case 2:
-                if (isRec) {
-                    bytecode ~= Opcode.rec2;
-                    bytecode ~= outreg.reg;
-                } else if (isStatic) {
-                    bytecode ~= Opcode.static_call2;
-                    bytecode ~= outreg.reg;
-                    if (int[]* preps = staticName in replaces) {
-                        *preps ~= cast(int)(bytecode.length);
-                    } else {
-                        replaces[staticName] = [cast(int)(bytecode.length)];
-                    }
-                    bytecode ~= ubytes(-1);
-                } else {
-                    bytecode ~= Opcode.call2;
-                    bytecode ~= outreg.reg;
-                    bytecode ~= funreg.reg;
-                }
-                bytecode ~= argRegs[0].reg;
-                bytecode ~= argRegs[1].reg;
-                break;
-            default:
+            if (argRegs.length > 2 || !xinstrs) {
                 if (isRec) {
                     bytecode ~= Opcode.rec;
                     bytecode ~= outreg.reg;
@@ -1125,9 +1100,71 @@ final class Walker {
                 foreach (reg; argRegs) {
                     bytecode ~= reg.reg;
                 }
-                break;
+                return outreg;
+            } else {
+                final switch (argRegs.length) {
+                case 0:
+                    if (isRec) {
+                        bytecode ~= Opcode.rec0;
+                        bytecode ~= outreg.reg;
+                    } else if (isStatic) {
+                        bytecode ~= Opcode.static_call0;
+                        bytecode ~= outreg.reg;
+                        if (int[]* preps = staticName in replaces) {
+                            *preps ~= cast(int)(bytecode.length);
+                        } else {
+                            replaces[staticName] = [cast(int)(bytecode.length)];
+                        }
+                        bytecode ~= ubytes(-1);
+                    } else {
+                        bytecode ~= Opcode.call0;
+                        bytecode ~= outreg.reg;
+                        bytecode ~= funreg.reg;
+                    }
+                    return outreg;
+                case 1:
+                    if (isRec) {
+                        bytecode ~= Opcode.rec1;
+                        bytecode ~= outreg.reg;
+                    } else if (isStatic) {
+                        bytecode ~= Opcode.static_call1;
+                        bytecode ~= outreg.reg;
+                        if (int[]* preps = staticName in replaces) {
+                            *preps ~= cast(int)(bytecode.length);
+                        } else {
+                            replaces[staticName] = [cast(int)(bytecode.length)];
+                        }
+                        bytecode ~= ubytes(-1);
+                    } else {
+                        bytecode ~= Opcode.call1;
+                        bytecode ~= outreg.reg;
+                        bytecode ~= funreg.reg;
+                    }
+                    bytecode ~= argRegs[0].reg;
+                    return outreg;
+                case 2:
+                    if (isRec) {
+                        bytecode ~= Opcode.rec2;
+                        bytecode ~= outreg.reg;
+                    } else if (isStatic) {
+                        bytecode ~= Opcode.static_call2;
+                        bytecode ~= outreg.reg;
+                        if (int[]* preps = staticName in replaces) {
+                            *preps ~= cast(int)(bytecode.length);
+                        } else {
+                            replaces[staticName] = [cast(int)(bytecode.length)];
+                        }
+                        bytecode ~= ubytes(-1);
+                    } else {
+                        bytecode ~= Opcode.call2;
+                        bytecode ~= outreg.reg;
+                        bytecode ~= funreg.reg;
+                    }
+                    bytecode ~= argRegs[0].reg;
+                    bytecode ~= argRegs[1].reg;
+                    return outreg;
+                }
             }
-            return outreg;
         case "return":
             Reg res = walk(form.args[0]);
             bytecode ~= Opcode.ret;

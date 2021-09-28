@@ -6,7 +6,6 @@ DC=gdc
 LD=$(DC)
 
 OPT_C=-Ofast
-OPT_C_GC=-Ofast
 OPT_D=-Os
 
 P=-p
@@ -45,11 +44,10 @@ endif
 
 
 DFILES:=$(shell find ext purr -type f -name '*.d')
-CFILES:=$(shell find minivm/vm -type f -name '*.c' -not -name wasm.c)
+CFILES=minivm/vm/minivm.c minivm/vm/gc.c minivm/vm/backend/js.c minivm/vm/backend/lua.c
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
 OBJS=$(DOBJS) $(COBJS) $(LIB)/libmimalloc.a
-GC_OBJ=$(LIB)/minivm/vm/gc.o
 
 default:
 	$(MAKE) $(BIN) $(LIB) P=$(P)
@@ -60,6 +58,7 @@ purr $(BIN)/purr: $(OBJS)
 	$(LD) $^ $(LDO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(XLFLAGS)
 
 minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(LIB)/libmimalloc.a
+	@mkdir $(P) $(BIN)
 	$(LD) $^ -o $(BIN)/minivm -I. -lm -lpthread $(LFLAGS) $(CLFLAGS)
 
 $(LIB)/libmimalloc.a: minivm/mimalloc
@@ -71,7 +70,7 @@ $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 
 $(COBJS) $(LIB)/minivm/main/main.o: $(patsubst $(LIB)/%.o,%.c,$@)
 	@mkdir $(P) $(basename $@) $(LIB)
-	$(if $(findstring $@,$(GC_OBJ)),$(CC_GC),$(CC)) $(FPIC) -c $(if $(findstring $@,$(GC_OBJ)),$(OPT_C_GC),$(OPT_C)) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS) 
+	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS) 
 
 $(BIN) $(LIB):
 	mkdir $(P) $@
