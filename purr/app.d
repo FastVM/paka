@@ -24,7 +24,7 @@ import core.memory;
 
 extern (C) __gshared string[] rt_options = ["gcopt=gc:manual"];
 
-string outLang = "xbc";
+string outLang = "vm";
 
 alias Thunk = void delegate();
 
@@ -140,7 +140,7 @@ Thunk cliOutHandler(immutable string filename) {
         Node node = code.parse(lang);
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
-        walker.xinstrs = outLang == "xbc";
+        walker.xinstrs = outLang != "ubc";
         walker.walkProgram(node);
         File outmvm = File("out.bc", "w");
         outmvm.rawWrite(walker.bytecode);
@@ -154,7 +154,7 @@ Thunk cliConvHandler(immutable string code) {
         Node node = code.parse(lang);
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
-        walker.xinstrs = outLang == "xbc";
+        walker.xinstrs = outLang != "ubc";
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
     };
@@ -167,7 +167,7 @@ Thunk cliConvFileHandler(immutable string filename) {
         Node node = code.parse(lang);
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
-        walker.xinstrs = outLang == "xbc";
+        walker.xinstrs = outLang != "ubc";
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
     };

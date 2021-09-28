@@ -1,6 +1,7 @@
 module ext.zz.zrepr;
 
 import purr.ast.ast;
+import std.conv;
 
 string tozz2(Node node, size_t ind=0) {
 	if (Form form = cast(Form) node) {

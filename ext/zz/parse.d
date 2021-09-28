@@ -6,6 +6,7 @@ import purr.srcloc;
 import purr.err;
 import purr.ast.ast;
 import ext.zz.zrepr;
+import std.conv;
 
 enum special = ["+", "-", "*", "/", "%", "&&", "||", "<", ">", "<=", ">=", "==", "!=", "do", "if", "while", "lambda", "return", "array", "def", "set", "var", "index", "call", "args", "macro"];
 enum ops = ["+", "-", "*", "/", "%"];

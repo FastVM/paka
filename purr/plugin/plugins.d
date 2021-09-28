@@ -6,6 +6,7 @@ import purr.parse;
 import purr.srcloc;
 import purr.ast.ast;
 import purr.srcloc;
+import std.conv;
 
 __gshared Plugin[] plugins;
 
