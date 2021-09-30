@@ -26,8 +26,8 @@ class Reg {
         sym = s;
     }
 
-    ubyte[4] reg() {
-        return (cast(ubyte*)&repr)[0 .. 4];
+    ubyte reg() {
+        return (cast(ubyte)repr);
     }
 
     override bool opEquals(Object other) {
@@ -45,7 +45,7 @@ class Reg {
 }
 
 final class Walker {
-    bool xinstrs = false;
+    bool xinstrs = true;
 
     Node[] nodes;
     double[string] constants;
@@ -474,7 +474,7 @@ final class Walker {
             }
             bytecode ~= Opcode.array;
             bytecode ~= outreg.reg;
-            bytecode ~= ubytes(cast(int) regs.length);
+            bytecode ~= cast(ubyte) regs.length;
             foreach (reg; regs) {
                 bytecode ~= reg.reg;
             }
@@ -510,7 +510,7 @@ final class Walker {
                 if (Form lambda = cast(Form) form.args[1]) {
                     if (lambda.form == "lambda") {
                         string name = id.repr;
-                        funcs[id.repr] = cast(int)(bytecode.length + 9);
+                        funcs[id.repr] = cast(int)(bytecode.length + 6);
                         isLambda = true;
                     }
                 }
@@ -545,7 +545,7 @@ final class Walker {
                 if (Form lambda = cast(Form) form.args[1]) {
                     if (lambda.form == "lambda") {
                         string name = id.repr;
-                        funcs[id.repr] = cast(int)(bytecode.length + 9);
+                        funcs[id.repr] = cast(int)(bytecode.length + 6);
                         isLambda = true;
                     }
                 }
@@ -995,7 +995,7 @@ final class Walker {
             int refLength = cast(int) bytecode.length;
             bytecode ~= ubytes(-1);
             int refRegc = cast(int) bytecode.length;
-            bytecode ~= ubytes(256);
+            bytecode ~= 255;
             Reg[] oldRegs = regs;
             regs = null;
             localss.length++;
@@ -1017,7 +1017,7 @@ final class Walker {
                 bytecode ~= Opcode.ret;
                 bytecode ~= alloc().reg;
             }
-            bytecode[refRegc .. refRegc + 4] = ubytes(regs.length);
+            bytecode[refRegc] = cast(ubyte) regs.length;
             regs = oldRegs;
             localss.length--;
             captureValuess.length--;
@@ -1240,9 +1240,18 @@ final class Walker {
             return null;
         } else if (val.info == typeid(double)) {
             Reg ret = allocOut;
-            bytecode ~= Opcode.store_int;
-            bytecode ~= ret.reg;
-            bytecode ~= ubytes(*cast(double*) val.value);
+            if (*cast(double*) val.value < 256 && *cast(double*) val.value >= 0)
+            {
+                bytecode ~= Opcode.store_byte;
+                bytecode ~= ret.reg;
+                bytecode ~= cast(ubyte) *cast(double*) val.value;
+            }
+            else
+            {
+                bytecode ~= Opcode.store_int;
+                bytecode ~= ret.reg;
+                bytecode ~= ubytes(*cast(double*) val.value);
+            }
             return ret;
         } else if (val.info == typeid(string)) {
             string src = *cast(string*) val.value;
@@ -1250,14 +1259,14 @@ final class Walker {
             Reg[] regs;
             foreach (chr; src) {
                 Reg reg = alloc;
-                bytecode ~= Opcode.store_int;
+                bytecode ~= Opcode.store_byte;
                 bytecode ~= reg.reg;
-                bytecode ~= ubytes(cast(int) chr);
+                bytecode ~= cast(ubyte) chr;
                 regs ~= reg;
             }
             bytecode ~= Opcode.array;
             bytecode ~= outreg.reg;
-            bytecode ~= ubytes(cast(int) src.length);
+            bytecode ~= cast(ubyte) src.length;
             foreach (reg; regs) {
                 bytecode ~= reg.reg;
             }

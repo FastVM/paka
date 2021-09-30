@@ -1,0 +1,1 @@
+s:=0 c:=2 while c<20000{t:=2 i:=1 while t<c{if c%t==0:i=1 t=t+1}if i:s=s+c c=c+1}println(s)

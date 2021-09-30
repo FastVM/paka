@@ -37,8 +37,16 @@ File astfile;
 
 void doBytecode(void[] bc) {
     switch (outLang) {
-    case "js":
-        char[] src = compile!"js"(bc);
+    case "v8":
+        char[] src = compile!"v8"(bc);
+        auto pipes = pipeProcess(command, Redirect.stdin);
+        pipes.stdin.writeln(src);
+        pipes.stdin.flush();
+        pipes.stdin.close();
+        wait(pipes.pid);
+        break;
+    case "node":
+        char[] src = compile!"node"(bc);
         auto pipes = pipeProcess(command, Redirect.stdin);
         pipes.stdin.write(src);
         pipes.stdin.flush();
@@ -53,11 +61,8 @@ void doBytecode(void[] bc) {
         pipes.stdin.close();
         wait(pipes.pid);
         break;
-    case "xbc":
-        File("out.xbc", "wb").rawWrite(bc);
-        break;
-    case "ubc":
-        File("out.ubc", "wb").rawWrite(bc);
+    case "bc":
+        File("out.bc", "wb").rawWrite(bc);
         break;
     case "vm":
         run(bc);
@@ -88,21 +93,22 @@ Thunk cliTargetHandler(immutable string lang) {
     return {
         switch (lang)
         {
-        case "xbc":
-            outLang = "xbc";
-            break;
-        case "ubc":
-            outLang = "ubc";
+        case "bc":
+            outLang = "bc";
             break;
         case "vm":
             outLang = "vm";
             break;
-        case "js":
-            outLang = "js";
-            command = ["js"];
+        case "d8":
+            outLang = "v8";
+            command = ["d8", "-e", "eval(readline());"];
+            break;
+        case "v8":
+            outLang = "v8";
+            command = ["v8", "-e", "eval(readline());"];
             break;
         case "node":
-            outLang = "js";
+            outLang = "node";
             command = ["node"];
             break;
         case "lua":
@@ -140,7 +146,6 @@ Thunk cliOutHandler(immutable string filename) {
         Node node = code.parse(lang);
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
-        walker.xinstrs = outLang != "ubc";
         walker.walkProgram(node);
         File outmvm = File("out.bc", "w");
         outmvm.rawWrite(walker.bytecode);
@@ -154,7 +159,6 @@ Thunk cliConvHandler(immutable string code) {
         Node node = code.parse(lang);
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
-        walker.xinstrs = outLang != "ubc";
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
     };
@@ -167,7 +171,6 @@ Thunk cliConvFileHandler(immutable string filename) {
         Node node = code.parse(lang);
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
-        walker.xinstrs = outLang != "ubc";
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
     };

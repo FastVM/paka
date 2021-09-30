@@ -10,7 +10,7 @@ import core.stdc.stdlib;
 
 
 extern (C) char* vm_backend_bf(void* func);
-extern (C) char* vm_backend_js(void* func);
+extern (C) char* vm_backend_js(void* func, immutable(char) *jstype="node".ptr);
 extern (C) char* vm_backend_lua(void* func);
 
 void run(void[] func) {
@@ -34,9 +34,19 @@ char[] compile(string lang: "lua")(void[] func) {
     return src;
 }
 
-char[] compile(string lang: "js")(void[] func) {
+char[] compile(string lang: "node")(void[] func) {
     GC.disable;
-    char* got = vm_backend_js(func.ptr);
+    char* got = vm_backend_js(func.ptr, "node".ptr);
+    char[] src = got.fromStringz.dup;
+    free(got);
+    GC.enable;
+    return src;
+}
+
+
+char[] compile(string lang: "v8")(void[] func) {
+    GC.disable;
+    char* got = vm_backend_js(func.ptr, "v8".ptr);
     char[] src = got.fromStringz.dup;
     free(got);
     GC.enable;
