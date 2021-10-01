@@ -11,8 +11,6 @@ OPT_D=-Os
 P=-p
 FPIC=-fPIC
 
-MICC=$(CC)
-
 ifeq ($(LD),$(DC))
 XLFLAGS=$(DLFLAGS)
 else
@@ -44,13 +42,10 @@ endif
 
 
 DFILES:=$(shell find ext purr -type f -name '*.d')
-C1FILES=minivm/vm/vm.c minivm/vm/gc.c 
-C2FILES=minivm/vm/backend/js.c minivm/vm/backend/lua.c
+CFILES=minivm/vm/vm.c minivm/vm/gc.c 
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
-C1OBJS=$(patsubst %.c,$(LIB)/%.o,$(C1FILES))
-C2OBJS=$(patsubst %.c,$(LIB)/%.o,$(C2FILES))
-COBJS=$(C1OBJS) $(C2OBJS)
-OBJS=$(DOBJS) $(COBJS) $(LIB)/libmimalloc.a
+COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
+OBJS=$(DOBJS) $(COBJS)
 
 default:
 	$(MAKE) $(BIN) $(LIB) P=$(P)
@@ -60,15 +55,12 @@ purr $(BIN)/purr: $(OBJS)
 	@mkdir $(P) $(BIN)
 	$(LD) $^ $(LDO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(XLFLAGS)
 
-minivm $(BIN)/minivm: $(C1OBJS) $(LIB)/minivm/main/main.o $(LIB)/libmimalloc.a
+minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o 
 	@mkdir $(P) $(BIN)
 	$(LD) $^ -o $(BIN)/minivm -I. -lm -lpthread $(LFLAGS) $(XLFLAGS)
 
-vm $(BIN)/vm: $(C1FILES) minivm/main/main.c $(LIB)/libmimalloc.a
+vm $(BIN)/vm: $(CFILES) minivm/main/main.c
 	$(CC) $^ -o $(BIN)/vm -Iminivm -lm -lpthread $(FPIC) $(OPT_C) $(LFLAGS) $(CLFAGS)
-
-$(LIB)/libmimalloc.a: minivm/mimalloc
-	$(MAKE) --no-print-directory -C minivm -f mimalloc.mak CC=$(MICC) LIB=$(LIB) CFLAGS=""
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	@mkdir $(P) $(basename $@) $(LIB)

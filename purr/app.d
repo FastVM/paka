@@ -37,30 +37,6 @@ File astfile;
 
 void doBytecode(void[] bc) {
     switch (outLang) {
-    case "v8":
-        char[] src = compile!"v8"(bc);
-        auto pipes = pipeProcess(command, Redirect.stdin);
-        pipes.stdin.writeln(src);
-        pipes.stdin.flush();
-        pipes.stdin.close();
-        wait(pipes.pid);
-        break;
-    case "node":
-        char[] src = compile!"node"(bc);
-        auto pipes = pipeProcess(command, Redirect.stdin);
-        pipes.stdin.write(src);
-        pipes.stdin.flush();
-        pipes.stdin.close();
-        wait(pipes.pid);
-        break;
-    case "lua":
-        char[] src = compile!"lua"(bc);
-        auto pipes = pipeProcess(command, Redirect.stdin);
-        pipes.stdin.write(src);
-        pipes.stdin.flush();
-        pipes.stdin.close();
-        wait(pipes.pid);
-        break;
     case "bc":
         File("out.bc", "wb").rawWrite(bc);
         break;
@@ -99,31 +75,8 @@ Thunk cliTargetHandler(immutable string lang) {
         case "vm":
             outLang = "vm";
             break;
-        case "d8":
-            outLang = "v8";
-            command = ["d8", "-e", "eval(readline());"];
-            break;
-        case "v8":
-            outLang = "v8";
-            command = ["v8", "-e", "eval(readline());"];
-            break;
-        case "node":
-            outLang = "node";
-            command = ["node"];
-            break;
-        case "lua":
-            outLang = "lua";
-            command = ["lua"];
-            break;
-        case "luajit":
-            outLang = "lua";
-            command = ["luajit"];
-            break;
         case "help":
-            vmError("--target=help: try --target=vm or --target=list");
-            break;
-        case "list":
-            vmError("full: vm js node lua luajit");
+            vmError("--target=help: try --target=vm or --target=bc");
             break;
         default:
             vmError("invalid --target=" ~ lang);
@@ -220,6 +173,20 @@ Thunk cliRepeatHandler(size_t n, Thunk next) {
     };
 }
 
+Thunk cliShowHandler(immutable string name) {
+    switch (name)
+    {
+    default:
+        return {
+            vmError("cannot --show=" ~ name);
+        };
+    case "mem":
+        return {
+            writeln("max mem " ~ to!string(vm_stats_memsize / 1024 / 1024) ~ "MiB");
+        };
+    }
+}
+
 bool debugging;
 
 Thunk cliDebugHandler() {
@@ -253,6 +220,9 @@ void domain(string[] args) {
         switch (parts[0]) {
         default:
             todo ~= parts[0].cliConvFileHandler;
+            break;
+        case "--show":
+            todo ~= part1.cliShowHandler;
             break;
         case "--file":
             todo ~= part1.cliConvFileHandler;
