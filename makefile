@@ -47,9 +47,7 @@ DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
 OBJS=$(DOBJS) $(COBJS)
 
-default:
-	$(MAKE) $(BIN) $(LIB) P=$(P)
-	$(MAKE) $(BIN)/purr $(BIN)/minivm P=$(P) BIN="$(BIN)" LIB="$(LIB)"
+default: $(BIN)/purr $(BIN)/minivm
 
 purr $(BIN)/purr: $(OBJS)
 	@mkdir $(P) $(BIN)
@@ -58,9 +56,6 @@ purr $(BIN)/purr: $(OBJS)
 minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o 
 	@mkdir $(P) $(BIN)
 	$(LD) $^ -o $(BIN)/minivm -I. -lm -lpthread $(LFLAGS) $(XLFLAGS)
-
-vm $(BIN)/vm: $(CFILES) minivm/main/main.c
-	$(CC) $^ -o $(BIN)/vm -Iminivm -lm -lpthread $(FPIC) $(OPT_C) $(LFLAGS) $(CLFAGS)
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	@mkdir $(P) $(basename $@) $(LIB)
