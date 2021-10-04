@@ -6,8 +6,6 @@ alias Number = double;
 alias String = immutable(char)*;
 
 extern (C) void vm_run(void* func);
-extern (C) extern __gshared size_t vm_stats_memsize;
-
 
 enum Opcode : ubyte {
     exit,

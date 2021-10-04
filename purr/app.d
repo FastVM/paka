@@ -180,10 +180,6 @@ Thunk cliShowHandler(immutable string name) {
         return {
             vmError("cannot --show=" ~ name);
         };
-    case "mem":
-        return {
-            writeln("max mem " ~ to!string(vm_stats_memsize / 1024 / 1024) ~ "MiB");
-        };
     }
 }
 
