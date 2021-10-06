@@ -1,7 +1,7 @@
 local x = 0
 local leak = {}
-while x < 1000 do
-	leak = {leak, leak}
+while x < 100000000 do
+	leak = {{{{{{{{{{x}}}}}}}}}}
 	x = x + 1
 end
-print(#leak)
+print(leak[1][1][1][1][1][1][1][1][1][1])

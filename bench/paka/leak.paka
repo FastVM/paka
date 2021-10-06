@@ -1,7 +1,7 @@
 x := 0
 leak := []
-while x < 1000 {
-	leak = [leak, leak]
+while x < 100000000 {
+	leak = [[[[[[[[[[x]]]]]]]]]]
 	x = x + 1
 }
-println(#leak)
+println(leak[0][0][0][0][0][0][0][0][0][0])
