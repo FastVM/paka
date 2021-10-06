@@ -1,0 +1,7 @@
+x := 0
+leak := []
+while x < 1000 {
+	leak = [leak, leak]
+	x = x + 1
+}
+println(#leak)

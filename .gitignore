@@ -48,3 +48,4 @@ crt.o
 cosmopolitan.zip
 *.dylib
 *.asm
+dump.rdb
