@@ -40,7 +40,7 @@ LDO=-o
 endif
 endif
 
-THREADS=-DVM_GC_THREADS
+MIMALLOC=-lmimalloc -DVM_USE_MIMALLOC
 
 DFILES:=$(shell find ext purr -type f -name '*.d')
 CFILES=minivm/vm/vm.c minivm/vm/gc.c 
@@ -52,11 +52,11 @@ default: $(BIN)/purr $(BIN)/minivm
 
 purr $(BIN)/purr: $(OBJS)
 	@mkdir $(P) $(BIN)
-	$(LD) $^ $(LDO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(XLFLAGS)
+	$(LD) $^ $(LDO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(MIMALLOC) $(XLFLAGS)
 
 minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o 
 	@mkdir $(P) $(BIN)
-	$(LD) $^ -o $(BIN)/minivm -I. -lm -lpthread $(LFLAGS) $(XLFLAGS)
+	$(LD) $^ -o $(BIN)/minivm -I. -lm -lpthread $(LFLAGS) $(MIMALLOC) $(XLFLAGS)
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	@mkdir $(P) $(basename $@) $(LIB)
@@ -64,7 +64,7 @@ $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 
 $(COBJS) $(LIB)/minivm/main/main.o: $(patsubst $(LIB)/%.o,%.c,$@)
 	@mkdir $(P) $(basename $@) $(LIB)
-	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(THREADS) $(CFLAGS) 
+	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS) 
 
 $(BIN) $(LIB):
 	mkdir $(P) $@
