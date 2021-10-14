@@ -15,9 +15,9 @@ ifeq ($(LD),$(DC))
 XLFLAGS=$(DLFLAGS)
 else
 ifeq ($(DC),gdc)
-XLFLAGS=$(DL)-lgphobos $(DL)-lgdruntime $(DL)-lm $(DL)-lpthread
+XLFLAGS=$(DL)-lgphobos $(DL)-lgdruntime $(DL)-lm
 else
-XLFLAGS=$(DL)-lphobos2-ldc-shared $(DL)-ldruntime-ldc-shared $(DL)-lm $(DL)-lpthread
+XLFLAGS=$(DL)-lphobos2-ldc $(DL)-ldruntime-ldc $(DL)-lm $(DL)-lz $(DL)-ldl
 endif
 endif
 
@@ -40,10 +40,10 @@ LDO=-o
 endif
 endif
 
-MIMALLOC=-lmimalloc -DVM_USE_MIMALLOC
+MIMALLOC=$(DL)-lmimalloc -DVM_USE_MIMALLOC $(DL)-lpthread
 
 DFILES:=$(shell find ext purr -type f -name '*.d')
-CFILES=minivm/vm/vm.c minivm/vm/gc.c 
+CFILES=minivm/vm/vm.c minivm/vm/gc.c minivm/vm/xobj.c
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
 OBJS=$(DOBJS) $(COBJS)
@@ -54,15 +54,15 @@ purr $(BIN)/purr: $(OBJS)
 	@mkdir $(P) $(BIN)
 	$(LD) $^ $(LDO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(MIMALLOC) $(XLFLAGS)
 
-minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o 
+minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(LIB)/minivm/vm/sys.o
 	@mkdir $(P) $(BIN)
-	$(LD) $^ -o $(BIN)/minivm -I. -lm -lpthread $(LFLAGS) $(MIMALLOC) $(XLFLAGS)
+	$(LD) $^ -o $(BIN)/minivm -I. -lm $(LFLAGS) $(MIMALLOC) $(XLFLAGS)
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	@mkdir $(P) $(basename $@) $(LIB)
 	$(DC) -c $(OPT_D) $(DO)$@ $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS)
 
-$(COBJS) $(LIB)/minivm/main/main.o: $(patsubst $(LIB)/%.o,%.c,$@)
+$(COBJS) $(LIB)/minivm/main/main.o $(LIB)/minivm/vm/sys.o: $(patsubst $(LIB)/%.o,%.c,$@)
 	@mkdir $(P) $(basename $@) $(LIB)
 	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS) 
 

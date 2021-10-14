@@ -1045,10 +1045,17 @@ final class Walker {
             string staticName;
             if (Ident func = cast(Ident) form.args[0]) {
                 if (func.repr == "println") {
-                    Reg outreg = walk(form.args[1]);
+                    Reg arg = walk(form.args[1]);
                     bytecode ~= Opcode.println;
-                    bytecode ~= outreg.reg;
+                    bytecode ~= arg.reg;
                     return allocOut;
+                } else if (func.repr == "syscall") {
+                    Reg outreg = allocOut;
+                    Reg arg = walk(form.args[1]);
+                    bytecode ~= Opcode.syscall;
+                    bytecode ~= outreg.reg;
+                    bytecode ~= arg.reg;
+                    return outreg;
                 } else if (func.repr == "putchar") {
                     Reg outreg = walk(form.args[1]);
                     bytecode ~= Opcode.putchar;

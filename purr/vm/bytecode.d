@@ -74,8 +74,7 @@ enum Opcode : ubyte {
     length,
     index,
     index_num,
-    reserve,
-    store_index,
+    syscall,
     max1,
     max2p = 128,
 }
