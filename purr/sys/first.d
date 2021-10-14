@@ -7,6 +7,7 @@ import purr.sys.gc;
 class State {
 	Entry*[] owns;
 	Memory *gc;
+	string[] calls;
 
 	this(Memory* gc_) {
 		owns = null;
@@ -29,6 +30,7 @@ private extern(C) State vm_sys_init(Memory* mem) {
 	return new State(mem);
 }
 
-private extern(C) Value vm_syscall(State sys, Value arg) {
-	return Value(0);
+private extern(C) Value vm_sys_call(State sys, Value arg) {
+	// return Value(0);
+	throw new Exception("no syscalls yet"); 
 }

@@ -22,29 +22,32 @@ extern (C) {
 	bool vm_xobj_is_ptr(Internal obj);
 	bool vm_xobj_is_dead(Internal obj);
 
-	// Internal vm_xobj_num_add(Internal lhs, Internal rhs);
-	// Internal vm_xobj_num_addc(Internal lhs, int rhs);
-	// Internal vm_xobj_num_sub(Internal lhs, Internal rhs);
-	// Internal vm_xobj_num_subc(Internal lhs, int rhs);
-	// Internal vm_xobj_num_mul(Internal lhs, Internal rhs);
-	// Internal vm_xobj_num_mulc(Internal lhs, int rhs);
-	// Internal vm_xobj_num_div(Internal lhs, Internal rhs);
-	// Internal vm_xobj_num_divc(Internal lhs, int rhs);
-	// Internal vm_xobj_num_mod(Internal lhs, Internal rhs);
-	// Internal vm_xobj_num_modc(Internal lhs, int rhs);
+	// we do our own math
+	version (none) {
+		Internal vm_xobj_num_add(Internal lhs, Internal rhs);
+		Internal vm_xobj_num_addc(Internal lhs, int rhs);
+		Internal vm_xobj_num_sub(Internal lhs, Internal rhs);
+		Internal vm_xobj_num_subc(Internal lhs, int rhs);
+		Internal vm_xobj_num_mul(Internal lhs, Internal rhs);
+		Internal vm_xobj_num_mulc(Internal lhs, int rhs);
+		Internal vm_xobj_num_div(Internal lhs, Internal rhs);
+		Internal vm_xobj_num_divc(Internal lhs, int rhs);
+		Internal vm_xobj_num_mod(Internal lhs, Internal rhs);
+		Internal vm_xobj_num_modc(Internal lhs, int rhs);
 
-	// bool vm_xobj_lt(Internal lhs, Internal rhs);
-	// bool vm_xobj_ilt(Internal lhs, int rhs);
-	// bool vm_xobj_gt(Internal lhs, Internal rhs);
-	// bool vm_xobj_igt(Internal lhs, int rhs);
-	// bool vm_xobj_lte(Internal lhs, Internal rhs);
-	// bool vm_xobj_ilte(Internal lhs, int rhs);
-	// bool vm_xobj_gte(Internal lhs, Internal rhs);
-	// bool vm_xobj_igte(Internal lhs, int rhs);
-	// bool vm_xobj_eq(Internal lhs, Internal rhs);
-	// bool vm_xobj_ieq(Internal lhs, int rhs);
-	// bool vm_xobj_neq(Internal lhs, Internal rhs);
-	// bool vm_xobj_ineq(Internal lhs, int rhs);
+		bool vm_xobj_lt(Internal lhs, Internal rhs);
+		bool vm_xobj_ilt(Internal lhs, int rhs);
+		bool vm_xobj_gt(Internal lhs, Internal rhs);
+		bool vm_xobj_igt(Internal lhs, int rhs);
+		bool vm_xobj_lte(Internal lhs, Internal rhs);
+		bool vm_xobj_ilte(Internal lhs, int rhs);
+		bool vm_xobj_gte(Internal lhs, Internal rhs);
+		bool vm_xobj_igte(Internal lhs, int rhs);
+		bool vm_xobj_eq(Internal lhs, Internal rhs);
+		bool vm_xobj_ieq(Internal lhs, int rhs);
+		bool vm_xobj_neq(Internal lhs, Internal rhs);
+		bool vm_xobj_ineq(Internal lhs, int rhs);
+	}
 }
 
 struct Value {
@@ -95,7 +98,7 @@ struct Value {
 			if (!chr.isNum) {
 				return false;
 			}
-			if (!isPrintable(chr.num.to!char)) {
+			if (!chr.num.to!char.isPrintable) {
 				return false;
 			}	
 		}
@@ -145,9 +148,7 @@ struct Value {
 	}
 
 	string toString() {
-		if (this.isStr) {
-			return this.str;
-		} else if (this.isArray) {
+		if (this.isArray) {
 			string ret = "[";
 			foreach (index, elem; this) {
 				if (index != 0) {

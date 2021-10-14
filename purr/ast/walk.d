@@ -514,10 +514,8 @@ final class Walker {
                         isLambda = true;
                     }
                 }
-                Reg target;
-                Reg from;     
-                target = alloc();
-                from = walk(form.args[1], target);
+                Reg target = alloc();
+                Reg from = walk(form.args[1], target);
                 locals[id.repr] = target;
                 if (target != from) {
                     bytecode ~= Opcode.store_reg;
@@ -1051,10 +1049,19 @@ final class Walker {
                     return allocOut;
                 } else if (func.repr == "syscall") {
                     Reg outreg = allocOut;
-                    Reg arg = walk(form.args[1]);
+                    Reg[] regs;
+                    foreach (arg; form.args[1..$]) {
+                        regs ~= walk(arg);
+                    }
+                    bytecode ~= Opcode.array;
+                    bytecode ~= outreg.reg;
+                    bytecode ~= cast(ubyte) regs.length;
+                    foreach (reg; regs) {
+                        bytecode ~= reg.reg;
+                    }
                     bytecode ~= Opcode.syscall;
                     bytecode ~= outreg.reg;
-                    bytecode ~= arg.reg;
+                    bytecode ~= outreg.reg;
                     return outreg;
                 } else if (func.repr == "putchar") {
                     Reg outreg = walk(form.args[1]);
@@ -1273,7 +1280,7 @@ final class Walker {
             }
             bytecode ~= Opcode.array;
             bytecode ~= outreg.reg;
-            bytecode ~= cast(ubyte) src.length;
+            bytecode ~= cast(ubyte) regs.length;
             foreach (reg; regs) {
                 bytecode ~= reg.reg;
             }
