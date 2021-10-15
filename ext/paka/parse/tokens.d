@@ -4,6 +4,7 @@ import std.ascii;
 import std.conv : to;
 import std.algorithm;
 import std.array;
+import std.ascii;
 import purr.srcloc;
 import purr.err;
 
@@ -215,10 +216,11 @@ redo:
     if ("}])".canFind(peek)) {
         return consToken(Token.Type.close, [read]);
     }
-    if (peek == '"') {
+    if (peek == '"' || peek == '\'') {
+        char first = peek;
         char got = read;
         char[] ret;
-        while (peek != '"') {
+        while (peek != first) {
             got = read;
             if (got == '\\') {
                 switch (got = read) {
@@ -269,6 +271,6 @@ redo:
     if (peek == '\0') {
         return consToken(Token.Type.none, "");
     }
-    vmFail("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
+    vmError("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
     assert(false);
 }

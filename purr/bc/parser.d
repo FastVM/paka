@@ -2,18 +2,31 @@ module purr.bc.parse;
 
 import std.conv;
 import std.stdio;
+import std.algorithm;
 
+import purr.err;
 import purr.vm.bytecode;
-import purr.bc.format;
+import purr.bc.reg;
+import purr.bc.locs;
 import purr.bc.instr;
+import purr.bc.format;
 
-Type read(Type)(ref void[] code) {
-	Type ret = *cast(Type*) code.ptr;
-	code = code[Type.sizeof..$];
+struct Code {
+	void[] code;
+	int offset;
+}
+
+Type read(Type)(ref Code code) {
+	if (code.code.length < Type.sizeof) {
+		vmError("invalid bytecode: missing data");
+	}
+	Type ret = *cast(Type*) code.code.ptr;
+	code.code = code.code[Type.sizeof..$];
+	code.offset += Type.sizeof;
 	return ret;
 }
 
-Argument readFmt(ref void[] code, char c) {
+Argument readFmt(ref Code code, char c) {
 	final switch (c) {
 	case 'r':
 		return new Register(code.read!ubyte);
@@ -23,6 +36,8 @@ Argument readFmt(ref void[] code, char c) {
 		return new Integer(code.read!int);
 	case 'j':
 		return new Location(code.read!int);
+	case 'f':
+		return new Function(code.read!ubyte, code.parse([Opcode.fun_done]));
 	case 'c':
 		ubyte num = code.read!ubyte;
 		ubyte[] regs;
@@ -33,9 +48,12 @@ Argument readFmt(ref void[] code, char c) {
 	}
 }
 
-Instr readInstr(ref void[] code) {
+Instr readInstr(ref Code code) {
 	Opcode op = code.read!Opcode;
 	Argument[] args;
+	if (op !in format) {
+		vmError("invalid bytecode: opcode not found: " ~ op.to!string);
+	}
 	Format opFmt = format[op];
 	foreach (spec; opFmt) {
 		args ~= code.readFmt(spec);
@@ -43,14 +61,44 @@ Instr readInstr(ref void[] code) {
 	return new Instr(op, args);
 }
 
-Instr[] parse(void[] code) {
-	Instr[] ret;
-	size_t len0 = code.length;
-	while (code.length != 0) {
-		size_t len = code.length;
+Instr[] parse(ref Code code, Opcode[] end) {
+	Instr[] instrs;
+	while (code.code.length != 0) {
+		int offset =  code.offset;
 		Instr instr = code.readInstr;
-		instr.index = cast(int) (len0 - len);
-		ret ~= instr;
+		if (end.canFind(instr.op)) {
+			break;
+		}
+		instr.offset = offset;
+		instrs ~= instr;
 	}
-	return ret;
+	int[][int] branches = instrs.branches;
+	int[] o2i = instrs.offsetToIndex;
+	int[] i2o = instrs.indexToOffset;
+	foreach (key, values; branches) {
+		instrs[o2i[key]].outJump = true;
+		foreach (value; values) {
+			instrs[o2i[value]].inJump = true;
+		}
+	}
+	instrs[0].inJump = true;
+	foreach (ref instr; instrs) {
+		if (instr.op == Opcode.ret || instr.op == Opcode.exit) {
+			instr.outJump = true;
+		}
+		if (instr.op == Opcode.store_fun) {
+			instr.outJump = false;
+		}
+		if (instr.op == Opcode.static_call0 || instr.op == Opcode.static_call1 || instr.op == Opcode.static_call2 || instr.op == Opcode.static_call) {
+			instr.outJump = false;
+		}
+	}
+	return instrs;
+}
+
+Instr[] parse(void[] bc) {
+	Code code = Code(bc, 0);
+	Instr[] instrs = code.parse([Opcode.exit]);
+	instrs ~= new Instr(Opcode.exit);
+	return instrs;
 }

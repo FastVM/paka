@@ -1,7 +1,9 @@
 module purr.bc.instr;
 
-import purr.vm.bytecode;
 import std.conv;
+import std.array;
+import std.algorithm;
+import purr.vm.bytecode;
 
 class Argument {}
 
@@ -61,14 +63,42 @@ class Call : Argument {
 	}
 
 	override string toString() {
-		return regs.to!string;
+		return "(" ~ regs.map!(x => 'r' ~ x.to!string).join(", ") ~ ")";
+	}
+}
+
+string indent(string src) {
+	string ret = "  ";
+	foreach (c; src) {
+		if (c == '\n') {
+			ret ~= "\n  ";
+		} else {
+			ret ~= c;
+		}
+	}
+	return ret;
+}
+
+class Function : Argument {
+	Instr[] instrs;
+	ubyte nregs;
+
+	this(ubyte nregs_, Instr[] instrs_) {
+		nregs = nregs_;
+		instrs = instrs_;
+	}
+
+	override string toString() {
+		return "{\n" ~ instrs.instrsToString.indent ~ "}";
 	}
 }
 
 class Instr {
-	int index;
+	int offset;
 	Opcode op;
 	Argument[] args;
+	bool outJump;
+	bool inJump;
 
 	this(Opcode op_, Argument[] args_ = null) {
 		op = op_;
@@ -85,4 +115,20 @@ class Instr {
 		}
 		return op.to!string ~ " " ~ args.to!string[1..$-1];
 	}
+}
+
+string instrsToString(Instr[] instrs) {
+	string ret;
+	bool last = false;
+	foreach (instr; instrs) {
+		if (instr.inJump || last) {
+			ret ~= instr.offset.to!string;
+			ret ~= ":\n";
+		}
+		ret ~= "  ";
+		ret ~= instr.to!string;
+		ret ~= '\n';
+		last = instr.outJump;
+	}
+	return ret;
 }

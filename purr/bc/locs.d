@@ -4,18 +4,38 @@ import purr.bc.instr;
 
 int[][int] branches(Instr[] instrs) {
 	int[][int] ret;
-	foreach (indexLong, instr; instrs) {
-		int index = cast(int) indexLong;
+	foreach (instr; instrs) {
 		foreach (arg; instr.args) {
 			if (Location loc = cast(Location) arg) {
 				int to = loc.loc;
-				if (int[]* val = index in ret) {
+				if (int[]* val = instr.offset in ret) {
 					*val ~= to;
 				} else {
-					ret[index] = [to];
+					ret[instr.offset] = [to];
 				}
 			}
 		}
+	}
+	return ret;
+}
+
+int[] indexToOffset(Instr[] instrs) {
+	int[] ret;
+	foreach (instr; instrs) {
+		ret ~= instr.offset;
+	}
+	return ret;
+}
+
+int[] offsetToIndex(Instr[] instrs) {
+	int[] ret;
+	int last = 0;
+	foreach (index, instr; instrs) {
+		while (ret.length < instr.offset) {
+			ret ~= last;
+		}
+		last = cast(int) index;
+		ret ~= last;
 	}
 	return ret;
 }

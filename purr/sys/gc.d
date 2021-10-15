@@ -11,7 +11,6 @@ extern(C) {
 	size_t vm_gc_sizeof(Entry* ptr);
 	Value vm_gc_get_index(Entry* ptr, size_t index);
 	void vm_gc_mark_ptr(Memory* gc, Entry* ent);
-	void vm_gc_mark_ptr(Memory* gc, Entry* ent);
 }
 
 Value arr(Memory* mem, Value[] arg) {

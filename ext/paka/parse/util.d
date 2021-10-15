@@ -21,7 +21,7 @@ template Spanning(alias F, T...) {
     Node spanning(TokenArray tokens, T a) {
         SrcLoc origPos = tokens.position;
         locs ~= origPos;
-        scope (success) {
+        scope (exit) {
             locs.length--;
         }
         Node ret = F(tokens, a);
@@ -44,6 +44,9 @@ pragma(inline, true):
         Token[] tokens;
 
         this(SrcLoc pos) {
+            if (!pos.src.all!isPrintable) {
+                vmFail("source not printable");
+            }
             tokens ~= pos.readToken;
             while (tokens[$ - 1].exists) {
                 tokens ~= pos.readToken;

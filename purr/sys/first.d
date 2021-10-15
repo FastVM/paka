@@ -3,6 +3,7 @@ module purr.sys.first;
 import std.stdio;
 import purr.sys.obj;
 import purr.sys.gc;
+import purr.err;
 
 class State {
 	Entry*[] owns;
@@ -32,5 +33,6 @@ private extern(C) State vm_sys_init(Memory* mem) {
 
 private extern(C) Value vm_sys_call(State sys, Value arg) {
 	// return Value(0);
-	throw new Exception("no syscalls yet"); 
+	vmError("no syscalls yet");
+	assert(false); 
 }

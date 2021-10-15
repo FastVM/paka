@@ -12,7 +12,7 @@ import ext.zz.zrepr;
 import ext.zz.parse;
 import ext.zz.walk;
 
-shared static this() {
+static this() {
     thisPlugin.addPlugin;
 }
 

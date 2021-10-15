@@ -10,5 +10,5 @@ import core.memory;
 import core.stdc.stdlib;
 
 void run(void[] func) {
-    vm_run(func.optimize.ptr);
+    vm_run(func.ptr);
 }

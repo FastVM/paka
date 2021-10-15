@@ -98,7 +98,8 @@ struct Value {
 			if (!chr.isNum) {
 				return false;
 			}
-			if (!chr.num.to!char.isPrintable) {
+			double n = chr.num;
+			if (!to!char(chr.num % 256).isPrintable) {
 				return false;
 			}	
 		}

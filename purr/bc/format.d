@@ -10,7 +10,7 @@ enum Format[Opcode] format() {
     ret[Opcode.store_reg] = "rr";
     ret[Opcode.store_byte] = "rb";
     ret[Opcode.store_int] = "ri";
-    ret[Opcode.store_fun] = "rjb";
+    ret[Opcode.store_fun] = "rjf";
     ret[Opcode.fun_done] = "";
     ret[Opcode.equal] = "rrr";
     ret[Opcode.equal_num] = "rri";

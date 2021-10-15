@@ -31,6 +31,33 @@ final class Form : Node {
     string form;
     Node[] args;
 
+    Node getArg(T)(T n) {
+        if (n < 0 || n >= args.length) {
+            vmError("invalid ast");
+            assert(false);
+        } else {
+            return args[n];
+        }
+    }
+
+    Node[] sliceArg(T)(T n) {
+        if (n < 0 || n >= args.length) {
+            vmError("invalid ast");
+            assert(false);
+        } else {
+            return args[n..$];
+        }
+    }
+
+    Node[] sliceArg(T1, T2)(T1 n, T2 m) {
+        if (n < 0 || n >= args.length || m < 1 || m > args.length || m + n > args.length) {
+            vmError("invalid ast");
+            assert(false);
+        } else {
+            return args[n..$-m];
+        }
+    }
+
     this(Args...)(string f, Args as) {
         static foreach (a; as) {
             args ~= a;
@@ -73,7 +100,7 @@ Ident genSym() {
 template ident(string name) {
     Ident value;
 
-    shared static this() {
+    static this() {
         value = new Ident(name);
     }
 

@@ -1,6 +1,8 @@
 module ext.zz.parse;
 
 import std.stdio;
+import std.string;
+import std.ascii;
 import std.algorithm;
 import purr.srcloc;
 import purr.err;
@@ -53,7 +55,7 @@ Node parseLines(string[] lines) {
 		Form[int] lastCalls = calls;
 		calls = null;
 		Node arg;
-		if ('0' <= words[$-1][0] && words[$-1][0] <= '9') {
+		if (words[$-1].all!isDigit) {
 			arg = cast(Node) new Value(words[$-1].to!double);
 		} else if (words[$-1] == "null") {
 			arg = cast(Node) new Value(null);

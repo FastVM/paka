@@ -1,13 +1,16 @@
 module ext.scheme.parser;
 
+import std.algorithm;
 import std.stdio;
 import std.conv;
+import std.string;
+import std.ascii;
 import purr.srcloc;
 import purr.ast.ast;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
 
-shared static this() {
+static this() {
     thisPlugin.addPlugin;
 }
 
@@ -66,7 +69,7 @@ Node readExpr(ref string src) {
         name ~= src[0];
         src = src[1 .. $];
     }
-    if ('0' <= name[0] && name[0] <= '9') {
+    if (name.all!isDigit) {
         return new Value(name.to!double);
     }
     return new Ident(name);

@@ -323,14 +323,9 @@ Node readPostExprImpl(TokenArray tokens) {
         tokens.nextIs(Token.Type.keyword, "self");
         last = new Form("capture");
     } else if (tokens.first.isIdent) {
-        if (tokens.first.value[0].isDigit) {
-            if (tokens.first.value.canFind(".")) {
-                last = new Value(tokens.first.value.to!double);
-                tokens.nextIs(Token.Type.ident);
-            } else {
-                last = new Value(tokens.first.value.to!double);
-                tokens.nextIs(Token.Type.ident);
-            }
+        if (tokens.first.value.all!isDigit) {
+            last = new Value(tokens.first.value.to!double);
+            tokens.nextIs(Token.Type.ident);
         } else {
             last = new Ident(tokens.first.value);
             tokens.nextIs(Token.Type.ident);
@@ -443,11 +438,11 @@ alias readBlockBody = Spanning!readBlockBodyImpl;
 Node readBlockBodyImpl(TokenArray tokens) {
     Node[] ret;
     while (tokens.first.exists && !tokens.first.isClose("}") && !tokens.first.isKeyword("else")) {
-        SrcLoc loc = tokens.position;
+        // SrcLoc loc = tokens.position;
         ret ~= tokens.readStmt;
-        if (tokens.position.isAt(loc)) {
-            break;
-        }
+        // if (tokens.position.isAt(loc)) {
+        //     vmFail("nothing to read");
+        // }
     }
     if (ret.length == 1) {
         return ret[0];
@@ -478,7 +473,7 @@ Node parsePakaAs(alias parser)(SrcLoc loc) {
     try {
         Node node = parser(tokens);
         return node;
-    } catch (Error e) {
+    } catch (Recover e) {
         string[] lines = loc.src.split("\n");
         size_t[] nums;
         size_t ml = 0;
@@ -499,7 +494,7 @@ Node parsePakaAs(alias parser)(SrcLoc loc) {
             }
         }
         e.msg = ret ~ e.msg;
-        vmFail(e.msg);
+        vmError(e.msg);
         assert(false);
     }
 }

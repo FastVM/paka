@@ -8,6 +8,7 @@ import purr.ast.ast;
 import purr.vm.bytecode;
 import purr.ast.walk;
 import purr.plugin.plugins;
+import purr.bc.opt;
 import purr.vm;
 import std.stdio;
 import std.uuid;
@@ -22,6 +23,8 @@ import std.process;
 import std.datetime.stopwatch;
 import core.memory;
 
+version(Fuzz) {}
+else:
 extern (C) __gshared string[] rt_options = ["gcopt=gc:manual"];
 
 string outLang = "vm";
@@ -34,8 +37,12 @@ string lang = "paka";
 
 string astLang = "zz";
 File astfile;
+string[] passes;
 
 void doBytecode(void[] bc) {
+    foreach (pass; passes) {
+        bc = bc.optimize(pass);
+    }
     switch (outLang) {
     case "bc":
         File("out.bc", "wb").rawWrite(bc);
@@ -49,6 +56,12 @@ void doBytecode(void[] bc) {
         vmError("please select a backend with: --target=help");
         break;
     }
+}
+
+Thunk cliPassHandler(immutable string pass) {
+    return {
+        passes ~= pass;
+    };
 }
 
 Thunk cliCommandHandler(immutable string cmd)
@@ -90,19 +103,6 @@ Thunk cliParseHandler(immutable string code) {
         SrcLoc loc = SrcLoc(1, 1, "__main__", code);
         Node node = loc.parse(lang);  
         if (dumpast) {astfile.write(astLang.unparse(node));}
-    };
-}
-
-Thunk cliOutHandler(immutable string filename) {
-    return {
-        SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        Node node = code.parse(lang);
-        if (dumpast) {astfile.write(astLang.unparse(node));}
-        Walker walker = new Walker;
-        walker.walkProgram(node);
-        File outmvm = File("out.bc", "w");
-        outmvm.rawWrite(walker.bytecode);
-        outmvm.close();
     };
 }
 
@@ -217,6 +217,9 @@ void domain(string[] args) {
         default:
             todo ~= parts[0].cliConvFileHandler;
             break;
+        case "--pass":
+            todo ~= part1.cliPassHandler;
+            break;
         case "--show":
             todo ~= part1.cliShowHandler;
             break;
@@ -240,9 +243,6 @@ void domain(string[] args) {
             break;
         case "--parse":
             todo ~= part1.cliParseHandler;
-            break;
-        case "--check":
-            todo ~= part1.cliOutHandler;
             break;
         case "--target":
             todo ~= part1.cliTargetHandler;

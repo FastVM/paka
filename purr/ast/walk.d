@@ -97,9 +97,12 @@ final class Walker {
         walk(program);
         bytecode ~= Opcode.exit;
         foreach (name, locs; replaces) {
-            int setto = funcs[name];
-            foreach (n; locs) {
-                bytecode[n .. n + 4] = ubytes(setto);
+            if (int* setto = name in funcs) {
+                foreach (n; locs) {
+                    bytecode[n .. n + 4] = ubytes(*setto);
+                }
+            } else {
+                vmError("function not found: " ~ name);
             }
         }
     }
@@ -113,7 +116,7 @@ final class Walker {
     }
 
     ubyte[4] ubytes(double val) {
-        assert(val % 1 == 0, "floats are broken, sadly");
+        vmCheckError(val % 1 == 0, "floats are broken, sadly");
         int inum = cast(int) val;
         return (cast(ubyte*)&inum)[0 .. 4];
     }
@@ -145,15 +148,15 @@ final class Walker {
             targets.length--;
             nodes.length--;
         }
-        switch (node.id) {
+        final switch (node.id) {
+        case NodeKind.base:
+            assert(false);
         case NodeKind.call:
             return walkExact(cast(Form) node);
         case NodeKind.ident:
             return walkExact(cast(Ident) node);
         case NodeKind.value:
             return walkExact(cast(Value) node);
-        default:
-            assert(false);
         }
     }
 
@@ -163,13 +166,13 @@ final class Walker {
     int[] jumpOn(bool doNotNegate)(Node node, int where = -1) {
         if (Form form = cast(Form) node) {
             if (form.form == "||") {
-                int[] reta = jumpOn!doNotNegate(form.args[0], where);
-                int[] retb = jumpOn!doNotNegate(form.args[1], where);
+                int[] reta = jumpOn!doNotNegate(form.getArg(0), where);
+                int[] retb = jumpOn!doNotNegate(form.getArg(1), where);
                 return reta ~ retb;
             }
             if (form.form == "&&") {
-                int[] passJumps = jumpOn!(!doNotNegate)(form.args[0], where);
-                int[] ret = jumpOn!doNotNegate(form.args[1], where);
+                int[] passJumps = jumpOn!(!doNotNegate)(form.getArg(0), where);
+                int[] ret = jumpOn!doNotNegate(form.getArg(1), where);
                 int passTo = cast(int) bytecode.length;
                 foreach (passJump; passJumps) {
                     bytecode[passJump .. passJump + 4] = ubytes(passTo);
@@ -178,9 +181,9 @@ final class Walker {
             }
             if (form.form == "==") {
                 if (xinstrs) {
-                    if (Value valueLeft = cast(Value) form.args[0]) {
-                        assert(valueLeft.info == typeid(double));
-                        Reg rhs = walk(form.args[1]);
+                    if (Value valueLeft = cast(Value) form.getArg(0)) {
+                        vmCheckError(valueLeft.info == typeid(double), "expected number");
+                        Reg rhs = walk(form.getArg(1));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_equal_num;
                         } else {
@@ -191,9 +194,9 @@ final class Walker {
                         bytecode ~= rhs.reg;
                         bytecode ~= ubytes(*cast(double*) valueLeft.value);
                         return [ret];
-                    } else if (Value valueRight = cast(Value) form.args[1]) {
-                        assert(valueRight.info == typeid(double));
-                        Reg lhs = walk(form.args[0]);
+                    } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                        vmCheckError(valueRight.info == typeid(double), "expected number");
+                        Reg lhs = walk(form.getArg(0));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_equal_num;
                         } else {
@@ -206,8 +209,8 @@ final class Walker {
                         return [ret];
                     }
                 }
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 static if (doNotNegate) {
                     bytecode ~= Opcode.jump_if_equal;
                 } else {
@@ -221,9 +224,9 @@ final class Walker {
             }
             if (form.form == "!=") {
                 if (xinstrs) {
-                    if (Value valueLeft = cast(Value) form.args[0]) {
-                        assert(valueLeft.info == typeid(double));
-                        Reg rhs = walk(form.args[1]);
+                    if (Value valueLeft = cast(Value) form.getArg(0)) {
+                        vmCheckError(valueLeft.info == typeid(double), "expected number");
+                        Reg rhs = walk(form.getArg(1));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_not_equal_num;
                         } else {
@@ -234,9 +237,9 @@ final class Walker {
                         bytecode ~= rhs.reg;
                         bytecode ~= ubytes(*cast(double*) valueLeft.value);
                         return [ret];
-                    } else if (Value valueRight = cast(Value) form.args[1]) {
-                        assert(valueRight.info == typeid(double));
-                        Reg lhs = walk(form.args[0]);
+                    } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                        vmCheckError(valueRight.info == typeid(double), "expected number");
+                        Reg lhs = walk(form.getArg(0));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_not_equal_num;
                         } else {
@@ -249,8 +252,8 @@ final class Walker {
                         return [ret];
                     }
                 }
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 static if (doNotNegate) {
                     bytecode ~= Opcode.jump_if_not_equal;
                 } else {
@@ -264,9 +267,9 @@ final class Walker {
             }
             if (form.form == "<") {
                 if (xinstrs) {
-                    if (Value valueLeft = cast(Value) form.args[0]) {
-                        assert(valueLeft.info == typeid(double));
-                        Reg rhs = walk(form.args[1]);
+                    if (Value valueLeft = cast(Value) form.getArg(0)) {
+                        vmCheckError(valueLeft.info == typeid(double), "expected number");
+                        Reg rhs = walk(form.getArg(1));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_greater_num;
                         } else {
@@ -277,9 +280,9 @@ final class Walker {
                         bytecode ~= rhs.reg;
                         bytecode ~= ubytes(*cast(double*) valueLeft.value);
                         return [ret];
-                    } else if (Value valueRight = cast(Value) form.args[1]) {
-                        assert(valueRight.info == typeid(double));
-                        Reg lhs = walk(form.args[0]);
+                    } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                        vmCheckError(valueRight.info == typeid(double), "expected number");
+                        Reg lhs = walk(form.getArg(0));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_less_num;
                         } else {
@@ -292,8 +295,8 @@ final class Walker {
                         return [ret];
                     }
                 }
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 static if (doNotNegate) {
                     bytecode ~= Opcode.jump_if_less;
                 } else {
@@ -307,9 +310,9 @@ final class Walker {
             }
             if (form.form == ">") {
                 if (xinstrs) {
-                    if (Value valueLeft = cast(Value) form.args[0]) {
-                        assert(valueLeft.info == typeid(double));
-                        Reg rhs = walk(form.args[1]);
+                    if (Value valueLeft = cast(Value) form.getArg(0)) {
+                        vmCheckError(valueLeft.info == typeid(double), "expected number");
+                        Reg rhs = walk(form.getArg(1));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_less_num;
                         } else {
@@ -320,9 +323,9 @@ final class Walker {
                         bytecode ~= rhs.reg;
                         bytecode ~= ubytes(*cast(double*) valueLeft.value);
                         return [ret];
-                    } else if (Value valueRight = cast(Value) form.args[1]) {
-                        assert(valueRight.info == typeid(double));
-                        Reg lhs = walk(form.args[0]);
+                    } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                        vmCheckError(valueRight.info == typeid(double), "expected number");
+                        Reg lhs = walk(form.getArg(0));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_greater_num;
                         } else {
@@ -335,8 +338,8 @@ final class Walker {
                         return [ret];
                     }
                 }
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 static if (doNotNegate) {
                     bytecode ~= Opcode.jump_if_greater;
                 } else {
@@ -350,9 +353,9 @@ final class Walker {
             }
             if (form.form == "<=") {
                 if (xinstrs) {
-                    if (Value valueLeft = cast(Value) form.args[0]) {
-                        assert(valueLeft.info == typeid(double));
-                        Reg rhs = walk(form.args[1]);
+                    if (Value valueLeft = cast(Value) form.getArg(0)) {
+                        vmCheckError(valueLeft.info == typeid(double), "expected number");
+                        Reg rhs = walk(form.getArg(1));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_greater_than_equal_num;
                         } else {
@@ -363,9 +366,9 @@ final class Walker {
                         bytecode ~= rhs.reg;
                         bytecode ~= ubytes(*cast(double*) valueLeft.value);
                         return [ret];
-                    } else if (Value valueRight = cast(Value) form.args[1]) {
-                        assert(valueRight.info == typeid(double));
-                        Reg lhs = walk(form.args[0]);
+                    } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                        vmCheckError(valueRight.info == typeid(double), "expected number");
+                        Reg lhs = walk(form.getArg(0));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_less_than_equal_num;
                         } else {
@@ -378,8 +381,8 @@ final class Walker {
                         return [ret];
                     }
                 }
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 static if (doNotNegate) {
                     bytecode ~= Opcode.jump_if_less_than_equal;
                 } else {
@@ -393,9 +396,9 @@ final class Walker {
             }
             if (form.form == ">=") {
                 if (xinstrs) {
-                    if (Value valueLeft = cast(Value) form.args[0]) {
-                        assert(valueLeft.info == typeid(double));
-                        Reg rhs = walk(form.args[1]);
+                    if (Value valueLeft = cast(Value) form.getArg(0)) {
+                        vmCheckError(valueLeft.info == typeid(double), "expected number");
+                        Reg rhs = walk(form.getArg(1));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_less_than_equal_num;
                         } else {
@@ -406,9 +409,9 @@ final class Walker {
                         bytecode ~= rhs.reg;
                         bytecode ~= ubytes(*cast(double*) valueLeft.value);
                         return [ret];
-                    } else if (Value valueRight = cast(Value) form.args[1]) {
-                        assert(valueRight.info == typeid(double));
-                        Reg lhs = walk(form.args[0]);
+                    } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                        vmCheckError(valueRight.info == typeid(double), "expected number");
+                        Reg lhs = walk(form.getArg(0));
                         static if (doNotNegate) {
                             bytecode ~= Opcode.jump_if_greater_than_equal_num;
                         } else {
@@ -421,8 +424,8 @@ final class Walker {
                         return [ret];
                     } 
                 } 
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 static if (doNotNegate) {
                     bytecode ~= Opcode.jump_if_greater_than_equal;
                 } else {
@@ -456,10 +459,10 @@ final class Walker {
                 return null;
             } else {
                 Reg ret = allocOutMaybe;
-                foreach (elem; form.args[0 .. $ - 1]) {
+                foreach (elem; form.sliceArg(0, 1)) {
                     walk(elem);
                 }
-                Reg last = walk(form.args[$ - 1], ret);
+                Reg last = walk(form.getArg(form.args.length - 1), ret);
                 if (ret !is null && last !is null && ret != last) {
                     vmError("reg alloc fail for: " ~ form.to!string);
                 }
@@ -481,8 +484,8 @@ final class Walker {
             return outreg;
         case "index":
             Reg outreg = allocOut;
-            Reg objreg = walk(form.args[0]);
-            Reg index = walk(form.args[1]);
+            Reg objreg = walk(form.getArg(0));
+            Reg index = walk(form.getArg(1));
             bytecode ~= Opcode.index;
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
@@ -490,24 +493,24 @@ final class Walker {
             return outreg;
         case "length":
             Reg outreg = allocOut;
-            Reg objreg = walk(form.args[0]);
+            Reg objreg = walk(form.getArg(0));
             bytecode ~= Opcode.length;
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             return outreg;
         case "def":
-            if (Ident id = cast(Ident) form.args[0]) {
+            if (Ident id = cast(Ident) form.getArg(0)) {
                 goto case "var";
-            } else if (Form call = cast(Form) form.args[0]) {
-                return walk(new Form("var", call.args[0], new Form("lambda", new Form("args", call.args[1..$]), form.args[1..$])));
+            } else if (Form call = cast(Form) form.getArg(0)) {
+                return walk(new Form("var", call.getArg(0), new Form("lambda", new Form("args", call.sliceArg(1)), form.sliceArg(1))));
             } else {
                 vmError("def to bad value");
                 assert(false);
             }
         case "var":
-            if (Ident id = cast(Ident) form.args[0]) {
+            if (Ident id = cast(Ident) form.getArg(0)) {
                 bool isLambda = false;
-                if (Form lambda = cast(Form) form.args[1]) {
+                if (Form lambda = cast(Form) form.getArg(1)) {
                     if (lambda.form == "lambda") {
                         string name = id.repr;
                         funcs[id.repr] = cast(int)(bytecode.length + 6);
@@ -515,7 +518,7 @@ final class Walker {
                     }
                 }
                 Reg target = alloc();
-                Reg from = walk(form.args[1], target);
+                Reg from = walk(form.getArg(1), target);
                 locals[id.repr] = target;
                 if (target != from) {
                     bytecode ~= Opcode.store_reg;
@@ -538,9 +541,9 @@ final class Walker {
                 assert(false);
             }
         case "set":
-            if (Ident id = cast(Ident) form.args[0]) {
+            if (Ident id = cast(Ident) form.getArg(0)) {
                 bool isLambda = false;
-                if (Form lambda = cast(Form) form.args[1]) {
+                if (Form lambda = cast(Form) form.getArg(1)) {
                     if (lambda.form == "lambda") {
                         string name = id.repr;
                         funcs[id.repr] = cast(int)(bytecode.length + 6);
@@ -551,7 +554,7 @@ final class Walker {
                 Reg from;     
                 if (Reg* ret = id.repr in locals) {
                     target = *ret;
-                    from = walk(form.args[1], target);
+                    from = walk(form.getArg(1), target);
                 } else {
                     vmError("set to unknown variable: " ~ id.repr);
                 }
@@ -577,13 +580,13 @@ final class Walker {
             }
         case "if":
             Reg outreg = allocOut;
-            int[] jumpsFalseFrom = ifFalse(form.args[0]);
-            walk(form.args[1], outreg);
+            int[] jumpsFalseFrom = ifFalse(form.getArg(0));
+            walk(form.getArg(1), outreg);
             bytecode ~= Opcode.jump_always;
             int jumpOutFrom = cast(int) bytecode.length;
             bytecode ~= ubytes(-1);
             int jumpFalseTo = cast(int) bytecode.length;
-            walk(form.args[2], outreg);
+            walk(form.getArg(2), outreg);
             int jumpOutTo = cast(int) bytecode.length;
             bytecode[jumpOutFrom .. jumpOutFrom + 4] = ubytes(jumpOutTo);
             foreach (jumpFalseFrom; jumpsFalseFrom) {
@@ -592,13 +595,13 @@ final class Walker {
             return outreg;
         case "unless":
             Reg outreg = allocOut;
-            int[] jumpsFalseFrom = ifTrue(form.args[0]);
-            walk(form.args[1], outreg);
+            int[] jumpsFalseFrom = ifTrue(form.getArg(0));
+            walk(form.getArg(1), outreg);
             bytecode ~= Opcode.jump_always;
             int jumpOutFrom = cast(int) bytecode.length;
             bytecode ~= ubytes(-1);
             int jumpFalseTo = cast(int) bytecode.length;
-            walk(form.args[2], outreg);
+            walk(form.getArg(2), outreg);
             int jumpOutTo = cast(int) bytecode.length;
             bytecode[jumpOutFrom .. jumpOutFrom + 4] = ubytes(jumpOutTo);
             foreach (jumpFalseFrom; jumpsFalseFrom) {
@@ -610,9 +613,9 @@ final class Walker {
             int jumpCondFrom = cast(int) bytecode.length;
             bytecode ~= ubytes(-1);
             int jumpRedoTo = cast(int) bytecode.length;
-            walk(form.args[1]);
+            walk(form.getArg(1));
             int jumpCondTo = cast(int) bytecode.length;
-            ifTrue(form.args[0], jumpRedoTo);
+            ifTrue(form.getArg(0), jumpRedoTo);
             bytecode[jumpCondFrom .. jumpCondFrom + 4] = ubytes(jumpCondTo);
             return null;
         case "until":
@@ -620,15 +623,15 @@ final class Walker {
             int jumpCondFrom = cast(int) bytecode.length;
             bytecode ~= ubytes(-1);
             int jumpRedoTo = cast(int) bytecode.length;
-            walk(form.args[1]);
+            walk(form.getArg(1));
             int jumpCondTo = cast(int) bytecode.length;
-            ifFalse(form.args[0], jumpRedoTo);
+            ifFalse(form.getArg(0), jumpRedoTo);
             bytecode[jumpCondFrom .. jumpCondFrom + 4] = ubytes(jumpCondTo);
             return null;
         case "+":
             if (xinstrs) {
-                if (Value valueLeft = cast(Value) form.args[0]) {
-                    Reg rhs = walk(form.args[1]);
+                if (Value valueLeft = cast(Value) form.getArg(0)) {
+                    Reg rhs = walk(form.getArg(1));
                     Reg res = allocOut;
                     if (res == rhs) {
                         bytecode ~= Opcode.inc_num;
@@ -638,11 +641,11 @@ final class Walker {
                         bytecode ~= res.reg;
                         bytecode ~= rhs.reg;
                     }
-                    assert(valueLeft.info == typeid(double));
+                    vmCheckError(valueLeft.info == typeid(double), "expected number");
                     bytecode ~= ubytes(*cast(double*) valueLeft.value);
                     return res;
-                } else if (Value valueRight = cast(Value) form.args[1]) {
-                    Reg lhs = walk(form.args[0]);
+                } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                    Reg lhs = walk(form.getArg(0));
                     Reg res = allocOut;
                     if (res == lhs) {
                         bytecode ~= Opcode.inc_num;
@@ -652,13 +655,13 @@ final class Walker {
                         bytecode ~= res.reg;
                         bytecode ~= lhs.reg;
                     }
-                    assert(valueRight.info == typeid(double));
+                    vmCheckError(valueRight.info == typeid(double), "expected number");
                     bytecode ~= ubytes(*cast(double*) valueRight.value);
                     return res;
                 }
             }
-            Reg lhs = walk(form.args[0]);
-            Reg rhs = walk(form.args[1]);
+            Reg lhs = walk(form.getArg(0));
+            Reg rhs = walk(form.getArg(1));
             Reg res = allocOut;
             if (xinstrs) {
                 if (lhs == res) {
@@ -680,8 +683,8 @@ final class Walker {
             return res;
         case "-":
             if (xinstrs) {
-                if (Value valueRight = cast(Value) form.args[1]) {
-                    Reg lhs = walk(form.args[0]);
+                if (Value valueRight = cast(Value) form.getArg(1)) {
+                    Reg lhs = walk(form.getArg(0));
                     Reg res = allocOut;
                     if (lhs == res) {
                         bytecode ~= Opcode.dec_num;
@@ -691,13 +694,13 @@ final class Walker {
                         bytecode ~= res.reg;
                         bytecode ~= lhs.reg;
                     }
-                    assert(valueRight.info == typeid(double));
+                    vmCheckError(valueRight.info == typeid(double), "expected number");
                     bytecode ~= ubytes(*cast(double*) valueRight.value);
                     return res;
                 } 
             }
-            Reg lhs = walk(form.args[0]);
-            Reg rhs = walk(form.args[1]);
+            Reg lhs = walk(form.getArg(0));
+            Reg rhs = walk(form.getArg(1));
             Reg res = allocOut;
             if (xinstrs) {
                 if (lhs == res) {
@@ -714,28 +717,28 @@ final class Walker {
             return res;
         case "*":
             if (xinstrs) {
-                if (Value valueLeft = cast(Value) form.args[0]) {
-                    Reg rhs = walk(form.args[1]);
+                if (Value valueLeft = cast(Value) form.getArg(0)) {
+                    Reg rhs = walk(form.getArg(1));
                     Reg res = allocOut;
                     bytecode ~= Opcode.mul_num;
                     bytecode ~= res.reg;
                     bytecode ~= rhs.reg;
-                    assert(valueLeft.info == typeid(double));
+                    vmCheckError(valueLeft.info == typeid(double), "expected number");
                     bytecode ~= ubytes(*cast(double*) valueLeft.value);
                     return res;
-                } else if (Value valueRight = cast(Value) form.args[1]) {
-                    Reg lhs = walk(form.args[0]);
+                } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                    Reg lhs = walk(form.getArg(0));
                     Reg res = allocOut;
                     bytecode ~= Opcode.mul_num;
                     bytecode ~= res.reg;
                     bytecode ~= lhs.reg;
-                    assert(valueRight.info == typeid(double));
+                    vmCheckError(valueRight.info == typeid(double), "expected number");
                     bytecode ~= ubytes(*cast(double*) valueRight.value);
                     return res;
                 } 
             }
-            Reg lhs = walk(form.args[0]);
-            Reg rhs = walk(form.args[1]);
+            Reg lhs = walk(form.getArg(0));
+            Reg rhs = walk(form.getArg(1));
             Reg res = allocOut;
             bytecode ~= Opcode.mul;
             bytecode ~= res.reg;
@@ -744,19 +747,19 @@ final class Walker {
             return res;
         case "/":
             if (xinstrs) {
-                if (Value valueRight = cast(Value) form.args[1]) {
-                    Reg lhs = walk(form.args[0]);
+                if (Value valueRight = cast(Value) form.getArg(1)) {
+                    Reg lhs = walk(form.getArg(0));
                     Reg res = allocOut;
                     bytecode ~= Opcode.div_num;
                     bytecode ~= res.reg;
                     bytecode ~= lhs.reg;
-                    assert(valueRight.info == typeid(double));
+                    vmCheckError(valueRight.info == typeid(double), "expected number");
                     bytecode ~= ubytes(*cast(double*) valueRight.value);
                     return res;
                 } 
             }
-            Reg lhs = walk(form.args[0]);
-            Reg rhs = walk(form.args[1]);
+            Reg lhs = walk(form.getArg(0));
+            Reg rhs = walk(form.getArg(1));
             Reg res = allocOut;
             bytecode ~= Opcode.div;
             bytecode ~= res.reg;
@@ -765,19 +768,19 @@ final class Walker {
             return res;
         case "%":
             if (xinstrs) {
-                if (Value valueRight = cast(Value) form.args[1]) {
-                    Reg lhs = walk(form.args[0]);
+                if (Value valueRight = cast(Value) form.getArg(1)) {
+                    Reg lhs = walk(form.getArg(0));
                     Reg res = allocOut;
                     bytecode ~= Opcode.mod_num;
                     bytecode ~= res.reg;
                     bytecode ~= lhs.reg;
-                    assert(valueRight.info == typeid(double));
+                    vmCheckError(valueRight.info == typeid(double), "expected number");
                     bytecode ~= ubytes(*cast(double*) valueRight.value);
                     return res;
                 } 
             }
-            Reg lhs = walk(form.args[0]);
-            Reg rhs = walk(form.args[1]);
+            Reg lhs = walk(form.getArg(0));
+            Reg rhs = walk(form.getArg(1));
             Reg res = allocOut;
             bytecode ~= Opcode.mod;
             bytecode ~= res.reg;
@@ -788,27 +791,27 @@ final class Walker {
             if (!xinstrs) {
                 return walk(new Form("if", form, new Value(1), new Value(0)));
             }
-            if (Value valueLeft = cast(Value) form.args[0]) {
-                Reg rhs = walk(form.args[1]);
+            if (Value valueLeft = cast(Value) form.getArg(0)) {
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.equal_num;
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
-                assert(valueLeft.info == typeid(double));
+                vmCheckError(valueLeft.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
-            } else if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
+            } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                Reg lhs = walk(form.getArg(0));
                 Reg res = allocOut;
                 bytecode ~= Opcode.equal_num;
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
-                assert(valueRight.info == typeid(double));
+                vmCheckError(valueRight.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
             } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.equal;
                 bytecode ~= res.reg;
@@ -820,27 +823,27 @@ final class Walker {
             if (!xinstrs) {
                 return walk(new Form("if", form, new Value(1), new Value(0)));
             }
-            if (Value valueLeft = cast(Value) form.args[0]) {
-                Reg rhs = walk(form.args[1]);
+            if (Value valueLeft = cast(Value) form.getArg(0)) {
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.not_equal_num;
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
-                assert(valueLeft.info == typeid(double));
+                vmCheckError(valueLeft.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
-            } else if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
+            } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                Reg lhs = walk(form.getArg(0));
                 Reg res = allocOut;
                 bytecode ~= Opcode.not_equal_num;
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
-                assert(valueRight.info == typeid(double));
+                vmCheckError(valueRight.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
             } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.not_equal;
                 bytecode ~= res.reg;
@@ -852,27 +855,27 @@ final class Walker {
             if (!xinstrs) {
                 return walk(new Form("if", form, new Value(1), new Value(0)));
             }
-            if (Value valueLeft = cast(Value) form.args[0]) {
-                Reg rhs = walk(form.args[1]);
+            if (Value valueLeft = cast(Value) form.getArg(0)) {
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater_num;
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
-                assert(valueLeft.info == typeid(double));
+                vmCheckError(valueLeft.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
-            } else if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
+            } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                Reg lhs = walk(form.getArg(0));
                 Reg res = allocOut;
                 bytecode ~= Opcode.less_num;
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
-                assert(valueRight.info == typeid(double));
+                vmCheckError(valueRight.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
             } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.less;
                 bytecode ~= res.reg;
@@ -884,27 +887,27 @@ final class Walker {
             if (!xinstrs) {
                 return walk(new Form("if", form, new Value(1), new Value(0)));
             }
-            if (Value valueLeft = cast(Value) form.args[0]) {
-                Reg rhs = walk(form.args[1]);
+            if (Value valueLeft = cast(Value) form.getArg(0)) {
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.less_num;
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
-                assert(valueLeft.info == typeid(double));
+                vmCheckError(valueLeft.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
-            } else if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
+            } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                Reg lhs = walk(form.getArg(0));
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater_num;
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
-                assert(valueRight.info == typeid(double));
+                vmCheckError(valueRight.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
             } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater;
                 bytecode ~= res.reg;
@@ -916,27 +919,27 @@ final class Walker {
             if (!xinstrs) {
                 return walk(new Form("if", form, new Value(1), new Value(0)));
             }
-            if (Value valueLeft = cast(Value) form.args[0]) {
-                Reg rhs = walk(form.args[1]);
+            if (Value valueLeft = cast(Value) form.getArg(0)) {
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater_than_equal_num;
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
-                assert(valueLeft.info == typeid(double));
+                vmCheckError(valueLeft.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
-            } else if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
+            } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                Reg lhs = walk(form.getArg(0));
                 Reg res = allocOut;
                 bytecode ~= Opcode.less_than_equal_num;
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
-                assert(valueRight.info == typeid(double));
+                vmCheckError(valueRight.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
             } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.less_than_equal;
                 bytecode ~= res.reg;
@@ -948,27 +951,27 @@ final class Walker {
             if (!xinstrs) {
                 return walk(new Form("if", form, new Value(1), new Value(0)));
             }
-            if (Value valueLeft = cast(Value) form.args[0]) {
-                Reg rhs = walk(form.args[1]);
+            if (Value valueLeft = cast(Value) form.getArg(0)) {
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.less_than_equal_num;
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
-                assert(valueLeft.info == typeid(double));
+                vmCheckError(valueLeft.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueLeft.value);
                 return res;
-            } else if (Value valueRight = cast(Value) form.args[1]) {
-                Reg lhs = walk(form.args[0]);
+            } else if (Value valueRight = cast(Value) form.getArg(1)) {
+                Reg lhs = walk(form.getArg(0));
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater_than_equal_num;
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
-                assert(valueRight.info == typeid(double));
+                vmCheckError(valueRight.info == typeid(double), "expected number");
                 bytecode ~= ubytes(*cast(double*) valueRight.value);
                 return res;
             } else {
-                Reg lhs = walk(form.args[0]);
-                Reg rhs = walk(form.args[1]);
+                Reg lhs = walk(form.getArg(0));
+                Reg rhs = walk(form.getArg(1));
                 Reg res = allocOut;
                 bytecode ~= Opcode.greater_than_equal;
                 bytecode ~= res.reg;
@@ -977,14 +980,14 @@ final class Walker {
                 return res;
             }
         case "lambda":
-            Form argsForm = cast(Form) form.args[0];
-            assert(argsForm !is null, "function must take args");
-            assert(argsForm.form == "call" || argsForm.form == "args",
+            Form argsForm = cast(Form) form.getArg(0);
+            vmCheckError(argsForm !is null, "function must take args");
+            vmCheckError(argsForm.form == "call" || argsForm.form == "args",
                     "malformed args type (must be 'args' or 'call')");
             string[] argnames;
             foreach (arg; argsForm.args) {
                 Ident id = cast(Ident) arg;
-                assert(id !is null, "malformed arg");
+                vmCheckError(id !is null, "malformed arg");
                 argnames ~= id.repr;
             }
             Reg lambdaReg = allocOut;
@@ -1007,7 +1010,7 @@ final class Walker {
             captureValuess.length++;
             currentCaptures.length++;
             inNthCaptures.length++;
-            Reg retreg = walk(form.args[1]);
+            Reg retreg = walk(form.getArg(1));
             if (retreg !is null) {
                 bytecode ~= Opcode.ret;
                 bytecode ~= retreg.reg;
@@ -1041,16 +1044,16 @@ final class Walker {
             bool isRec = false;
             bool isStatic = false;
             string staticName;
-            if (Ident func = cast(Ident) form.args[0]) {
+            if (Ident func = cast(Ident) form.getArg(0)) {
                 if (func.repr == "println") {
-                    Reg arg = walk(form.args[1]);
+                    Reg arg = walk(form.getArg(1));
                     bytecode ~= Opcode.println;
                     bytecode ~= arg.reg;
                     return allocOut;
                 } else if (func.repr == "syscall") {
                     Reg outreg = allocOut;
                     Reg[] regs;
-                    foreach (arg; form.args[1..$]) {
+                    foreach (arg; form.sliceArg(1)) {
                         regs ~= walk(arg);
                     }
                     bytecode ~= Opcode.array;
@@ -1064,7 +1067,7 @@ final class Walker {
                     bytecode ~= outreg.reg;
                     return outreg;
                 } else if (func.repr == "putchar") {
-                    Reg outreg = walk(form.args[1]);
+                    Reg outreg = walk(form.getArg(1));
                     bytecode ~= Opcode.putchar;
                     bytecode ~= outreg.reg;
                     return allocOut;
@@ -1072,7 +1075,7 @@ final class Walker {
                     isRec = true;
                 } else if (func.repr == "length") {
                     Reg outreg = allocOut;
-                    Reg objreg = walk(form.args[1]);
+                    Reg objreg = walk(form.getArg(1));
                     bytecode ~= Opcode.length;
                     bytecode ~= outreg.reg;
                     bytecode ~= objreg.reg;
@@ -1086,10 +1089,10 @@ final class Walker {
             Reg funreg;
             Reg outreg = allocOut;
             if (!isRec && !isStatic) {
-                funreg = walk(form.args[0]);
+                funreg = walk(form.getArg(0));
             }
             Reg[] argRegs;
-            foreach (index, arg; form.args[1 .. $]) {
+            foreach (index, arg; form.sliceArg(1)) {
                 argRegs ~= walk(arg);
             }
             if (argRegs.length > 2 || !xinstrs) {
@@ -1180,7 +1183,7 @@ final class Walker {
                 }
             }
         case "return":
-            Reg res = walk(form.args[0]);
+            Reg res = walk(form.getArg(0));
             bytecode ~= Opcode.ret;
             bytecode ~= res.reg;
             return null;
@@ -1208,7 +1211,7 @@ final class Walker {
                 where = cast(int) index;
             }
         }
-        assert(where >= 0, name);
+        vmCheckError(where >= 0, name);
         currentCaptures[where] ~= localss[where][name];
         captureValuess[where] ~= new Ident(name);
         inNthCaptures[where + 1][name] = cast(int) captureValuess[where].length;

@@ -4,7 +4,7 @@ import ext.paka.parse.parse;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
 
-shared static this() {
+static this() {
     thisPlugin.addPlugin;
 }
 
