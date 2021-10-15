@@ -13,6 +13,9 @@ void put(Type)(ref void[] buf, Type val) {
 
 void bufWrite(ref void[] buf, Instr instr, ref int[int] updateOffsets, ref int[] putOffsets) {
 	updateOffsets[instr.offset] = cast(int) buf.length;
+	if (instr.keep == false) {
+		return;
+	}
 	buf.put(instr.op);
 	foreach (arg; instr.args) {
 		if (Register reg = cast(Register) arg) {

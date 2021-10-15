@@ -1,8 +1,5 @@
 module purr.bc.opt;
 
-import std.stdio;
-import std.algorithm;
-
 import purr.bc.parser;
 import purr.bc.writer;
 import purr.bc.instr;
@@ -48,7 +45,7 @@ class Blocks {
 	
 	Instr[] instrs() {
 		Instr[] instrs;
-		this.getInstrs(instrs);
+		getInstrs(instrs);
 		return instrs;
 	}
 
@@ -124,61 +121,12 @@ class Block {
 }
 
 class Optimizer {
+	bool toplevel;
 	Blocks program;
-	int[] blockScanned;
-	Block[int] blocksByOffset;
-	int[Block] blockRefCount;
 
 	this(Instr[] instrs) {
+		toplevel = false;
 		program = Blocks.parse(instrs);
-	}
-
-	void jumpCombineRef(Block block) {
-		blockRefCount[block] += 1;
-		if (!blockScanned.canFind(block.firstOffset)) {
-			blockScanned ~= block.firstOffset;
-			foreach (instr; block.instrs) {
-				if (instr.op == Opcode.store_fun) {
-					continue;
-				}
-				if (!instr.outJump) {
-					continue;
-				}
-				foreach (arg; instr.args) {
-					if (Location loc = cast(Location) arg) {
-						jumpCombineRef(blocksByOffset[loc.loc]);
-					}
-				}
-			}
-			if (block.next !is null) {
-				jumpCombineRef(block.next);
-			}
-		}
-	}
-
-	void jumpCombine() {
-		foreach (block; program.blocks) {
-			blocksByOffset[block.firstOffset] = block;
-			blockRefCount[block] = 0;
-		}
-		jumpCombineRef(program.blocks[0]);
-		Block[] oldBlocks = program.blocks;
-		program.blocks = null;
-		Block last = null;
-		foreach (block; oldBlocks) {
-			if (blockRefCount[block] != 0) {
-				if (last !is null) {
-					if (last.usesNext) {
-						last.next = block;
-					}
-				}
-				program.blocks ~= block;
-				last = block;
-			}
-		}
-		if (last !is null) {
-			last.next = null;
-		}
 	}
 
 	Instr[] instrs() {
@@ -190,23 +138,38 @@ class Optimizer {
 			foreach (instr; block.instrs) {
 				foreach (ref arg; instr.args) {
 					if (Function func = cast(Function) arg) {
-						Optimizer subOpt = new Optimizer(func.instrs);
+						Optimizer subOpt = passes[pass](func.instrs);
 						subOpt.opt(pass);
 						func.instrs = subOpt.instrs;
 					}
 				}
 			}
 		}
-		if (pass == "dce") {
-			jumpCombine();
-		}
+		impl();
+	}
+
+	void impl() {
+		assert(false);	
 	}
 }
 
+Optimizer delegate(Instr[])[string] passes;
+
+void set(Type)(string name) {
+	passes[name] = (Instr[] instrs) {
+		return new Type(instrs);
+	};
+}
+
 void[] optimize(void[] code, string pass) {
-	Optimizer opt = new Optimizer(code.parse);
+	if (pass !in passes) {
+		vmError("unknown pass: " ~ pass);
+	}
+	Optimizer opt = passes[pass](code.parse);
+	opt.toplevel = true;
 	opt.opt(pass);
-	return opt.instrs.toBytecode;
+	void[] ret = opt.instrs.toBytecode;
+	return ret;
 }
 
 void[] validate(void[] code) {

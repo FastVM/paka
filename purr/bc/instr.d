@@ -99,6 +99,7 @@ class Instr {
 	Argument[] args;
 	bool outJump;
 	bool inJump;
+	bool keep = true;
 
 	this(Opcode op_, Argument[] args_ = null) {
 		op = op_;

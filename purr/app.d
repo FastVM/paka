@@ -218,7 +218,9 @@ void domain(string[] args) {
             todo ~= parts[0].cliConvFileHandler;
             break;
         case "--pass":
-            todo ~= part1.cliPassHandler;
+            foreach_reverse (part; part1.split("+")) {
+                todo ~= part.cliPassHandler;
+            }
             break;
         case "--show":
             todo ~= part1.cliShowHandler;
