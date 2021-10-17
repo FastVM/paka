@@ -25,7 +25,7 @@ import core.memory;
 
 version(Fuzz) {}
 else:
-extern (C) __gshared string[] rt_options = ["gcopt=gc:manual"];
+extern (C) __gshared string[] rt_options = ["gcopt=heapSizeFactor:16", "gcopt=cleanup:none"];
 
 string outLang = "vm";
 
