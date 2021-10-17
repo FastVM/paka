@@ -13,10 +13,6 @@ static this() {
 }
 
 class Print : Optimizer {
-	int[] blockScanned;
-	Block[int] blocksByOffset;
-	int[Block] blockRefCount;
-
 	this(Instr[] instrs) {
 		super(instrs);
 	}

@@ -8,6 +8,8 @@ alias String = immutable(char)*;
 extern (C) void vm_run(void* func);
 
 enum Opcode : ubyte {
+
+
     exit,
     store_reg,
     store_byte,
@@ -76,4 +78,29 @@ enum Opcode : ubyte {
     syscall,
     max1,
     max2p = 128,
+}
+
+bool noOutputs(Opcode op) {
+    return op == Opcode.putchar 
+        || op == Opcode.println 
+        || op == Opcode.ret
+        || op == Opcode.exit;
+}
+
+bool isJump(Opcode op) {
+    return op == Opcode.jump_always
+        || op == Opcode.jump_if_false 
+        || op == Opcode.jump_if_true 
+        || op == Opcode.jump_if_equal 
+        || op == Opcode.jump_if_equal_num 
+        || op == Opcode.jump_if_not_equal 
+        || op == Opcode.jump_if_not_equal_num 
+        || op == Opcode.jump_if_less 
+        || op == Opcode.jump_if_less_num 
+        || op == Opcode.jump_if_greater 
+        || op == Opcode.jump_if_greater_num 
+        || op == Opcode.jump_if_less_than_equal 
+        || op == Opcode.jump_if_less_than_equal_num 
+        || op == Opcode.jump_if_greater_than_equal 
+        || op == Opcode.jump_if_greater_than_equal_num;
 }

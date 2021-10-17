@@ -94,7 +94,7 @@ class Function : Argument {
 }
 
 class Instr {
-	int offset;
+	int offset = -1;
 	Opcode op;
 	Argument[] args;
 	bool outJump;
@@ -104,6 +104,14 @@ class Instr {
 	this(Opcode op_, Argument[] args_ = null) {
 		op = op_;
 		args = args_;
+	}
+
+	Instr copy() {
+		Instr ret = new Instr(op, args);
+		ret.outJump = outJump;
+		ret.inJump = inJump;
+		ret.keep = true;
+		return ret;
 	}
 
 	void opOpAssign(string op: "~", Type)(Type val) {
@@ -130,6 +138,7 @@ string instrsToString(Instr[] instrs) {
 		ret ~= instr.to!string;
 		ret ~= '\n';
 		last = instr.outJump;
+		// last = false;
 	}
 	return ret;
 }

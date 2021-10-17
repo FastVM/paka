@@ -1,5 +1,8 @@
 module purr.bc.opt;
 
+import std.stdio;
+import std.conv;
+
 import purr.bc.parser;
 import purr.bc.writer;
 import purr.bc.instr;
@@ -50,8 +53,17 @@ class Blocks {
 	}
 
 	void getInstrs(ref Instr[] outInstrs) {
-		foreach (block; blocks) {
-			block.getInstrs(outInstrs);
+		foreach (index, block; blocks[0..$-1]) {
+			Block next = blocks[index + 1];
+			foreach (instr; block.instrs) {
+				outInstrs ~= instr;
+			}
+			if (block.next !is null && next != block.next) {
+				outInstrs ~= new Instr(Opcode.jump_always, [new Location(next.firstOffset)]);
+			}
+		}
+		foreach (instr; blocks[$-1].instrs) {
+			outInstrs ~= instr;
 		}
 	}
 
@@ -92,12 +104,6 @@ class Block {
 		return block;
 	}
 
-	void getInstrs(ref Instr[] outInstrs) {
-		foreach (instr; instrs) {
-			outInstrs ~= instr;
-		}
-	}
-
 	int firstOffset() {
 		if (instrs.length != 0) {
 			return instrs[0].offset + startOffset;
@@ -114,14 +120,13 @@ class Block {
 	}
 
 	override string toString() {
-		Instr[] instrs;
-		getInstrs(instrs);
-		return instrsToString(instrs);
+		return '@' ~ firstOffset.to!string;
 	}
 }
 
 class Optimizer {
 	bool toplevel;
+	ubyte nregs;
 	Blocks program;
 
 	this(Instr[] instrs) {
@@ -139,8 +144,11 @@ class Optimizer {
 				foreach (ref arg; instr.args) {
 					if (Function func = cast(Function) arg) {
 						Optimizer subOpt = passes[pass](func.instrs);
+						subOpt.nregs = func.nregs;
 						subOpt.opt(pass);
 						func.instrs = subOpt.instrs;
+						// writeln(func.nregs, " -> ", subOpt.nregs);
+						func.nregs = subOpt.nregs;
 					}
 				}
 			}

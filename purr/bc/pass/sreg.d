@@ -19,19 +19,36 @@ class StoreReg : Optimizer {
 	}
 
 	void removeDead(ubyte[] usedRegs, Block block) {
+		Instr[int] over;
 		foreach (ref instr; block.instrs) {
 			Register outReg;
 			if (instr.op == Opcode.store_int) {
 				outReg = cast(Register) instr.args[0];
 			}
-			if (instr.op == Opcode.store_byte) {
+			else if (instr.op == Opcode.store_byte) {
 				outReg = cast(Register) instr.args[0];
 			}
-			if (instr.op == Opcode.store_reg) {
+			else if (instr.op == Opcode.store_reg) {
 				outReg = cast(Register) instr.args[0];
+			} else {
+				foreach (arg; instr.args) {
+					if (Register reg = cast(Register) arg) {
+						if (reg.reg in over) {
+							over.remove(reg.reg);
+						}
+					}
+				}
 			}
 			if (outReg !is null && !usedRegs.canFind(outReg.reg)) {
 				instr.keep = false;				
+			}
+			if (outReg !is null) {
+				if (Instr* refInstr = outReg.reg in over) {
+					refInstr.keep = false;
+					*refInstr = instr;
+				} else {
+					over[outReg.reg] = instr;
+				}
 			}
 		}
 	}

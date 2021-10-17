@@ -60,6 +60,6 @@ void[] toBytecode(Instr[] instrs) {
 		int *ptr = cast(int*) ret[where..where+int.sizeof].ptr;
 		*ptr = updateOffsets[*ptr];
 	}
-	ret.put(Opcode.exit);
+	// ret.put(Opcode.exit);
 	return ret;
 }

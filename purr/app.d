@@ -64,6 +64,16 @@ Thunk cliPassHandler(immutable string pass) {
     };
 }
 
+Thunk cliOptHandler(immutable string opt) {
+    return {
+        string[] startPasses = ["fold", "dce", "jump", "sreg"];
+        passes = null;
+        foreach (i; 0..opt.to!int) {
+            passes ~= startPasses;
+        }
+    };
+}
+
 Thunk cliCommandHandler(immutable string cmd)
 {
     return {
@@ -221,6 +231,9 @@ void domain(string[] args) {
             foreach_reverse (part; part1.split("+")) {
                 todo ~= part.cliPassHandler;
             }
+            break;
+        case "--opt":
+            todo ~= part1.cliOptHandler;
             break;
         case "--show":
             todo ~= part1.cliShowHandler;

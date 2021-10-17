@@ -66,10 +66,10 @@ Instr[] parse(ref Code code, Opcode[] end) {
 	while (code.code.length != 0) {
 		int offset =  code.offset;
 		Instr instr = code.readInstr;
+		instr.offset = offset;
 		if (end.canFind(instr.op)) {
 			break;
 		}
-		instr.offset = offset;
 		instrs ~= instr;
 	}
 	int[][int] branches = instrs.branches;
@@ -98,7 +98,7 @@ Instr[] parse(ref Code code, Opcode[] end) {
 
 Instr[] parse(void[] bc) {
 	Code code = Code(bc, 0);
-	Instr[] instrs = code.parse([Opcode.exit]);
-	instrs ~= new Instr(Opcode.exit);
+	Instr[] instrs = code.parse([]);
+	// instrs ~= code.readInstr;
 	return instrs;
 }

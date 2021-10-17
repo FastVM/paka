@@ -1113,7 +1113,7 @@ final class Walker {
                     bytecode ~= outreg.reg;
                     bytecode ~= funreg.reg;
                 }
-                bytecode ~= ubytes(cast(int) argRegs.length);
+                bytecode ~= cast(ubyte) argRegs.length;
                 foreach (reg; argRegs) {
                     bytecode ~= reg.reg;
                 }

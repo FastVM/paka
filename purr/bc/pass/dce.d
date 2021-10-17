@@ -31,10 +31,16 @@ class DCE : Optimizer {
 				if (!instr.outJump) {
 					continue;
 				}
+				if (instr.op == Opcode.ret) {
+					return;
+				}
 				foreach (arg; instr.args) {
 					if (Location loc = cast(Location) arg) {
 						jumpCombineRef(blocksByOffset[loc.loc]);
 					}
+				}
+				if (instr.op == Opcode.jump_always) {
+					return;
 				}
 			}
 			if (block.next !is null) {
