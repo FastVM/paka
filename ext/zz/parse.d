@@ -10,7 +10,7 @@ import purr.ast.ast;
 import ext.zz.zrepr;
 import std.conv;
 
-enum special = ["+", "-", "*", "/", "%", "&&", "||", "<", ">", "<=", ">=", "==", "!=", "do", "if", "while", "lambda", "return", "array", "def", "set", "var", "index", "call", "args", "macro"];
+enum special = ["+", "-", "*", "/", "%", "&&", "||", "<", ">", "<=", ">=", "==", "!=", "do", "if", "while", "lambda", "return", "array", "def", "set", "var", "index", "call", "args", "macro", "label", "goto"];
 enum ops = ["+", "-", "*", "/", "%"];
 
 int indentc(string line) {
@@ -55,7 +55,9 @@ Node parseLines(string[] lines) {
 		Form[int] lastCalls = calls;
 		calls = null;
 		Node arg;
-		if (words[$-1].all!isDigit) {
+		if (words[$-1][0] == '-' && words[$-1][1..$].all!isDigit) {
+			arg = cast(Node) new Value(-words[$-1][1..$].to!double);
+		} else if (words[$-1].all!isDigit) {
 			arg = cast(Node) new Value(words[$-1].to!double);
 		} else if (words[$-1] == "null") {
 			arg = cast(Node) new Value(null);

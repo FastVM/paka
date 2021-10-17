@@ -50,6 +50,8 @@ final class Walker {
     Node[] nodes;
     double[string] constants;
 
+    int[][string][] jumpLocss;
+    int[string][] jumpLabelss;
     Node[][] captureValuess;
     Reg[][] currentCaptures;
     Reg[] captureRegs;
@@ -78,17 +80,41 @@ final class Walker {
         return currentCaptures[$ - 1];
     }
 
+    ref int[][string] jumpLocs() {
+        return jumpLocss[$ - 1];
+    }
+
+    ref int[string] jumpLabels() {
+        return jumpLabelss[$ - 1];
+    }
+
     ref Node[] captureValues() {
         return captureValuess[$ - 1];
     }
 
+    void fixGotoLabels() {
+        foreach (name, where; jumpLabels) {
+            if (name !in jumpLocs) {
+                continue;
+            }
+            foreach (ent; jumpLocs[name]) {
+                bytecode[ent .. ent+4] = ubytes(where);
+            }
+        }
+    }
+
     void walkProgram(Node program) {
         localss.length++;
+        jumpLocss.length++;
+        jumpLabelss.length++;
         captureValuess.length++;
         currentCaptures.length++;
         inNthCaptures.length++;
         scope (exit) {
+            fixGotoLabels();
             localss.length--;
+            jumpLocss.length--;
+            jumpLabelss.length--;
             captureValuess.length--;
             currentCaptures.length--;
             inNthCaptures.length--;
@@ -454,6 +480,20 @@ final class Walker {
         switch (form.form) {
         default:
             break;
+        case "label":
+            Ident label = cast(Ident) form.getArg(0);
+            jumpLabels[label.repr] = cast(int) bytecode.length;
+            return null;
+        case "goto":
+            Ident label = cast(Ident) form.getArg(0);
+            bytecode ~= Opcode.jump_always;
+            if (int[]* places = label.repr in jumpLocs) {
+                *places ~= cast(int) bytecode.length;
+            } else {
+                jumpLocs[label.repr] = [cast(int) bytecode.length];
+            }
+            bytecode ~= ubytes(-1);
+            return null;
         case "do":
             if (form.args.length == 0) {
                 return null;
@@ -586,7 +626,11 @@ final class Walker {
             int jumpOutFrom = cast(int) bytecode.length;
             bytecode ~= ubytes(-1);
             int jumpFalseTo = cast(int) bytecode.length;
-            walk(form.getArg(2), outreg);
+            Node arg2 = new Value(0);
+            if (form.args.length > 2) {
+                arg2 = form.getArg(2);
+            }
+            walk(arg2, outreg);
             int jumpOutTo = cast(int) bytecode.length;
             bytecode[jumpOutFrom .. jumpOutFrom + 4] = ubytes(jumpOutTo);
             foreach (jumpFalseFrom; jumpsFalseFrom) {
@@ -1007,6 +1051,8 @@ final class Walker {
             scope (exit) {
                 captureRegs.length--;
             }
+            jumpLabelss.length++;
+            jumpLocss.length++;
             captureValuess.length++;
             currentCaptures.length++;
             inNthCaptures.length++;
@@ -1020,7 +1066,10 @@ final class Walker {
             }
             bytecode[refRegc] = cast(ubyte) regs.length;
             regs = oldRegs;
+            fixGotoLabels();
             localss.length--;
+            jumpLocss.length--;
+            jumpLabelss.length--;
             captureValuess.length--;
             currentCaptures.length--;
             inNthCaptures.length--;
@@ -1255,6 +1304,21 @@ final class Walker {
     Reg walkExact(Value val) {
         if (val.info == typeid(null)) {
             return null;
+        } else if (val.info == typeid(int)) {
+            Reg ret = allocOut;
+            if (*cast(int*) val.value < 256 && *cast(int*) val.value >= 0)
+            {
+                bytecode ~= Opcode.store_byte;
+                bytecode ~= ret.reg;
+                bytecode ~= cast(ubyte) *cast(int*) val.value;
+            }
+            else
+            {
+                bytecode ~= Opcode.store_int;
+                bytecode ~= ret.reg;
+                bytecode ~= ubytes(*cast(int*) val.value);
+            }
+            return ret;
         } else if (val.info == typeid(double)) {
             Reg ret = allocOut;
             if (*cast(double*) val.value < 256 && *cast(double*) val.value >= 0)

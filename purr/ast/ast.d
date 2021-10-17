@@ -151,6 +151,9 @@ final class Value : Node {
         if (info == typeid(double)) {
             return to!string(*cast(double*) value);
         }
+        if (info == typeid(int)) {
+            return to!string(*cast(int*) value);
+        }
         if (info == typeid(bool)) {
             return to!string(*cast(bool*) value);
         }

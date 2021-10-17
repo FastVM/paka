@@ -8,8 +8,6 @@ alias String = immutable(char)*;
 extern (C) void vm_run(void* func);
 
 enum Opcode : ubyte {
-
-
     exit,
     store_reg,
     store_byte,
@@ -76,8 +74,6 @@ enum Opcode : ubyte {
     length,
     index,
     syscall,
-    max1,
-    max2p = 128,
 }
 
 bool noOutputs(Opcode op) {

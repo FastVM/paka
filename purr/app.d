@@ -1,6 +1,7 @@
 module purr.app;
 
 import purr.ast.walk;
+import purr.ast.dis;
 import purr.parse;
 import purr.err;
 import purr.srcloc;
@@ -9,6 +10,7 @@ import purr.vm.bytecode;
 import purr.ast.walk;
 import purr.plugin.plugins;
 import purr.bc.opt;
+static import purr.bc.parser;
 import purr.vm;
 import std.stdio;
 import std.uuid;
@@ -58,6 +60,12 @@ void doBytecode(void[] bc) {
     case "bc":
         File("out.bc", "wb").rawWrite(bc);
         break;
+    case "zz":
+        Dis dis = new Dis();
+        Node res = dis.dis(Blocks.from(purr.bc.parser.parse(bc)));
+        string src = astLang.unparse(res);
+        File("out.zz", "w").write(src);
+        break;
     case "vm":
         run(bc);
         break;
@@ -67,6 +75,16 @@ void doBytecode(void[] bc) {
         vmError("please select a backend with: --target=help");
         break;
     }
+}
+
+Thunk cliDisHandler(immutable string file) {
+    return {
+        void[] bc = file.read;
+        Dis dis = new Dis();
+        Node res = dis.dis(Blocks.from(purr.bc.parser.parse(bc)));
+        string src = astLang.unparse(res);
+        writeln(src);
+    };
 }
 
 Thunk cliPassHandler(immutable string pass) {
@@ -91,6 +109,10 @@ Thunk cliCommandHandler(immutable string cmd)
 Thunk cliLangHandler(immutable string langName)
 {
     return {
+        if (langName == "zz") {
+            // zz should not be optimized by default
+            nopt = 2;
+        }
         lang = langName.dup;
     };
 }
@@ -104,6 +126,9 @@ Thunk cliTargetHandler(immutable string lang) {
             break;
         case "vm":
             outLang = "vm";
+            break;
+        case "zz":
+            outLang = "zz";
             break;
         case "help":
             vmError("--target=help: try --target=vm or --target=bc");
@@ -241,6 +266,9 @@ void domain(string[] args) {
             break;
         case "--opt":
             todo ~= part1.cliOptHandler;
+            break;
+        case "--dis":
+            todo ~= part1.cliDisHandler;
             break;
         case "--show":
             todo ~= part1.cliShowHandler;
