@@ -19,32 +19,35 @@ class Fold : Optimizer {
 	}
 
 	Instr foldMathInstr(string op)(ref int[ubyte] constRegs, Argument outRegArg, Argument inRegArg, Argument valArg) {
-		Register outReg = cast(Register) outRegArg;
-		Register argReg = cast(Register) inRegArg;
+		Register outReg = outRegArg.value.register;
+		Register argReg = inRegArg.value.register;
 		int num;
-		if (Integer inum = cast(Integer) valArg) {
+		if (valArg.type == Argument.type.integer) {
+		    Integer inum = valArg.value.integer;
 			num = inum.val;
 		}
-		if (Byte bnum = cast(Byte) valArg) {
+		if (valArg.type == Argument.type.byte_) {
+		    Byte bnum = valArg.value.byte_;
 			num = cast(int) bnum.val;
 		}
-		if (Register reg = cast(Register) valArg) {
+		if (valArg.type == Argument.type.register) {
+		    Register reg = valArg.value.register;
 			if (int *refValue = reg.reg in constRegs) {
 				num = *refValue;
 			} else {
-				return null;
+				return Instr.noKeep;
 			}
 		}
 		if (int *refValue = argReg.reg in constRegs) {
 			double res = mixin(`cast(double) *refValue` ~ op ~ `cast(double) num`);
 			if (res % 1 == 0 && 0 <= res && res < 256) {
-				return new Instr(Opcode.store_byte, [outReg, new Byte(cast(ubyte) res)]);
+				return Instr(Opcode.store_byte, outReg, Byte(cast(ubyte) res));
 			}
 			if (res % 1 == 0 && res.abs < 2L ^^ 31) {
-				return new Instr(Opcode.store_int, [outReg, new Integer(cast(int) res)]);
+				return Instr(Opcode.store_int, outReg, Integer(cast(int) res));
 			}
 		}
-		return null;
+		return Instr.noKeep;
 	}
 
 	void foldMath(Block block) {
@@ -52,25 +55,25 @@ class Fold : Optimizer {
 			int[ubyte] constRegs;
 			storeHere: foreach (ref instr; block.instrs) {
 				if (instr.op == Opcode.store_int) {
-					Register reg = cast(Register) instr.args[0];
-					Integer num = cast(Integer) instr.args[1];
+					Register reg = instr.args[0].value.register;
+					Integer num = instr.args[1].value.integer;
 					constRegs[reg.reg] = num.val;
 					continue storeHere;
 				}
 				if (instr.op == Opcode.store_byte) {
-					Register reg = cast(Register) instr.args[0];
-					Byte num = cast(Byte) instr.args[1];
+					Register reg = instr.args[0].value.register;
+					Byte num = instr.args[1].value.byte_;
 					constRegs[reg.reg] = num.val;
 					continue storeHere;
 				}
 				if (instr.op == Opcode.store_reg) {
-					Register outReg = cast(Register) instr.args[0];
-					Register inReg = cast(Register) instr.args[1];
+					Register outReg = instr.args[0].value.register;
+					Register inReg = instr.args[1].value.register;
 					if (int *refValue = inReg.reg in constRegs) {
 						if (0 <= *refValue && *refValue < 256) {
-							instr = new Instr(Opcode.store_byte, [outReg, new Byte(cast(ubyte) *refValue)]);
+							instr = Instr(Opcode.store_byte, outReg, Byte(cast(ubyte) *refValue));
 						} else {
-							instr = new Instr(Opcode.store_int, [outReg, new Integer(*refValue)]);
+							instr = Instr(Opcode.store_int, outReg, Integer(*refValue));
 						}
 						continue redoPass;
 					}
@@ -78,7 +81,8 @@ class Fold : Optimizer {
 				bool redo = false;
 				void fold(string op, Args...)(Args args) {
 					if (!redo) {
-						if (Instr res = foldMathInstr!op(constRegs, args)) {
+						Instr res = foldMathInstr!op(constRegs, args);
+						if (res.keep) {
 							redo = true;
 							instr = res;
 						}
@@ -114,31 +118,34 @@ class Fold : Optimizer {
 	}
 
 	Instr foldJumpInstr(string op)(ref int[ubyte] constRegs, Block block, Argument jumpToArg, Argument lhsArg, Argument rhsArg) {
-		Location jumpTo = cast(Location) jumpToArg;
-		Register lhsReg = cast(Register) lhsArg;
+		Location jumpTo = jumpToArg.value.location;
+		Register lhsReg = lhsArg.value.register;
 		int num;
-		if (Integer inum = cast(Integer) rhsArg) {
+		if (rhsArg.type == Argument.type.integer) {
+		    Integer inum = rhsArg.value.integer;
 			num = inum.val;
 		}
-		if (Byte bnum = cast(Byte) rhsArg) {
+		if (rhsArg.type == Argument.type.byte_) {
+		    Byte bnum = rhsArg.value.byte_;
 			num = cast(int) bnum.val;
 		}
-		if (Register reg = cast(Register) rhsArg) {
+		if (rhsArg.type == Argument.type.register) {
+		    Register reg = rhsArg.value.register;
 			if (int *refValue = reg.reg in constRegs) {
 				num = *refValue;
 			} else {
-				return null;
+				return Instr.noKeep;
 			}
 		}
 		if (int *refValue = lhsReg.reg in constRegs) {
 			bool res = mixin(`*refValue` ~ op ~ `num`);
 			if (res) {
-				return new Instr(Opcode.jump_always, [jumpTo]);
+				return Instr(Opcode.jump_always, jumpTo);
 			} else if (block.next !is null) {
-				return new Instr(Opcode.jump_always, [new Location(block.next.firstOffset)]);
+				return Instr(Opcode.jump_always, Location(block.next.firstOffset));
 			}
 		}
-		return null;
+		return Instr.noKeep;
 	}
 
 	void foldJumps(Block block) {
@@ -146,25 +153,25 @@ class Fold : Optimizer {
 			int[ubyte] constRegs;
 			storeHere: foreach (ref instr; block.instrs) {
 				if (instr.op == Opcode.store_int) {
-					Register reg = cast(Register) instr.args[0];
-					Integer num = cast(Integer) instr.args[1];
+					Register reg = instr.args[0].value.register;
+					Integer num = instr.args[1].value.integer;
 					constRegs[reg.reg] = num.val;
 					continue storeHere;
 				}
 				if (instr.op == Opcode.store_byte) {
-					Register reg = cast(Register) instr.args[0];
-					Byte num = cast(Byte) instr.args[1];
+					Register reg = instr.args[0].value.register;
+					Byte num = instr.args[1].value.byte_;
 					constRegs[reg.reg] = num.val;
 					continue storeHere;
 				}
 				if (instr.op == Opcode.store_reg) {
-					Register outReg = cast(Register) instr.args[0];
-					Register inReg = cast(Register) instr.args[1];
+					Register outReg = instr.args[0].value.register;
+					Register inReg = instr.args[1].value.register;
 					if (int *refValue = inReg.reg in constRegs) {
 						if (0 <= *refValue && *refValue < 256) {
-							instr = new Instr(Opcode.store_byte, [outReg, new Byte(cast(ubyte) *refValue)]);
+							instr = Instr(Opcode.store_byte, outReg, Byte(cast(ubyte) *refValue));
 						} else {
-							instr = new Instr(Opcode.store_int, [outReg, new Integer(*refValue)]);
+							instr = Instr(Opcode.store_int, outReg, Integer(*refValue));
 						}
 						continue redoPass;
 					}
@@ -172,17 +179,18 @@ class Fold : Optimizer {
 				bool redo = false;
 				void fold(string op, Args...)(Args args) {
 					if (!redo) {
-						if (Instr res = foldJumpInstr!op(constRegs, block, args)) {
+						Instr res = foldJumpInstr!op(constRegs, block, args);
+						if (res.keep) {
 							redo = true;
 							instr = res;
 						}
 					}
 				}
 				if (instr.op == Opcode.jump_if_false) {
-					fold!"=="(instr.args[0], instr.args[1], new Integer(0));
+					fold!"=="(instr.args[0], instr.args[1], Argument(Integer(0)));
 				}
 				if (instr.op == Opcode.jump_if_true) {
-					fold!"!="(instr.args[0], instr.args[1], new Integer(0));
+					fold!"!="(instr.args[0], instr.args[1], Argument(Integer(0)));
 				}
 				if (instr.op == Opcode.jump_if_equal_num || instr.op == Opcode.jump_if_equal) {
 					fold!"=="(instr.args[0], instr.args[1], instr.args[2]);
@@ -211,7 +219,7 @@ class Fold : Optimizer {
 	}
 
 	void foldMathBlocks() {
-		foreach (block; program.blocks) {
+		foreach (ref block; program.blocks) {
 			foldMath(block);
 			foldJumps(block);
 		}

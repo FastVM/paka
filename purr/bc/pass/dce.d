@@ -24,7 +24,7 @@ class DCE : Optimizer {
 		blockRefCount[block] += 1;
 		if (!blockScanned.canFind(block.firstOffset)) {
 			blockScanned ~= block.firstOffset;
-			foreach (instr; block.instrs) {
+			foreach (ref instr; block.instrs) {
 				if (instr.op == Opcode.store_fun) {
 					continue;
 				}
@@ -34,8 +34,9 @@ class DCE : Optimizer {
 				if (instr.op == Opcode.ret) {
 					return;
 				}
-				foreach (arg; instr.args) {
-					if (Location loc = cast(Location) arg) {
+				foreach (ref arg; instr.args) {
+					if (arg.type == Argument.type.location) {
+					    Location loc = arg.value.location;
 						jumpCombineRef(blocksByOffset[loc.loc]);
 					}
 				}
@@ -50,7 +51,7 @@ class DCE : Optimizer {
 	}
 
 	void jumpCombine() {
-		foreach (block; program.blocks) {
+		foreach (ref block; program.blocks) {
 			blocksByOffset[block.firstOffset] = block;
 			blockRefCount[block] = 0;
 		}
@@ -58,7 +59,7 @@ class DCE : Optimizer {
 		Block[] oldBlocks = program.blocks;
 		program.blocks = null;
 		Block last = null;
-		foreach (block; oldBlocks) {
+		foreach (ref block; oldBlocks) {
 			if (blockRefCount[block] != 0) {
 				if (last !is null) {
 					if (last.usesNext) {

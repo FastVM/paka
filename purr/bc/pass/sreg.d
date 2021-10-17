@@ -19,35 +19,35 @@ class StoreReg : Optimizer {
 	}
 
 	void removeDead(ubyte[] usedRegs, Block block) {
-		Instr[int] over;
-		foreach (ref instr; block.instrs) {
-			Register outReg;
-			if (instr.op == Opcode.store_int) {
-				outReg = cast(Register) instr.args[0];
-			}
-			else if (instr.op == Opcode.store_byte) {
-				outReg = cast(Register) instr.args[0];
-			}
-			else if (instr.op == Opcode.store_reg) {
-				outReg = cast(Register) instr.args[0];
-			} else {
-				foreach (arg; instr.args) {
-					if (Register reg = cast(Register) arg) {
+		int[ubyte] over;
+		foreach (index, ref instr; block.instrs) {
+			if (instr.op == Opcode.store_int || instr.op == Opcode.store_byte || instr.op == Opcode.store_reg) {
+				Register outReg = instr.args[0].value.register;
+				if (!usedRegs.canFind(outReg.reg)) {
+					instr.keep = false;				
+				}
+				if (int* refIndex = outReg.reg in over) {
+					block.instrs[*refIndex].keep = false;
+					*refIndex = cast(int) index;
+				} else {
+					over[outReg.reg] = cast(int) index;
+				}
+				foreach (arg; instr.args[1..$]) {
+					if (arg.type == Argument.type.register) {
+						Register reg = arg.value.register;
 						if (reg.reg in over) {
 							over.remove(reg.reg);
 						}
 					}
 				}
-			}
-			if (outReg !is null && !usedRegs.canFind(outReg.reg)) {
-				instr.keep = false;				
-			}
-			if (outReg !is null) {
-				if (Instr* refInstr = outReg.reg in over) {
-					refInstr.keep = false;
-					*refInstr = instr;
-				} else {
-					over[outReg.reg] = instr;
+			} else {
+				foreach (arg; instr.args) {
+					if (arg.type == Argument.type.register) {
+						Register reg = arg.value.register;
+						if (reg.reg in over) {
+							over.remove(reg.reg);
+						}
+					}
 				}
 			}
 		}
@@ -59,10 +59,12 @@ class StoreReg : Optimizer {
 			start = 1;
 		}
 		foreach (arg; instr.args[start..$]) {
-			if (Register reg = cast(Register) arg) {
+			if (arg.type == Argument.type.register) {
+			    Register reg = arg.value.register;
 				usedRegs ~= reg.reg;
 			}
-			if (Call call = cast(Call) arg) {
+			if (arg.type == Argument.type.call) {
+			    Call call = arg.value.call;
 				foreach (reg; call.regs) {
 					usedRegs ~= reg;
 				}

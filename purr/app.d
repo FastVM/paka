@@ -37,9 +37,20 @@ string lang = "paka";
 
 string astLang = "zz";
 File astfile;
-string[] passes;
+int nopt = 500;
+string[] passes = ["regalloc"];
 
 void doBytecode(void[] bc) {
+    foreach (passNum; 0..nopt) {
+        void[] next = bc;
+        foreach (pass; ["fold", "dce", "jump", "sreg"]) {
+            next = next.optimize(pass);
+        }
+        if (next == bc) {
+            break;
+        }
+        bc = next;
+    }
     foreach (pass; passes) {
         bc = bc.optimize(pass);
     }
@@ -66,11 +77,7 @@ Thunk cliPassHandler(immutable string pass) {
 
 Thunk cliOptHandler(immutable string opt) {
     return {
-        string[] startPasses = ["fold", "dce", "jump", "sreg"];
-        passes = null;
-        foreach (i; 0..opt.to!int) {
-            passes ~= startPasses;
-        }
+        nopt = opt.to!int;
     };
 }
 

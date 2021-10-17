@@ -18,29 +18,35 @@ void bufWrite(ref void[] buf, Instr instr, ref int[int] updateOffsets, ref int[]
 	}
 	buf.put(instr.op);
 	foreach (arg; instr.args) {
-		if (Register reg = cast(Register) arg) {
+		if (arg.type == Argument.type.register) {
+		    Register reg = arg.value.register;
 			buf.put(cast(ubyte) reg.reg);
 		}
-		if (Byte byte_ = cast(Byte) arg) {
+		if (arg.type == Argument.type.byte_) {
+			Byte byte_ = arg.value.byte_;
 			buf.put(cast(ubyte) byte_.val);
 		}
-		if (Integer int_ = cast(Integer) arg) {
+		if (arg.type == Argument.type.integer) {
+			Integer int_ = arg.value.integer;
 			buf.put(cast(int) int_.val);
 		}
-		if (Location loc = cast(Location) arg) {
+		if (arg.type == Argument.type.location) {
+		    Location loc = arg.value.location;
 			putOffsets ~= cast(int) buf.length;
 			buf.put(cast(int) loc.loc);
 		}
-		if (Call call = cast(Call) arg) {
+		if (arg.type == Argument.type.call) {
+		    Call call = arg.value.call;
 			buf.put(cast(ubyte) call.regs.length);
-			foreach (reg; call.regs) {
+			foreach (ref reg; call.regs) {
 				buf.put(cast(ubyte) reg);
 			}
 		}
-		if (Function func = cast(Function) arg) {
+		if (arg.type == Argument.type.function_) {
+		    Function func = arg.value.function_;
 			updateOffsets[func.instrs[0].offset - 1] = cast(int) buf.length;
 			buf.put(cast(ubyte) func.nregs);
-			foreach (subInstr; func.instrs) {
+			foreach (ref subInstr; func.instrs) {
 				buf.bufWrite(subInstr, updateOffsets, putOffsets);
 			}
 			buf.put(Opcode.fun_done);
@@ -52,11 +58,11 @@ void[] toBytecode(Instr[] instrs) {
 	void[] ret;
 	int[int] updateOffsets;
 	int[] putOffsets;
-	foreach (instr; instrs) {
+	foreach (ref instr; instrs) {
 		ret.bufWrite(instr, updateOffsets, putOffsets);
 	}
 	updateOffsets[0] = 0;
-	foreach (where; putOffsets) {
+	foreach (ref where; putOffsets) {
 		int *ptr = cast(int*) ret[where..where+int.sizeof].ptr;
 		*ptr = updateOffsets[*ptr];
 	}

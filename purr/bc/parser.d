@@ -29,22 +29,22 @@ Type read(Type)(ref Code code) {
 Argument readFmt(ref Code code, char c) {
 	final switch (c) {
 	case 'r':
-		return new Register(code.read!ubyte);
+		return Argument(Register(code.read!ubyte));
 	case 'b': 
-		return new Byte(code.read!ubyte);
+		return Argument(Byte(code.read!ubyte));
 	case 'i':
-		return new Integer(code.read!int);
+		return Argument(Integer(code.read!int));
 	case 'j':
-		return new Location(code.read!int);
+		return Argument(Location(code.read!int));
 	case 'f':
-		return new Function(code.read!ubyte, code.parse([Opcode.fun_done]));
+		return Argument(Function(code.read!ubyte, code.parse([Opcode.fun_done])));
 	case 'c':
 		ubyte num = code.read!ubyte;
 		ubyte[] regs;
 		foreach (i; 0..num) {
 			regs ~= code.read!ubyte;
 		}
-		return new Call(regs);
+		return Argument(Call(regs));
 	}
 }
 
@@ -58,7 +58,7 @@ Instr readInstr(ref Code code) {
 	foreach (spec; opFmt) {
 		args ~= code.readFmt(spec);
 	}
-	return new Instr(op, args);
+	return Instr(op, args);
 }
 
 Instr[] parse(ref Code code, Opcode[] end) {

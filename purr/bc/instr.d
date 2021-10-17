@@ -5,64 +5,130 @@ import std.array;
 import std.algorithm;
 import purr.vm.bytecode;
 
-class Argument {}
+struct Argument {
+	enum Type {
+		register,
+		byte_,
+		integer,
+		location,
+		call,
+		function_,
+	}
+	union Value {
+		Register register;
+		Byte byte_;
+		Integer integer;
+		Location location;
+		Call call;
+		Function function_;
+	}
+	Type type;
+	Value value;
 
-class Register : Argument {
+	this(Register val) {
+		value.register = val;
+		type = Type.register;
+	}
+
+	this(Byte val) {
+		value.byte_ = val;
+		type = Type.byte_;
+	}
+
+	this(Integer val) {
+		value.integer = val;
+		type = Type.integer;
+	}
+
+	this(Location val) {
+		value.location = val;
+		type = Type.location;
+	}
+
+	this(Call val) {
+		value.call = val;
+		type = Type.call;
+	}
+
+	this(Function val) {
+		value.function_ = val;
+		type = Type.function_;
+	}
+
+	string toString() {
+		final switch (type) {
+		case Type.register:
+			return value.register.to!string;
+		case Type.byte_:
+			return value.byte_.to!string;
+		case Type.integer:
+			return value.integer.to!string;
+		case Type.location:
+			return value.location.to!string;
+		case Type.call:
+			return value.call.to!string;
+		case Type.function_:
+			return value.function_.to!string;
+		}
+	}
+}
+
+struct Register {
 	ubyte reg;
 
 	this(ubyte reg_) {
 		reg = reg_;
 	}
 
-	override string toString() {
+	string toString() {
 		return "r" ~ reg.to!string;
 	}
 }
 
-class Byte : Argument {
+struct Byte {
 	ubyte val;
 
 	this(ubyte val_) {
 		val = val_;
 	}
 
-	override string toString() {
+	string toString() {
 		return val.to!string;
 	}
 }
 
-class Integer : Argument {
+struct Integer {
 	int val;
 
 	this(int val_) {
 		val = val_;
 	}
 
-	override string toString() {
+	string toString() {
 		return val.to!string;
 	}
 }
 
-class Location : Argument {
+struct Location {
 	int loc;
 
 	this(int loc_) {
 		loc = loc_;
 	}
 
-	override string toString() {
+	string toString() {
 		return "@" ~ loc.to!string;
 	}
 }
 
-class Call : Argument {
+struct Call {
 	ubyte[] regs;
 	
 	this(ubyte[] regs_) {
 		regs = regs_;
 	}
 
-	override string toString() {
+	string toString() {
 		return "(" ~ regs.map!(x => 'r' ~ x.to!string).join(", ") ~ ")";
 	}
 }
@@ -79,7 +145,7 @@ string indent(string src) {
 	return ret;
 }
 
-class Function : Argument {
+struct Function {
 	Instr[] instrs;
 	ubyte nregs;
 
@@ -88,12 +154,12 @@ class Function : Argument {
 		instrs = instrs_;
 	}
 
-	override string toString() {
+	string toString() {
 		return "{\n" ~ instrs.instrsToString.indent ~ "}";
 	}
 }
 
-class Instr {
+struct Instr {
 	int offset = -1;
 	Opcode op;
 	Argument[] args;
@@ -101,13 +167,19 @@ class Instr {
 	bool inJump;
 	bool keep = true;
 
-	this(Opcode op_, Argument[] args_ = null) {
+	this(Args...)(Opcode op_, Args args_) {
 		op = op_;
-		args = args_;
-	}
+		static foreach (arg; args_) {
+			static if (is(typeof(arg) == Argument[])) {
+				args ~= arg;
+			} else {
+				args ~= Argument(arg);
+			}
+		}
+	} 
 
 	Instr copy() {
-		Instr ret = new Instr(op, args);
+		Instr ret = Instr(op, args);
 		ret.outJump = outJump;
 		ret.inJump = inJump;
 		ret.keep = true;
@@ -115,21 +187,27 @@ class Instr {
 	}
 
 	void opOpAssign(string op: "~", Type)(Type val) {
-		args ~= cast(Argument) val;
+		args ~= Argument(val);
 	}
 
-	override string toString() {
+	string toString() {
 		if (args.length == 0) {
 			return op.to!string;
 		}
 		return op.to!string ~ " " ~ args.to!string[1..$-1];
+	}
+
+	static Instr noKeep() {
+		Instr ret = void;
+		ret.keep = false;
+		return ret;
 	}
 }
 
 string instrsToString(Instr[] instrs) {
 	string ret;
 	bool last = false;
-	foreach (instr; instrs) {
+	foreach (ref instr; instrs) {
 		if (instr.inJump || last) {
 			ret ~= instr.offset.to!string;
 			ret ~= ":\n";

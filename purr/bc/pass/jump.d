@@ -18,17 +18,17 @@ class Print : Optimizer {
 	}
 
 	override void impl() {
-		foreach (block; program.blocks) {
+		foreach (ref block; program.blocks) {
 			if (block.instrs[$-1].op == Opcode.jump_always) {
-				Location loc = cast(Location) block.instrs[$-1].args[0];
-				foreach (target; program.blocks) {
+				Location loc = block.instrs[$-1].args[0].value.location;
+				foreach (ref target; program.blocks) {
 					if (target.firstOffset == loc.loc) {
 						block.instrs[$-1].keep = false;
-						foreach (instr; target.instrs) {
+						foreach (ref instr; target.instrs) {
 							block.instrs ~= instr.copy;
 						}
 						if (target.next !is null) {
-							block.instrs ~= new Instr(Opcode.jump_always, [new Location(target.next.firstOffset)]);
+							block.instrs ~= Instr(Opcode.jump_always, Location(target.next.firstOffset));
 						}
 						block.next = target.next;
 					}

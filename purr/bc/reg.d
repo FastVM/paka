@@ -9,10 +9,11 @@ int[] usedRegs(Instr[] instrs) {
 	int[] regs;
 	int depth = 0;
 	Instr[] sub;
-	foreach (instr; instrs) {
+	foreach (ref instr; instrs) {
 		if (depth == 0) {
-			foreach (arg; instr.args) {
-				if (Register reg = cast(Register) arg) {
+			foreach (ref arg; instr.args) {
+				if (arg.type == Argument.type.register) {
+				    Register reg  = arg.value.register;
 					if (!regs.canFind(reg.reg)) {
 						regs ~= reg.reg;
 					}
@@ -33,7 +34,7 @@ int[][] allUsedRegs(Instr[] instrs) {
 	int[][] allRegs = [usedRegs(instrs)];
 	int depth = 0;
 	Instr[] sub;
-	foreach (instr; instrs) {
+	foreach (ref instr; instrs) {
 		if (instr.op == Opcode.fun_done) {
 			depth -= 1;
 			if (depth == 0) {

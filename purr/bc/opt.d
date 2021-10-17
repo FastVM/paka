@@ -55,14 +55,14 @@ class Blocks {
 	void getInstrs(ref Instr[] outInstrs) {
 		foreach (index, block; blocks[0..$-1]) {
 			Block next = blocks[index + 1];
-			foreach (instr; block.instrs) {
+			foreach (ref instr; block.instrs) {
 				outInstrs ~= instr;
 			}
 			if (block.next !is null && next != block.next) {
-				outInstrs ~= new Instr(Opcode.jump_always, [new Location(next.firstOffset)]);
+				outInstrs ~= Instr(Opcode.jump_always, Location(next.firstOffset));
 			}
 		}
-		foreach (instr; blocks[$-1].instrs) {
+		foreach (ref instr; blocks[$-1].instrs) {
 			outInstrs ~= instr;
 		}
 	}
@@ -140,15 +140,17 @@ class Optimizer {
 
 	void opt(string pass) {
 		foreach (block; program.blocks) {
-			foreach (instr; block.instrs) {
+			foreach (ref instr; block.instrs) {
 				foreach (ref arg; instr.args) {
-					if (Function func = cast(Function) arg) {
+					if (arg.type == Argument.type.function_) {
+					    Function func = arg.value.function_;
 						Optimizer subOpt = passes[pass](func.instrs);
 						subOpt.nregs = func.nregs;
 						subOpt.opt(pass);
 						func.instrs = subOpt.instrs;
 						// writeln(func.nregs, " -> ", subOpt.nregs);
 						func.nregs = subOpt.nregs;
+						arg.value.function_ = func;
 					}
 				}
 			}
