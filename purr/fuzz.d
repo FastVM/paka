@@ -11,8 +11,6 @@ import purr.srcloc;
 import purr.ast.ast;
 import purr.ast.walk;
 import ext.paka.parse.parse;
-import purr.bc.parser;
-import purr.bc.opt;
 
 extern(C) int LLVMFuzzerTestOneInput(const(void*) data, size_t size) {
 	Runtime.initialize;

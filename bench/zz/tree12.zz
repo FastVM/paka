@@ -55,7 +55,7 @@ var tree
     bottom_up_tree 0
                    stretchdepth
 println item_check tree
-var longlivedtree
+var llt
     bottom_up_tree 0
                    maxdepth
 var depth
@@ -93,4 +93,4 @@ while < depth
          set depth
              + depth
                2
-println item_check longlivedtree
+println item_check llt

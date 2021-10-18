@@ -7,10 +7,10 @@ import std.conv;
 import purr.ast.ast;
 
 import purr.err;
-import purr.bc.instr;
-import purr.bc.locs;
-import purr.bc.opt;
-import purr.vm.bytecode;
+import optimize.instr;
+import optimize.locs;
+import optimize.opt;
+import optimize.bytecode;
 import purr.plugin.plugins;
 
 class Dis {

@@ -6,11 +6,10 @@ import purr.parse;
 import purr.err;
 import purr.srcloc;
 import purr.ast.ast;
-import purr.vm.bytecode;
 import purr.ast.walk;
 import purr.plugin.plugins;
-import purr.bc.opt;
-static import purr.bc.parser;
+import optimize.opt;
+import optimize.bytecode;
 import purr.vm;
 import std.stdio;
 import std.uuid;
@@ -24,10 +23,11 @@ import std.getopt;
 import std.process;
 import std.datetime.stopwatch;
 import core.memory;
+static import optimize.parser;
 
 version(Fuzz) {}
 else:
-extern (C) __gshared string[] rt_options = ["gcopt=heapSizeFactor:16", "gcopt=cleanup:none"];
+extern (C) __gshared string[] rt_options = ["gcopt=heapSizeFactor:16"];
 
 string outLang = "vm";
 
@@ -39,14 +39,14 @@ string lang = "paka";
 
 string astLang = "zz";
 File astfile;
-int nopt = 500;
+int nopt = 0;
 string[] passes = ["regalloc"];
 
 void doBytecode(void[] bc) {
     foreach (passNum; 0..nopt) {
         void[] next = bc;
         foreach (pass; ["fold", "dce", "jump", "sreg"]) {
-            next = next.optimize(pass);
+            next = next.bcOpt(pass);
         }
         if (next == bc) {
             break;
@@ -54,7 +54,7 @@ void doBytecode(void[] bc) {
         bc = next;
     }
     foreach (pass; passes) {
-        bc = bc.optimize(pass);
+        bc = bc.bcOpt(pass);
     }
     switch (outLang) {
     case "bc":
@@ -62,7 +62,7 @@ void doBytecode(void[] bc) {
         break;
     case "zz":
         Dis dis = new Dis();
-        Node res = dis.dis(Blocks.from(purr.bc.parser.parse(bc)));
+        Node res = dis.dis(Blocks.from(optimize.parser.parse(bc)));
         string src = astLang.unparse(res);
         File("out.zz", "w").write(src);
         break;
@@ -81,7 +81,7 @@ Thunk cliDisHandler(immutable string file) {
     return {
         void[] bc = file.read;
         Dis dis = new Dis();
-        Node res = dis.dis(Blocks.from(purr.bc.parser.parse(bc)));
+        Node res = dis.dis(Blocks.from(optimize.parser.parse(bc)));
         string src = astLang.unparse(res);
         writeln(src);
     };

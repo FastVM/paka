@@ -1,7 +1,6 @@
 module purr.vm;
 
-import purr.vm.bytecode;
-import purr.bc.opt;
+import optimize.bytecode;
 
 import std.string;
 import std.stdio;

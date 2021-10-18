@@ -10,7 +10,7 @@ import purr.ast.ast;
 import purr.srcloc;
 import purr.err;
 import purr.plugin.plugins;
-import purr.vm.bytecode;
+import optimize.bytecode;
 
 __gshared bool dumpast = false;
 

@@ -3,7 +3,7 @@ module purr.parse;
 import std.conv : to;
 import purr.ast.ast;
 import purr.ast.walk;
-import purr.vm.bytecode;
+import optimize.bytecode;
 import purr.err;
 import purr.vm;
 import purr.srcloc;
