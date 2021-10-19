@@ -1,15 +1,12 @@
 module purr.app;
 
 import purr.ast.walk;
-import purr.ast.dis;
 import purr.parse;
 import purr.err;
 import purr.srcloc;
 import purr.ast.ast;
 import purr.ast.walk;
 import purr.plugin.plugins;
-import optimize.opt;
-import optimize.bytecode;
 import purr.vm;
 import std.stdio;
 import std.uuid;
@@ -23,11 +20,10 @@ import std.getopt;
 import std.process;
 import std.datetime.stopwatch;
 import core.memory;
-static import optimize.parser;
 
 version(Fuzz) {}
 else:
-extern (C) __gshared string[] rt_options = ["gcopt=heapSizeFactor:16"];
+extern (C) __gshared string[] rt_options = ["gcopt=heapSizeFactor:2"];
 
 string outLang = "vm";
 
@@ -39,62 +35,28 @@ string lang = "paka";
 
 string astLang = "zz";
 File astfile;
-int nopt = 0;
-string[] passes = ["regalloc"];
+
+Thunk[] next;
 
 void doBytecode(void[] bc) {
-    // foreach (passNum; 0..nopt) {
-    //     void[] next = bc;
-    //     foreach (pass; ["fold", "dce", "jump", "sreg"]) {
-    //         next = next.bcOpt(pass);
-    //     }
-    //     if (next == bc) {
-    //         break;
-    //     }
-    //     bc = next;
-    // }
-    foreach (pass; passes) {
-        bc = bc.bcOpt(pass);
-    }
     final switch (outLang) {
     case "bc":
-        File("out.bc", "wb").rawWrite(bc);
-        break;
-    case "zz":
-        Dis dis = new Dis();
-        Node res = dis.dis(Blocks.from(optimize.parser.parse(bc)));
-        string src = astLang.unparse(res);
-        File("out.zz", "w").write(src);
+        next ~= {
+            File("out.bc", "wb").rawWrite(bc);
+        };
         break;
     case "vm":
-        run(bc);
+        next ~= {
+            GC.collect;
+            GC.minimize;
+            run(bc);
+        };
         break;
     case "none":
         break;
     }
 }
 
-Thunk cliDisHandler(immutable string file) {
-    return {
-        void[] bc = file.read;
-        Dis dis = new Dis();
-        Node res = dis.dis(Blocks.from(optimize.parser.parse(bc)));
-        string src = astLang.unparse(res);
-        writeln(src);
-    };
-}
-
-Thunk cliPassHandler(immutable string pass) {
-    return {
-        passes ~= pass;
-    };
-}
-
-Thunk cliOptHandler(immutable string opt) {
-    return {
-        nopt = opt.to!int;
-    };
-}
 
 Thunk cliCommandHandler(immutable string cmd)
 {
@@ -106,10 +68,6 @@ Thunk cliCommandHandler(immutable string cmd)
 Thunk cliLangHandler(immutable string langName)
 {
     return {
-        if (langName == "zz") {
-            // zz should not be optimized by default
-            nopt = 2;
-        }
         lang = langName.dup;
     };
 }
@@ -123,9 +81,6 @@ Thunk cliTargetHandler(immutable string lang) {
             break;
         case "vm":
             outLang = "vm";
-            break;
-        case "zz":
-            outLang = "zz";
             break;
         case "help":
             vmError("--target=help: try --target=vm or --target=bc");
@@ -256,17 +211,6 @@ void domain(string[] args) {
         default:
             todo ~= parts[0].cliConvFileHandler;
             break;
-        case "--pass":
-            foreach_reverse (part; part1.split("+")) {
-                todo ~= part.cliPassHandler;
-            }
-            break;
-        case "--opt":
-            todo ~= part1.cliOptHandler;
-            break;
-        case "--dis":
-            todo ~= part1.cliDisHandler;
-            break;
         case "--show":
             todo ~= part1.cliShowHandler;
             break;
@@ -305,8 +249,12 @@ void domain(string[] args) {
             break;
         }
     }
-    foreach_reverse (fun; todo) {
-        fun();
+    while (todo.length != 0) {
+        next = null;
+        foreach_reverse (fun; todo) {
+            fun();
+        }
+        todo = next;
     }
 }
 

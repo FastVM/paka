@@ -41,7 +41,7 @@ final class Form : Node {
     }
 
     Node[] sliceArg(T)(T n) {
-        if (n < 0 || n >= args.length) {
+        if (n < 0 || n > args.length) {
             vmError("invalid ast");
             assert(false);
         } else {
@@ -50,7 +50,7 @@ final class Form : Node {
     }
 
     Node[] sliceArg(T1, T2)(T1 n, T2 m) {
-        if (n < 0 || n >= args.length || m < 1 || m > args.length || m + n > args.length) {
+        if (n < 0 || n > args.length || m < 1 || m > args.length || m + n > args.length) {
             vmError("invalid ast");
             assert(false);
         } else {

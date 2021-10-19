@@ -7,10 +7,11 @@ import std.string;
 import std.algorithm;
 import std.ascii;
 import purr.ast.ast;
+import purr.ast.syms;
 import purr.srcloc;
 import purr.err;
 import purr.plugin.plugins;
-import optimize.bytecode;
+import purr.vm.bytecode;
 
 __gshared bool dumpast = false;
 
@@ -48,7 +49,7 @@ final class Walker {
     bool xinstrs = true;
 
     Node[] nodes;
-    double[string] constants;
+    Node[string] constants;
 
     int[][string][] jumpLocss;
     int[string][] jumpLabelss;
@@ -67,6 +68,10 @@ final class Walker {
 
     int[string] funcs;
     int[][string] replaces;
+
+    this() {
+        constants = constSyms;
+    }
 
     ref Reg[string] locals() {
         return localss[$ - 1];
@@ -1268,12 +1273,9 @@ final class Walker {
     }
 
     Reg walkExact(Ident id) {
-        if (double* pnum = id.repr in constants) {
-            Reg ret = allocOut;
-            bytecode ~= Opcode.store_int;
-            bytecode ~= ret.reg;
-            bytecode ~= ubytes(*pnum);
-            return ret;
+        if (Node* pnum = id.repr in constants) {
+            Reg ret = allocOutMaybe;
+            return walk(*pnum, ret);
         } else if (Reg* fromreg = id.repr in locals) {
             Reg outreg = allocOutMaybe;
             if (outreg is null || outreg == *fromreg) {

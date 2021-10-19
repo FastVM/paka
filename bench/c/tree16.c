@@ -3,21 +3,36 @@
 #include <stdbool.h>
 
 struct tree_s;
+struct leaf_s;
 typedef struct tree_s tree_s;
+typedef struct leaf_s leaf_s;
 typedef tree_s *tree_t;
+
+struct leaf_s
+{
+    bool is_leaf;
+    int num;
+};
 
 struct tree_s
 {
+    bool is_leaf;
+    int num;
     tree_t lhs;
     tree_t rhs;
-    int num;
-    bool is_leaf;
 };
 
 tree_t new_tree(tree_s value)
 {
     tree_t ret = malloc(sizeof(tree_s));
     *ret = value;
+    return ret;
+}
+
+tree_t new_leaf(int num) {
+    tree_t ret = malloc(sizeof(leaf_s));
+    ret->is_leaf = true;
+    ret->num = num;
     return ret;
 }
 
@@ -30,18 +45,15 @@ tree_t bottom_up_tree(int item, int depth)
         tree_t left = bottom_up_tree(i - 1, depth);
         tree_t right = bottom_up_tree(i, depth);
         return new_tree((tree_s){
+            .is_leaf = false,
+            .num = item,
             .lhs = left,
             .rhs = right,
-            .num = item,
-            .is_leaf = false,
         });
     }
     else
     {
-        return new_tree((tree_s){
-            .num = item,
-            .is_leaf = true,
-        });
+        return new_leaf(item);
     }
 }
 
