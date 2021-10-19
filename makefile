@@ -15,9 +15,9 @@ ifeq ($(LD),$(DC))
 XLFLAGS=$(DLFLAGS)
 else
 ifeq ($(DC),gdc)
-XLFLAGS=$(DL)-lgphobos $(DL)-lgdruntime $(DL)-lm
+XLFLAGS=$(DL)-lgphobos $(DL)-lgdruntime $(DL)-lm $(DL)-lpthread
 else
-XLFLAGS=$(DL)-lphobos2-ldc $(DL)-ldruntime-ldc $(DL)-lm $(DL)-lz $(DL)-ldl
+XLFLAGS=$(DL)-lphobos2-ldc $(DL)-ldruntime-ldc $(DL)-lm $(DL)-lz $(DL)-ldl $(DL)-lpthread
 endif
 endif
 
@@ -40,7 +40,7 @@ LDO=-o
 endif
 endif
 
-MIMALLOC=$(DL)-lmimalloc -DVM_USE_MIMALLOC $(DL)-lpthread
+MIMALLOC=$(DL)-lmimalloc -DVM_USE_MIMALLOC
 
 DFILES:=$(shell find ext purr minivm/optimize -type f -name '*.d')
 CFILES=minivm/vm/vm.c minivm/vm/gc.c minivm/vm/xobj.c

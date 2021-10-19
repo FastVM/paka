@@ -1088,7 +1088,7 @@ final class Walker {
                 }
                 bytecode ~= Opcode.array;
                 bytecode ~= lambdaReg.reg;
-                bytecode ~= ubytes(cast(int) regs.length);
+                bytecode ~= cast(ubyte) regs.length;
                 foreach (reg; regs) {
                     bytecode ~= reg.reg;
                 }
@@ -1135,7 +1135,7 @@ final class Walker {
                     bytecode ~= objreg.reg;
                     return outreg;
                 } else {
-                    isStatic = true;
+                    // isStatic = true;
                     staticName = func.repr;
                 }
             }
@@ -1259,17 +1259,15 @@ final class Walker {
     }
 
     Node path(string name) {
-        int where = -1;
-        foreach (index, lvl; localss[0 .. $ - 1]) {
-            if (name in lvl) {
-                where = cast(int) index;
-            }
+        if (name in localss[$-2]) {
+            currentCaptures[$-2] ~= localss[$-2][name];
+            captureValuess[$-2] ~= new Ident(name);
+            inNthCaptures[$-1][name] = cast(int) captureValuess[$-2].length;
+            return new Form("index", new Form("capture"), new Value(cast(double) captureValuess[$-2].length));
+        } else {
+            vmError("capture resolution fail for: " ~ name);
+            assert(false);
         }
-        vmCheckError(where >= 0, name);
-        currentCaptures[where] ~= localss[where][name];
-        captureValuess[where] ~= new Ident(name);
-        inNthCaptures[where + 1][name] = cast(int) captureValuess[where].length;
-        return new Form("index", new Form("capture"), new Value(cast(double) captureValuess[where].length));
     }
 
     Reg walkExact(Ident id) {
@@ -1286,6 +1284,9 @@ final class Walker {
                 bytecode ~= (*fromreg).reg;
                 return outreg;
             }
+        } else if (localss.length <= 1) {
+            vmError("global name resolution fail for: " ~ id.to!string);
+            assert(false);
         } else if (Node lookup = path(id.repr)) {
             Reg outreg = allocOutMaybe;
             Reg fromreg = walk(lookup, outreg);
