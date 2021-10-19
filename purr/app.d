@@ -43,20 +43,20 @@ int nopt = 0;
 string[] passes = ["regalloc"];
 
 void doBytecode(void[] bc) {
-    foreach (passNum; 0..nopt) {
-        void[] next = bc;
-        foreach (pass; ["fold", "dce", "jump", "sreg"]) {
-            next = next.bcOpt(pass);
-        }
-        if (next == bc) {
-            break;
-        }
-        bc = next;
-    }
+    // foreach (passNum; 0..nopt) {
+    //     void[] next = bc;
+    //     foreach (pass; ["fold", "dce", "jump", "sreg"]) {
+    //         next = next.bcOpt(pass);
+    //     }
+    //     if (next == bc) {
+    //         break;
+    //     }
+    //     bc = next;
+    // }
     foreach (pass; passes) {
         bc = bc.bcOpt(pass);
     }
-    switch (outLang) {
+    final switch (outLang) {
     case "bc":
         File("out.bc", "wb").rawWrite(bc);
         break;
@@ -70,9 +70,6 @@ void doBytecode(void[] bc) {
         run(bc);
         break;
     case "none":
-        break;
-    default:
-        vmError("please select a backend with: --target=help");
         break;
     }
 }

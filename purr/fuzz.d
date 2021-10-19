@@ -11,6 +11,9 @@ import purr.srcloc;
 import purr.ast.ast;
 import purr.ast.walk;
 import ext.paka.parse.parse;
+import optimize.opt;
+
+version(Fuzz):
 
 extern(C) int LLVMFuzzerTestOneInput(const(void*) data, size_t size) {
 	Runtime.initialize;
@@ -21,6 +24,7 @@ extern(C) int LLVMFuzzerTestOneInput(const(void*) data, size_t size) {
         Walker walker = new Walker;
         walker.walkProgram(node);
 		void[] bc = walker.bytecode;
+		bc.bcOpt("regalloc");
 		assert(bc.validate == bc);
 		writeln(code);
 		// writeln(node);
