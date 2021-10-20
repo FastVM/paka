@@ -27,9 +27,8 @@ Node readExpr(ref string src) {
         src = src[1 .. $];
         if (Ident id = cast(Ident) children[0]) {
             switch (id.repr) {
-            case "println":
-            case "print":
-                return new Form("call", new Ident("println"), children[1 .. $]);
+            case "putchar":
+                return new Form("call", new Ident("putchar"), children[1 .. $]);
             case "do":
                 return new Form("do", children[1 .. $]);
             case "define":

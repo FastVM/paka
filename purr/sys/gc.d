@@ -10,6 +10,7 @@ extern(C) {
 	Entry* vm_gc_new(Memory* gc, size_t len, Value* values);
 	size_t vm_gc_sizeof(Entry* ptr);
 	Value vm_gc_get_index(Entry* ptr, size_t index);
+	void vm_gc_set_index(Entry *ptr, size_t index, Value value);
 	void vm_gc_mark_ptr(Memory* gc, Entry* ent);
 }
 

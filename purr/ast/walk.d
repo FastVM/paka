@@ -7,7 +7,6 @@ import std.string;
 import std.algorithm;
 import std.ascii;
 import purr.ast.ast;
-import purr.ast.syms;
 import purr.srcloc;
 import purr.err;
 import purr.plugin.plugins;
@@ -49,7 +48,6 @@ final class Walker {
     bool xinstrs = true;
 
     Node[] nodes;
-    Node[string] constants;
 
     int[][string][] jumpLocss;
     int[string][] jumpLabelss;
@@ -68,10 +66,6 @@ final class Walker {
 
     int[string] funcs;
     int[][string] replaces;
-
-    this() {
-        constants = constSyms;
-    }
 
     ref Reg[string] locals() {
         return localss[$ - 1];
@@ -520,7 +514,7 @@ final class Walker {
                 Reg reg = walk(arg);
                 regs ~= reg;
             }
-            bytecode ~= Opcode.array;
+            bytecode ~= Opcode.array_new;
             bytecode ~= outreg.reg;
             bytecode ~= cast(ubyte) regs.length;
             foreach (reg; regs) {
@@ -531,15 +525,15 @@ final class Walker {
             Reg outreg = allocOut;
             Reg objreg = walk(form.getArg(0));
             Reg index = walk(form.getArg(1));
-            bytecode ~= Opcode.index;
+            bytecode ~= Opcode.array_get;
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             bytecode ~= index.reg;
             return outreg;
         case "length":
             Reg outreg = allocOut;
-            Reg objreg = walk(form.getArg(0));
-            bytecode ~= Opcode.length;
+            Reg objreg = walk(form.getArg(0), outreg);
+            bytecode ~= Opcode.array_length;
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             return outreg;
@@ -554,12 +548,10 @@ final class Walker {
             }
         case "var":
             if (Ident id = cast(Ident) form.getArg(0)) {
-                bool isLambda = false;
                 if (Form lambda = cast(Form) form.getArg(1)) {
                     if (lambda.form == "lambda") {
                         string name = id.repr;
-                        funcs[id.repr] = cast(int)(bytecode.length + 6);
-                        isLambda = true;
+                        funcs[id.repr] = cast(int)(bytecode.length + 7);
                     }
                 }
                 Reg target = alloc();
@@ -587,12 +579,10 @@ final class Walker {
             }
         case "set":
             if (Ident id = cast(Ident) form.getArg(0)) {
-                bool isLambda = false;
                 if (Form lambda = cast(Form) form.getArg(1)) {
                     if (lambda.form == "lambda") {
                         string name = id.repr;
-                        funcs[id.repr] = cast(int)(bytecode.length + 6);
-                        isLambda = true;
+                        funcs[id.repr] = cast(int)(bytecode.length + 7);
                     }
                 }
                 Reg target;
@@ -618,6 +608,20 @@ final class Walker {
                     bytecode ~= outreg.reg;
                     bytecode ~= from.reg;
                     return outreg;
+                }
+            } else if (Form call = cast(Form) form.getArg(0)) {
+                if (call.form == "index") {
+                    Reg arrayReg = walk(call.getArg(0));
+                    Reg indexReg = walk(call.getArg(1));
+                    Reg valueReg = walk(form.getArg(1));
+                    bytecode ~= Opcode.array_set,
+                    bytecode ~= arrayReg.reg;
+                    bytecode ~= indexReg.reg;
+                    bytecode ~= valueReg.reg;
+                    return arrayReg;
+                } else {
+                    vmError("set to bad value");
+                    assert(false);
                 }
             } else {
                 vmError("set to bad value");
@@ -1061,7 +1065,10 @@ final class Walker {
             captureValuess.length++;
             currentCaptures.length++;
             inNthCaptures.length++;
-            Reg retreg = walk(form.getArg(1));
+            Reg retreg;
+            foreach (arg; form.sliceArg(1)) {
+                retreg = walk(arg);
+            }
             if (retreg !is null) {
                 bytecode ~= Opcode.ret;
                 bytecode ~= retreg.reg;
@@ -1086,7 +1093,7 @@ final class Walker {
                     Reg reg = walk(arg);
                     regs ~= reg;
                 }
-                bytecode ~= Opcode.array;
+                bytecode ~= Opcode.array_new;
                 bytecode ~= lambdaReg.reg;
                 bytecode ~= cast(ubyte) regs.length;
                 foreach (reg; regs) {
@@ -1099,18 +1106,13 @@ final class Walker {
             bool isStatic = false;
             string staticName;
             if (Ident func = cast(Ident) form.getArg(0)) {
-                if (func.repr == "println") {
-                    Reg arg = walk(form.getArg(1));
-                    bytecode ~= Opcode.println;
-                    bytecode ~= arg.reg;
-                    return allocOut;
-                } else if (func.repr == "syscall") {
+                if (func.repr == "syscall") {
                     Reg outreg = allocOut;
                     Reg[] regs;
                     foreach (arg; form.sliceArg(1)) {
                         regs ~= walk(arg);
                     }
-                    bytecode ~= Opcode.array;
+                    bytecode ~= Opcode.array_new;
                     bytecode ~= outreg.reg;
                     bytecode ~= cast(ubyte) regs.length;
                     foreach (reg; regs) {
@@ -1121,21 +1123,28 @@ final class Walker {
                     bytecode ~= outreg.reg;
                     return outreg;
                 } else if (func.repr == "putchar") {
-                    Reg outreg = walk(form.getArg(1));
+                    Reg reg = walk(form.getArg(1));
                     bytecode ~= Opcode.putchar;
-                    bytecode ~= outreg.reg;
-                    return allocOut;
+                    bytecode ~= reg.reg;
+                    return null;
                 } else if (func.repr == "rec") {
                     isRec = true;
                 } else if (func.repr == "length") {
                     Reg outreg = allocOut;
                     Reg objreg = walk(form.getArg(1));
-                    bytecode ~= Opcode.length;
+                    bytecode ~= Opcode.array_length;
+                    bytecode ~= outreg.reg;
+                    bytecode ~= objreg.reg;
+                    return outreg;
+                } else if (func.repr == "type") {
+                    Reg outreg = allocOut;
+                    Reg objreg = walk(form.getArg(1));
+                    bytecode ~= Opcode.type;
                     bytecode ~= outreg.reg;
                     bytecode ~= objreg.reg;
                     return outreg;
                 } else {
-                    // isStatic = true;
+                    isStatic = true;
                     staticName = func.repr;
                 }
             }
@@ -1271,10 +1280,7 @@ final class Walker {
     }
 
     Reg walkExact(Ident id) {
-        if (Node* pnum = id.repr in constants) {
-            Reg ret = allocOutMaybe;
-            return walk(*pnum, ret);
-        } else if (Reg* fromreg = id.repr in locals) {
+        if (Reg* fromreg = id.repr in locals) {
             Reg outreg = allocOutMaybe;
             if (outreg is null || outreg == *fromreg) {
                 return *fromreg;
@@ -1348,7 +1354,7 @@ final class Walker {
                 bytecode ~= cast(ubyte) chr;
                 regs ~= reg;
             }
-            bytecode ~= Opcode.array;
+            bytecode ~= Opcode.array_new;
             bytecode ~= outreg.reg;
             bytecode ~= cast(ubyte) regs.length;
             foreach (reg; regs) {

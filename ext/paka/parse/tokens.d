@@ -16,12 +16,12 @@ string[][] prec = [
 ];
 
 /// operators that dont work like binary operators sometimes
-string[] nops = [".", "not", ",", "\\", "!", "#", ":", "...", "->"];
+string[] nops = ["not", ",", "\\", "!", "#", ":", "->"];
 
 /// language keywords
 string[] keywords = [
     "if", "else", "def", "lambda", "true", "false",
-    "while", "return", "until", "unless", "self",
+    "while", "return", "until", "unless", "macro",
 ];
 
 /// gets the operators by length not precidence
@@ -197,8 +197,7 @@ redo:
     if (peek.isAlphaNum || peek == '_' || peek == '@' || peek == '?') {
         bool isNumber = true;
         char[] ret;
-        while (peek.isAlphaNum || peek == '_' || peek == '@' || peek == '?'
-                || (isNumber && peek == '.')) {
+        while (peek.isAlphaNum || peek == '_' || peek == '@' || peek == '?' || peek == '.') {
             isNumber = isNumber && (peek.isDigit || peek == '.');
             ret ~= read;
         }

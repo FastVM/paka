@@ -25,7 +25,6 @@ Paka is evolving rapidly, it needs work in:
   - Remove features that are not used or slow
   - Change things to be simpler
   - Add new features without minivm modifications
-- Replace println with putchar
 
 ### Shaw Summa
 

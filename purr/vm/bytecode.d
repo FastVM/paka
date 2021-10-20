@@ -68,17 +68,17 @@ enum Opcode : ubyte {
     call2,
     call,
     ret,
-    println,
     putchar,
-    array,
-    length,
-    index,
+    array_new,
+    array_length,
+    array_get,
+    array_set,
     syscall,
+    type,
 }
 
 bool noOutputs(Opcode op) {
     return op == Opcode.putchar 
-        || op == Opcode.println 
         || op == Opcode.ret
         || op == Opcode.exit;
 }

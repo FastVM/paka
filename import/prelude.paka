@@ -1,0 +1,57 @@
+
+macro type.number {0}
+macro type.array {1}
+macro type.function {2}
+
+def puts(str) {
+	i := 0
+	while i < #str {
+		putchar(str[i])
+		i = i + 1
+	}
+}
+
+def print_num(n) {
+	if n < 0 {
+		puts("-")
+		print_num(0 - n)
+	} else {
+		if n >= 10 {
+			lowest := n % 10
+			rec((n - lowest) / 10)
+			putchar(lowest + 48)
+		} else {
+			putchar(n % 10 + 48)
+		}
+	}
+}
+
+def print_array(arr) {
+	puts("[")
+	i := 0
+	while i < length(arr) {
+		if i != 0 {
+			puts(", ")
+		}
+		print(arr[i])
+		i = i + 1
+	}
+	puts("]")
+}
+
+def print(value) {
+	if type(value) == type.number {
+		print_num(value)
+	} else: if type(value) == type.array {
+		print_array(value)
+	} else: if type(value) == type.function {
+		puts("lambda(...){}")
+	} else {
+		puts("?")
+	}
+}
+
+def println(value) {
+	print(value)
+	putchar(10)
+}

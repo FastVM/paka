@@ -43,6 +43,10 @@ BinaryOp parseBinaryOp(string[] ops) {
                                 lhsForm.args[1 .. $]), rhs);
                         return parseBinaryOp([":="])(lhsForm.args[0], rhsLambda);
                     }
+                    if (lhsForm.form == "index") {
+                        vmFail("do not use := for setting array index"); 
+                        assert(false);
+                    }
                     vmFail("assign to expression of type: " ~ lhsForm.form);
                     assert(false);
                 } else {
@@ -56,6 +60,9 @@ BinaryOp parseBinaryOp(string[] ops) {
                         Node rhsLambda = new Form("lambda", new Form("args",
                                 lhsForm.args[1 .. $]), rhs);
                         return parseBinaryOp(["="])(lhsForm.args[0], rhsLambda);
+                    }
+                    if (lhsForm.form == "index") {
+                        return new Form("set", lhs, rhs);
                     }
                     vmFail("assign to expression of type: " ~ lhsForm.form);
                     assert(false);

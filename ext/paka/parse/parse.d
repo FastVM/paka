@@ -17,6 +17,8 @@ import ext.paka.parse.tokens;
 import ext.paka.parse.util;
 import ext.paka.parse.op;
 
+Node[string] macros;
+
 /// reads open parens
 Node[][] readOpen(string v)(TokenArray tokens) if (v == "()") {
     Node[][] ret;
@@ -298,9 +300,6 @@ Node readPostExprImpl(TokenArray tokens) {
             ret = new Form("array", node, ret);
         }
         last = ret;
-    } else if (tokens.first.isKeyword("static")) {
-        tokens.nextIs(Token.Type.keyword, "static");
-        last = new Form("static", tokens.readBlock);
     } else if (tokens.first.isKeyword("if")) {
         tokens.nextIs(Token.Type.keyword, "if");
         last = tokens.readIf;
@@ -326,6 +325,9 @@ Node readPostExprImpl(TokenArray tokens) {
         if (tokens.first.value.all!isDigit) {
             last = new Value(tokens.first.value.to!double);
             tokens.nextIs(Token.Type.ident);
+        } else if (Node* retRef = tokens.first.value in macros) {
+            last = *retRef;
+            tokens.nextIs(Token.Type.ident);
         } else {
             last = new Ident(tokens.first.value);
             tokens.nextIs(Token.Type.ident);
@@ -334,8 +336,9 @@ Node readPostExprImpl(TokenArray tokens) {
         last = new Value(tokens.first.value);
         tokens.nextIs(Token.Type.string);
     } else {
-        last = new Ident(tokens.first.value);
-        tokens.nextIs(Token.Type.ident);
+        vmError("expected something else in parser");
+        // last = new Ident(tokens.first.value);
+        // tokens.nextIs(Token.Type.ident);
     }
     return tokens.readPostExtend(last);
 }
@@ -407,6 +410,13 @@ Node readStmtImpl(TokenArray tokens) {
     if (tokens.first.isKeyword("return")) {
         tokens.nextIs(Token.Type.keyword, "return");
         return new Form("return", tokens.readExprBase);
+    }
+    if (tokens.first.isKeyword("macro")) {
+        tokens.nextIs(Token.Type.keyword, "macro");
+        string name = tokens.first.value;
+        tokens.nextIs(Token.Type.ident);
+        macros[name] = tokens.readBlock;
+        return new Form("do");
     }
     if (tokens.first.isKeyword("jump")) {
         tokens.nextIs(Token.Type.keyword, "jump");
@@ -504,7 +514,8 @@ alias parseCached = memoize!parseUncached;
 /// parses code as archive of the paka programming language
 Node parseUncached(SrcLoc loc) {
     SrcLoc location = loc;
+    Node pre = SrcLoc(1, 1, "prelude.paka", import("prelude.paka")).parsePaka;
     Node ast = location.parsePaka;
     // Node ret = new Form("do", ast, new Form("call", new Ident("main")));
-    return ast;
+    return new Form("do", pre, ast);
 }

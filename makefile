@@ -60,7 +60,7 @@ minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(LIB)/minivm/vm/sys.o
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	@mkdir $(P) $(dir $@) $(LIB)
-	$(DC) -c $(OPT_D) $(DO)$@ -Iminivm $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS)
+	$(DC) -Jimport -c $(OPT_D) $(DO)$@ -Iminivm $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS)
 
 $(COBJS) $(LIB)/minivm/main/main.o $(LIB)/minivm/vm/sys.o: $(patsubst $(LIB)/%.o,%.c,$@)
 	@mkdir $(P) $(dir $@) $(LIB)
