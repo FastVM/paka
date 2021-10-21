@@ -16,11 +16,9 @@ extern (C) {
 	Internal vm_xobj_of_num(double obj);
 	Internal vm_xobj_of_ptr(Entry* obj);
 	Internal vm_xobj_of_fun(int obj);
-	Internal vm_xobj_of_dead();
 
 	bool vm_xobj_is_num(Internal obj);
 	bool vm_xobj_is_ptr(Internal obj);
-	bool vm_xobj_is_dead(Internal obj);
 }
 
 struct Value {
@@ -45,14 +43,6 @@ struct Value {
 	this(Entry* ptr)
 	{
 		internal = vm_xobj_of_ptr(ptr);	
-	}
-
-	static Value dead() {
-		return Value(vm_xobj_of_dead());
-	}
-
-	bool isDead() {
-		return vm_xobj_is_dead(internal);
 	}
 
 	bool isNum() {
