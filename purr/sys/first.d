@@ -31,7 +31,9 @@ private extern(C) State vm_sys_init(Memory* mem) {
 	return new State(mem);
 }
 
-private extern(C) void vm_sys_deinit(State mem) {}
+private extern(C) void vm_sys_deinit(State mem) {
+	
+}
 
 private extern(C) Value vm_sys_call(State sys, Value arg) {
 	vmError("no syscalls yet"); 
