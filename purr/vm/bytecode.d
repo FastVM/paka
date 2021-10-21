@@ -5,7 +5,7 @@ import core.memory;
 alias Number = double;
 alias String = immutable(char)*;
 
-extern (C) void vm_run(void* func);
+extern (C) void vm_run(int len, void* func);
 
 enum Opcode : ubyte {
     exit,

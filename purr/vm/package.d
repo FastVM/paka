@@ -9,5 +9,5 @@ import core.memory;
 import core.stdc.stdlib;
 
 void run(void[] func) {
-    vm_run(func.ptr);
+    vm_run(cast(int) func.length, func.ptr);
 }

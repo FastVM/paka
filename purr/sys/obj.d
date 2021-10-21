@@ -21,33 +21,6 @@ extern (C) {
 	bool vm_xobj_is_num(Internal obj);
 	bool vm_xobj_is_ptr(Internal obj);
 	bool vm_xobj_is_dead(Internal obj);
-
-	// we do our own math
-	version (none) {
-		Internal vm_xobj_num_add(Internal lhs, Internal rhs);
-		Internal vm_xobj_num_addc(Internal lhs, int rhs);
-		Internal vm_xobj_num_sub(Internal lhs, Internal rhs);
-		Internal vm_xobj_num_subc(Internal lhs, int rhs);
-		Internal vm_xobj_num_mul(Internal lhs, Internal rhs);
-		Internal vm_xobj_num_mulc(Internal lhs, int rhs);
-		Internal vm_xobj_num_div(Internal lhs, Internal rhs);
-		Internal vm_xobj_num_divc(Internal lhs, int rhs);
-		Internal vm_xobj_num_mod(Internal lhs, Internal rhs);
-		Internal vm_xobj_num_modc(Internal lhs, int rhs);
-
-		bool vm_xobj_lt(Internal lhs, Internal rhs);
-		bool vm_xobj_ilt(Internal lhs, int rhs);
-		bool vm_xobj_gt(Internal lhs, Internal rhs);
-		bool vm_xobj_igt(Internal lhs, int rhs);
-		bool vm_xobj_lte(Internal lhs, Internal rhs);
-		bool vm_xobj_ilte(Internal lhs, int rhs);
-		bool vm_xobj_gte(Internal lhs, Internal rhs);
-		bool vm_xobj_igte(Internal lhs, int rhs);
-		bool vm_xobj_eq(Internal lhs, Internal rhs);
-		bool vm_xobj_ieq(Internal lhs, int rhs);
-		bool vm_xobj_neq(Internal lhs, Internal rhs);
-		bool vm_xobj_ineq(Internal lhs, int rhs);
-	}
 }
 
 struct Value {
