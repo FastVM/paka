@@ -537,6 +537,20 @@ final class Walker {
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             return outreg;
+        case "box":
+            Reg outreg = allocOut;
+            Reg objreg = walk(form.getArg(0), outreg);
+            bytecode ~= Opcode.box_new;
+            bytecode ~= outreg.reg;
+            bytecode ~= objreg.reg;
+            return outreg;
+        case "unbox":
+            Reg outreg = allocOut;
+            Reg objreg = walk(form.getArg(0), outreg);
+            bytecode ~= Opcode.box_get;
+            bytecode ~= outreg.reg;
+            bytecode ~= objreg.reg;
+            return outreg;
         case "def":
             if (Ident id = cast(Ident) form.getArg(0)) {
                 goto case "var";
@@ -619,6 +633,13 @@ final class Walker {
                     bytecode ~= indexReg.reg;
                     bytecode ~= valueReg.reg;
                     return arrayReg;
+                } else if (call.form == "unbox") {
+                    Reg boxReg = walk(call.getArg(0));
+                    Reg valueReg = walk(form.getArg(1));
+                    bytecode ~= Opcode.box_set,
+                    bytecode ~= boxReg.reg;
+                    bytecode ~= valueReg.reg;
+                    return boxReg;
                 } else {
                     vmError("set to bad value");
                     assert(false);
@@ -1136,6 +1157,7 @@ final class Walker {
                     bytecode ~= outreg.reg;
                     bytecode ~= objreg.reg;
                     return outreg;
+                // } else if (func.repr !in locals) {
                 } else {
                     isStatic = true;
                     staticName = func.repr;

@@ -61,7 +61,7 @@ BinaryOp parseBinaryOp(string[] ops) {
                                 lhsForm.args[1 .. $]), rhs);
                         return parseBinaryOp(["="])(lhsForm.args[0], rhsLambda);
                     }
-                    if (lhsForm.form == "index") {
+                    if (lhsForm.form == "index" || lhsForm.form == "unbox") {
                         return new Form("set", lhs, rhs);
                     }
                     vmFail("assign to expression of type: " ~ lhsForm.form);

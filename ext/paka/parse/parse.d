@@ -354,6 +354,16 @@ Node readPreExprImpl(TokenArray tokens) {
         }
         return parseUnaryOp(vals)(tokens.readPostExpr);
     }
+    if (tokens.first.isKeyword("box")) {
+        tokens.nextIs(Token.type.keyword);
+        Node ret = tokens.readPreExpr;
+        return new Form("box", ret);
+    }
+    if (tokens.first.isKeyword("unbox")) {
+        tokens.nextIs(Token.type.keyword);
+        Node ret = tokens.readPreExpr;
+        return new Form("unbox", ret);
+    }
     return tokens.readPostExpr;
 }
 

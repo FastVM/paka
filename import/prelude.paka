@@ -3,6 +3,7 @@ macro type.number {0}
 macro type.function {1}
 macro type.array {2}
 macro type.string {3}
+macro type.box {4}
 
 def puts(str) {
 	i := 0
@@ -51,6 +52,9 @@ def print(value) {
 		puts("\"")
 		puts(value)
 		puts("\"")
+	} else: if type(value) == type.box {
+		puts("box ")
+		print(unbox value)
 	} else {
 		puts("?")
 	}
