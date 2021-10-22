@@ -42,8 +42,8 @@ endif
 
 MIMALLOC=$(DL)-lmimalloc -DVM_USE_MIMALLOC
 
-DFILES:=$(shell find ext purr minivm/optimize -type f -name '*.d')
-CFILES=minivm/vm/vm.c minivm/vm/io.c minivm/vm/gc.c minivm/vm/xobj.c
+DFILES:=$(shell find ext purr -type f -name '*.d')
+CFILES=minivm/vm/vm.c minivm/vm/io.c minivm/vm/gc.c
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
 OBJS=$(DOBJS) $(COBJS)
@@ -54,7 +54,7 @@ purr $(BIN)/purr: $(OBJS)
 	@mkdir $(P) $(BIN)
 	$(LD) $^ $(LDO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(MIMALLOC) $(XLFLAGS)
 
-minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(LIB)/minivm/vm/sys.o
+minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o
 	@mkdir $(P) $(BIN)
 	$(LD) $^ -o $(BIN)/minivm -I. -lm $(LFLAGS) $(MIMALLOC) $(XLFLAGS)
 
@@ -62,7 +62,7 @@ $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	@mkdir $(P) $(dir $@) $(LIB)
 	$(DC) -Jimport -c $(OPT_D) $(DO)$@ -Iminivm $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS)
 
-$(COBJS) $(LIB)/minivm/main/main.o $(LIB)/minivm/vm/sys.o: $(patsubst $(LIB)/%.o,%.c,$@)
+$(COBJS) $(LIB)/minivm/main/main.o: $(patsubst $(LIB)/%.o,%.c,$@)
 	@mkdir $(P) $(dir $@) $(LIB)
 	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(CFLAGS) 
 

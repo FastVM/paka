@@ -1,7 +1,8 @@
 
 macro type.number {0}
-macro type.array {1}
-macro type.function {2}
+macro type.function {1}
+macro type.array {2}
+macro type.string {3}
 
 def puts(str) {
 	i := 0
@@ -42,10 +43,14 @@ def print_array(arr) {
 def print(value) {
 	if type(value) == type.number {
 		print_num(value)
-	} else: if type(value) == type.array {
-		print_array(value)
 	} else: if type(value) == type.function {
 		puts("lambda(...){}")
+	} else: if type(value) == type.array {
+		print_array(value)
+	} else: if type(value) == type.string {
+		puts("\"")
+		puts(value)
+		puts("\"")
 	} else {
 		puts("?")
 	}

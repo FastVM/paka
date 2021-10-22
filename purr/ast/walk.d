@@ -525,7 +525,7 @@ final class Walker {
             Reg outreg = allocOut;
             Reg objreg = walk(form.getArg(0));
             Reg index = walk(form.getArg(1));
-            bytecode ~= Opcode.array_get;
+            bytecode ~= Opcode.index_get;
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             bytecode ~= index.reg;
@@ -533,7 +533,7 @@ final class Walker {
         case "length":
             Reg outreg = allocOut;
             Reg objreg = walk(form.getArg(0), outreg);
-            bytecode ~= Opcode.array_length;
+            bytecode ~= Opcode.length;
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             return outreg;
@@ -614,7 +614,7 @@ final class Walker {
                     Reg arrayReg = walk(call.getArg(0));
                     Reg indexReg = walk(call.getArg(1));
                     Reg valueReg = walk(form.getArg(1));
-                    bytecode ~= Opcode.array_set,
+                    bytecode ~= Opcode.index_set,
                     bytecode ~= arrayReg.reg;
                     bytecode ~= indexReg.reg;
                     bytecode ~= valueReg.reg;
@@ -681,6 +681,15 @@ final class Walker {
             ifFalse(form.getArg(0), jumpRedoTo);
             bytecode[jumpCondFrom .. jumpCondFrom + 4] = ubytes(jumpCondTo);
             return null;
+        case "~":
+            Reg lhs = walk(form.getArg(0));
+            Reg rhs = walk(form.getArg(1));
+            Reg res = allocOut;
+            bytecode ~= Opcode.concat;
+            bytecode ~= res.reg;
+            bytecode ~= lhs.reg;
+            bytecode ~= rhs.reg;
+            return res;
         case "+":
             if (xinstrs) {
                 if (Value valueLeft = cast(Value) form.getArg(0)) {
@@ -1106,23 +1115,7 @@ final class Walker {
             bool isStatic = false;
             string staticName;
             if (Ident func = cast(Ident) form.getArg(0)) {
-                if (func.repr == "syscall") {
-                    Reg outreg = allocOut;
-                    Reg[] regs;
-                    foreach (arg; form.sliceArg(1)) {
-                        regs ~= walk(arg);
-                    }
-                    bytecode ~= Opcode.array_new;
-                    bytecode ~= outreg.reg;
-                    bytecode ~= cast(ubyte) regs.length;
-                    foreach (reg; regs) {
-                        bytecode ~= reg.reg;
-                    }
-                    bytecode ~= Opcode.syscall;
-                    bytecode ~= outreg.reg;
-                    bytecode ~= outreg.reg;
-                    return outreg;
-                } else if (func.repr == "putchar") {
+                if (func.repr == "putchar") {
                     Reg reg = walk(form.getArg(1));
                     bytecode ~= Opcode.putchar;
                     bytecode ~= reg.reg;
@@ -1132,7 +1125,7 @@ final class Walker {
                 } else if (func.repr == "length") {
                     Reg outreg = allocOut;
                     Reg objreg = walk(form.getArg(1));
-                    bytecode ~= Opcode.array_length;
+                    bytecode ~= Opcode.length;
                     bytecode ~= outreg.reg;
                     bytecode ~= objreg.reg;
                     return outreg;
@@ -1346,19 +1339,11 @@ final class Walker {
         } else if (val.info == typeid(string)) {
             string src = *cast(string*) val.value;
             Reg outreg = allocOut;
-            Reg[] regs;
-            foreach (chr; src) {
-                Reg reg = alloc;
-                bytecode ~= Opcode.store_byte;
-                bytecode ~= reg.reg;
-                bytecode ~= cast(ubyte) chr;
-                regs ~= reg;
-            }
-            bytecode ~= Opcode.array_new;
+            bytecode ~= Opcode.string_new;
             bytecode ~= outreg.reg;
-            bytecode ~= cast(ubyte) regs.length;
-            foreach (reg; regs) {
-                bytecode ~= reg.reg;
+            bytecode ~= cast(ubyte) src.length;
+            foreach (chr; src) {
+                bytecode ~= cast(ubyte) chr;
             }
             return outreg;
         } else {

@@ -55,6 +55,7 @@ enum Opcode : ubyte {
     div_num,
     mod,
     mod_num,
+    concat,
     static_call0,
     static_call1,
     static_call2,
@@ -70,10 +71,10 @@ enum Opcode : ubyte {
     ret,
     putchar,
     array_new,
-    array_length,
-    array_get,
-    array_set,
-    syscall,
+    string_new,
+    length,
+    index_get,
+    index_set,
     type,
 }
 
