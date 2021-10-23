@@ -2,6 +2,3 @@
 	path = minivm
 	url = https://github.com/shawsumma/minivm
 	branch = main
-[submodule "klib"]
-	path = klib
-	url = https://github.com/attractivechaos/klib
