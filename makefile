@@ -51,15 +51,15 @@ OBJS=$(DOBJS) $(COBJS)
 
 default: $(BIN)/purr $(BIN)/minivm
 
-purr $(BIN)/purr: $(OBJS) mimalloc
+purr $(BIN)/purr: $(OBJS) $(MIMALLOC)
 	@mkdir $(P) $(BIN)
 	$(LD) $(OBJS) $(LDO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(XLFLAGS)
 
-minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o mimalloc
+minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(MIMALLOC)
 	@mkdir $(P) $(BIN)
 	$(LD) $(COBJS) $(LIB)/minivm/main/main.o $(LDO)$(BIN)/minivm $(LFLAGS) $(MIMALLOC) $(XLFLAGS)
 
-mimalloc: .dummy
+$(MIMALLOC): .dummy
 	make -C minivm -f mimalloc.mak --no-print-directory CC=$(MICC)
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
@@ -76,4 +76,6 @@ $(BIN) $(LIB):
 .dummy:
 
 clean:
-	rm -r $(BIN) $(LIB)
+	$(MAKE) -C minivm -f makefile clean
+	$(MAKE) -C minivm -f mimalloc.mak clean
+	: rm -r $(BIN) $(LIB)
