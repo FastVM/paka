@@ -311,10 +311,10 @@ Node readPostExprImpl(TokenArray tokens) {
         last = tokens.readUntil;
     } else if (tokens.first.isKeyword("true")) {
         tokens.nextIs(Token.Type.keyword, "true");
-        last = new Value(1.0);
+        last = new Value(true);
     } else if (tokens.first.isKeyword("false")) {
         tokens.nextIs(Token.Type.keyword, "false");
-        last = new Value(0.0);
+        last = new Value(false);
     } else if (tokens.first.isKeyword("nil")) {
         tokens.nextIs(Token.Type.keyword, "nil");
         last = new Form("array");

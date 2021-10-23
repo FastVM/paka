@@ -1,9 +1,11 @@
 
-macro type.number {0}
-macro type.function {1}
-macro type.array {2}
-macro type.string {3}
-macro type.box {4}
+macro type.none {0}
+macro type.boolean {1}
+macro type.number {2}
+macro type.function {3}
+macro type.array {4}
+macro type.string {5}
+macro type.box {6}
 
 def puts(str) {
 	i := 0
@@ -42,7 +44,15 @@ def print_array(arr) {
 }
 
 def print(value) {
-	if type(value) == type.number {
+	if type(value) == type.none {
+		puts("none")
+	} else: if type(value) == type.boolean {
+		if value {
+			puts("true")
+		} else {
+			puts("false")
+		}
+	} else: if type(value) == type.number {
 		print_num(value)
 	} else: if type(value) == type.function {
 		puts("lambda(...){}")

@@ -10,6 +10,8 @@ extern (C) void vm_run(int len, void* func);
 enum Opcode : ubyte {
     exit,
     store_reg,
+    store_none,
+    store_bool,
     store_byte,
     store_int,
     store_fun,
