@@ -312,6 +312,9 @@ Node readPostExprImpl(TokenArray tokens) {
     } else if (tokens.first.isKeyword("true")) {
         tokens.nextIs(Token.Type.keyword, "true");
         last = new Value(true);
+    } else if (tokens.first.isKeyword("map")) {
+        tokens.nextIs(Token.Type.keyword, "map");
+        last = new Form("map");
     } else if (tokens.first.isKeyword("false")) {
         tokens.nextIs(Token.Type.keyword, "false");
         last = new Value(false);

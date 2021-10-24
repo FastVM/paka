@@ -531,6 +531,11 @@ final class Walker {
                 bytecode ~= reg.reg;
             }
             return outreg;
+        case "map":
+            Reg outreg = allocOut;
+            bytecode ~= Opcode.map_new;
+            bytecode ~= outreg.reg;
+            return outreg;
         case "index":
             Reg outreg = allocOut;
             Reg objreg = walk(form.getArg(0));

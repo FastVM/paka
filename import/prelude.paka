@@ -6,6 +6,7 @@ macro type.function {3}
 macro type.array {4}
 macro type.string {5}
 macro type.box {6}
+macro type.map {7}
 
 def puts(str) {
 	i := 0
@@ -65,6 +66,12 @@ def print(value) {
 	} else: if type(value) == type.box {
 		puts("box ")
 		print(unbox value)
+	} else: if type(value) == type.map {
+		puts("(")
+		print_num(length(value))
+		puts("){")
+		puts("...")
+		puts("}")
 	} else {
 		puts("?")
 	}
