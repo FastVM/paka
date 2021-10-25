@@ -49,7 +49,9 @@ void doBytecode(void[] bc) {
         next ~= {
             GC.collect;
             GC.minimize;
+            GC.disable;
             run(bc);
+            GC.enable;
         };
         break;
     case "none":
