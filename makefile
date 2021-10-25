@@ -41,7 +41,11 @@ LDO=-o
 endif
 endif
 
+ifeq ($(MI),1)
 MIMALLOC=$(DL)$(PWD)/minivm/lib/libmimalloc.a
+L_MIMALLOC=$(DL)$(PWD)/minivm/lib/libmimalloc.a
+C_MIMALLOC=-DVM_USE_MIMALLOC
+endif
 
 DFILES:=$(shell find ext purr -type f -name '*.d')
 CFILES=minivm/vm/vm.c minivm/vm/io.c minivm/vm/gc.c minivm/vm/obj/map.c
@@ -57,7 +61,7 @@ purr $(BIN)/purr: $(OBJS) $(MIMALLOC)
 
 minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(MIMALLOC)
 	@mkdir $(P) $(BIN)
-	$(LD) $(COBJS) $(LIB)/minivm/main/main.o $(LDO)$(BIN)/minivm $(LFLAGS) $(MIMALLOC) $(XLFLAGS) $(AFLAGS)
+	$(LD) $(COBJS) $(LIB)/minivm/main/main.o $(LDO)$(BIN)/minivm $(LFLAGS) $(MIMALLOC) $(L_MIMALLOC) $(XLFLAGS) $(AFLAGS)
 
 $(MIMALLOC): .dummy
 	make -C minivm -f mimalloc.mak --no-print-directory CC=$(MICC) CFLAGS= LFLAGS=
@@ -68,7 +72,7 @@ $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 
 $(COBJS) $(LIB)/minivm/main/main.o: $(patsubst $(LIB)/%.o,%.c,$@)
 	@mkdir $(P) $(dir $@) $(LIB)
-	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm -DVM_USE_MIMALLOC $(CFLAGS) $(AFLAGS)
+	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(C_MIMALLOC) $(CFLAGS) $(AFLAGS)
 
 $(BIN) $(LIB):
 	mkdir $(P) $@
