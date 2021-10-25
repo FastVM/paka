@@ -606,6 +606,33 @@ final class Walker {
                 vmError("set to bad value");
                 assert(false);
             }
+        case "handle":
+            Reg valueReg = walk(form.getArg(1));
+            Reg nameReg = walk(form.getArg(0));
+            bytecode ~= Opcode.set_handler;
+            bytecode ~= nameReg.reg;
+            bytecode ~= valueReg.reg;
+            return null;
+        case "throw":
+            Reg outreg = allocOut;
+            Reg valueReg = walk(form.getArg(0));
+            bytecode ~= Opcode.call_handler;
+            bytecode ~= outreg.reg;
+            bytecode ~= valueReg.reg;
+            return outreg;
+        case "resolve":
+            Reg valueReg = walk(form.getArg(0));
+            bytecode ~= Opcode.return_handler;
+            bytecode ~= valueReg.reg;
+            return null;
+        case "reject":
+            Reg valueReg = walk(form.getArg(0));
+            bytecode ~= Opcode.exit_handler;
+            bytecode ~= valueReg.reg;
+            return null;
+        case "exit":
+            bytecode ~= Opcode.exit;
+            return null;
         case "set":
             if (Ident id = cast(Ident) form.getArg(0)) {
                 if (Form lambda = cast(Form) form.getArg(1)) {

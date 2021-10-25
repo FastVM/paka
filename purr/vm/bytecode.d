@@ -5,7 +5,7 @@ import core.memory;
 alias Number = double;
 alias String = immutable(char)*;
 
-extern (C) void vm_run(int len, void* func);
+extern (C) void vm_run(size_t len, void* func, size_t start);
 
 enum Opcode : ubyte {
     exit,
@@ -82,6 +82,10 @@ enum Opcode : ubyte {
     index_get,
     index_set,
     type,
+    call_handler,
+    set_handler,
+    return_handler,
+    exit_handler,
 }
 
 bool noOutputs(Opcode op) {

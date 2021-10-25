@@ -8,6 +8,11 @@ macro type.string {5}
 macro type.box {6}
 macro type.map {7}
 
+macro effect.math.div {1}
+macro effect.math.mod {2}
+macro effect.type.concat {3}
+macro effect.bounds {4}
+
 def puts(str) {
 	i := 0
 	while i < #str {
@@ -80,4 +85,24 @@ def print(value) {
 def println(value) {
 	print(value)
 	putchar(10)
+}
+
+handle effect.math.div {
+	println("unhandled: div by zero")
+	exit
+}
+
+handle effect.math.mod {
+	println("unhandled: mod by zero")
+	exit
+}
+
+handle effect.type.concat {
+	println("unhandled: type error")
+	exit
+}
+
+handle effect.bounds {
+	println("unhandled: index out of bounds")
+	exit
 }

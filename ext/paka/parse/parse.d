@@ -281,6 +281,9 @@ Node readPostExprImpl(TokenArray tokens) {
     } else if (tokens.first.isKeyword("if")) {
         tokens.nextIs(Token.Type.keyword, "if");
         last = tokens.readIf;
+    } else if (tokens.first.isKeyword("throw")) {
+        tokens.nextIs(Token.Type.keyword, "throw");
+        last = new Form("throw", tokens.readExprBase);
     } else if (tokens.first.isKeyword("while")) {
         tokens.nextIs(Token.Type.keyword, "while");
         last = tokens.readWhile;
@@ -410,9 +413,28 @@ Node readStmtImpl(TokenArray tokens) {
             tokens.nextIs(Token.Type.semicolon);
         }
     }
+    if (tokens.first.isKeyword("handle")) {
+        tokens.nextIs(Token.Type.keyword, "handle");
+        Node name = tokens.readExprBase;
+        Node lambdaBody = tokens.readBlock;
+        Node lambda = new Form("lambda", new Form("args"), new Form("do", lambdaBody, new Form("reject", name)));
+        return new Form("handle", name, lambda);
+    }
     if (tokens.first.isKeyword("return")) {
         tokens.nextIs(Token.Type.keyword, "return");
         return new Form("return", tokens.readExprBase);
+    }
+    if (tokens.first.isKeyword("resolve")) {
+        tokens.nextIs(Token.Type.keyword, "resolve");
+        return new Form("resolve", tokens.readExprBase);
+    }
+    if (tokens.first.isKeyword("reject")) {
+        tokens.nextIs(Token.Type.keyword, "reject");
+        return new Form("reject", tokens.readExprBase);
+    }
+    if (tokens.first.isKeyword("exit")) {
+        tokens.nextIs(Token.Type.keyword, "exit");
+        return new Form("exit");
     }
     if (tokens.first.isKeyword("macro")) {
         tokens.nextIs(Token.Type.keyword, "macro");
