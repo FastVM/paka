@@ -8,7 +8,6 @@ import std.ascii;
 import std.string;
 import std.algorithm;
 import std.functional;
-import purr.vm;
 import purr.err;
 import purr.srcloc;
 import purr.ast.walk;
@@ -16,6 +15,7 @@ import purr.ast.ast;
 import ext.paka.parse.tokens;
 import ext.paka.parse.util;
 import ext.paka.parse.op;
+import ext.paka.parse.map;
 
 Node[string] macros;
 
@@ -87,7 +87,7 @@ Node[] readOpen(string v)(TokenArray tokens) if (v == "{}") {
     return args;
 }
 
-// /// strips newlines and changes the input
+/// strips newlines and changes the input
 void stripNewlines(TokenArray tokens) {
     while (tokens.first.isSemicolon) {
         tokens.nextIs(Token.Type.semicolon);
@@ -96,33 +96,11 @@ void stripNewlines(TokenArray tokens) {
 
 Node readPostCallExtend(TokenArray tokens, Node last) {
     Node[][] args = tokens.readOpen!"()";
-    if (Ident id = cast(Ident) last) {
-        switch (id.repr) {
-        case "empty":
-            last = new Form("==", new Value(0.0), new Form("length", args[0]));
-            args = args[1 .. $];
-            break;
-        case "first":
-            last = new Form("index", args[0], new Value(1.0));
-            args = args[1 .. $];
-            break;
-        case "pop":
-            last = new Form("index", args[0], new Value(0.0));
-            args = args[1 .. $];
-            break;
-        case "push":
-            last = new Form("array", args[0]);
-            args = args[1 .. $];
-            break;
-        default:
-            break;
-        }
-    }
     while (tokens.first.isOperator("->")) {
         tokens.nextIs(Token.Type.operator, "->");
         Node[] params;
         while (tokens.first.isIdent) {
-            params ~= cast(Node) new Ident(tokens.first.value);
+            params ~= cast(Node) ident(tokens.first.value);
             tokens.nextIs(Token.Type.ident);
         }
         args[$ - 1] ~= new Form("lambda", [
@@ -314,7 +292,21 @@ Node readPostExprImpl(TokenArray tokens) {
         last = new Value(true);
     } else if (tokens.first.isKeyword("map")) {
         tokens.nextIs(Token.Type.keyword, "map");
-        last = new Form("map");
+        if (tokens.first.isOpen("(")) {
+            last = new Form("do", tokens.readOpen1!"()");
+        } else {
+            last = new Form("map");
+        }
+        if (tokens.first.isOpen("{") || tokens.first.isOperator(":")) {
+            Node thisVar = new Ident("this");
+            Node setThisVar = new Form("var", thisVar, last);
+            Node block = tokens.readBlock;
+            last = new Form("do", setThisVar, block, thisVar);
+        }
+        return last;
+    } else if (tokens.first.isKeyword("none")) {
+        tokens.nextIs(Token.Type.keyword, "none");
+        last = new Value(null);
     } else if (tokens.first.isKeyword("false")) {
         tokens.nextIs(Token.Type.keyword, "false");
         last = new Value(false);
@@ -332,7 +324,7 @@ Node readPostExprImpl(TokenArray tokens) {
             last = *retRef;
             tokens.nextIs(Token.Type.ident);
         } else {
-            last = new Ident(tokens.first.value);
+            last = ident(tokens.first.value);
             tokens.nextIs(Token.Type.ident);
         }
     } else if (tokens.first.isString) {
@@ -340,8 +332,6 @@ Node readPostExprImpl(TokenArray tokens) {
         tokens.nextIs(Token.Type.string);
     } else {
         vmError("expected something else in parser");
-        // last = new Ident(tokens.first.value);
-        // tokens.nextIs(Token.Type.ident);
     }
     return tokens.readPostExtend(last);
 }
@@ -437,7 +427,7 @@ Node readStmtImpl(TokenArray tokens) {
     }
     if (tokens.first.isKeyword("def")) {
         tokens.nextIs(Token.Type.keyword, "def");
-        Ident id = new Ident(tokens.first.value);
+        Node id = ident(tokens.first.value);
         tokens.skip;
         Node[][] allArgs = tokens.readOpen!"()";
         Node then = tokens.readBlock;
@@ -461,11 +451,7 @@ alias readBlockBody = Spanning!readBlockBodyImpl;
 Node readBlockBodyImpl(TokenArray tokens) {
     Node[] ret;
     while (tokens.first.exists && !tokens.first.isClose("}") && !tokens.first.isKeyword("else")) {
-        // SrcLoc loc = tokens.position;
         ret ~= tokens.readStmt;
-        // if (tokens.position.isAt(loc)) {
-        //     vmFail("nothing to read");
-        // }
     }
     if (ret.length == 1) {
         return ret[0];
@@ -524,7 +510,7 @@ Node parsePakaAs(alias parser)(SrcLoc loc) {
 
 alias parseCached = memoize!parseUncached;
 
-/// parses code as archive of the paka programming language
+/// parses code as the paka programming language
 Node parseUncached(SrcLoc loc) {
     SrcLoc location = loc;
     Node pre = SrcLoc(1, 1, "prelude.paka", import("prelude.paka")).parsePaka;

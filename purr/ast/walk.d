@@ -1129,8 +1129,12 @@ final class Walker {
                 bytecode ~= Opcode.ret;
                 bytecode ~= retreg.reg;
             } else {
+                Reg reg = alloc();
+                bytecode ~= Opcode.store_bool;
+                bytecode ~= reg.reg;
+                bytecode ~= 0;
                 bytecode ~= Opcode.ret;
-                bytecode ~= alloc().reg;
+                bytecode ~= reg.reg;
             }
             bytecode[refRegc] = cast(ubyte) regs.length;
             regs = oldRegs;
