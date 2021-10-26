@@ -22,7 +22,7 @@ extern(C) int LLVMFuzzerTestOneInput(const(void*) data, size_t size) {
 		Node node = loc.parseUncached;  
         Walker walker = new Walker;
         walker.walkProgram(node);
-		void[] bc = walker.bytecode;
+		uint[] bc = walker.bytecode;
 	} catch (Problem p) {}
 	return 0;
 }

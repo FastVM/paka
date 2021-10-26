@@ -7,12 +7,11 @@ alias String = immutable(char)*;
 
 extern (C) void vm_run(size_t len, void* func, size_t start);
 
-enum Opcode : ubyte {
+enum Opcode : uint {
     exit,
     store_reg,
     store_none,
     store_bool,
-    store_byte,
     store_int,
     store_fun,
     fun_done,

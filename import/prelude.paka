@@ -8,10 +8,15 @@ macro type.string {5}
 macro type.box {6}
 macro type.map {7}
 
-macro effect.math.div {1}
-macro effect.math.mod {2}
-macro effect.type.concat {3}
-macro effect.bounds {4}
+## lib stuff
+
+iota_num := 0
+def iota(name) {
+	iota_num = iota_num + 1
+	return box iota_num
+}
+
+## io lib
 
 def puts(str) {
 	i := 0
@@ -91,28 +96,15 @@ def println(value) {
 	putchar(10)
 }
 
-iota_num := 0
-def iota(name) {
-	iota_num = iota_num + 1
-	return box iota_num
-}
+## effects
 
-handle effect.math.div {
-	println("unhandled: div by zero")
-	exit
-}
+macro effect.default {0}
+macro effect.type {1}
+macro effect.bounds {2}
+macro effect.div0 {3}
+macro effect.mod0 {4}
 
-handle effect.math.mod {
-	println("unhandled: mod by zero")
-	exit
-}
-
-handle effect.type.concat {
-	println("unhandled: type error")
-	exit
-}
-
-handle effect.bounds {
-	println("unhandled: index out of bounds")
+handle effect.default {
+	println("unhandled: effect not handled anywhere")
 	exit
 }

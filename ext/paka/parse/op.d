@@ -29,9 +29,6 @@ UnaryOp parseUnaryOp(string[] ops) {
 
 Node call(Node fun, Node[] args) {
     if (Ident id = cast(Ident) fun) {
-        if (id.repr == "rec") {
-            return new Form("rec", args);
-        }
         if (id.repr == "length") {
             return new Form("length", args);
         }

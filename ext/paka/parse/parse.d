@@ -417,7 +417,7 @@ Node readStmtImpl(TokenArray tokens) {
         tokens.nextIs(Token.Type.keyword, "handle");
         Node name = tokens.readExprBase;
         Node lambdaBody = tokens.readBlock;
-        Node lambda = new Form("lambda", new Form("args"), new Form("do", lambdaBody, new Form("reject", name)));
+        Node lambda = new Form("lambda", new Form("args"), new Form("do", lambdaBody, new Form("reject", new Value(null))));
         return new Form("handle", name, lambda);
     }
     if (tokens.first.isKeyword("return")) {

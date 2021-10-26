@@ -15,6 +15,10 @@ import purr.vm.bytecode;
 
 __gshared bool dumpast = false;
 
+enum jumpTmp = -1;
+
+enum jumpSize = 1;
+
 class Reg {
     int repr;
     string sym;
@@ -27,8 +31,8 @@ class Reg {
         sym = s;
     }
 
-    ubyte reg() {
-        return (cast(ubyte)repr);
+    uint reg() {
+        return (cast(uint)repr);
     }
 
     override bool opEquals(Object other) {
@@ -60,7 +64,7 @@ final class Walker {
 
     Reg[] regs;
 
-    ubyte[] bytecode;
+    uint[] bytecode;
 
     Reg[] targets;
 
@@ -93,7 +97,7 @@ final class Walker {
                 continue;
             }
             foreach (ent; jumpLocs[name]) {
-                bytecode[ent .. ent+4] = ubytes(where);
+                bytecode[ent .. ent+4] = jump(where);
             }
         }
     }
@@ -124,7 +128,7 @@ final class Walker {
         foreach (name, locs; replaces) {
             if (int* setto = name in funcs) {
                 foreach (n; locs) {
-                    bytecode[n .. n + 4] = ubytes(*setto);
+                    bytecode[n .. n + jumpSize] = jump(*setto);
                 }
             } else {
                 vmError("function not found: " ~ name);
@@ -133,18 +137,18 @@ final class Walker {
         // writeln(regs);
     }
 
-    ubyte[1] ubytes(bool val) {
-        return (cast(ubyte*)&val)[0 .. 1];
+    uint[1] literal(bool val) {
+        return [cast(uint) val];
     }
 
-    ubyte[4] ubytes(int val) {
-        return (cast(ubyte*)&val)[0 .. 4];
+    uint[1] jump(int val) {
+        return [cast(uint) val];
     }
 
-    ubyte[4] ubytes(double val) {
+    uint[1] literal(double val) {
         vmCheckError(val % 1 == 0, "floats are broken, sadly");
         int inum = cast(int) val;
-        return (cast(ubyte*)&inum)[0 .. 4];
+        return cast(uint[]) [inum];
     }
 
     Reg allocOut() {
@@ -209,7 +213,7 @@ final class Walker {
                 int[] ret = jumpOn!doNotNegate(form.getArg(1), where);
                 int passTo = cast(int) bytecode.length;
                 foreach (passJump; passJumps) {
-                    bytecode[passJump .. passJump + 4] = ubytes(passTo);
+                    bytecode[passJump .. passJump + jumpSize] = jump(passTo);
                 }
                 return ret;
             }
@@ -226,9 +230,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_not_equal_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        bytecode ~= literal(*cast(double*) valueLeft.value);
                         return [ret];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         if (valueRight.info != typeid(double)) {
@@ -241,9 +245,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_not_equal_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        bytecode ~= literal(*cast(double*) valueRight.value);
                         return [ret];
                     }
                 }
@@ -256,7 +260,7 @@ final class Walker {
                     bytecode ~= Opcode.jump_if_not_equal;
                 }
                 int ret = cast(int) bytecode.length;
-                bytecode ~= ubytes(where);
+                bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
                 return [ret];
@@ -274,9 +278,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_equal_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        bytecode ~= literal(*cast(double*) valueLeft.value);
                         return [ret];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         if (valueRight.info != typeid(double)) {
@@ -289,9 +293,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_equal_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        bytecode ~= literal(*cast(double*) valueRight.value);
                         return [ret];
                     }
                 }
@@ -304,7 +308,7 @@ final class Walker {
                     bytecode ~= Opcode.jump_if_equal;
                 }
                 int ret = cast(int) bytecode.length;
-                bytecode ~= ubytes(where);
+                bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
                 return [ret];
@@ -320,9 +324,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_less_than_equal_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        bytecode ~= literal(*cast(double*) valueLeft.value);
                         return [ret];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         vmCheckError(valueRight.info == typeid(double), "expected number");
@@ -333,9 +337,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_greater_than_equal_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        bytecode ~= literal(*cast(double*) valueRight.value);
                         return [ret];
                     }
                 }
@@ -347,7 +351,7 @@ final class Walker {
                     bytecode ~= Opcode.jump_if_greater_than_equal;
                 }
                 int ret = cast(int) bytecode.length;
-                bytecode ~= ubytes(where);
+                bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
                 return [ret];
@@ -363,9 +367,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_greater_than_equal_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        bytecode ~= literal(*cast(double*) valueLeft.value);
                         return [ret];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         vmCheckError(valueRight.info == typeid(double), "expected number");
@@ -376,9 +380,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_less_than_equal_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        bytecode ~= literal(*cast(double*) valueRight.value);
                         return [ret];
                     }
                 }
@@ -390,7 +394,7 @@ final class Walker {
                     bytecode ~= Opcode.jump_if_less_than_equal;
                 }
                 int ret = cast(int) bytecode.length;
-                bytecode ~= ubytes(where);
+                bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
                 return [ret];
@@ -406,9 +410,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_less_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        bytecode ~= literal(*cast(double*) valueLeft.value);
                         return [ret];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         vmCheckError(valueRight.info == typeid(double), "expected number");
@@ -419,9 +423,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_greater_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        bytecode ~= literal(*cast(double*) valueRight.value);
                         return [ret];
                     }
                 }
@@ -433,7 +437,7 @@ final class Walker {
                     bytecode ~= Opcode.jump_if_greater;
                 }
                 int ret = cast(int) bytecode.length;
-                bytecode ~= ubytes(where);
+                bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
                 return [ret];
@@ -449,9 +453,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_greater_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                        bytecode ~= literal(*cast(double*) valueLeft.value);
                         return [ret];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         vmCheckError(valueRight.info == typeid(double), "expected number");
@@ -462,9 +466,9 @@ final class Walker {
                             bytecode ~= Opcode.jump_if_less_num;
                         }
                         int ret = cast(int) bytecode.length;
-                        bytecode ~= ubytes(where);
+                        bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
-                        bytecode ~= ubytes(*cast(double*) valueRight.value);
+                        bytecode ~= literal(*cast(double*) valueRight.value);
                         return [ret];
                     } 
                 } 
@@ -476,7 +480,7 @@ final class Walker {
                     bytecode ~= Opcode.jump_if_less;
                 }
                 int ret = cast(int) bytecode.length;
-                bytecode ~= ubytes(where);
+                bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
                 return [ret];
@@ -489,7 +493,7 @@ final class Walker {
             bytecode ~= Opcode.jump_if_false;
         }
         int ret = cast(int) bytecode.length;
-        bytecode ~= ubytes(where);
+        bytecode ~= jump(where);
         bytecode ~= cmp.reg;
         return [ret];
     }
@@ -510,7 +514,7 @@ final class Walker {
             } else {
                 jumpLocs[label.repr] = [cast(int) bytecode.length];
             }
-            bytecode ~= ubytes(-1);
+            bytecode ~= jumpTmp;
             return null;
         case "do":
             if (form.args.length == 0) {
@@ -535,7 +539,7 @@ final class Walker {
             }
             bytecode ~= Opcode.array_new;
             bytecode ~= outreg.reg;
-            bytecode ~= cast(ubyte) regs.length;
+            bytecode ~= cast(uint) regs.length;
             foreach (reg; regs) {
                 bytecode ~= reg.reg;
             }
@@ -735,7 +739,7 @@ final class Walker {
             walk(form.getArg(1), outreg);
             bytecode ~= Opcode.jump_always;
             int jumpOutFrom = cast(int) bytecode.length;
-            bytecode ~= ubytes(-1);
+            bytecode ~= jumpTmp;
             int jumpFalseTo = cast(int) bytecode.length;
             Node arg2 = new Value(0);
             if (form.args.length > 2) {
@@ -743,9 +747,9 @@ final class Walker {
             }
             walk(arg2, outreg);
             int jumpOutTo = cast(int) bytecode.length;
-            bytecode[jumpOutFrom .. jumpOutFrom + 4] = ubytes(jumpOutTo);
+            bytecode[jumpOutFrom .. jumpOutFrom + jumpSize] = jump(jumpOutTo);
             foreach (jumpFalseFrom; jumpsFalseFrom) {
-                bytecode[jumpFalseFrom .. jumpFalseFrom + 4] = ubytes(jumpFalseTo);
+                bytecode[jumpFalseFrom .. jumpFalseFrom + jumpSize] = jump(jumpFalseTo);
             }
             return outreg;
         case "unless":
@@ -754,34 +758,34 @@ final class Walker {
             walk(form.getArg(1), outreg);
             bytecode ~= Opcode.jump_always;
             int jumpOutFrom = cast(int) bytecode.length;
-            bytecode ~= ubytes(-1);
+            bytecode ~= jumpTmp;
             int jumpFalseTo = cast(int) bytecode.length;
             walk(form.getArg(2), outreg);
             int jumpOutTo = cast(int) bytecode.length;
-            bytecode[jumpOutFrom .. jumpOutFrom + 4] = ubytes(jumpOutTo);
+            bytecode[jumpOutFrom .. jumpOutFrom + jumpSize] = jump(jumpOutTo);
             foreach (jumpFalseFrom; jumpsFalseFrom) {
-                bytecode[jumpFalseFrom .. jumpFalseFrom + 4] = ubytes(jumpFalseTo);
+                bytecode[jumpFalseFrom .. jumpFalseFrom + jumpSize] = jump(jumpFalseTo);
             }
             return outreg;
         case "while":
             bytecode ~= Opcode.jump_always;
             int jumpCondFrom = cast(int) bytecode.length;
-            bytecode ~= ubytes(-1);
+            bytecode ~= jumpTmp;
             int jumpRedoTo = cast(int) bytecode.length;
             walk(form.getArg(1));
             int jumpCondTo = cast(int) bytecode.length;
             ifTrue(form.getArg(0), jumpRedoTo);
-            bytecode[jumpCondFrom .. jumpCondFrom + 4] = ubytes(jumpCondTo);
+            bytecode[jumpCondFrom .. jumpCondFrom + jumpSize] = jump(jumpCondTo);
             return null;
         case "until":
             bytecode ~= Opcode.jump_always;
             int jumpCondFrom = cast(int) bytecode.length;
-            bytecode ~= ubytes(-1);
+            bytecode ~= jumpTmp;
             int jumpRedoTo = cast(int) bytecode.length;
             walk(form.getArg(1));
             int jumpCondTo = cast(int) bytecode.length;
             ifFalse(form.getArg(0), jumpRedoTo);
-            bytecode[jumpCondFrom .. jumpCondFrom + 4] = ubytes(jumpCondTo);
+            bytecode[jumpCondFrom .. jumpCondFrom + jumpSize] = jump(jumpCondTo);
             return null;
         case "~":
             Reg lhs = walk(form.getArg(0));
@@ -806,7 +810,7 @@ final class Walker {
                         bytecode ~= rhs.reg;
                     }
                     vmCheckError(valueLeft.info == typeid(double), "expected number");
-                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                    bytecode ~= literal(*cast(double*) valueLeft.value);
                     return res;
                 } else if (Value valueRight = cast(Value) form.getArg(1)) {
                     Reg lhs = walk(form.getArg(0));
@@ -820,7 +824,7 @@ final class Walker {
                         bytecode ~= lhs.reg;
                     }
                     vmCheckError(valueRight.info == typeid(double), "expected number");
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    bytecode ~= literal(*cast(double*) valueRight.value);
                     return res;
                 }
             }
@@ -859,7 +863,7 @@ final class Walker {
                         bytecode ~= lhs.reg;
                     }
                     vmCheckError(valueRight.info == typeid(double), "expected number");
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    bytecode ~= literal(*cast(double*) valueRight.value);
                     return res;
                 } 
             }
@@ -888,7 +892,7 @@ final class Walker {
                     bytecode ~= res.reg;
                     bytecode ~= rhs.reg;
                     vmCheckError(valueLeft.info == typeid(double), "expected number");
-                    bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                    bytecode ~= literal(*cast(double*) valueLeft.value);
                     return res;
                 } else if (Value valueRight = cast(Value) form.getArg(1)) {
                     Reg lhs = walk(form.getArg(0));
@@ -897,7 +901,7 @@ final class Walker {
                     bytecode ~= res.reg;
                     bytecode ~= lhs.reg;
                     vmCheckError(valueRight.info == typeid(double), "expected number");
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    bytecode ~= literal(*cast(double*) valueRight.value);
                     return res;
                 } 
             }
@@ -918,7 +922,7 @@ final class Walker {
                     bytecode ~= res.reg;
                     bytecode ~= lhs.reg;
                     vmCheckError(valueRight.info == typeid(double), "expected number");
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    bytecode ~= literal(*cast(double*) valueRight.value);
                     return res;
                 } 
             }
@@ -939,7 +943,7 @@ final class Walker {
                     bytecode ~= res.reg;
                     bytecode ~= lhs.reg;
                     vmCheckError(valueRight.info == typeid(double), "expected number");
-                    bytecode ~= ubytes(*cast(double*) valueRight.value);
+                    bytecode ~= literal(*cast(double*) valueRight.value);
                     return res;
                 } 
             }
@@ -965,7 +969,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
                 vmCheckError(valueLeft.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                bytecode ~= literal(*cast(double*) valueLeft.value);
                 return res;
             } else if (Value valueRight = cast(Value) form.getArg(1)) {
                 if(valueRight.info != typeid(double)) {
@@ -976,7 +980,7 @@ final class Walker {
                 bytecode ~= Opcode.equal_num;
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
+                bytecode ~= literal(*cast(double*) valueRight.value);
                 return res;
             }
         cmpEq:
@@ -1002,7 +1006,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
                 vmCheckError(valueLeft.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                bytecode ~= literal(*cast(double*) valueLeft.value);
                 return res;
             } else if (Value valueRight = cast(Value) form.getArg(1)) {
                 if(valueRight.info != typeid(double)) {
@@ -1014,7 +1018,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
                 vmCheckError(valueRight.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
+                bytecode ~= literal(*cast(double*) valueRight.value);
                 return res;
             }
         cmpNeq:
@@ -1037,7 +1041,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
                 vmCheckError(valueLeft.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                bytecode ~= literal(*cast(double*) valueLeft.value);
                 return res;
             } else if (Value valueRight = cast(Value) form.getArg(1)) {
                 Reg lhs = walk(form.getArg(0));
@@ -1046,7 +1050,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
                 vmCheckError(valueRight.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
+                bytecode ~= literal(*cast(double*) valueRight.value);
                 return res;
             } else {
                 Reg lhs = walk(form.getArg(0));
@@ -1069,7 +1073,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
                 vmCheckError(valueLeft.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                bytecode ~= literal(*cast(double*) valueLeft.value);
                 return res;
             } else if (Value valueRight = cast(Value) form.getArg(1)) {
                 Reg lhs = walk(form.getArg(0));
@@ -1078,7 +1082,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
                 vmCheckError(valueRight.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
+                bytecode ~= literal(*cast(double*) valueRight.value);
                 return res;
             } else {
                 Reg lhs = walk(form.getArg(0));
@@ -1101,7 +1105,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
                 vmCheckError(valueLeft.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                bytecode ~= literal(*cast(double*) valueLeft.value);
                 return res;
             } else if (Value valueRight = cast(Value) form.getArg(1)) {
                 Reg lhs = walk(form.getArg(0));
@@ -1110,7 +1114,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
                 vmCheckError(valueRight.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
+                bytecode ~= literal(*cast(double*) valueRight.value);
                 return res;
             } else {
                 Reg lhs = walk(form.getArg(0));
@@ -1133,7 +1137,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= rhs.reg;
                 vmCheckError(valueLeft.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueLeft.value);
+                bytecode ~= literal(*cast(double*) valueLeft.value);
                 return res;
             } else if (Value valueRight = cast(Value) form.getArg(1)) {
                 Reg lhs = walk(form.getArg(0));
@@ -1142,7 +1146,7 @@ final class Walker {
                 bytecode ~= res.reg;
                 bytecode ~= lhs.reg;
                 vmCheckError(valueRight.info == typeid(double), "expected number");
-                bytecode ~= ubytes(*cast(double*) valueRight.value);
+                bytecode ~= literal(*cast(double*) valueRight.value);
                 return res;
             } else {
                 Reg lhs = walk(form.getArg(0));
@@ -1169,13 +1173,13 @@ final class Walker {
             bytecode ~= Opcode.store_fun;
             bytecode ~= lambdaReg.reg;
             int refLength = cast(int) bytecode.length;
-            bytecode ~= ubytes(-1);
+            bytecode ~= jumpTmp;
             int refRegc = cast(int) bytecode.length;
             bytecode ~= 255;
             Reg[] oldRegs = regs;
             regs = null;
             localss.length++;
-            locals["%"] = alloc();
+            locals["rec"] = alloc();
             foreach (index, arg; argnames) {
                 locals[arg] = alloc();
             }
@@ -1199,7 +1203,7 @@ final class Walker {
                 bytecode ~= Opcode.ret;
                 bytecode ~= reg.reg;
             }
-            bytecode[refRegc] = cast(ubyte) regs.length;
+            bytecode[refRegc] = cast(uint) regs.length;
             regs = oldRegs;
             fixGotoLabels();
             localss.length--;
@@ -1209,7 +1213,7 @@ final class Walker {
             currentCaptures.length--;
             inNthCaptures.length--;
             bytecode ~= Opcode.fun_done;
-            bytecode[refLength .. refLength + 4] = ubytes(cast(int) bytecode.length);
+            bytecode[refLength .. refLength + jumpSize] = jump(cast(int) bytecode.length);
             if (captureValues.length != 0) {
                 Reg[] regs = [lambdaReg];
                 foreach (arg; captureValues) {
@@ -1218,7 +1222,7 @@ final class Walker {
                 }
                 bytecode ~= Opcode.array_new;
                 bytecode ~= lambdaReg.reg;
-                bytecode ~= cast(ubyte) regs.length;
+                bytecode ~= cast(uint) regs.length;
                 foreach (reg; regs) {
                     bytecode ~= reg.reg;
                 }
@@ -1237,42 +1241,6 @@ final class Walker {
             bytecode ~= Opcode.putchar;
             bytecode ~= reg.reg;
             return null;
-        case "rec":
-            Reg funreg = new Reg(0);
-            Reg[] argRegs;
-            foreach (index, arg; form.sliceArg(1)) {
-                argRegs ~= walk(arg);
-            }
-            Reg outreg = allocOut;
-            switch (argRegs.length) {
-            case 0:
-                bytecode ~= Opcode.call0;
-                bytecode ~= outreg.reg;
-                bytecode ~= funreg.reg;
-                return outreg;
-            case 1:
-                bytecode ~= Opcode.call1;
-                bytecode ~= outreg.reg;
-                bytecode ~= funreg.reg;
-                bytecode ~= argRegs[0].reg;
-                return outreg;
-            case 2:
-                bytecode ~= Opcode.call2;
-                bytecode ~= outreg.reg;
-                bytecode ~= funreg.reg;
-                bytecode ~= argRegs[0].reg;
-                bytecode ~= argRegs[1].reg;
-                return outreg;
-            default:
-                bytecode ~= Opcode.call;
-                bytecode ~= outreg.reg;
-                bytecode ~= funreg.reg;
-                bytecode ~= cast(ubyte) argRegs.length;
-                foreach (reg; argRegs) {
-                    bytecode ~= reg.reg;
-                }
-                return outreg;
-            }
         case "call":
             Reg funreg = walk(form.getArg(0));
             Reg[] argRegs;
@@ -1303,7 +1271,7 @@ final class Walker {
                 bytecode ~= Opcode.call;
                 bytecode ~= outreg.reg;
                 bytecode ~= funreg.reg;
-                bytecode ~= cast(ubyte) argRegs.length;
+                bytecode ~= cast(uint) argRegs.length;
                 foreach (reg; argRegs) {
                     bytecode ~= reg.reg;
                 }
@@ -1373,46 +1341,28 @@ final class Walker {
             Reg ret = allocOut;
             bytecode ~= Opcode.store_bool;
             bytecode ~= ret.reg;
-            bytecode ~= cast(ubyte) *cast(bool*) val.value;
+            bytecode ~= cast(uint) *cast(bool*) val.value;
             return ret;
         } else if (val.info == typeid(int)) {
             Reg ret = allocOut;
-            if (*cast(int*) val.value < 256 && *cast(int*) val.value >= 0)
-            {
-                bytecode ~= Opcode.store_byte;
-                bytecode ~= ret.reg;
-                bytecode ~= cast(ubyte) *cast(int*) val.value;
-            }
-            else
-            {
-                bytecode ~= Opcode.store_int;
-                bytecode ~= ret.reg;
-                bytecode ~= ubytes(*cast(int*) val.value);
-            }
+            bytecode ~= Opcode.store_int;
+            bytecode ~= ret.reg;
+            bytecode ~= jump(cast(double)*cast(int*) val.value);
             return ret;
         } else if (val.info == typeid(double)) {
             Reg ret = allocOut;
-            if (*cast(double*) val.value < 256 && *cast(double*) val.value >= 0)
-            {
-                bytecode ~= Opcode.store_byte;
-                bytecode ~= ret.reg;
-                bytecode ~= cast(ubyte) *cast(double*) val.value;
-            }
-            else
-            {
-                bytecode ~= Opcode.store_int;
-                bytecode ~= ret.reg;
-                bytecode ~= ubytes(*cast(double*) val.value);
-            }
+            bytecode ~= Opcode.store_int;
+            bytecode ~= ret.reg;
+            bytecode ~= literal(*cast(double*) val.value);
             return ret;
         } else if (val.info == typeid(string)) {
             string src = *cast(string*) val.value;
             Reg outreg = allocOut;
             bytecode ~= Opcode.string_new;
             bytecode ~= outreg.reg;
-            bytecode ~= cast(ubyte) src.length;
+            bytecode ~= cast(uint) src.length;
             foreach (chr; src) {
-                bytecode ~= cast(ubyte) chr;
+                bytecode ~= cast(uint) chr;
             }
             return outreg;
         } else {

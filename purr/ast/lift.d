@@ -15,7 +15,7 @@ class Lifter {
 	size_t depth;
 
 	this() {
-		captureSymbol = new Ident("%");
+		captureSymbol = new Ident("rec");
 	}
 
 	Node liftProgram(Node node) {
@@ -71,7 +71,7 @@ class Lifter {
 				depth--;
 			}
 			Form[string] oldLocals = locals;
-			locals = null;
+			locals = ["rec": new Form("do", new Ident("rec"))];
 			scope(exit) {
 				locals = oldLocals;
 			}

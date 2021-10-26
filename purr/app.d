@@ -38,7 +38,7 @@ File astfile;
 
 Thunk[] next;
 
-void doBytecode(void[] bc) {
+void doBytecode(uint[] bc) {
     final switch (outLang) {
     case "bc":
         next ~= {
