@@ -68,9 +68,31 @@ BinaryOp parseBinaryOp(string[] ops) {
             return (Node lhs, Node rhs) {
                 if (Form lhsForm = cast(Form) lhs) {
                     if (lhsForm.form == "call") {
-                        Node rhsLambda = new Form("lambda", new Form("args",
-                                lhsForm.args[1 .. $]), rhs);
-                        return parseBinaryOp(["="])(lhsForm.args[0], rhsLambda);
+                        Node[] argsRest;
+                        Node[] matches;
+                        foreach (arg; lhsForm.args[1 .. $]) {
+                            if (Value val = cast(Value) arg) {
+                                Ident sym = genSym();
+                                argsRest ~= sym;
+                                matches ~= new Form("==", sym, val);
+                            } else if (Ident id = cast(Ident) arg) {
+                                argsRest ~= arg;
+                            } else if (Form form = cast(Form) arg) {
+                                argsRest ~= arg;
+                            }
+                        }
+                        import std.stdio: writeln;
+                        Node last = genSym;
+                        Node setTo = lhsForm.args[0];
+                        Node branch = new Form("return", rhs);
+                        foreach (match; matches) {
+                            Node ifFalse = new Form("return", new Form("call", last, argsRest));
+                            branch = new Form("if", match, branch, ifFalse);
+                        }
+                        Node lambda = new Form("lambda", new Form("args", argsRest), branch);
+                        Node setLast = new Form("var", last, setTo);
+                        Node setLambda = parseBinaryOp([":="])(setTo, lambda);
+                        return new Form("do", setLast, setLambda);
                     }
                     if (lhsForm.form == "index" || lhsForm.form == "unbox") {
                         return new Form("set", lhs, rhs);

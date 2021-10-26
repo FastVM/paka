@@ -44,7 +44,7 @@ class Reg {
         if (sym.length == 0) {
             return "." ~ repr.to!string;
         } else {
-            return sym;
+            return "(reg: " ~ sym ~ ")";
         }
     }
 }
@@ -1197,9 +1197,8 @@ final class Walker {
                 bytecode ~= retreg.reg;
             } else {
                 Reg reg = alloc();
-                bytecode ~= Opcode.store_bool;
+                bytecode ~= Opcode.store_none;
                 bytecode ~= reg.reg;
-                bytecode ~= 0;
                 bytecode ~= Opcode.ret;
                 bytecode ~= reg.reg;
             }
@@ -1278,6 +1277,40 @@ final class Walker {
                 return outreg;
             }
         case "return":
+            if (Form call = cast(Form) form.getArg(0)) {
+                if (call.form == "call") {
+                    Reg func = walk(call.getArg(0));
+                    Reg[] argRegs;
+                    foreach (index, arg; call.sliceArg(1)) {
+                        argRegs ~= walk(arg);
+                    }
+                    switch (argRegs.length) {
+                    case 0:
+                        bytecode ~= Opcode.tail_call0;
+                        bytecode ~= func.reg;
+                        return null;
+                    case 1:
+                        bytecode ~= Opcode.tail_call1;
+                        bytecode ~= func.reg;
+                        bytecode ~= argRegs[0].reg;
+                        return null;
+                    case 2:
+                        bytecode ~= Opcode.tail_call2;
+                        bytecode ~= func.reg;
+                        bytecode ~= argRegs[0].reg;
+                        bytecode ~= argRegs[1].reg;
+                        return null;
+                    default:
+                        bytecode ~= Opcode.tail_call;
+                        bytecode ~= func.reg;
+                        bytecode ~= cast(uint) argRegs.length;
+                        foreach (reg; argRegs) {
+                            bytecode ~= reg.reg;
+                        }
+                        return null;
+                    }
+                }
+            }
             Reg res = walk(form.getArg(0));
             bytecode ~= Opcode.ret;
             bytecode ~= res.reg;
