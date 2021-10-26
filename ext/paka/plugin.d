@@ -10,8 +10,8 @@ static this() {
 
 Plugin thisPlugin() {
     Plugin plugin = new Plugin;
-    plugin.parsers["paka"] = &parseUncached;
-    plugin.parsers["paka.cached"] = &parseCached;
-    plugin.parsers["paka.uncached"] = &parseUncached;
+    plugin.parsers["paka"] = &parse;
+    plugin.parsers["paka.raw"] = &parseRaw;
+    plugin.parsers["paka.prelude"] = &parsePrelude;
     return plugin;
 }

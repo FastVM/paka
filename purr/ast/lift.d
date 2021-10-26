@@ -16,6 +16,7 @@ class Lifter {
 
 	this() {
 		captureSymbol = new Ident("rec");
+		locals["this"] = new Form("do", new Ident("this"));
 	}
 
 	Node liftProgram(Node node) {
@@ -107,18 +108,6 @@ class Lifter {
 			Node built = new Form("array", lambda, captureNodes);
 			return built;
 		case "var":
-			Node input = lift(form.getArg(1));
-			Ident id = cast(Ident) form.getArg(0);
-			Node output;
-			if (Form* poutput = id.repr in locals) {
-				output = poutput.args[0];
-			} else { 
-				locals[id.repr] = new Form("do", id);
-				output = id;
-				pre[id.repr] = new Form("var", output, new Value(null));
-			}
-			return cast(Node) new Form("set", output, input);
-		case "set":
 			Node input = lift(form.getArg(1));
 			Ident id = cast(Ident) form.getArg(0);
 			Node output;

@@ -19,7 +19,7 @@ extern(C) int LLVMFuzzerTestOneInput(const(void*) data, size_t size) {
 	string code = (cast(char*) data)[0..size].dup;
 	try {
 		SrcLoc loc = SrcLoc(1, 1, "__main__", code);
-		Node node = loc.parseUncached;  
+		Node node = loc.parse;  
         Walker walker = new Walker;
         walker.walkProgram(node);
 		uint[] bc = walker.bytecode;

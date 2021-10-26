@@ -471,7 +471,14 @@ alias readBlockBody = Spanning!readBlockBodyImpl;
 Node readBlockBodyImpl(TokenArray tokens) {
     Node[] ret;
     while (tokens.first.exists && !tokens.first.isClose("}") && !tokens.first.isKeyword("else")) {
-        ret ~= tokens.readStmt;
+        Node stmt = tokens.readStmt;
+        if (Form form = cast(Form) stmt) {
+            if (form.form == "do") {
+                ret ~= form.args;
+                continue;
+            }
+        } 
+        ret ~= stmt;
     }
     if (ret.length == 1) {
         return ret[0];
@@ -528,13 +535,14 @@ Node parsePakaAs(alias parser)(SrcLoc loc) {
     }
 }
 
-alias parseCached = memoize!parseUncached;
+Node parsePrelude(SrcLoc loc) {
+    return SrcLoc(1, 1, "prelude.paka", import("prelude.paka")).parsePaka;
+}
 
-/// parses code as the paka programming language
-Node parseUncached(SrcLoc loc) {
-    SrcLoc location = loc;
-    Node pre = SrcLoc(1, 1, "prelude.paka", import("prelude.paka")).parsePaka;
-    Node ast = location.parsePaka;
-    // Node ret = new Form("do", ast, new Form("call", new Ident("main")));
-    return new Form("do", pre, ast);
+Node parseRaw(SrcLoc loc) {
+    return loc.parsePaka;
+}
+
+Node parse(SrcLoc loc) {
+    return new Form("do", loc.parsePrelude, loc.parseRaw);
 }

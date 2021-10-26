@@ -7,7 +7,7 @@ import purr.srcloc;
 import purr.ast.ast;
 import purr.ast.walk;
 import purr.plugin.plugins;
-import purr.vm;
+import purr.vm.state;
 import std.stdio;
 import std.uuid;
 import std.path;
@@ -36,27 +36,52 @@ string lang = "paka";
 string astLang = "zz";
 File astfile;
 
-Thunk[] next;
-
 void doBytecode(uint[] bc) {
     final switch (outLang) {
     case "bc":
-        next ~= {
-            File("out.bc", "wb").rawWrite(bc);
-        };
+        File("out.bc", "wb").rawWrite(bc);
         break;
     case "vm":
-        next ~= {
-            GC.collect;
-            GC.minimize;
-            GC.disable;
-            run(bc);
-            GC.enable;
-        };
+        GC.collect;
+        GC.minimize;
+        GC.disable;
+        run(bc);
+        GC.enable;
         break;
     case "none":
         break;
     }
+}
+
+Thunk cliReplHandler()
+{
+    return {
+        size_t line = 1;
+        while (!stdin.eof) {
+            try {
+                write(">>> ");
+                SrcLoc code = SrcLoc(line, 1, "repl", readln);
+                Node initNode = code.parse("paka.raw");
+                Node lambdaBody = initNode;
+                Node mainLambda = new Form("lambda", new Form("args"), lambdaBody);
+                Node setFinal = new Form("var", new Ident("repl.out"), new Form("call", mainLambda));
+                Node printAll = new Form("call", new Ident("println"), new Ident("repl.out"));
+                Node isFinalNone = new Form("!=", new Ident("repl.out"), new Value(null));
+                Node maybePrintAll = new Form("if", isFinalNone, printAll, new Value(null));
+                Node pre = SrcLoc.init.parse("paka.prelude");
+                Node doMain = new Form("do", pre, setFinal, maybePrintAll);
+                Node finalNode = doMain;
+                if (dumpast) {astfile.write(astLang.unparse(initNode));}
+                Walker walker = new Walker;
+                walker.walkProgram(finalNode);
+                doBytecode(walker.bytecode);
+            } catch (Problem prob) {
+                writeln("error: ", prob.msg);
+            }
+            
+            line += 1;
+        }
+    };
 }
 
 
@@ -102,7 +127,7 @@ Thunk cliParseHandler(immutable string code) {
     };
 }
 
-Thunk cliConvHandler(immutable string code) {
+Thunk cliEvalHandler(immutable string code) {
     return {
         SrcLoc code = SrcLoc(1, 1, "__main__", code);
         Node node = code.parse(lang);
@@ -113,8 +138,7 @@ Thunk cliConvHandler(immutable string code) {
     };
 }
 
-
-Thunk cliConvFileHandler(immutable string filename) {
+Thunk cliFileHandler(immutable string filename) {
     return {
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
         Node node = code.parse(lang);
@@ -211,19 +235,22 @@ void domain(string[] args) {
         }
         switch (parts[0]) {
         default:
-            todo ~= parts[0].cliConvFileHandler;
+            todo ~= parts[0].cliFileHandler;
             break;
         case "--show":
             todo ~= part1.cliShowHandler;
             break;
         case "--file":
-            todo ~= part1.cliConvFileHandler;
+            todo ~= part1.cliFileHandler;
             break;
         case "--lang":
             todo ~= part1.cliLangHandler;
             break;
         case "--eval":
-            todo ~= part1.cliConvHandler;
+            todo ~= part1.cliEvalHandler;
+            break;
+        case "--repl":
+            todo ~= cliReplHandler;
             break;
         case "--time":
             todo[$ - 1] = todo[$ - 1].cliTimeHandler;
@@ -251,12 +278,8 @@ void domain(string[] args) {
             break;
         }
     }
-    while (todo.length != 0) {
-        next = null;
-        foreach_reverse (fun; todo) {
-            fun();
-        }
-        todo = next;
+    foreach_reverse (fun; todo) {
+        fun();
     }
 }
 

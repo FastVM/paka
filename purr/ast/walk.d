@@ -123,6 +123,7 @@ final class Walker {
             inNthCaptures.length--;
         }
         bytecode = null;
+        locals["this"] = new Reg(0);
         walk(program);
         bytecode ~= Opcode.exit;
         foreach (name, locs; replaces) {
@@ -167,11 +168,11 @@ final class Walker {
 
     Reg alloc(Node isFor = null) {
         if (isFor !is null) {
-            Reg reg = new Reg(regs.length, isFor.to!string);
+            Reg reg = new Reg(regs.length + 1, isFor.to!string);
             regs ~= reg;
             return reg;
         } else {
-            Reg reg = new Reg(regs.length);
+            Reg reg = new Reg(regs.length + 1);
             regs ~= reg;
             return reg;
         }
@@ -518,7 +519,13 @@ final class Walker {
             return null;
         case "do":
             if (form.args.length == 0) {
-                return null;
+                Reg ret = allocOutMaybe;
+                if (ret is null) {
+                    return ret;
+                }
+                bytecode ~= Opcode.store_none;
+                bytecode ~= ret.reg;
+                return ret;
             } else {
                 Reg ret = allocOutMaybe;
                 foreach (elem; form.sliceArg(0, 1)) {
@@ -1179,7 +1186,7 @@ final class Walker {
             Reg[] oldRegs = regs;
             regs = null;
             localss.length++;
-            locals["rec"] = alloc();
+            locals["rec"] = new Reg(0);
             foreach (index, arg; argnames) {
                 locals[arg] = alloc();
             }
@@ -1202,7 +1209,7 @@ final class Walker {
                 bytecode ~= Opcode.ret;
                 bytecode ~= reg.reg;
             }
-            bytecode[refRegc] = cast(uint) regs.length;
+            bytecode[refRegc] = cast(uint) (regs.length + 1);
             regs = oldRegs;
             fixGotoLabels();
             localss.length--;
@@ -1321,18 +1328,6 @@ final class Walker {
         assert(false);
     }
 
-    // Node path(string name) {
-    //     if (name in localss[$-2]) {
-    //         currentCaptures[$-2] ~= localss[$-2][name];
-    //         captureValuess[$-2] ~= new Ident(name);
-    //         inNthCaptures[$-1][name] = cast(int) captureValuess[$-2].length;
-    //         return new Form("index", new Form("capture"), new Value(cast(double) captureValuess[$-2].length));
-    //     } else {
-    //         vmError("capture resolution fail for: " ~ name);
-    //         assert(false);
-    //     }
-    // }
-
     Reg walkExact(Ident id) {
         if (Reg* fromreg = id.repr in locals) {
             Reg outreg = allocOutMaybe;
@@ -1344,20 +1339,6 @@ final class Walker {
                 bytecode ~= (*fromreg).reg;
                 return outreg;
             }
-        // } else if (localss.length <= 1) {
-        //     vmError("global name resolution fail for: " ~ id.to!string);
-        //     assert(false);
-        // } else if (Node lookup = path(id.repr)) {
-        //     Reg outreg = allocOutMaybe;
-        //     Reg fromreg = walk(lookup, outreg);
-        //     if (outreg is null || outreg == fromreg) {
-        //         return fromreg;
-        //     } else {
-        //         bytecode ~= Opcode.store_reg;
-        //         bytecode ~= outreg.reg;
-        //         bytecode ~= fromreg.reg;
-        //         return outreg;
-        //     }
         } else {
             vmError("name resolution fail for: " ~ id.to!string);
             assert(false);

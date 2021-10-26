@@ -5,7 +5,13 @@ import core.memory;
 alias Number = double;
 alias String = immutable(char)*;
 
-extern (C) void vm_run(size_t len, void* func, size_t start);
+struct State;
+
+extern (C) {
+    void vm_run(State* state, size_t len, void* func);
+    State* vm_state_new();
+    void vm_state_del(State *);
+}
 
 enum Opcode : uint {
     exit,

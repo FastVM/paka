@@ -5,7 +5,6 @@ import purr.ast.ast;
 import purr.ast.walk;
 import purr.vm.bytecode;
 import purr.err;
-import purr.vm;
 import purr.srcloc;
 
 enum string bashLine = "#!";
