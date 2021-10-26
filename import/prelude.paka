@@ -91,6 +91,12 @@ def println(value) {
 	putchar(10)
 }
 
+iota_num := 0
+def iota(name) {
+	iota_num = iota_num + 1
+	return box iota_num
+}
+
 handle effect.math.div {
 	println("unhandled: div by zero")
 	exit

@@ -695,6 +695,13 @@ final class Walker {
                     bytecode ~= boxReg.reg;
                     bytecode ~= valueReg.reg;
                     return boxReg;
+                } else if (call.form == "deref") {
+                    Reg boxReg = walk(call.getArg(0));
+                    Reg valueReg = walk(form.getArg(1));
+                    bytecode ~= Opcode.ref_set,
+                    bytecode ~= boxReg.reg;
+                    bytecode ~= valueReg.reg;
+                    return boxReg;
                 } else if (call.form == "do") {
                     Reg target = walk(form.getArg(0));
                     Reg from = walk(form.getArg(1), target);
@@ -1231,106 +1238,76 @@ final class Walker {
             bytecode ~= reg.reg;
             return null;
         case "rec":
-        case "call":
-            bool isRec = form.form == "rec";
-            bool isStatic = false;
-            string staticName;
-
-            Reg funreg;
-            Reg outreg = allocOut;
-            if (!isRec && !isStatic) {
-                funreg = walk(form.getArg(0));
-            }
+            Reg funreg = new Reg(0);
             Reg[] argRegs;
             foreach (index, arg; form.sliceArg(1)) {
                 argRegs ~= walk(arg);
             }
-            if (argRegs.length > 2 || !xinstrs) {
-                if (isRec) {
-                    bytecode ~= Opcode.rec;
-                    bytecode ~= outreg.reg;
-                } else if (isStatic) {
-                    bytecode ~= Opcode.static_call;
-                    bytecode ~= outreg.reg;
-                    if (int[]* preps = staticName in replaces) {
-                        *preps ~= cast(int)(bytecode.length);
-                    } else {
-                        replaces[staticName] = [cast(int)(bytecode.length)];
-                    }
-                    bytecode ~= ubytes(-1);
-                } else {
-                    bytecode ~= Opcode.call;
-                    bytecode ~= outreg.reg;
-                    bytecode ~= funreg.reg;
-                }
+            Reg outreg = allocOut;
+            switch (argRegs.length) {
+            case 0:
+                bytecode ~= Opcode.call0;
+                bytecode ~= outreg.reg;
+                bytecode ~= funreg.reg;
+                return outreg;
+            case 1:
+                bytecode ~= Opcode.call1;
+                bytecode ~= outreg.reg;
+                bytecode ~= funreg.reg;
+                bytecode ~= argRegs[0].reg;
+                return outreg;
+            case 2:
+                bytecode ~= Opcode.call2;
+                bytecode ~= outreg.reg;
+                bytecode ~= funreg.reg;
+                bytecode ~= argRegs[0].reg;
+                bytecode ~= argRegs[1].reg;
+                return outreg;
+            default:
+                bytecode ~= Opcode.call;
+                bytecode ~= outreg.reg;
+                bytecode ~= funreg.reg;
                 bytecode ~= cast(ubyte) argRegs.length;
                 foreach (reg; argRegs) {
                     bytecode ~= reg.reg;
                 }
                 return outreg;
-            } else {
-                final switch (argRegs.length) {
-                case 0:
-                    if (isRec) {
-                        bytecode ~= Opcode.rec0;
-                        bytecode ~= outreg.reg;
-                    } else if (isStatic) {
-                        bytecode ~= Opcode.static_call0;
-                        bytecode ~= outreg.reg;
-                        if (int[]* preps = staticName in replaces) {
-                            *preps ~= cast(int)(bytecode.length);
-                        } else {
-                            replaces[staticName] = [cast(int)(bytecode.length)];
-                        }
-                        bytecode ~= ubytes(-1);
-                    } else {
-                        bytecode ~= Opcode.call0;
-                        bytecode ~= outreg.reg;
-                        bytecode ~= funreg.reg;
-                    }
-                    return outreg;
-                case 1:
-                    if (isRec) {
-                        bytecode ~= Opcode.rec1;
-                        bytecode ~= outreg.reg;
-                    } else if (isStatic) {
-                        bytecode ~= Opcode.static_call1;
-                        bytecode ~= outreg.reg;
-                        if (int[]* preps = staticName in replaces) {
-                            *preps ~= cast(int)(bytecode.length);
-                        } else {
-                            replaces[staticName] = [cast(int)(bytecode.length)];
-                        }
-                        bytecode ~= ubytes(-1);
-                    } else {
-                        bytecode ~= Opcode.call1;
-                        bytecode ~= outreg.reg;
-                        bytecode ~= funreg.reg;
-                    }
-                    bytecode ~= argRegs[0].reg;
-                    return outreg;
-                case 2:
-                    if (isRec) {
-                        bytecode ~= Opcode.rec2;
-                        bytecode ~= outreg.reg;
-                    } else if (isStatic) {
-                        bytecode ~= Opcode.static_call2;
-                        bytecode ~= outreg.reg;
-                        if (int[]* preps = staticName in replaces) {
-                            *preps ~= cast(int)(bytecode.length);
-                        } else {
-                            replaces[staticName] = [cast(int)(bytecode.length)];
-                        }
-                        bytecode ~= ubytes(-1);
-                    } else {
-                        bytecode ~= Opcode.call2;
-                        bytecode ~= outreg.reg;
-                        bytecode ~= funreg.reg;
-                    }
-                    bytecode ~= argRegs[0].reg;
-                    bytecode ~= argRegs[1].reg;
-                    return outreg;
+            }
+        case "call":
+            Reg funreg = walk(form.getArg(0));
+            Reg[] argRegs;
+            foreach (index, arg; form.sliceArg(1)) {
+                argRegs ~= walk(arg);
+            }
+            Reg outreg = allocOut;
+            switch (argRegs.length) {
+            case 0:
+                bytecode ~= Opcode.call0;
+                bytecode ~= outreg.reg;
+                bytecode ~= funreg.reg;
+                return outreg;
+            case 1:
+                bytecode ~= Opcode.call1;
+                bytecode ~= outreg.reg;
+                bytecode ~= funreg.reg;
+                bytecode ~= argRegs[0].reg;
+                return outreg;
+            case 2:
+                bytecode ~= Opcode.call2;
+                bytecode ~= outreg.reg;
+                bytecode ~= funreg.reg;
+                bytecode ~= argRegs[0].reg;
+                bytecode ~= argRegs[1].reg;
+                return outreg;
+            default:
+                bytecode ~= Opcode.call;
+                bytecode ~= outreg.reg;
+                bytecode ~= funreg.reg;
+                bytecode ~= cast(ubyte) argRegs.length;
+                foreach (reg; argRegs) {
+                    bytecode ~= reg.reg;
                 }
+                return outreg;
             }
         case "return":
             Reg res = walk(form.getArg(0));
