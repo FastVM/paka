@@ -1,8 +1,8 @@
 def bottom_up_tree(item, depth) {
     if depth != 0 {
         i := item + item
-        left := rec(i-1, depth - 1)
-        right := rec(i, depth - 1)
+        left := bottom_up_tree(i-1, depth - 1)
+        right := bottom_up_tree(i, depth - 1)
         return [item, left, right]
     } else {
         return box item
@@ -11,7 +11,7 @@ def bottom_up_tree(item, depth) {
 
 def item_check(tree) {
     if type(tree) == type.array {
-        return tree[0] + rec(tree[1]) - rec(tree[2])
+        return tree[0] + item_check(tree[1]) - item_check(tree[2])
     } else {
         return unbox tree
     }
@@ -21,7 +21,7 @@ def pow2(n) {
     if n == 0 {
         return 1
     } else {
-        return rec(n-1) * 2
+        return pow2(n-1) * 2
     }
 }
 

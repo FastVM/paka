@@ -28,6 +28,20 @@ UnaryOp parseUnaryOp(string[] ops) {
 }
 
 Node call(Node fun, Node[] args) {
+    if (Ident id = cast(Ident) fun) {
+        if (id.repr == "rec") {
+            return new Form("rec", args);
+        }
+        if (id.repr == "length") {
+            return new Form("length", args);
+        }
+        if (id.repr == "putchar") {
+            return new Form("putchar", args);
+        }
+        if (id.repr == "type") {
+            return new Form("type", args);
+        }
+    }
     return new Form("call", fun, args);
 }
 

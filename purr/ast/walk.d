@@ -9,6 +9,7 @@ import std.ascii;
 import purr.ast.ast;
 import purr.srcloc;
 import purr.err;
+import purr.ast.lift;
 import purr.plugin.plugins;
 import purr.vm.bytecode;
 
@@ -53,7 +54,6 @@ final class Walker {
     int[string][] jumpLabelss;
     Node[][] captureValuess;
     Reg[][] currentCaptures;
-    Reg[] captureRegs;
     double[string][] inNthCaptures;
 
     Reg[string][] localss;
@@ -69,10 +69,6 @@ final class Walker {
 
     ref Reg[string] locals() {
         return localss[$ - 1];
-    }
-
-    ref Reg captureReg() {
-        return captureRegs[$ - 1];
     }
 
     ref Reg[] currentCapture() {
@@ -103,6 +99,10 @@ final class Walker {
     }
 
     void walkProgram(Node program) {
+        Lifter lifter = new Lifter; 
+        Node lifted = lifter.liftProgram(program);
+        program = lifted;
+        // writeln(program);
         localss.length++;
         jumpLocss.length++;
         jumpLabelss.length++;
@@ -130,6 +130,7 @@ final class Walker {
                 vmError("function not found: " ~ name);
             }
         }
+        // writeln(regs);
     }
 
     ubyte[1] ubytes(bool val) {
@@ -150,7 +151,7 @@ final class Walker {
         if (targets[$ - 1]!is null) {
             return targets[$ - 1];
         }
-        return alloc();
+        return alloc(nodes[$-1]);
     }
 
     Reg allocOutMaybe() {
@@ -161,12 +162,20 @@ final class Walker {
     }
 
     Reg alloc(Node isFor = null) {
-        Reg reg = new Reg(regs.length);
-        regs ~= reg;
-        return reg;
+        if (isFor !is null) {
+            Reg reg = new Reg(regs.length, isFor.to!string);
+            regs ~= reg;
+            return reg;
+        } else {
+            Reg reg = new Reg(regs.length);
+            regs ~= reg;
+            return reg;
+        }
     }
 
     Reg walk(Node node, Reg target = null) {
+        // writeln(bytecode.length, ": ", node);
+        stdout.flush;
         targets ~= target;
         nodes ~= node;
         scope (exit) {
@@ -559,6 +568,20 @@ final class Walker {
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             return outreg;
+        case "ref":
+            Reg outreg = allocOut;
+            Reg objreg = walk(form.getArg(0));
+            bytecode ~= Opcode.ref_new;
+            bytecode ~= outreg.reg;
+            bytecode ~= objreg.reg;
+            return outreg;
+        case "deref":
+            Reg outreg = allocOut;
+            Reg objreg = walk(form.getArg(0), outreg);
+            bytecode ~= Opcode.ref_get;
+            bytecode ~= outreg.reg;
+            bytecode ~= objreg.reg;
+            return outreg;
         case "unbox":
             Reg outreg = allocOut;
             Reg objreg = walk(form.getArg(0), outreg);
@@ -566,15 +589,6 @@ final class Walker {
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             return outreg;
-        case "def":
-            if (Ident id = cast(Ident) form.getArg(0)) {
-                goto case "var";
-            } else if (Form call = cast(Form) form.getArg(0)) {
-                return walk(new Form("var", call.getArg(0), new Form("lambda", new Form("args", call.sliceArg(1)), form.sliceArg(1))));
-            } else {
-                vmError("def to bad value");
-                assert(false);
-            }
         case "var":
             if (Ident id = cast(Ident) form.getArg(0)) {
                 if (Form lambda = cast(Form) form.getArg(1)) {
@@ -583,7 +597,7 @@ final class Walker {
                         funcs[id.repr] = cast(int)(bytecode.length + 7);
                     }
                 }
-                Reg target = alloc();
+                Reg target = alloc(id);
                 Reg from = walk(form.getArg(1), target);
                 locals[id.repr] = target;
                 if (target != from) {
@@ -603,7 +617,7 @@ final class Walker {
                     return outreg;
                 }
             } else {
-                vmError("set to bad value");
+                vmError("var set to bad value");
                 assert(false);
             }
         case "handle":
@@ -642,13 +656,12 @@ final class Walker {
                     }
                 }
                 Reg target;
-                Reg from;     
                 if (Reg* ret = id.repr in locals) {
                     target = *ret;
-                    from = walk(form.getArg(1), target);
                 } else {
                     vmError("set to unknown variable: " ~ id.repr);
                 }
+                Reg from = walk(form.getArg(1), target);
                 if (target != from) {
                     bytecode ~= Opcode.store_reg;
                     bytecode ~= target.reg;
@@ -682,6 +695,25 @@ final class Walker {
                     bytecode ~= boxReg.reg;
                     bytecode ~= valueReg.reg;
                     return boxReg;
+                } else if (call.form == "do") {
+                    Reg target = walk(form.getArg(0));
+                    Reg from = walk(form.getArg(1), target);
+                    if (target != from) {
+                        bytecode ~= Opcode.store_reg;
+                        bytecode ~= target.reg;
+                        bytecode ~= from.reg;
+                    }
+                    Reg outreg = allocOutMaybe;
+                    if (outreg is null || outreg == target) {
+                        return target;
+                    } else if (outreg == from) {
+                        return from;
+                    } else {
+                        bytecode ~= Opcode.store_reg;
+                        bytecode ~= outreg.reg;
+                        bytecode ~= from.reg;
+                        return outreg;
+                    }
                 } else {
                     vmError("set to bad value");
                     assert(false);
@@ -1136,12 +1168,9 @@ final class Walker {
             Reg[] oldRegs = regs;
             regs = null;
             localss.length++;
+            locals["%"] = alloc();
             foreach (index, arg; argnames) {
                 locals[arg] = alloc();
-            }
-            captureRegs ~= alloc();
-            scope (exit) {
-                captureRegs.length--;
             }
             jumpLabelss.length++;
             jumpLocss.length++;
@@ -1187,39 +1216,25 @@ final class Walker {
                     bytecode ~= reg.reg;
                 }
             }
+            // writeln(lambdaReg);
             return lambdaReg;
+        case "type":
+            Reg outreg = allocOut;
+            Reg objreg = walk(form.getArg(0));
+            bytecode ~= Opcode.type;
+            bytecode ~= outreg.reg;
+            bytecode ~= objreg.reg;
+            return outreg;
+        case "putchar":
+            Reg reg = walk(form.getArg(0));
+            bytecode ~= Opcode.putchar;
+            bytecode ~= reg.reg;
+            return null;
+        case "rec":
         case "call":
-            bool isRec = false;
+            bool isRec = form.form == "rec";
             bool isStatic = false;
             string staticName;
-            if (Ident func = cast(Ident) form.getArg(0)) {
-                if (func.repr == "putchar") {
-                    Reg reg = walk(form.getArg(1));
-                    bytecode ~= Opcode.putchar;
-                    bytecode ~= reg.reg;
-                    return null;
-                } else if (func.repr == "rec") {
-                    isRec = true;
-                } else if (func.repr == "length") {
-                    Reg outreg = allocOut;
-                    Reg objreg = walk(form.getArg(1));
-                    bytecode ~= Opcode.length;
-                    bytecode ~= outreg.reg;
-                    bytecode ~= objreg.reg;
-                    return outreg;
-                } else if (func.repr == "type") {
-                    Reg outreg = allocOut;
-                    Reg objreg = walk(form.getArg(1));
-                    bytecode ~= Opcode.type;
-                    bytecode ~= outreg.reg;
-                    bytecode ~= objreg.reg;
-                    return outreg;
-                // } else if (func.repr !in locals) {
-                } else {
-                    isStatic = true;
-                    staticName = func.repr;
-                }
-            }
 
             Reg funreg;
             Reg outreg = allocOut;
@@ -1322,34 +1337,23 @@ final class Walker {
             bytecode ~= Opcode.ret;
             bytecode ~= res.reg;
             return null;
-        case "capture":
-            Reg fromreg = captureReg;
-            Reg outreg = allocOutMaybe;
-            if (outreg is null || outreg == fromreg) {
-                return fromreg;
-            } else {
-                bytecode ~= Opcode.store_reg;
-                bytecode ~= outreg.reg;
-                bytecode ~= fromreg.reg;
-                return outreg;
-            }
         }
 
         vmError("Form: " ~ form.to!string);
         assert(false);
     }
 
-    Node path(string name) {
-        if (name in localss[$-2]) {
-            currentCaptures[$-2] ~= localss[$-2][name];
-            captureValuess[$-2] ~= new Ident(name);
-            inNthCaptures[$-1][name] = cast(int) captureValuess[$-2].length;
-            return new Form("index", new Form("capture"), new Value(cast(double) captureValuess[$-2].length));
-        } else {
-            vmError("capture resolution fail for: " ~ name);
-            assert(false);
-        }
-    }
+    // Node path(string name) {
+    //     if (name in localss[$-2]) {
+    //         currentCaptures[$-2] ~= localss[$-2][name];
+    //         captureValuess[$-2] ~= new Ident(name);
+    //         inNthCaptures[$-1][name] = cast(int) captureValuess[$-2].length;
+    //         return new Form("index", new Form("capture"), new Value(cast(double) captureValuess[$-2].length));
+    //     } else {
+    //         vmError("capture resolution fail for: " ~ name);
+    //         assert(false);
+    //     }
+    // }
 
     Reg walkExact(Ident id) {
         if (Reg* fromreg = id.repr in locals) {
@@ -1362,20 +1366,20 @@ final class Walker {
                 bytecode ~= (*fromreg).reg;
                 return outreg;
             }
-        } else if (localss.length <= 1) {
-            vmError("global name resolution fail for: " ~ id.to!string);
-            assert(false);
-        } else if (Node lookup = path(id.repr)) {
-            Reg outreg = allocOutMaybe;
-            Reg fromreg = walk(lookup, outreg);
-            if (outreg is null || outreg == fromreg) {
-                return fromreg;
-            } else {
-                bytecode ~= Opcode.store_reg;
-                bytecode ~= outreg.reg;
-                bytecode ~= fromreg.reg;
-                return outreg;
-            }
+        // } else if (localss.length <= 1) {
+        //     vmError("global name resolution fail for: " ~ id.to!string);
+        //     assert(false);
+        // } else if (Node lookup = path(id.repr)) {
+        //     Reg outreg = allocOutMaybe;
+        //     Reg fromreg = walk(lookup, outreg);
+        //     if (outreg is null || outreg == fromreg) {
+        //         return fromreg;
+        //     } else {
+        //         bytecode ~= Opcode.store_reg;
+        //         bytecode ~= outreg.reg;
+        //         bytecode ~= fromreg.reg;
+        //         return outreg;
+        //     }
         } else {
             vmError("name resolution fail for: " ~ id.to!string);
             assert(false);

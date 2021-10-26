@@ -458,11 +458,9 @@ Node readStmtImpl(TokenArray tokens) {
         // }
         // return new Form("var", id, then);
         if (Form thenForm = cast(Form) then) {
-            if (thenForm.form == "do") {
-                return new Form("def", new Form("call", id, allArgs[0]), thenForm.args);
-            }
+            return new Form("var", id, new Form("lambda", new Form("args", allArgs[0]), thenForm));
         }
-        return new Form("def", new Form("call", id, allArgs[0]), then);
+        vmFail("parse error");
     }
     return tokens.readExprBase;
 }
