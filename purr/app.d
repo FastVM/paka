@@ -5,8 +5,10 @@ import purr.parse;
 import purr.err;
 import purr.srcloc;
 import purr.ast.ast;
+import purr.ast.lift;
 import purr.ast.walk;
 import purr.plugin.plugins;
+import purr.vm.bytecode;
 import purr.vm.state;
 import std.stdio;
 import std.uuid;
@@ -36,6 +38,16 @@ string lang = "paka";
 string astLang = "zz";
 File astfile;
 
+__gshared State* state;
+
+shared static this() {
+    state = vm_state_new();
+}
+
+shared static ~this() {
+    vm_state_del(state);
+}
+
 void doBytecode(uint[] bc) {
     final switch (outLang) {
     case "bc":
@@ -45,7 +57,7 @@ void doBytecode(uint[] bc) {
         GC.collect;
         GC.minimize;
         GC.disable;
-        run(bc);
+        run(bc, state);
         GC.enable;
         break;
     case "none":
@@ -57,23 +69,45 @@ Thunk cliReplHandler()
 {
     return {
         size_t line = 1;
+        Node pre = SrcLoc.init.parse("paka.prelude");
+        Node[] vals;
         while (!stdin.eof) {
             try {
                 write(">>> ");
                 SrcLoc code = SrcLoc(line, 1, "repl", readln);
                 Node initNode = code.parse("paka.raw");
-                Node lambdaBody = initNode;
+                Node[] lastVals = vals;
+                Node[] after;
+                {
+                    Lifter pl = new Lifter;
+                    pl.liftProgram(pre);
+                    Lifter ll = new Lifter;
+                    ll.liftProgram(new Form("do", vals, pre, initNode));
+                    foreach(name, get; ll.locals) {
+                        if (name == "this" || name == "repl.out" || name in pl.locals) {
+                            continue;
+                        }
+                        after ~= new Form("set", new Form("index", new Ident("this"), new Value(name)), get);
+                    }
+                    vals = null;
+                    foreach (name, get; ll.locals) {
+                        if (name == "this" || name == "repl.out" || name in pl.locals) {
+                            continue;
+                        }
+                        vals ~= new Form("var", new Ident(name), new Form("index", new Ident("this"), new Value(name)));
+                    }
+                }
+                Node lambdaBody = new Form("do", lastVals, new Form("var", new Ident("repl.return"), initNode), after, new Ident("repl.return"));
                 Node mainLambda = new Form("lambda", new Form("args"), lambdaBody);
                 Node setFinal = new Form("var", new Ident("repl.out"), new Form("call", mainLambda));
                 Node printAll = new Form("call", new Ident("println"), new Ident("repl.out"));
                 Node isFinalNone = new Form("!=", new Ident("repl.out"), new Value(null));
                 Node maybePrintAll = new Form("if", isFinalNone, printAll, new Value(null));
-                Node pre = SrcLoc.init.parse("paka.prelude");
                 Node doMain = new Form("do", pre, setFinal, maybePrintAll);
-                Node finalNode = doMain;
                 if (dumpast) {astfile.write(astLang.unparse(initNode));}
+                Node all = new Form("do", doMain);
                 Walker walker = new Walker;
-                walker.walkProgram(finalNode);
+                walker.walkProgram(doMain);
                 doBytecode(walker.bytecode);
             } catch (Problem prob) {
                 writeln("error: ", prob.msg);
@@ -212,6 +246,9 @@ Thunk cliDebugHandler() {
 void domain(string[] args) {
     args = args[1 .. $];
     Thunk[] todo;
+    if (args.length == 0) {
+        todo ~= cliReplHandler;
+    }
     foreach_reverse (arg; args) {
         string[] parts = arg.split("=").array;
         string part1() {

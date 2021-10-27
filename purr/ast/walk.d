@@ -102,10 +102,12 @@ final class Walker {
         }
     }
 
-    void walkProgram(Node program) {
-        Lifter lifter = new Lifter; 
-        Node lifted = lifter.liftProgram(program);
-        program = lifted;
+    void walkProgram(Node program, bool lift = true) {
+        if (lift) {
+            Lifter lifter = new Lifter; 
+            Node lifted = lifter.liftProgram(program);
+            program = lifted;
+        }
         // writeln(program);
         localss.length++;
         jumpLocss.length++;
