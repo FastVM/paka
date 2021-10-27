@@ -15,16 +15,16 @@ import ext.paka.parse.parse;
 version(Fuzz):
 
 extern(C) int LLVMFuzzerTestOneInput(const(void*) data, size_t size) {
-	Runtime.initialize;
-	// string code = (cast(char*) data)[0..size].dup;
-	// try {
-	// 	SrcLoc loc = SrcLoc(1, 1, "__main__", code);
-	// 	Node node = loc.parse;  
+    Runtime.initialize;
+    // string code = (cast(char*) data)[0..size].dup;
+    // try {
+    //     SrcLoc loc = SrcLoc(1, 1, "__main__", code);
+    //     Node node = loc.parse;  
     //     Walker walker = new Walker;
     //     walker.walkProgram(node);
-	// 	uint[] bc = walker.bytecode;
-	// } catch (Problem p) {}
-	// return 0;
+    //     uint[] bc = walker.bytecode;
+    // } catch (Problem p) {}
+    // return 0;
 }
 
 // ext

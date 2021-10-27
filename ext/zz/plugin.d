@@ -17,16 +17,16 @@ static this() {
 }
 
 Node parse(SrcLoc loc) {
-	Node pre = loc.src.split("\n").parseLines;
-	Macros macros = new Macros(size_t.max);
-	Node ret;
-	macros.walk(pre, ret);
-	return ret;
+    Node pre = loc.src.split("\n").parseLines;
+    Macros macros = new Macros(size_t.max);
+    Node ret;
+    macros.walk(pre, ret);
+    return ret;
 }
 
 Plugin thisPlugin() {
     Plugin plugin = new Plugin;
     plugin.parsers["zz"] = &parse;
-	plugin.undo["zz"] = &tozz;
+    plugin.undo["zz"] = &tozz;
     return plugin;
 }
