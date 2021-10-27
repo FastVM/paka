@@ -5,7 +5,7 @@ import purr.parse;
 import purr.err;
 import purr.srcloc;
 import purr.ast.ast;
-import purr.ast.lift;
+import purr.ast.repl;
 import purr.ast.walk;
 import purr.plugin.plugins;
 import purr.vm.bytecode;
@@ -72,8 +72,7 @@ Thunk cliReplHandler()
     return {
         size_t line = 1;
         bool doExit = false;
-        Node pre = SrcLoc.init.parse("paka.prelude");
-        Node[] vals;
+        Node[] state;
         char[][] history;
         Reader reader = new Reader(history);
         scope(exit) {
@@ -84,36 +83,9 @@ Thunk cliReplHandler()
             try {
                 string src = reader.readln("(" ~ line.to!string ~ ")> ");
                 SrcLoc code = SrcLoc(line, 1, "repl", src);
-                Node initNode = code.parse("paka.raw");
-                Node[] lastVals = vals;
-                Node[] after;
-                {
-                    Lifter pl = new Lifter;
-                    pl.liftProgram(pre);
-                    Lifter ll = new Lifter;
-                    ll.liftProgram(new Form("do", vals, pre, initNode));
-                    foreach(name, get; ll.locals) {
-                        if (name == "this" || name == "repl.out" || name in pl.locals) {
-                            continue;
-                        }
-                        after ~= new Form("set", new Form("index", new Ident("this"), new Value(name)), get);
-                    }
-                    vals = null;
-                    foreach (name, get; ll.locals) {
-                        if (name == "this" || name == "repl.out" || name in pl.locals) {
-                            continue;
-                        }
-                        vals ~= new Form("var", new Ident(name), new Form("index", new Ident("this"), new Value(name)));
-                    }
-                }
-                Node lambdaBody = new Form("do", lastVals, new Form("var", new Ident("repl.return"), initNode), after, new Ident("repl.return"));
-                Node mainLambda = new Form("lambda", new Form("args"), lambdaBody);
-                Node setFinal = new Form("var", new Ident("repl.out"), new Form("call", mainLambda));
-                Node printAll = new Form("call", new Ident("println"), new Ident("repl.out"));
-                Node isFinalNone = new Form("!=", new Ident("repl.out"), new Value(null));
-                Node maybePrintAll = new Form("if", isFinalNone, printAll, new Value(null));
-                Node doMain = new Form("do", pre, setFinal, maybePrintAll);
-                if (dumpast) {astfile.write(astLang.unparse(initNode));}
+                Node parsed = code.parse(lang);
+                Node doMain = state.replify(parsed);
+                if (dumpast) {astfile.write(astLang.unparse(parsed));}
                 Node all = new Form("do", doMain);
                 Walker walker = new Walker;
                 walker.walkProgram(doMain);
