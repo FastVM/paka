@@ -87,7 +87,7 @@ class Lifter {
 				captures = oldCaptures;
 			}
 			Form argsForm = cast(Form) form.getArg(0);
-			if (form is null) {
+			if (argsForm is null) {
 				vmError("malformed ast");
 			}
 			foreach (arg; argsForm.args) {

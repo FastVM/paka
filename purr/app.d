@@ -41,6 +41,7 @@ string astLang = "zz";
 File astfile;
 
 __gshared State* state;
+Node[] nodes;
 
 shared static this() {
     state = vm_state_new();
@@ -72,7 +73,6 @@ Thunk cliReplHandler()
     return {
         size_t line = 1;
         bool doExit = false;
-        Node[] state;
         char[][] history;
         Reader reader = new Reader(history);
         scope(exit) {
@@ -84,9 +84,8 @@ Thunk cliReplHandler()
                 string src = reader.readln("(" ~ line.to!string ~ ")> ");
                 SrcLoc code = SrcLoc(line, 1, "repl", src);
                 Node parsed = code.parse(lang);
-                Node doMain = state.replify(parsed);
+                Node doMain = nodes.replify(parsed);
                 if (dumpast) {astfile.write(astLang.unparse(parsed));}
-                Node all = new Form("do", doMain);
                 Walker walker = new Walker;
                 walker.walkProgram(doMain);
                 doBytecode(walker.bytecode);
@@ -165,7 +164,7 @@ Thunk cliParseHandler(immutable string code) {
 Thunk cliEvalHandler(immutable string code) {
     return {
         SrcLoc code = SrcLoc(1, 1, "__main__", code);
-        Node node = code.parse(lang);
+        Node node = nodes.replify(code.parse(lang));
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
         walker.walkProgram(node);
@@ -176,7 +175,7 @@ Thunk cliEvalHandler(immutable string code) {
 Thunk cliFileHandler(immutable string filename) {
     return {
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        Node node = code.parse(lang);
+        Node node = nodes.replify(code.parse(lang));
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
         walker.walkProgram(node);
