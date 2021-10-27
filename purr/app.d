@@ -10,6 +10,7 @@ import purr.ast.walk;
 import purr.plugin.plugins;
 import purr.vm.bytecode;
 import purr.vm.state;
+import purr.atext.atext;
 import std.stdio;
 import std.uuid;
 import std.path;
@@ -31,6 +32,7 @@ string outLang = "vm";
 
 alias Thunk = void delegate();
 
+char[][] history;
 string[] command;
 
 string lang = "paka";
@@ -69,12 +71,19 @@ Thunk cliReplHandler()
 {
     return {
         size_t line = 1;
+        bool doExit = false;
         Node pre = SrcLoc.init.parse("paka.prelude");
         Node[] vals;
+        char[][] history;
+        Reader reader = new Reader(history);
+        scope(exit) {
+            history = reader.history;
+        }
         while (!stdin.eof) {
+            bool setExit = false;
             try {
-                write(">>> ");
-                SrcLoc code = SrcLoc(line, 1, "repl", readln);
+                string src = reader.readln("(" ~ line.to!string ~ ")> ");
+                SrcLoc code = SrcLoc(line, 1, "repl", src);
                 Node initNode = code.parse("paka.raw");
                 Node[] lastVals = vals;
                 Node[] after;
@@ -109,11 +118,31 @@ Thunk cliReplHandler()
                 Walker walker = new Walker;
                 walker.walkProgram(doMain);
                 doBytecode(walker.bytecode);
+                line += 1;
             } catch (Problem prob) {
                 writeln("error: ", prob.msg);
+            } catch (ExitException ee) {
+                writeln;
+                if (ee.letter == 'L') {
+                    continue;
+                } else if (ee.letter == 'C') {
+                    if (doExit) {
+                        writeln("Closing REPL"); 
+                        break;
+                    } else {
+                        writeln("Got Ctrl-C, one more to close this REPL"); 
+                        setExit = true;
+                    }
+                } else {
+                    writeln("Got Ctrl-" ~ ee.letter ~ ", closing this REPL");
+                    break;
+                }
             }
-            
-            line += 1;
+            if (setExit) {
+                doExit = true;
+            } else {
+                doExit = false;
+            }
         }
     };
 }
