@@ -189,6 +189,7 @@ final class Walker {
             targets.length--;
             nodes.length--;
         }
+        // writeln(node);
         final switch (node.id) {
         case NodeKind.base:
             assert(false);
@@ -683,7 +684,10 @@ final class Walker {
                     vmError("set to unknown variable: " ~ id.repr);
                 }
                 Reg from = walk(form.getArg(1), target);
-                if (target != from) {
+                if (from is null) {
+                    bytecode ~= Opcode.store_none;
+                    bytecode ~= target.reg;
+                } else if (target != from) {
                     bytecode ~= Opcode.store_reg;
                     bytecode ~= target.reg;
                     bytecode ~= from.reg;

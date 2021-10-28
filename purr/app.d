@@ -24,8 +24,8 @@ import std.process;
 import std.datetime.stopwatch;
 import core.memory;
 
-version(Fuzz) {}
-else:
+version(Fuzz) {} else:
+
 extern (C) __gshared string[] rt_options = ["gcopt=heapSizeFactor:2"];
 
 string outLang = "vm";
@@ -37,7 +37,7 @@ string[] command;
 
 string lang = "paka";
 
-string astLang = "zz";
+string astLang = "paka";
 File astfile;
 
 __gshared State* state;
