@@ -602,6 +602,14 @@ final class Walker {
             bytecode ~= outreg.reg;
             bytecode ~= objreg.reg;
             return outreg;
+        case "decl":
+            if (Ident id = cast(Ident) form.getArg(0)) {
+                locals[id.repr] = alloc(id);
+                return null;
+            } else {
+                vmError("decl to bad value");
+                assert(false);
+            }
         case "var":
             if (Ident id = cast(Ident) form.getArg(0)) {
                 if (Form lambda = cast(Form) form.getArg(1)) {

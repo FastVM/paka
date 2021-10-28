@@ -51,6 +51,11 @@ shared static ~this() {
     vm_state_del(state);
 }
 
+Node convert(Node node) {
+    return nodes.replify(node);
+    // return node;
+} 
+
 void doBytecode(uint[] bc) {
     final switch (outLang) {
     case "bc":
@@ -84,7 +89,7 @@ Thunk cliReplHandler()
                 string src = reader.readln("(" ~ line.to!string ~ ")> ");
                 SrcLoc code = SrcLoc(line, 1, "repl", src);
                 Node parsed = code.parse(lang);
-                Node doMain = nodes.replify(parsed);
+                Node doMain = convert(parsed);
                 if (dumpast) {astfile.write(astLang.unparse(parsed));}
                 Walker walker = new Walker;
                 walker.walkProgram(doMain);
@@ -156,7 +161,7 @@ Thunk cliTargetHandler(immutable string lang) {
 Thunk cliParseHandler(immutable string code) {
     return {
         SrcLoc loc = SrcLoc(1, 1, "__main__", code);
-        Node node = loc.parse(lang);  
+        Node node = convert(loc.parse(lang));  
         if (dumpast) {astfile.write(astLang.unparse(node));}
     };
 }
@@ -164,7 +169,7 @@ Thunk cliParseHandler(immutable string code) {
 Thunk cliEvalHandler(immutable string code) {
     return {
         SrcLoc code = SrcLoc(1, 1, "__main__", code);
-        Node node = nodes.replify(code.parse(lang));
+        Node node = convert(code.parse(lang));
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
         walker.walkProgram(node);
@@ -175,7 +180,7 @@ Thunk cliEvalHandler(immutable string code) {
 Thunk cliFileHandler(immutable string filename) {
     return {
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
-        Node node = nodes.replify(code.parse(lang));
+        Node node = convert(code.parse(lang));
         if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
         walker.walkProgram(node);

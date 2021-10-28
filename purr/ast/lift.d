@@ -2,27 +2,123 @@ module purr.ast.lift;
 
 import std.array;
 import std.stdio;
+import std.conv;
 import std.algorithm;
 import purr.err;
 import purr.ast.ast;
 
+string[] findVars(Node node) {
+    string[] vars;
+    findVars(vars, node);
+    return vars;
+}
+
+void findVars(ref string[] vars, Node node) {
+    final switch (node.id) {
+    case NodeKind.base:
+        assert(false);
+    case NodeKind.call:
+        return findVarsExact(vars, cast(Form) node);
+    case NodeKind.ident:
+        return findVarsExact(vars, cast(Ident) node);
+    case NodeKind.value:
+        return findVarsExact(vars, cast(Value) node);
+    }
+}
+
+void findVarsExact(ref string[] vars, Form node) {
+    if (node.form == "var") {
+        Ident id = cast(Ident) node.getArg(0);
+        vmCheckError(id !is null, "bad id");
+        findVars(vars, node.getArg(1));
+        if (!vars.canFind(id.repr)) {
+            vars ~= id.repr;
+        }
+    } else if (node.form == "lambda") {
+
+    } else {
+        foreach (arg; node.args) {
+            findVars(vars, arg);
+        }
+    }
+}
+
+void findVarsExact(ref string[] vars, Ident node) {}
+void findVarsExact(ref string[] vars, Value node) {}
+
+string[] findUsages(Node node) {
+    string[] vars;
+    findUsages(vars, node);
+    return vars;
+}
+
+void findUsages(ref string[] vars, Node node) {
+    final switch (node.id) {
+    case NodeKind.base:
+        assert(false);
+    case NodeKind.call:
+        return findUsagesExact(vars, cast(Form) node);
+    case NodeKind.ident:
+        return findUsagesExact(vars, cast(Ident) node);
+    case NodeKind.value:
+        return findUsagesExact(vars, cast(Value) node);
+    }
+}
+
+void findUsagesExact(ref string[] vars, Form node) {
+    if (node.form == "var") {
+        findUsages(vars, node.getArg(1));
+    } else if (node.form == "lambda") {
+        string[] has = findVars(node.getArg(1));
+        string[] uses = findUsages(node.getArg(1));
+        Form form = cast(Form) node.getArg(0);
+        if (form is null) {
+            vmError("internal error: lambda args");
+        }
+        foreach (index, arg; form.args) {
+            Ident id = cast(Ident) arg;
+            if (id is null) {
+                vmError("internal error: lambda arg " ~ index.to!string);
+            }
+            if (!has.canFind(id.repr)) {
+                has ~= id.repr;
+            }
+        }
+        string[] needs;
+        foreach (use; uses) {
+            if (!has.canFind(use) && !vars.canFind(use)) {
+                vars ~= use;
+                needs ~= use;
+            }
+        }
+    } else {
+        foreach (arg; node.args) {
+            findUsages(vars, arg);
+        }
+    }
+}
+
+void findUsagesExact(ref string[] vars, Ident node) {
+    if (!vars.canFind(node.repr)) {
+        vars ~= node.repr;
+    }
+}
+void findUsagesExact(ref string[] vars, Value node) {}
+
 class Lifter {
-    Form[string] locals;
-    string[] captures;
+    Node[string] locals;
     Node[] nodes;
-    Node captureSymbol;
-    Node[string] pre; 
     size_t depth;
 
-    this() {
-        captureSymbol = new Ident("rec");
-        locals["this"] = new Form("do", new Ident("this"));
-    }
-
     Node liftProgram(Node node) {
+        locals["this"] = new Ident("this");
+        Node[] pre;
+        foreach (name; findVars(node)) {
+            locals[name] = new Ident(name);
+            pre ~= new Form("decl", new Ident(name));
+        }
         Node lifted = lift(node);
-        // writeln(lifted);
-        return new Form("do", pre.values.array, lifted);
+        return new Form("do", pre, lifted);
     }
 
     Node lift(Node node) {
@@ -43,21 +139,11 @@ class Lifter {
     }
 
     Node liftExact(Ident id) {
-        if (Form* ret = id.repr in locals) {
+        if (Node* ret = id.repr in locals) {
             return cast(Node) *ret;
         }
-        if (depth == 0) {
-            vmError("global name resolution fail for: " ~ id.repr);
-        }
-        foreach (index, capture; captures) {
-            if (capture == id.repr) {
-                locals[id.repr] = new Form("deref", new Form("index", captureSymbol, new Value(cast(double)(index + 1))));
-                return locals[id.repr];
-            }
-        }
-        captures ~= id.repr;
-        locals[id.repr] = new Form("deref", new Form("index", captureSymbol, new Value(cast(double) captures.length)));
-        return locals[id.repr];
+        vmError("name resolution fail for: " ~ id.repr);
+        assert(false);
     }
 
     Node liftExact(Value val) {
@@ -71,54 +157,58 @@ class Lifter {
             scope(exit) {
                 depth--;
             }
-            Form[string] oldLocals = locals;
-            locals = ["rec": new Form("do", new Ident("rec"))];
+            Node[string] oldLocals = locals;
+            locals = ["rec": new Ident("rec")];
             scope(exit) {
                 locals = oldLocals;
-            }
-            Node[string] oldPre = pre;
-            pre = null;
-            scope(exit) {
-                pre = oldPre;
-            }
-            string[] oldCaptures = captures;
-            captures = null;
-            scope(exit) {
-                captures = oldCaptures;
             }
             Form argsForm = cast(Form) form.getArg(0);
             if (argsForm is null) {
                 vmError("malformed ast");
             }
+            string[] varNames = ["rec"];
+            foreach (arg; form.sliceArg(1)) {
+                findVars(varNames, arg);
+            }
+            string[] used;
+            foreach (arg; form.sliceArg(1)) {
+                findUsages(used, arg);
+            }
             foreach (arg; argsForm.args) {
                 if (Ident id = cast(Ident) arg) {
-                    locals[id.repr] = new Form("do", arg);
+                    locals[id.repr] = arg;
+                    varNames ~= id.repr;
                 }
             }
-            Node lambdaBody = lift(form.getArg(1));
-            Node[] captureNodes;
-            foreach (capture; captures) {
-                if (capture !in oldLocals) {
-                    captureNodes ~= new Form("ref", new Ident(capture));
+            Node[] pre;
+            string[] notFound;
+            foreach (index, name; used) {
+                if (!varNames.canFind(name)) {
+                    notFound ~= name;
+                    locals[name] = new Form("deref", new Form("index", new Ident("rec"), new Value(cast(double) notFound.length)));
+                } else if (name !in locals) {
+                    pre ~= new Form("decl", new Ident(name));
+                    locals[name] = new Ident(name);
+                } 
+            }
+            Node[] lambdaBody;
+            foreach (arg; form.sliceArg(1)) {
+                lambdaBody ~= lift(arg);
+            }
+            Node[] preArray;
+            Node[] arrayValues;
+            foreach (name; notFound) {
+                if (Node* val = name in oldLocals) {
+                    arrayValues ~= new Form("ref", *val);
                 } else {
-                    captureNodes ~= new Form("ref", new Ident(capture));
+                    vmError("local name resolution failure: " ~ name);
                 }
             }
-            Node lambda = new Form("lambda", new Form("args", argsForm.args), pre.values.array, lambdaBody);
-            Node built = new Form("array", lambda, captureNodes);
+            Node lambda = new Form("lambda", new Form("args", argsForm.args), pre, lambdaBody);
+            Node built = new Form("do", preArray, new Form("array", lambda, arrayValues));
             return built;
         case "var":
-            Node input = lift(form.getArg(1));
-            Ident id = cast(Ident) form.getArg(0);
-            Node output;
-            if (Form* poutput = id.repr in locals) {
-                output = poutput.args[0];
-            } else { 
-                locals[id.repr] = new Form("do", id);
-                output = id;
-                pre[id.repr] = new Form("var", output, new Value(null));
-            }
-            return cast(Node) new Form("set", output, input);
+            return new Form("set", lift(form.getArg(0)), lift(form.getArg(1)));
         default:
             Node[] args;
             foreach (arg; form.args) {
