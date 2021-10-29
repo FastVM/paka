@@ -6,10 +6,10 @@ import std.conv;
 string tozz2(Node node, size_t ind=0) {
     if (Form form = cast(Form) node) {
         if (form.form == "call" && form.args.length > 1) {
-            string ret = form.args[0].tozz2(ind);
+            string ret = form.getArg(0).tozz2(ind);
             ret ~= ' ';
             size_t next = ind + ret.length;
-            foreach(i, arg; form.args[1..$]) {
+            foreach(i, arg; form.sliceArg(1)) {
                 if (i != 0) {
                     ret ~= '\n';
                     foreach (j; 0..next) {

@@ -5,6 +5,7 @@ import purr.parse;
 import purr.err;
 import purr.srcloc;
 import purr.ast.ast;
+import purr.ast.note;
 import purr.ast.repl;
 import purr.ast.walk;
 import purr.plugin.plugins;
@@ -40,7 +41,7 @@ string lang = "paka";
 string astLang = "paka";
 File astfile;
 
-__gshared State* state;
+State* state;
 Node[] nodes;
 
 shared static this() {
@@ -49,6 +50,89 @@ shared static this() {
 
 shared static ~this() {
     vm_state_del(state);
+}
+
+shared static this() {
+    addStyle("paka", [
+        "space": Color.init,
+        "keyword": Color.light_white,
+        "flow": Color.light_magenta,
+        "ident": Color.white,
+        "number": Color.light_yellow,
+        "string": Color.light_cyan,
+    ]);
+}
+
+string[] last;
+
+string[] pakaColors(string src) {
+
+    Node parsed;
+
+    try {
+        parsed = SrcLoc(1, 1, "__color__", src).parse(lang);
+    } catch (Problem e) {
+        string[] ret2 = last;
+        ret2.length = src.length;
+        return ret2;
+    }
+
+    string[] ret = new string[src.length];
+
+    foreach (index, chr; src) {
+        ret[index] = "space";
+    }
+
+    void light(Node node) {
+        string name = null;
+        if (Value val = cast(Value) node) {
+            if (val.info == typeid(string)) {
+                name = "string";
+            }
+            if (val.info == typeid(double)) {
+                name = "number";
+            }
+            if (val.info == typeid(int)) {
+                name = "number";
+            }
+            if (val.info == typeid(bool)) {
+                name = "keyword";
+            }
+            if (val.info == typeid(null)) {
+                name = "keyword";
+            }
+        }
+        if (Ident id = cast(Ident) node) {
+            name = "ident";
+        }
+
+        if (name is null) {
+            name = "space";
+        }
+
+        if (node.fixed && node.file == "__color__") {
+            foreach(i; node.offset .. node.offset + node.src.length) {
+                ret[i] = name;
+            } 
+        }
+
+        if (Form form = cast(Form) node) {
+            foreach (arg; form.args) {
+                light(arg);
+            }
+        }
+    }
+    light(parsed);
+
+    foreach (index, chr; src) {
+        if ("(){}[]".canFind(chr)) {
+            ret[index] = "space";
+        }
+    }
+
+    last = ret;
+
+    return ret;
 }
 
 Node convert(Node node) {
@@ -80,6 +164,8 @@ Thunk cliReplHandler()
         bool doExit = false;
         char[][] history;
         Reader reader = new Reader(history);
+        reader.style = "paka";
+        reader.setColors(src => src.pakaColors);
         scope(exit) {
             history = reader.history;
         }
@@ -87,7 +173,7 @@ Thunk cliReplHandler()
             bool setExit = false;
             try {
                 string src = reader.readln("(" ~ line.to!string ~ ")> ");
-                SrcLoc code = SrcLoc(line, 1, "repl", src);
+                SrcLoc code = SrcLoc(line, 1, "__repl__", src);
                 Node parsed = code.parse(lang);
                 Node doMain = convert(parsed);
                 if (dumpast) {astfile.write(astLang.unparse(parsed));}
@@ -174,6 +260,14 @@ Thunk cliEvalHandler(immutable string code) {
         Walker walker = new Walker;
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
+    };
+}
+
+Thunk cliNoteHandler(immutable string code) {
+    return {
+        SrcLoc code = SrcLoc(1, 1, "__main__", code);
+        Node node = code.parse(lang);
+        annotate(node);
     };
 }
 
@@ -290,6 +384,9 @@ void domain(string[] args) {
             break;
         case "--eval":
             todo ~= part1.cliEvalHandler;
+            break;
+        case "--note":
+            todo ~= part1.cliNoteHandler;
             break;
         case "--repl":
             todo ~= cliReplHandler;

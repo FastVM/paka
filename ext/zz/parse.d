@@ -92,9 +92,9 @@ Node parseLines(string[] lines) {
         }
         if (Form* c = indent in calls) {
             if (ops.canFind(c.form) && c.args.length == 2) {
-                Node lhs = c.args[$-1];
+                Node lhs = c.getArg(-1);
                 Form nf = new Form(c.form, lhs, arg);
-                c.args[$-1] = nf;
+                c.getArg(-1) = nf;
                 *c = nf;
             } else {
                 c.args ~= arg;

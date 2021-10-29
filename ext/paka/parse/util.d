@@ -1,6 +1,8 @@
 module ext.paka.parse.util;
 
 import std.conv : to;
+import std.stdio;
+import std.algorithm;
 import purr.srcloc;
 import purr.ast.ast;
 import ext.paka.parse.tokens;
@@ -12,21 +14,20 @@ alias BinaryOp = Node delegate(Node lhs, Node rhs);
 /// operators for comparrason
 string[] cmpOps = ["<", ">", "<=", ">=", "==", "!="];
 
-/// locations for error handling
-SrcLoc[] locs;
-
 /// wraps a function of type Node function(T...)(TokenArray tokens, T args).
 /// it gets the span of tokens consumed and it gives them a span
 template Spanning(alias F, T...) {
     Node spanning(TokenArray tokens, T a) {
-        SrcLoc origPos = tokens.position;
-        locs ~= origPos;
-        scope (exit) {
-            locs.length--;
-        }
+        string src0 = tokens.src;
+        string src1 = tokens.first.span.first.src;
         Node ret = F(tokens, a);
-        if (ret !is null) {
-            ret.span = Span(origPos, tokens.position);
+        if (ret !is null && !ret.fixed) {
+            string srcN = tokens.first.span.first.src;
+            size_t diff = src1.length - srcN.length;
+            ret.fixed = true;
+            ret.file = tokens.first.span.first.file;
+            ret.src = src1[0 .. diff].strip(' ').strip('\n').strip('\t');
+            ret.offset = src0.length - src1.length;
         }
         return ret;
     }
@@ -38,44 +39,23 @@ template Spanning(alias F, T...) {
 
 /// token reader.
 class TokenArray {
-pragma(inline, true):
-    version (tokenize_at_once) {
-        size_t index;
-        Token[] tokens;
+    Token first;
+    SrcLoc position;
+    string src;
 
-        this(SrcLoc pos) {
-            if (!pos.src.all!isPrintable) {
-                vmFail("source not printable");
-            }
-            tokens ~= pos.readToken;
-            while (tokens[$ - 1].exists) {
-                tokens ~= pos.readToken;
-            }
-        }
+    this(SrcLoc pos) {
+        src = pos.src;
+        position = pos;
+        skip;
+    }
 
-        Token first() {
-            return tokens[index];
-        }
+    void strip() {
+        position.stripToken;
+    }
 
-        SrcLoc position() {
-            return first.span.first;
-        }
-
-        void skip() {
-            index += 1;
-        }
-    } else {
-        Token first;
-        SrcLoc position;
-        this(SrcLoc pos) {
-            position = pos;
-            skip;
-        }
-
-        /// this just skips a token, often used for bracket matching
-        void skip() {
-            first = position.readToken;
-        }
+    /// this just skips a token, often used for bracket matching
+    void skip() {
+        first = position.readToken;
     }
 
     TokenArray dup() {

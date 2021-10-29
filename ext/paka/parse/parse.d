@@ -94,7 +94,7 @@ void stripNewlines(TokenArray tokens) {
     }
 }
 
-Node readPostCallExtend(TokenArray tokens, Node last) {
+Node delegate(Node) postCallExtend(TokenArray tokens) {
     Node[][] args = tokens.readOpen!"()";
     while (tokens.first.isOperator("->")) {
         tokens.nextIs(Token.Type.operator, "->");
@@ -107,38 +107,30 @@ Node readPostCallExtend(TokenArray tokens, Node last) {
                 new Form("args", params), tokens.readBlock
                 ]);
     }
-    foreach (argList; args) {
-        last = last.call(argList);
-    }
-    return last;
+    return (Node last) {
+        foreach (argList; args) {
+            last = last.call(argList);
+        }
+        return last;
+    };
 }
 
-/// after reading a small expression, read a postfix expression
-alias readPostExtend = Spanning!(readPostExtendImpl, Node);
-Node readPostExtendImpl(TokenArray tokens, Node last) {
+Node delegate(Node) postExtend(TokenArray tokens) {
     if (!tokens.first.exists) {
-        return last;
+        return null;
     }
     if (tokens.first.isOpen("(")) {
-        return tokens.readPostExtend(tokens.readPostCallExtend(last));
+        return tokens.postCallExtend;
     } else if (tokens.first.isOpen("[")) {
         Node[][] arg = tokens.readOpen!"[]";
         if (arg.length != 1) {
             vmError("semicolon not valid in index");
         }
-        Node cur = new Form("index", last, arg[0]);
-        return tokens.readPostExtend(cur);
-    } else if (tokens.first.isOperator(".")) {
-        tokens.nextIs(Token.Type.operator, ".");
-        Node index = new Value(tokens.first.value);
-        tokens.nextIs(Token.Type.ident);
-        Node[] args = [last];
-        if (tokens.first.isOpen("(")) {
-            args ~= tokens.readOpen1!"()";
-        }
-        return tokens.readPostExtend(index.call(args));
+        return (Node last) {
+            return new Form("index", last, arg[0]);
+        };
     } else {
-        return last;
+        return null;
     }
 }
 
@@ -156,6 +148,7 @@ Node readIfImpl(TokenArray tokens) {
     }
     return new Form("if", cond, iftrue, iffalse);
 }
+
 /// read an if statement
 alias readWhile = Spanning!readWhileImpl;
 Node readWhileImpl(TokenArray tokens) {
@@ -253,9 +246,9 @@ size_t escapeNumber(ref string input) {
 }
 
 /// reads first element of postfix expression
-alias readPostExpr = Spanning!readPostExprImpl;
-Node readPostExprImpl(TokenArray tokens) {
-    Node last = void;
+alias readSingleExpr = Spanning!readSingleExprImpl;
+Node readSingleExprImpl(TokenArray tokens) {
+    Node last;
     if (tokens.first.isKeyword("lambda")) {
         tokens.nextIs(Token.Type.keyword, "lambda");
         if (tokens.first.isOpen("(")) {
@@ -264,6 +257,8 @@ Node readPostExprImpl(TokenArray tokens) {
                     ]);
         } else if (tokens.first.isOpen("{") || tokens.first.isOperator(":")) {
             last = new Form("lambda", new Form("args"), tokens.readBlock);
+        } else {
+            vmError("error: lambda misformed");
         }
     } else if (tokens.first.isOpen("(")) {
         Node[] nodes = tokens.readOpen1!"()";
@@ -336,7 +331,19 @@ Node readPostExprImpl(TokenArray tokens) {
     } else {
         vmError("expected something else in parser");
     }
-    return tokens.readPostExtend(last);
+    return last;
+}
+
+alias readPostExpr = Spanning!readPostExprImpl;
+Node readPostExprImpl(TokenArray tokens) {
+    Node ret = tokens.readSingleExpr;
+    while (true) {
+        Node delegate(Node) next = tokens.postExtend;
+        if (next is null) {
+            return ret;
+        }
+        ret = next(ret);
+    }
 }
 
 /// read prefix before postfix expression.
@@ -379,30 +386,20 @@ bool isAnyOperator(Token tok, string[] ops) {
 }
 
 alias readExpr = Spanning!(readExprImpl, size_t);
-/// reads any expression
+/// reads any expression nicely
 Node readExprImpl(TokenArray tokens, size_t level) {
     if (level == prec.length) {
         return tokens.readPreExpr;
     }
-    string[][] opers;
-    Node[] subNodes = [tokens.readExpr(level + 1)];
-    while (tokens.first.isAnyOperator(prec[level])) {
-        opers ~= [tokens.first.value];
+    Node lhs = tokens.readExpr(level + 1);
+    if (tokens.first.isAnyOperator(prec[level])) {
+        string oper = tokens.first.value;
         tokens.nextIs(Token.Type.operator);
-        while (tokens.first.isAnyOperator(["<", ">"])) {
-            opers[$ - 1] ~= tokens.first.value;
-            tokens.nextIs(Token.Type.operator);
-            opers[$ - 1] ~= tokens.first.value;
-            tokens.nextIs(Token.Type.operator);
-        }
-        subNodes ~= tokens.readExpr(level + 1);
+        Node rhs = tokens.readExpr(level);
+        return parseBinaryOp([oper])(lhs, rhs);
+    } else {
+        return lhs;
     }
-    Node ret = subNodes[0];
-    Ident last;
-    foreach (i, oper; opers) {
-        ret = parseBinaryOp(oper)(ret, subNodes[i + 1]);
-    }
-    return ret;
 }
 
 /// reads any statement ending in a semicolon
@@ -506,33 +503,8 @@ alias parsePaka = parsePakaValue;
 /// parses code as the paka programming language
 Node parsePakaAs(alias parser)(SrcLoc loc) {
     TokenArray tokens = new TokenArray(loc);
-    try {
-        Node node = parser(tokens);
-        return node;
-    } catch (Recover e) {
-        string[] lines = loc.src.split("\n");
-        size_t[] nums;
-        size_t ml = 0;
-        foreach (i; locs) {
-            if (nums.length == 0 || nums[$ - 1] < i.line) {
-                nums ~= i.line;
-                ml = max(ml, i.line.to!string.length);
-            }
-        }
-        string ret;
-        foreach (i; nums) {
-            string s = i.to!string;
-            foreach (j; 0 .. ml - s.length) {
-                ret ~= ' ';
-            }
-            if (i > 0 && i < lines.length) {
-                ret ~= i.to!string ~ ": " ~ lines[i - 1].to!string ~ "\n";
-            }
-        }
-        e.msg = ret ~ e.msg;
-        vmError(e.msg);
-        assert(false);
-    }
+    Node node = parser(tokens);
+    return node;
 }
 
 Node parsePrelude(SrcLoc loc) {

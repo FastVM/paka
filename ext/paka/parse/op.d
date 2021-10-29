@@ -51,8 +51,8 @@ BinaryOp parseBinaryOp(string[] ops) {
                 if (Form lhsForm = cast(Form) lhs) {
                     if (lhsForm.form == "call") {
                         Node rhsLambda = new Form("lambda", new Form("args",
-                                lhsForm.args[1 .. $]), rhs);
-                        return parseBinaryOp([":="])(lhsForm.args[0], rhsLambda);
+                                lhsForm.sliceArg(1)), rhs);
+                        return parseBinaryOp([":="])(lhsForm.getArg(0), rhsLambda);
                     }
                     if (lhsForm.form == "index") {
                         vmFail("do not use := for setting array index"); 
@@ -70,7 +70,7 @@ BinaryOp parseBinaryOp(string[] ops) {
                     if (lhsForm.form == "call") {
                         Node[] argsRest;
                         Node[] matches;
-                        foreach (arg; lhsForm.args[1 .. $]) {
+                        foreach (arg; lhsForm.sliceArg(1)) {
                             if (Value val = cast(Value) arg) {
                                 Ident sym = genSym();
                                 argsRest ~= sym;
@@ -83,7 +83,7 @@ BinaryOp parseBinaryOp(string[] ops) {
                         }
                         import std.stdio: writeln;
                         Node last = genSym;
-                        Node setTo = lhsForm.args[0];
+                        Node setTo = lhsForm.getArg(0);
                         Node branch = new Form("return", rhs);
                         foreach (match; matches) {
                             Node ifFalse = new Form("return", new Form("call", last, argsRest));

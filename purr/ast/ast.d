@@ -19,7 +19,10 @@ enum NodeKind {
 
 /// any node, not valid in the ast
 class Node {
-    Span span;
+    bool fixed;
+    string file;
+    size_t offset = size_t.max;
+    string src;
 
     NodeKind id() {
         return NodeKind.base;
@@ -31,7 +34,7 @@ final class Form : Node {
     string form;
     Node[] args;
 
-    Node getArg(T)(T n) {
+    ref Node getArg(T)(T n) {
         if (n < 0 || n >= args.length) {
             vmError("invalid ast");
             assert(false);
@@ -95,18 +98,6 @@ size_t usedSyms;
 Ident genSym() {
     usedSyms++;
     return new Ident("_purr_" ~ to!string(usedSyms - 1));
-}
-
-template ident(string name) {
-    Ident value;
-
-    static this() {
-        value = new Ident(name);
-    }
-
-    Ident ident() {
-        return new Ident(name);
-    }
 }
 
 /// ident or number, detects at runtime

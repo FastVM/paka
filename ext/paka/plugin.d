@@ -4,11 +4,9 @@ import ext.paka.parse.parse;
 import purr.plugin.plugin;
 import purr.plugin.plugins;
 
-static this() {
+shared static this() {
     thisPlugin.addPlugin;
 }
-
-
 
 Plugin thisPlugin() {
     Plugin plugin = new Plugin;

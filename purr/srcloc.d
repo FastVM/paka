@@ -3,6 +3,8 @@ module purr.srcloc;
 import std.conv : to;
 
 struct SrcLoc {
+    enum nowhere = size_t.max;
+    
     size_t line = 0;
     size_t column = 1;
     string file;
@@ -35,7 +37,7 @@ struct SrcLoc {
                 mycol += 1;
             }
         }
-        assert(false);
+        return nowhere;
     }
 
     bool isAt(SrcLoc other) {

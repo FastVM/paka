@@ -131,8 +131,48 @@ pragma(inline, true):
     }
 }
 
+void stripToken(ref SrcLoc location) {
+    ref string code() {
+        return location.src;
+    }
+
+    char peek() {
+        if (code.length == 0) {
+            return '\0';
+        }
+        return code[0];
+    }
+
+    void consume() {
+        if (code.length == 0) {
+            return;
+        }
+        if (code[0] == '\n') {
+            location.line += 1;
+            location.column = 1;
+        } else {
+            location.column += 1;
+        }
+        code = code[1 .. $];
+    }
+
+    while (true) {
+        if (peek == '#' && code.length >= 2 && code[1] == '#') {
+            while (code.length != 0 && peek != '\n') {
+                consume;
+            }
+        } else if (peek.isWhite) {
+            consume;
+        } else {
+            break;
+        }
+    }
+}
+
 /// reads a single token from a string
 Token readToken(ref SrcLoc location) {
+    location.stripToken;
+    
     ref string code() {
         return location.src;
     }
@@ -163,6 +203,7 @@ Token readToken(ref SrcLoc location) {
         return ret;
     }
 
+
     SrcLoc begin = location;
 
     Token consToken(T)(Token.Type t, T v) {
@@ -170,18 +211,7 @@ Token readToken(ref SrcLoc location) {
         Span span = Span(begin, end);
         return Token(span, t, v);
     }
-
-redo:
-    if (peek == '#' && code.length >= 2 && code[1] == '#') {
-        while (code.length != 0 && peek != '\n') {
-            consume;
-        }
-        goto redo;
-    }
-    if (peek.isWhite) {
-        consume;
-        goto redo;
-    }
+    
     if (peek == ';') {
         return consToken(Token.Type.semicolon, [read]);
     }

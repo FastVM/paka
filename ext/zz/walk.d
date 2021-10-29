@@ -25,7 +25,7 @@ class Macros {
                 Form ret = new Form(form.form, form.args);
                 dest = cast(Node) ret;
                 foreach (ind, arg; form.args) {
-                    walk(arg, ret.args[ind]);
+                    walk(arg, ret.getArg(ind));
                 }
             } else {
                 dest = cast(Node) src;
