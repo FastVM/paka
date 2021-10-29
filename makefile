@@ -48,7 +48,7 @@ C_MIMALLOC=-DVM_USE_MIMALLOC
 endif
 
 DFILES:=$(shell find ext purr -type f -name '*.d')
-CFILES=minivm/vm/vm.c minivm/vm/io.c minivm/vm/gc.c minivm/vm/obj/map.c
+CFILES=$(shell find ext minivm/vm -type f -name '*.c')
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
 OBJS=$(DOBJS) $(COBJS)
