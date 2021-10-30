@@ -47,7 +47,7 @@ L_MIMALLOC=$(DL)$(PWD)/minivm/lib/libmimalloc.a
 C_MIMALLOC=-DVM_USE_MIMALLOC
 endif
 
-DFILES:=$(shell find ext/paka ext/zz purr -type f -name '*.d')
+DFILES:=$(shell find ext purr -type f -name '*.d')
 CFILES=$(shell find ext minivm/vm -type f -name '*.c')
 DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
 COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))

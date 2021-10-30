@@ -53,7 +53,7 @@ BinaryOp parseBinaryOp(string[] ops) {
                     ret = new Form("lambda", new Form("args", new Ident(id.repr)), ret);
                 } else {
                     vmError("cannot unpack yet");
-                assert(false);
+                    assert(false);
                 }
             }
             return ret;
