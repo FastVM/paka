@@ -64,6 +64,10 @@ struct Token {
         return "\"" ~ value ~ "\"";
     }
 
+    bool isNone() {
+        return type == Type.none;
+    }
+
     bool isIdent() {
         return type == Type.ident;
     }

@@ -9,6 +9,7 @@ import std.ascii;
 import std.string;
 import std.algorithm;
 import purr.srcloc;
+import purr.err;
 import purr.ast.ast;
 import ext.passerine.parse.tokens;
 import ext.passerine.parse.util;
@@ -297,7 +298,7 @@ redo:
         last = new Value(tokens.first.value);
         tokens.nextIs(Token.Type.string);
     } else {
-        return null;
+        vmFail("unexpected: " ~ tokens.first.type.to!string);
     }
     return tokens.readPostExtend(last);
 }
@@ -319,7 +320,7 @@ Node readPreExprImpl(ref TokenArray tokens) {
     // TokenArray[] tokens2 = [lastTokens[0 .. lastTokens.length - tokens.length]];
     // lastTokens = tokens;
 
-    while (!tokens.done && !tokens.first.isSemicolon && !tokens.first.isClose
+    while (!tokens.first.isNone && !tokens.first.isSemicolon && !tokens.first.isClose
             && !tokens.first.isComma && !tokens.first.isOperator) {
         Node arg = tokens.readPostExpr;
         if (arg is null) {
@@ -355,19 +356,19 @@ Node readExprImpl(ref TokenArray tokens, size_t level) {
     }
     string[] opers;
     Node[] subNodes;
-    if (prec[level].canFind("=")) {
-        subNodes ~= tokens.readParenBody(level + 1);
-    } else {
+    // if (prec[level].canFind("=")) {
+    //     subNodes ~= tokens.readParenBody(level + 1);
+    // } else {
         subNodes ~= tokens.readExpr(level + 1);
-    }
+    // }
     while (!tokens.done && tokens.first.isAnyOperator(prec[level])) {
         opers ~= tokens.first.value;
         tokens.eat;
-        if (prec[level].canFind("=")) {
-            subNodes ~= tokens.readParenBody(level + 1);
-        } else {
+        // if (prec[level].canFind("=")) {
+        //     subNodes ~= tokens.readParenBody(level + 1);
+        // } else {
             subNodes ~= tokens.readExpr(level + 1);
-        }
+        // }
     }
     if (opers.length == 0) {
         return subNodes[0];
@@ -429,32 +430,8 @@ alias parsePasserine = memoize!parsePasserineValue;
 /// parses code as the passerine programming language
 Node parsePasserineAs(alias parser)(SrcLoc loc) {
     TokenArray tokens = new TokenArray(loc);
-    try {
-        Node node = parser(tokens);
-        return node;
-    } catch (Exception e) {
-        string[] lines = loc.src.split("\n");
-        size_t[] nums;
-        size_t ml = 0;
-        foreach (i; locs) {
-            if (nums.length == 0 || nums[$ - 1] < i.line) {
-                nums ~= i.line;
-                ml = max(ml, i.line.to!string.length);
-            }
-        }
-        string ret;
-        foreach (i; nums) {
-            string s = i.to!string;
-            foreach (j; 0 .. ml - s.length) {
-                ret ~= ' ';
-            }
-            if (i > 0 && i < lines.length) {
-                ret ~= i.to!string ~ ": " ~ lines[i - 1].to!string ~ "\n";
-            }
-        }
-        e.msg = ret ~ e.msg;
-        throw e;
-    }
+    Node node = parser(tokens);
+    return node;
 }
 
 import std.stdio;
