@@ -21,7 +21,7 @@ string[] nops = ["not", ",", "\\", "!", "#", ":", "->"];
 /// language keywords
 string[] keywords = [
     "if", "else", "def", "lambda", "true", "false",
-    "while", "return", "until", "unless", "macro",
+    "while", "return", "macro",
     "box", "unbox", "map", "none", "handle", "throw",
     "resolve", "reject", "exit", 
 ];

@@ -32,7 +32,7 @@ class Reg {
     }
 
     uint reg() {
-        return (cast(uint)repr);
+        return (cast(uint) repr);
     }
 
     override bool opEquals(Object other) {
@@ -97,14 +97,14 @@ final class Walker {
                 continue;
             }
             foreach (ent; jumpLocs[name]) {
-                bytecode[ent .. ent+4] = jump(where);
+                bytecode[ent .. ent + 4] = jump(where);
             }
         }
     }
 
     void walkProgram(Node program, bool lift = true) {
         if (lift) {
-            Lifter lifter = new Lifter; 
+            Lifter lifter = new Lifter;
             Node lifted = lifter.liftProgram(program);
             program = lifted;
         }
@@ -151,14 +151,14 @@ final class Walker {
     uint[1] literal(double val) {
         vmCheckError(val % 1 == 0, "floats are broken, sadly");
         int inum = cast(int) val;
-        return cast(uint[]) [inum];
+        return cast(uint[])[inum];
     }
 
     Reg allocOut() {
         if (targets[$ - 1]!is null) {
             return targets[$ - 1];
         }
-        return alloc(nodes[$-1]);
+        return alloc(nodes[$ - 1]);
     }
 
     Reg allocOutMaybe() {
@@ -202,24 +202,25 @@ final class Walker {
         }
     }
 
-    alias ifTrue = jumpOn!true;
-    alias ifFalse = jumpOn!false;
-
-    int[] jumpOn(bool doNotNegate)(Node node, int where = -1) {
+    int[][2] ifTrue(Node node, int where = -1) {
         if (Form form = cast(Form) node) {
             if (form.form == "||") {
-                int[] reta = jumpOn!doNotNegate(form.getArg(0), where);
-                int[] retb = jumpOn!doNotNegate(form.getArg(1), where);
-                return reta ~ retb;
+                int[][2] reta = ifTrue(form.getArg(0), where);
+                int midj = cast(int) bytecode.length;
+                int[][2] retb = ifTrue(form.getArg(1), where);
+                foreach (i; reta[1]) {
+                    bytecode[i .. i + jumpSize] = midj;
+                }
+                return [reta[0] ~ retb[0], retb[1]];
             }
             if (form.form == "&&") {
-                int[] passJumps = jumpOn!(!doNotNegate)(form.getArg(0), where);
-                int[] ret = jumpOn!doNotNegate(form.getArg(1), where);
-                int passTo = cast(int) bytecode.length;
-                foreach (passJump; passJumps) {
-                    bytecode[passJump .. passJump + jumpSize] = jump(passTo);
+                int[][2] reta = ifTrue(form.getArg(0), where);
+                int midj = cast(int) bytecode.length;
+                int[][2] retb = ifTrue(form.getArg(1), where);
+                foreach (i; reta[0]) {
+                    bytecode[i .. i + jumpSize] = midj;
                 }
-                return ret;
+                return [retb[0], reta[1] ~ retb[1]];
             }
             if (form.form == "==") {
                 if (xinstrs) {
@@ -228,46 +229,40 @@ final class Walker {
                             goto cmpEq;
                         }
                         Reg rhs = walk(form.getArg(1));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_equal_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_not_equal_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_equal_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
                         bytecode ~= literal(*cast(double*) valueLeft.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         if (valueRight.info != typeid(double)) {
                             goto cmpEq;
                         }
                         Reg lhs = walk(form.getArg(0));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_equal_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_not_equal_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_equal_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
                         bytecode ~= literal(*cast(double*) valueRight.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     }
                 }
             cmpEq:
                 Reg lhs = walk(form.getArg(0));
                 Reg rhs = walk(form.getArg(1));
-                static if (doNotNegate) {
-                    bytecode ~= Opcode.jump_if_equal;
-                } else {
-                    bytecode ~= Opcode.jump_if_not_equal;
-                }
-                int ret = cast(int) bytecode.length;
+                bytecode ~= Opcode.branch_equal;
+                int ret1 = cast(int) bytecode.length;
+                bytecode ~= jump(where);
+                int ret2 = cast(int) bytecode.length;
                 bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
-                return [ret];
+                return [[ret1], [ret2]];
             }
             if (form.form == "!=") {
                 if (xinstrs) {
@@ -276,230 +271,198 @@ final class Walker {
                             goto cmpNeq;
                         }
                         Reg rhs = walk(form.getArg(1));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_not_equal_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_equal_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_not_equal_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
                         bytecode ~= literal(*cast(double*) valueLeft.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         if (valueRight.info != typeid(double)) {
                             goto cmpNeq;
                         }
                         Reg lhs = walk(form.getArg(0));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_not_equal_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_equal_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_not_equal_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
                         bytecode ~= literal(*cast(double*) valueRight.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     }
                 }
             cmpNeq:
                 Reg lhs = walk(form.getArg(0));
                 Reg rhs = walk(form.getArg(1));
-                static if (doNotNegate) {
-                    bytecode ~= Opcode.jump_if_not_equal;
-                } else {
-                    bytecode ~= Opcode.jump_if_equal;
-                }
-                int ret = cast(int) bytecode.length;
+                bytecode ~= Opcode.branch_not_equal;
+                int ret1 = cast(int) bytecode.length;
+                bytecode ~= jump(where);
+                int ret2 = cast(int) bytecode.length;
                 bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
-                return [ret];
+                return [[ret1], [ret2]];
             }
             if (form.form == "<") {
                 if (xinstrs) {
                     if (Value valueLeft = cast(Value) form.getArg(0)) {
                         vmCheckError(valueLeft.info == typeid(double), "expected number");
                         Reg rhs = walk(form.getArg(1));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_greater_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_less_than_equal_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_greater_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
                         bytecode ~= literal(*cast(double*) valueLeft.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         vmCheckError(valueRight.info == typeid(double), "expected number");
                         Reg lhs = walk(form.getArg(0));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_less_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_greater_than_equal_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_less_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
                         bytecode ~= literal(*cast(double*) valueRight.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     }
                 }
                 Reg lhs = walk(form.getArg(0));
                 Reg rhs = walk(form.getArg(1));
-                static if (doNotNegate) {
-                    bytecode ~= Opcode.jump_if_less;
-                } else {
-                    bytecode ~= Opcode.jump_if_greater_than_equal;
-                }
-                int ret = cast(int) bytecode.length;
+                bytecode ~= Opcode.branch_less;
+                int ret1 = cast(int) bytecode.length;
+                bytecode ~= jump(where);
+                int ret2 = cast(int) bytecode.length;
                 bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
-                return [ret];
+                return [[ret1], [ret2]];
             }
             if (form.form == ">") {
                 if (xinstrs) {
                     if (Value valueLeft = cast(Value) form.getArg(0)) {
                         vmCheckError(valueLeft.info == typeid(double), "expected number");
                         Reg rhs = walk(form.getArg(1));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_less_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_greater_than_equal_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_less_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
                         bytecode ~= literal(*cast(double*) valueLeft.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         vmCheckError(valueRight.info == typeid(double), "expected number");
                         Reg lhs = walk(form.getArg(0));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_greater_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_less_than_equal_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_greater_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
                         bytecode ~= literal(*cast(double*) valueRight.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     }
                 }
                 Reg lhs = walk(form.getArg(0));
                 Reg rhs = walk(form.getArg(1));
-                static if (doNotNegate) {
-                    bytecode ~= Opcode.jump_if_greater;
-                } else {
-                    bytecode ~= Opcode.jump_if_less_than_equal;
-                }
-                int ret = cast(int) bytecode.length;
+                bytecode ~= Opcode.branch_greater;
+                int ret1 = cast(int) bytecode.length;
+                bytecode ~= jump(where);
+                int ret2 = cast(int) bytecode.length;
                 bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
-                return [ret];
+                return [[ret1], [ret2]];
             }
             if (form.form == "<=") {
                 if (xinstrs) {
                     if (Value valueLeft = cast(Value) form.getArg(0)) {
                         vmCheckError(valueLeft.info == typeid(double), "expected number");
                         Reg rhs = walk(form.getArg(1));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_greater_than_equal_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_less_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_greater_than_equal_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
                         bytecode ~= literal(*cast(double*) valueLeft.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         vmCheckError(valueRight.info == typeid(double), "expected number");
                         Reg lhs = walk(form.getArg(0));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_less_than_equal_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_greater_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_less_than_equal_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
                         bytecode ~= literal(*cast(double*) valueRight.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     }
                 }
                 Reg lhs = walk(form.getArg(0));
                 Reg rhs = walk(form.getArg(1));
-                static if (doNotNegate) {
-                    bytecode ~= Opcode.jump_if_less_than_equal;
-                } else {
-                    bytecode ~= Opcode.jump_if_greater;
-                }
-                int ret = cast(int) bytecode.length;
+                bytecode ~= Opcode.branch_less_than_equal;
+                int ret1 = cast(int) bytecode.length;
+                bytecode ~= jump(where);
+                int ret2 = cast(int) bytecode.length;
                 bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
-                return [ret];
+                return [[ret1], [ret2]];
             }
             if (form.form == ">=") {
                 if (xinstrs) {
                     if (Value valueLeft = cast(Value) form.getArg(0)) {
                         vmCheckError(valueLeft.info == typeid(double), "expected number");
                         Reg rhs = walk(form.getArg(1));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_less_than_equal_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_greater_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_less_than_equal_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= rhs.reg;
                         bytecode ~= literal(*cast(double*) valueLeft.value);
-                        return [ret];
+                        return [[ret1], [ret2]];
                     } else if (Value valueRight = cast(Value) form.getArg(1)) {
                         vmCheckError(valueRight.info == typeid(double), "expected number");
                         Reg lhs = walk(form.getArg(0));
-                        static if (doNotNegate) {
-                            bytecode ~= Opcode.jump_if_greater_than_equal_num;
-                        } else {
-                            bytecode ~= Opcode.jump_if_less_num;
-                        }
-                        int ret = cast(int) bytecode.length;
+                        bytecode ~= Opcode.branch_greater_than_equal_num;
+                        int ret1 = cast(int) bytecode.length;
+                        bytecode ~= jump(where);
+                        int ret2 = cast(int) bytecode.length;
                         bytecode ~= jump(where);
                         bytecode ~= lhs.reg;
                         bytecode ~= literal(*cast(double*) valueRight.value);
-                        return [ret];
-                    } 
-                } 
+                        return [[ret1], [ret2]];
+                    }
+                }
                 Reg lhs = walk(form.getArg(0));
                 Reg rhs = walk(form.getArg(1));
-                static if (doNotNegate) {
-                    bytecode ~= Opcode.jump_if_greater_than_equal;
-                } else {
-                    bytecode ~= Opcode.jump_if_less;
-                }
-                int ret = cast(int) bytecode.length;
+                bytecode ~= Opcode.branch_greater_than_equal;
+                int ret1 = cast(int) bytecode.length;
+                bytecode ~= jump(where);
+                int ret2 = cast(int) bytecode.length;
                 bytecode ~= jump(where);
                 bytecode ~= lhs.reg;
                 bytecode ~= rhs.reg;
-                return [ret];
+                return [[ret1], [ret2]];
             }
         }
         Reg cmp = walk(node);
-        static if (doNotNegate) {
-            bytecode ~= Opcode.jump_if_true;
-        } else {
-            bytecode ~= Opcode.jump_if_false;
-        }
-        int ret = cast(int) bytecode.length;
+        bytecode ~= Opcode.branch_true;
+        int ret1 = cast(int) bytecode.length;
+        bytecode ~= jump(where);
+        int ret2 = cast(int) bytecode.length;
         bytecode ~= jump(where);
         bytecode ~= cmp.reg;
-        return [ret];
+        return [[ret1], [ret2]];
     }
 
     Reg walkExact(Form form) {
@@ -512,7 +475,7 @@ final class Walker {
             return null;
         case "goto":
             Ident label = cast(Ident) form.getArg(0);
-            bytecode ~= Opcode.jump_always;
+            bytecode ~= Opcode.jump;
             if (int[]* places = label.repr in jumpLocs) {
                 *places ~= cast(int) bytecode.length;
             } else {
@@ -708,23 +671,20 @@ final class Walker {
                     Reg arrayReg = walk(call.getArg(0));
                     Reg indexReg = walk(call.getArg(1));
                     Reg valueReg = walk(form.getArg(1));
-                    bytecode ~= Opcode.index_set,
-                    bytecode ~= arrayReg.reg;
+                    bytecode ~= Opcode.index_set, bytecode ~= arrayReg.reg;
                     bytecode ~= indexReg.reg;
                     bytecode ~= valueReg.reg;
                     return arrayReg;
                 } else if (call.form == "unbox") {
                     Reg boxReg = walk(call.getArg(0));
                     Reg valueReg = walk(form.getArg(1));
-                    bytecode ~= Opcode.box_set,
-                    bytecode ~= boxReg.reg;
+                    bytecode ~= Opcode.box_set, bytecode ~= boxReg.reg;
                     bytecode ~= valueReg.reg;
                     return boxReg;
                 } else if (call.form == "deref") {
                     Reg boxReg = walk(call.getArg(0));
                     Reg valueReg = walk(form.getArg(1));
-                    bytecode ~= Opcode.ref_set,
-                    bytecode ~= boxReg.reg;
+                    bytecode ~= Opcode.ref_set, bytecode ~= boxReg.reg;
                     bytecode ~= valueReg.reg;
                     return boxReg;
                 } else if (call.form == "do") {
@@ -756,9 +716,10 @@ final class Walker {
             }
         case "if":
             Reg outreg = allocOut;
-            int[] jumpsFalseFrom = ifFalse(form.getArg(0));
+            int[][2] jumpPairs = ifTrue(form.getArg(0));
+            int jumpTrueTo = cast(int) bytecode.length;
             walk(form.getArg(1), outreg);
-            bytecode ~= Opcode.jump_always;
+            bytecode ~= Opcode.jump;
             int jumpOutFrom = cast(int) bytecode.length;
             bytecode ~= jumpTmp;
             int jumpFalseTo = cast(int) bytecode.length;
@@ -769,44 +730,44 @@ final class Walker {
             walk(arg2, outreg);
             int jumpOutTo = cast(int) bytecode.length;
             bytecode[jumpOutFrom .. jumpOutFrom + jumpSize] = jump(jumpOutTo);
-            foreach (jumpFalseFrom; jumpsFalseFrom) {
-                bytecode[jumpFalseFrom .. jumpFalseFrom + jumpSize] = jump(jumpFalseTo);
+            foreach (j; jumpPairs[0]) {
+                bytecode[j .. j + jumpSize] = jump(jumpTrueTo);
+            }
+            foreach (j; jumpPairs[1]) {
+                bytecode[j .. j + jumpSize] = jump(jumpFalseTo);
             }
             return outreg;
-        case "unless":
-            Reg outreg = allocOut;
-            int[] jumpsFalseFrom = ifTrue(form.getArg(0));
-            walk(form.getArg(1), outreg);
-            bytecode ~= Opcode.jump_always;
-            int jumpOutFrom = cast(int) bytecode.length;
-            bytecode ~= jumpTmp;
-            int jumpFalseTo = cast(int) bytecode.length;
-            walk(form.getArg(2), outreg);
-            int jumpOutTo = cast(int) bytecode.length;
-            bytecode[jumpOutFrom .. jumpOutFrom + jumpSize] = jump(jumpOutTo);
-            foreach (jumpFalseFrom; jumpsFalseFrom) {
-                bytecode[jumpFalseFrom .. jumpFalseFrom + jumpSize] = jump(jumpFalseTo);
-            }
-            return outreg;
+            // case "unless":
+            //     Reg outreg = allocOut;
+            //     int[] jumpsFalseFrom = ifTrue(form.getArg(0));
+            //     walk(form.getArg(1), outreg);
+            //     bytecode ~= Opcode.jump_always;
+            //     int jumpOutFrom = cast(int) bytecode.length;
+            //     bytecode ~= jumpTmp;
+            //     int jumpFalseTo = cast(int) bytecode.length;
+            //     walk(form.getArg(2), outreg);
+            //     int jumpOutTo = cast(int) bytecode.length;
+            //     bytecode[jumpOutFrom .. jumpOutFrom + jumpSize] = jump(jumpOutTo);
+            //     foreach (jumpFalseFrom; jumpsFalseFrom) {
+            //         bytecode[jumpFalseFrom .. jumpFalseFrom + jumpSize] = jump(jumpFalseTo);
+            //     }
+            //     return outreg;
         case "while":
-            bytecode ~= Opcode.jump_always;
+            bytecode ~= Opcode.jump;
             int jumpCondFrom = cast(int) bytecode.length;
             bytecode ~= jumpTmp;
-            int jumpRedoTo = cast(int) bytecode.length;
+            int jumpTrueTo = cast(int) bytecode.length;
             walk(form.getArg(1));
             int jumpCondTo = cast(int) bytecode.length;
-            ifTrue(form.getArg(0), jumpRedoTo);
-            bytecode[jumpCondFrom .. jumpCondFrom + jumpSize] = jump(jumpCondTo);
-            return null;
-        case "until":
-            bytecode ~= Opcode.jump_always;
-            int jumpCondFrom = cast(int) bytecode.length;
-            bytecode ~= jumpTmp;
-            int jumpRedoTo = cast(int) bytecode.length;
-            walk(form.getArg(1));
-            int jumpCondTo = cast(int) bytecode.length;
-            ifFalse(form.getArg(0), jumpRedoTo);
-            bytecode[jumpCondFrom .. jumpCondFrom + jumpSize] = jump(jumpCondTo);
+            int[][2] jumpPairs = ifTrue(form.getArg(0));
+            int jumpFalseTo = cast(int) bytecode.length;
+            bytecode[jumpCondFrom .. jumpCondFrom + jumpSize] = jumpCondTo;
+            foreach (j; jumpPairs[0]) {
+                bytecode[j .. j + jumpSize] = jump(jumpTrueTo);
+            }
+            foreach (j; jumpPairs[1]) {
+                bytecode[j .. j + jumpSize] = jump(jumpFalseTo);
+            }
             return null;
         case "~":
             Reg lhs = walk(form.getArg(0));
@@ -863,7 +824,7 @@ final class Walker {
                     bytecode ~= res.reg;
                     bytecode ~= lhs.reg;
                     return res;
-                } 
+                }
             }
             bytecode ~= Opcode.add;
             bytecode ~= res.reg;
@@ -886,7 +847,7 @@ final class Walker {
                     vmCheckError(valueRight.info == typeid(double), "expected number");
                     bytecode ~= literal(*cast(double*) valueRight.value);
                     return res;
-                } 
+                }
             }
             Reg lhs = walk(form.getArg(0));
             Reg rhs = walk(form.getArg(1));
@@ -897,7 +858,7 @@ final class Walker {
                     bytecode ~= res.reg;
                     bytecode ~= rhs.reg;
                     return res;
-                } 
+                }
             }
             bytecode ~= Opcode.sub;
             bytecode ~= res.reg;
@@ -924,7 +885,7 @@ final class Walker {
                     vmCheckError(valueRight.info == typeid(double), "expected number");
                     bytecode ~= literal(*cast(double*) valueRight.value);
                     return res;
-                } 
+                }
             }
             Reg lhs = walk(form.getArg(0));
             Reg rhs = walk(form.getArg(1));
@@ -945,7 +906,7 @@ final class Walker {
                     vmCheckError(valueRight.info == typeid(double), "expected number");
                     bytecode ~= literal(*cast(double*) valueRight.value);
                     return res;
-                } 
+                }
             }
             Reg lhs = walk(form.getArg(0));
             Reg rhs = walk(form.getArg(1));
@@ -966,7 +927,7 @@ final class Walker {
                     vmCheckError(valueRight.info == typeid(double), "expected number");
                     bytecode ~= literal(*cast(double*) valueRight.value);
                     return res;
-                } 
+                }
             }
             Reg lhs = walk(form.getArg(0));
             Reg rhs = walk(form.getArg(1));
@@ -981,7 +942,7 @@ final class Walker {
                 return walk(new Form("if", form, new Value(1), new Value(0)));
             }
             if (Value valueLeft = cast(Value) form.getArg(0)) {
-                if(valueLeft.info != typeid(double)) {
+                if (valueLeft.info != typeid(double)) {
                     goto cmpEq;
                 }
                 Reg rhs = walk(form.getArg(1));
@@ -993,7 +954,7 @@ final class Walker {
                 bytecode ~= literal(*cast(double*) valueLeft.value);
                 return res;
             } else if (Value valueRight = cast(Value) form.getArg(1)) {
-                if(valueRight.info != typeid(double)) {
+                if (valueRight.info != typeid(double)) {
                     goto cmpEq;
                 }
                 Reg lhs = walk(form.getArg(0));
@@ -1018,7 +979,7 @@ final class Walker {
                 return walk(new Form("if", form, new Value(1), new Value(0)));
             }
             if (Value valueLeft = cast(Value) form.getArg(0)) {
-                if(valueLeft.info != typeid(double)) {
+                if (valueLeft.info != typeid(double)) {
                     goto cmpNeq;
                 }
                 Reg rhs = walk(form.getArg(1));
@@ -1030,7 +991,7 @@ final class Walker {
                 bytecode ~= literal(*cast(double*) valueLeft.value);
                 return res;
             } else if (Value valueRight = cast(Value) form.getArg(1)) {
-                if(valueRight.info != typeid(double)) {
+                if (valueRight.info != typeid(double)) {
                     goto cmpNeq;
                 }
                 Reg lhs = walk(form.getArg(0));
@@ -1051,7 +1012,7 @@ final class Walker {
             bytecode ~= lhs.reg;
             bytecode ~= rhs.reg;
             return res;
-    case "<":
+        case "<":
             if (!xinstrs) {
                 return walk(new Form("if", form, new Value(1), new Value(0)));
             }
@@ -1223,7 +1184,7 @@ final class Walker {
                 bytecode ~= Opcode.ret;
                 bytecode ~= reg.reg;
             }
-            bytecode[refRegc] = cast(uint) (regs.length + 1);
+            bytecode[refRegc] = cast(uint)(regs.length + 1);
             regs = oldRegs;
             fixGotoLabels();
             localss.length--;
@@ -1369,7 +1330,7 @@ final class Walker {
             Reg ret = allocOut;
             bytecode ~= Opcode.store_bool;
             bytecode ~= ret.reg;
-            bytecode ~= cast(uint) *cast(bool*) val.value;
+            bytecode ~= cast(uint)*cast(bool*) val.value;
             return ret;
         } else if (val.info == typeid(int)) {
             Reg ret = allocOut;

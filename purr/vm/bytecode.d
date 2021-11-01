@@ -33,21 +33,36 @@ enum Opcode : uint {
     less_than_equal_num,
     greater_than_equal,
     greater_than_equal_num,
-    jump_always,
-    jump_if_false,
-    jump_if_true,
-    jump_if_equal,
-    jump_if_equal_num,
-    jump_if_not_equal,
-    jump_if_not_equal_num,
-    jump_if_less,
-    jump_if_less_num,
-    jump_if_greater,
-    jump_if_greater_num,
-    jump_if_less_than_equal,
-    jump_if_less_than_equal_num,
-    jump_if_greater_than_equal,
-    jump_if_greater_than_equal_num,
+    // jump_always,
+    // jump_if_false,
+    // jump_if_true,
+    // jump_if_equal,
+    // jump_if_equal_num,
+    // jump_if_not_equal,
+    // jump_if_not_equal_num,
+    // jump_if_less,
+    // jump_if_less_num,
+    // jump_if_greater,
+    // jump_if_greater_num,
+    // jump_if_less_than_equal,
+    // jump_if_less_than_equal_num,
+    // jump_if_greater_than_equal,
+    // jump_if_greater_than_equal_num,
+    jump,
+    branch_false,
+    branch_true,
+    branch_equal,
+    branch_equal_num,
+    branch_not_equal,
+    branch_not_equal_num,
+    branch_less,
+    branch_less_num,
+    branch_greater,
+    branch_greater_num,
+    branch_less_than_equal,
+    branch_less_than_equal_num,
+    branch_greater_than_equal,
+    branch_greater_than_equal_num,
     inc,
     inc_num,
     dec,
@@ -99,19 +114,19 @@ bool noOutputs(Opcode op) {
 }
 
 bool isJump(Opcode op) {
-    return op == Opcode.jump_always
-        || op == Opcode.jump_if_false 
-        || op == Opcode.jump_if_true 
-        || op == Opcode.jump_if_equal 
-        || op == Opcode.jump_if_equal_num 
-        || op == Opcode.jump_if_not_equal 
-        || op == Opcode.jump_if_not_equal_num 
-        || op == Opcode.jump_if_less 
-        || op == Opcode.jump_if_less_num 
-        || op == Opcode.jump_if_greater 
-        || op == Opcode.jump_if_greater_num 
-        || op == Opcode.jump_if_less_than_equal 
-        || op == Opcode.jump_if_less_than_equal_num 
-        || op == Opcode.jump_if_greater_than_equal 
-        || op == Opcode.jump_if_greater_than_equal_num;
+    return op == Opcode.jump
+        || op == Opcode.branch_false 
+        || op == Opcode.branch_true 
+        || op == Opcode.branch_equal 
+        || op == Opcode.branch_equal_num 
+        || op == Opcode.branch_not_equal 
+        || op == Opcode.branch_not_equal_num 
+        || op == Opcode.branch_less 
+        || op == Opcode.branch_less_num 
+        || op == Opcode.branch_greater 
+        || op == Opcode.branch_greater_num 
+        || op == Opcode.branch_less_than_equal 
+        || op == Opcode.branch_less_than_equal_num 
+        || op == Opcode.branch_greater_than_equal 
+        || op == Opcode.branch_greater_than_equal_num;
 }
