@@ -10,6 +10,7 @@ import purr.ast.ast;
 import purr.srcloc;
 import purr.err;
 import purr.ast.lift;
+import purr.ast.optcall;
 import purr.plugin.plugins;
 import purr.vm.bytecode;
 
@@ -106,7 +107,9 @@ final class Walker {
         if (lift) {
             Lifter lifter = new Lifter;
             Node lifted = lifter.liftProgram(program);
-            program = lifted;
+            CallOpt ca = new CallOpt;
+            Node cad = ca.optCalls(lifted);
+            program = cad;
         }
         // writeln(program);
         localss.length++;
