@@ -8,6 +8,6 @@ import std.stdio;
 import core.memory;
 import core.stdc.stdlib;
 
-void run(void[] func, State *state) {
+void run(uint[] func, State *state) {
     vm_run(state, func.length, func.ptr);
 }

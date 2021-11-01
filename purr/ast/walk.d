@@ -68,8 +68,8 @@ final class Walker {
 
     Reg[] targets;
 
-    int[string] funcs;
-    int[][string] replaces;
+    // int[string] funcs;
+    // int[][string] replaces;
 
     ref Reg[string] locals() {
         return localss[$ - 1];
@@ -128,15 +128,15 @@ final class Walker {
         locals["this"] = new Reg(0);
         walk(program);
         bytecode ~= Opcode.exit;
-        foreach (name, locs; replaces) {
-            if (int* setto = name in funcs) {
-                foreach (n; locs) {
-                    bytecode[n .. n + jumpSize] = jump(*setto);
-                }
-            } else {
-                vmError("function not found: " ~ name);
-            }
-        }
+        // foreach (name, locs; replaces) {
+        //     if (int* setto = name in funcs) {
+        //         foreach (n; locs) {
+        //             bytecode[n .. n + jumpSize] = jump(*setto);
+        //         }
+        //     } else {
+        //         vmError("function not found: " ~ name);
+        //     }
+        // }
         // writeln(regs);
     }
 
@@ -613,12 +613,12 @@ final class Walker {
             }
         case "var":
             if (Ident id = cast(Ident) form.getArg(0)) {
-                if (Form lambda = cast(Form) form.getArg(1)) {
-                    if (lambda.form == "lambda") {
-                        string name = id.repr;
-                        funcs[id.repr] = cast(int)(bytecode.length + 7);
-                    }
-                }
+                // if (Form lambda = cast(Form) form.getArg(1)) {
+                //     if (lambda.form == "lambda") {
+                //         string name = id.repr;
+                //         funcs[id.repr] = cast(int)(bytecode.length + 2);
+                //     }
+                // }
                 Reg target = alloc(id);
                 Reg from = walk(form.getArg(1), target);
                 locals[id.repr] = target;
@@ -671,12 +671,12 @@ final class Walker {
             return null;
         case "set":
             if (Ident id = cast(Ident) form.getArg(0)) {
-                if (Form lambda = cast(Form) form.getArg(1)) {
-                    if (lambda.form == "lambda") {
-                        string name = id.repr;
-                        funcs[id.repr] = cast(int)(bytecode.length + 7);
-                    }
-                }
+                // if (Form lambda = cast(Form) form.getArg(1)) {
+                //     if (lambda.form == "lambda") {
+                //         string name = id.repr;
+                //         funcs[id.repr] = cast(int)(bytecode.length + 7);
+                //     }
+                // }
                 Reg target;
                 if (Reg* ret = id.repr in locals) {
                     target = *ret;
@@ -1193,9 +1193,9 @@ final class Walker {
             Reg lambdaReg = allocOut;
             bytecode ~= Opcode.store_fun;
             bytecode ~= lambdaReg.reg;
-            int refLength = cast(int) bytecode.length;
+            int refLength = cast(uint) bytecode.length;
             bytecode ~= jumpTmp;
-            int refRegc = cast(int) bytecode.length;
+            int refRegc = cast(uint) bytecode.length;
             bytecode ~= 255;
             Reg[] oldRegs = regs;
             regs = null;

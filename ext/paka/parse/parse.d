@@ -391,14 +391,31 @@ Node readExprImpl(TokenArray tokens, size_t level) {
     if (level == prec.length) {
         return tokens.readPreExpr;
     }
-    Node lhs = tokens.readExpr(level + 1);
-    if (tokens.first.isAnyOperator(prec[level])) {
-        string oper = tokens.first.value;
-        tokens.nextIs(Token.Type.operator);
-        Node rhs = tokens.readExpr(level);
-        return parseBinaryOp([oper])(lhs, rhs);
+    if (prec[level].canFind("=")) {
+        Node lhs = tokens.readExpr(level + 1);
+        if (tokens.first.isAnyOperator(prec[level])) {
+            string oper = tokens.first.value;
+            tokens.nextIs(Token.Type.operator);
+            Node rhs = tokens.readExpr(level);
+            return parseBinaryOp([oper])(lhs, rhs);
+        } else {
+            return lhs;
+        }
     } else {
-        return lhs;
+        import std.stdio: writeln;
+        Node[] args = [tokens.readExpr(level + 1)];
+        string[] ops;
+        while (tokens.first.isAnyOperator(prec[level])) {
+            string oper = tokens.first.value;
+            tokens.nextIs(Token.Type.operator);
+            ops ~= oper;
+            args ~= tokens.readExpr(level + 1);
+        }
+        Node cur = args[0];
+        foreach (k, op; ops) {
+            cur = parseBinaryOp([op])(cur, args[k + 1]);
+        }
+        return cur;
     }
 }
 
