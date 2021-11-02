@@ -26,7 +26,7 @@ BinaryOp parseBinaryOp(string[] ops) {
                 if (id.repr == "_") {
                     return rhs;
                 }
-                return new Form("var", id, rhs);
+                return new Form("set", id, rhs);
             } else {
                 vmError("assign to bad value");
                 assert(false);

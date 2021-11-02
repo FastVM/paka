@@ -10,7 +10,7 @@ import purr.ast.ast;
 import ext.zz.zrepr;
 import std.conv;
 
-enum special = ["+", "-", "*", "/", "%", "&&", "||", "<", ">", "<=", ">=", "==", "!=", "do", "if", "while", "lambda", "return", "array", "def", "set", "var", "index", "call", "args", "macro", "label", "goto"];
+enum special = ["+", "-", "*", "/", "%", "&&", "||", "<", ">", "<=", ">=", "==", "!=", "do", "if", "while", "lambda", "return", "array", "def", "set", "index", "call", "args", "macro", "label", "goto"];
 enum ops = ["+", "-", "*", "/", "%"];
 
 int indentc(string line) {

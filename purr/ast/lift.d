@@ -1,5 +1,6 @@
 module purr.ast.lift;
 
+import std.stdio: writeln;
 import std.conv: to;
 import std.algorithm: canFind;
 import purr.ast.ast: Node, Form, Ident, Value, NodeKind;
@@ -25,13 +26,16 @@ void findVars(ref string[] vars, Node node) {
 }
 
 void findVarsExact(ref string[] vars, Form node) {
-    if (node.form == "var") {
-        Ident id = cast(Ident) node.getArg(0);
-        vmCheckError(id !is null, "bad id");
-        findVars(vars, node.getArg(1));
-        if (!vars.canFind(id.repr)) {
-            vars ~= id.repr;
+    if (node.form == "set") {
+        if (Ident id = cast(Ident) node.getArg(0)) {
+            findVars(vars, node.getArg(1));
+            if (!vars.canFind(id.repr)) {
+                vars ~= id.repr;
+            }
+        } else {
+            findVars(vars, node.getArg(0));
         }
+        findVars(vars, node.getArg(1));
     } else if (node.form == "lambda") {
 
     } else {
@@ -64,8 +68,13 @@ void findUsages(ref string[] vars, Node node) {
 }
 
 void findUsagesExact(ref string[] vars, Form node) {
-    if (node.form == "var") {
-        findUsages(vars, node.getArg(1));
+    if (node.form == "set") {
+        if (Ident id = cast(Ident) node.getArg(0)) {
+            findUsages(vars, node.getArg(1));
+        } else {
+            findUsages(vars, node.getArg(0));
+            findUsages(vars, node.getArg(1));
+        }
     } else if (node.form == "lambda") {
         string[] has = findVars(node.getArg(1));
         string[] uses = findUsages(node.getArg(1));
@@ -146,7 +155,7 @@ class Lifter {
         if (Node* ret = id.repr in locals) {
             return cast(Node) *ret;
         }
-        vmError("name resolution fail for: " ~ id.repr);
+        vmError("name resolution failure for: " ~ id.repr);
         assert(false);
     }
 
@@ -214,7 +223,7 @@ class Lifter {
                 lambda = new Form("def", new Ident(outname), lambda.sliceArg(0));
             }
             return cast(Node) lambda;
-        case "var":
+        case "set":
             if (Ident id = cast(Ident) form.getArg(0)) {
                 return new Form("set", lift(form.getArg(0)), lift(form.getArg(1), id.repr));
             } else {

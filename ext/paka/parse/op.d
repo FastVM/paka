@@ -46,24 +46,6 @@ BinaryOp parseBinaryOp(string[] ops) {
     if (ops.length == 1) {
         string opName = ops[0];
         switch (opName) {
-        case ":=":
-            return (Node lhs, Node rhs) {
-                if (Form lhsForm = cast(Form) lhs) {
-                    if (lhsForm.form == "call") {
-                        Node rhsLambda = new Form("lambda", new Form("args",
-                                lhsForm.sliceArg(1)), rhs);
-                        return parseBinaryOp([":="])(lhsForm.getArg(0), rhsLambda);
-                    }
-                    if (lhsForm.form == "index") {
-                        vmFail("do not use := for setting array index"); 
-                        assert(false);
-                    }
-                    vmFail("assign to expression of type: " ~ lhsForm.form);
-                    assert(false);
-                } else {
-                    return new Form("var", lhs, rhs);
-                }
-            };
         case "=":
             return (Node lhs, Node rhs) {
                 if (Form lhsForm = cast(Form) lhs) {
@@ -89,8 +71,8 @@ BinaryOp parseBinaryOp(string[] ops) {
                             branch = new Form("if", match, branch, ifFalse);
                         }
                         Node lambda = new Form("lambda", new Form("args", argsRest), branch);
-                        Node setLast = new Form("var", last, setTo);
-                        Node setLambda = parseBinaryOp([":="])(setTo, lambda);
+                        Node setLast = new Form("set", last, setTo);
+                        Node setLambda = parseBinaryOp(["="])(setTo, lambda);
                         return new Form("do", setLast, setLambda);
                     }
                     if (lhsForm.form == "index" || lhsForm.form == "unbox") {

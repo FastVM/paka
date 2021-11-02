@@ -10,7 +10,7 @@ macro type.map {7}
 
 ## lib stuff
 
-iota_num := 0
+iota_num = 0
 def iota(name) {
     iota_num = iota_num + 1
     return box iota_num
@@ -19,7 +19,7 @@ def iota(name) {
 ## io lib
 
 def puts(str) {
-    i := 0
+    i = 0
     while i < #str {
         putchar(str[i])
         i = i + 1
@@ -28,7 +28,7 @@ def puts(str) {
 
 def putn_gte0(n) {
     if n >= 10 {
-        lowest := n % 10
+        lowest = n % 10
         putn_gte0((n - lowest) / 10)
         putchar(lowest + 48)
     } else {
@@ -47,7 +47,7 @@ def putn(n) {
 
 def print_array(arr) {
     puts("[")
-    i := 0
+    i = 0
     while i < length(arr) {
         if i != 0 {
             puts(", ")

@@ -549,31 +549,6 @@ final class Walker {
                 vmError("decl to bad value");
                 assert(false);
             }
-        case "var":
-            if (Ident id = cast(Ident) form.getArg(0)) {
-                Reg target = alloc(id);
-                Reg from = walk(form.getArg(1), target);
-                locals[id.repr] = target;
-                if (target != from) {
-                    bytecode ~= Opcode.store_reg;
-                    bytecode ~= target.reg;
-                    bytecode ~= from.reg;
-                }
-                Reg outreg = allocOutMaybe;
-                if (outreg is null || outreg == target) {
-                    return target;
-                } else if (outreg == from) {
-                    return from;
-                } else {
-                    bytecode ~= Opcode.store_reg;
-                    bytecode ~= outreg.reg;
-                    bytecode ~= from.reg;
-                    return outreg;
-                }
-            } else {
-                vmError("var set to bad value");
-                assert(false);
-            }
         case "handle":
             Reg valueReg = walk(form.getArg(1));
             Reg nameReg = walk(form.getArg(0));

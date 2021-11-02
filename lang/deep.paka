@@ -1,9 +1,0 @@
-def deep(x) {
-    if x == 0 {
-        return 0
-    } else {
-        return deep(x-1) + 1
-    }
-}
-
-println(deep(100000))

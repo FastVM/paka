@@ -1,14 +1,14 @@
-charmap := " .:-=+*#%@"
-y := 0-1
+charmap = " .:-=+*#%@"
+y = 0-1
 while y < 1 {
-    x := 0-2
+    x = 0-2
     while x < 1 {
-        zi := 0
-        zr := 0
-        i := 0
+        zi = 0
+        zr = 0
+        i = 0
         while i < 100000 and zi*zi+zr*zr < 4 {
-            lzr := zr
-            lzi := zi
+            lzr = zr
+            lzi = zi
             zr = lzr * lzr - lzi * zi + x
             zi = 2 * lzr * lzi + y
             i = i + 1

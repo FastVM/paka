@@ -25,12 +25,12 @@ Node replify(ref Node[] state, Node initNode) {
             if (name == "this" || name == "repl.out" || name in pl.locals) {
                 continue;
             }
-            state ~= new Form("var", new Ident(name), new Form("index", new Ident("this"), new Value(name)));
+            state ~= new Form("set", new Ident(name), new Form("index", new Ident("this"), new Value(name)));
         }
     }
-    Node lambdaBody = new Form("do", lastVals, new Form("var", new Ident("repl.return"), initNode), after, new Ident("repl.return"));
+    Node lambdaBody = new Form("do", lastVals, new Form("set", new Ident("repl.return"), initNode), after, new Ident("repl.return"));
     Node mainLambda = new Form("lambda", new Form("args"), lambdaBody);
-    Node setFinal = new Form("var", new Ident("repl.out"), new Form("call", mainLambda));
+    Node setFinal = new Form("set", new Ident("repl.out"), new Form("call", mainLambda));
     Node printAll = new Form("call", new Ident("println"), new Ident("repl.out"));
     Node isFinalNone = new Form("!=", new Ident("repl.out"), new Value(null));
     Node maybePrintAll = new Form("if", isFinalNone, printAll, new Value(null));

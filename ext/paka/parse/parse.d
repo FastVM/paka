@@ -272,7 +272,7 @@ Node readSingleExprImpl(TokenArray tokens) {
         }
         if (tokens.first.isOpen("{") || tokens.first.isOperator(":")) {
             Node thisVar = new Ident("this");
-            Node setThisVar = new Form("var", thisVar, last);
+            Node setThisVar = new Form("set", thisVar, last);
             Node block = tokens.readBlock;
             last = new Form("do", setThisVar, block, thisVar);
         }
@@ -447,7 +447,7 @@ Node readStmtImpl(TokenArray tokens) {
         // }
         // return new Form("var", id, then);
         // if (Form thenForm = cast(Form) then) {
-            return new Form("var", id, new Form("lambda", new Form("args", allArgs[0]), then));
+            return new Form("set", id, new Form("lambda", new Form("args", allArgs[0]), then));
         // }
         // vmFail("parse error");
     }

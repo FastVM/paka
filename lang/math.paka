@@ -1,3 +1,0 @@
-
-range(0, f) = []
-range(n, f) = do { range(n-1) f(n) }
