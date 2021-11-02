@@ -12,6 +12,10 @@ OPT_D=
 P=-p
 FPIC=-fPIC
 
+LFLAGS+=$(FLAGS)
+CFLAGS+=$(FLAGS)
+DFLAGS+=$(FLAGS)
+
 ifeq ($(LD),$(DC))
 XLFLAGS=$(DLFLAGS)
 else
