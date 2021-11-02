@@ -1,12 +1,11 @@
 module ext.paka.parse.util;
 
 import std.conv : to;
-import std.stdio;
-import std.algorithm;
-import purr.srcloc;
-import purr.ast.ast;
-import ext.paka.parse.tokens;
-import purr.err;
+import std.algorithm: strip;
+import purr.srcloc: SrcLoc;
+import purr.ast.ast: Node;
+import ext.paka.parse.tokens: Token, stripToken, readToken;
+import purr.err: vmFail;
 
 alias UnaryOp = Node delegate(Node rhs);
 alias BinaryOp = Node delegate(Node lhs, Node rhs);

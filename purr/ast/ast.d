@@ -1,11 +1,8 @@
 module purr.ast.ast;
 
-import std.algorithm;
 import std.conv : to;
-import std.meta;
-import std.string;
-import purr.err;
-import purr.srcloc;
+import std.meta: AliasSeq;
+import purr.err: vmError;
 
 /// all possible node types
 alias NodeTypes = AliasSeq!(Form, Value, Ident);

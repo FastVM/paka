@@ -1,9 +1,7 @@
 module ext.paka.parse.map;
 
-import purr.err;
-import purr.srcloc;
-import purr.ast.walk;
-import purr.ast.ast;
+import purr.srcloc: SrcLoc;
+import purr.ast.ast: Node, Form, Ident, Value;
 
 Node ident(string name) {
     if (name[0] == '@') {

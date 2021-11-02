@@ -87,32 +87,6 @@ string color(
   return format("\033[%d;%d;%dm", m, c, b);
 }
 
-unittest
-{
-  import colorize.cwrite;
-  string ret;
-
-  ret = "This is yellow".color(fg.yellow);
-  cwriteln(ret);
-  assert(ret == "\033[33mThis is yellow\033[0m");
-
-  ret = "This is light green".color(fg.light_green);
-  cwriteln(ret);
-  assert(ret == "\033[92mThis is light green\033[0m");
-
-  ret = "This is light blue with red background".color(fg.light_blue, bg.red);
-  cwriteln(ret);
-  assert(ret == "\033[0;94;41mThis is light blue with red background\033[0m");
-
-  ret = "This is red on blue blinking".color(fg.red, bg.blue, mode.blink);
-  cwriteln(ret);
-  assert(ret == "\033[5;31;44mThis is red on blue blinking\033[0m");
-
-  ret = color("This is magenta", "magenta");
-  cwriteln(ret);
-  assert(ret == "\033[35mThis is magenta\033[0m");
-}
-
 string colorHelper(const string str, const string name) pure
 {
   int code;
@@ -201,20 +175,3 @@ alias background color;
 alias foreground color;
 alias style color;
 alias colorHelper color;
-
-unittest
-{
-  import colorize.cwrite;
-  string ret;
-
-  ret = "This is red on blue blinking"
-    .foreground(fg.red)
-    .background(bg.blue)
-    .style(mode.blink);
-
-  cwriteln(ret);
-  assert(ret == "\033[5m\033[44m\033[31mThis is red on blue blinking\033[0m\033[0m\033[0m");
-
-  ret = "This is a custom color";
-  cwriteln(ret.customForeground(1, 0.1, 0.3));
-}

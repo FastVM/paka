@@ -1,21 +1,16 @@
 module ext.paka.parse.parse;
 
 import std.conv : to;
-import std.file;
-import std.array;
-import std.utf;
-import std.ascii;
-import std.string;
-import std.algorithm;
-import std.functional;
-import purr.err;
-import purr.srcloc;
-import purr.ast.walk;
-import purr.ast.ast;
-import ext.paka.parse.tokens;
-import ext.paka.parse.util;
-import ext.paka.parse.op;
-import ext.paka.parse.map;
+import std.array: array;
+import std.ascii: isDigit;
+import std.algorithm: canFind, all;
+import purr.err: vmFail, vmError;
+import purr.srcloc: SrcLoc;
+import purr.ast.ast: Node, Form, Ident, Value;
+import ext.paka.parse.tokens: Token, prec;
+import ext.paka.parse.util: TokenArray, Spanning;
+import ext.paka.parse.op: parseBinaryOp, parseUnaryOp, call;
+import ext.paka.parse.map: ident;
 
 Node[string] macros;
 
@@ -155,16 +150,6 @@ Node readWhileImpl(TokenArray tokens) {
     Node cond = tokens.readExprBase;
     Node block = tokens.readBlock;
     return new Form("while", cond, block);
-}
-
-void skip1(ref string str, ref Span span) {
-    if (str[0] == '\n') {
-        span.first.line += 1;
-        span.first.column = 1;
-    } else {
-        span.first.column += 1;
-    }
-    str = str[1 .. $];
 }
 
 bool isDigitInBase(char c, long base) {

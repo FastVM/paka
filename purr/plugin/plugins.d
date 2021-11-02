@@ -1,12 +1,10 @@
 module purr.plugin.plugins;
 
-import purr.plugin.plugin;
-import purr.ast.walk;
-import purr.parse;
-import purr.srcloc;
-import purr.ast.ast;
-import purr.srcloc;
-import std.conv;
+import purr.plugin.plugin: Plugin;
+import purr.parse: parsers;
+import purr.srcloc: SrcLoc;
+import purr.ast.ast: Node;
+import std.conv: to;
 
 __gshared Plugin[] plugins;
 

@@ -1,6 +1,5 @@
 module purr.err;
 
-import std.stdio;
 import core.stdc.stdlib : exit;
 
 class Problem : Exception {

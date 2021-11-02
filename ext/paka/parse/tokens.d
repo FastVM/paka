@@ -1,12 +1,11 @@
 module ext.paka.parse.tokens;
 
-import std.ascii;
+import std.ascii: isDigit, isWhite, isAlphaNum;
 import std.conv : to;
-import std.algorithm;
-import std.array;
-import std.ascii;
-import purr.srcloc;
-import purr.err;
+import std.algorithm: startsWith, sort, canFind;
+import std.array: join, array;
+import purr.srcloc: SrcLoc, Span;
+import purr.err: vmFail;
 
 /// operator precidence
 string[][] prec = [
@@ -302,6 +301,6 @@ Token readToken(ref SrcLoc location) {
     if (peek == '\0') {
         return consToken(Token.Type.none, "");
     }
-    vmError("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
+    vmFail("parse error: bad char " ~ peek ~ "(code: " ~ to!string(cast(ubyte) peek) ~ ")");
     assert(false);
 }

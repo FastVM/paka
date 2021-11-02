@@ -1,29 +1,20 @@
 module purr.app;
 
-import purr.ast.walk;
-import purr.parse;
-import purr.err;
-import purr.srcloc;
-import purr.ast.ast;
-import purr.ast.note;
-import purr.ast.repl;
-import purr.ast.walk;
-import purr.plugin.plugins;
-import purr.vm.bytecode;
-import purr.vm.state;
-import purr.atext.atext;
-import std.stdio;
-import std.uuid;
-import std.path;
-import std.array;
-import std.file;
-import std.algorithm;
-import std.conv : to;
-import std.string;
-import std.getopt;
-import std.process;
-import std.datetime.stopwatch;
-import core.memory;
+import core.time: Duration;
+import std.stdio: File, stdin, writeln;
+import std.file: readText;
+import std.conv: to;
+import std.datetime.stopwatch: StopWatch, AutoStart;
+import std.array: split, array, join;
+import purr.err: Problem, vmError;
+import purr.parse: parse;
+import purr.srcloc: SrcLoc;
+import purr.atext.atext: Reader, Color, ExitException, addStyle;
+import purr.ast.ast: Node, Form, Ident, Value;
+import purr.ast.repl: replify;
+import purr.ast.walk: Walker;
+import purr.vm.state: run;
+import purr.vm.bytecode: State, vm_state_del, vm_state_new;
 
 version(Fuzz) {} else:
 
@@ -124,11 +115,11 @@ string[] pakaColors(string src) {
     }
     light(parsed);
 
-    foreach (index, chr; src) {
-        if ("(){}[]".canFind(chr)) {
-            ret[index] = "space";
-        }
-    }
+    // foreach (index, chr; src) {
+    //     if ("(){}[]".canFind(chr)) {
+    //         ret[index] = "space";
+    //     }
+    // }
 
     last = ret;
 
@@ -146,11 +137,7 @@ void doBytecode(uint[] bc) {
         File("out.bc", "wb").rawWrite(bc);
         break;
     case "vm":
-        GC.collect;
-        GC.minimize;
-        GC.disable;
         run(bc, state);
-        GC.enable;
         break;
     case "none":
         break;
@@ -176,7 +163,6 @@ Thunk cliReplHandler()
                 SrcLoc code = SrcLoc(line, 1, "__repl__", src);
                 Node parsed = code.parse(lang);
                 Node doMain = convert(parsed);
-                if (dumpast) {astfile.write(astLang.unparse(parsed));}
                 Walker walker = new Walker;
                 walker.walkProgram(doMain);
                 doBytecode(walker.bytecode);
@@ -248,7 +234,6 @@ Thunk cliParseHandler(immutable string code) {
     return {
         SrcLoc loc = SrcLoc(1, 1, "__main__", code);
         Node node = convert(loc.parse(lang));  
-        if (dumpast) {astfile.write(astLang.unparse(node));}
     };
 }
 
@@ -256,18 +241,9 @@ Thunk cliEvalHandler(immutable string code) {
     return {
         SrcLoc code = SrcLoc(1, 1, "__main__", code);
         Node node = convert(code.parse(lang));
-        if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
-    };
-}
-
-Thunk cliNoteHandler(immutable string code) {
-    return {
-        SrcLoc code = SrcLoc(1, 1, "__main__", code);
-        Node node = code.parse(lang);
-        annotate(node);
     };
 }
 
@@ -275,22 +251,9 @@ Thunk cliFileHandler(immutable string filename) {
     return {
         SrcLoc code = SrcLoc(1, 1, filename, filename.readText);
         Node node = convert(code.parse(lang));
-        if (dumpast) {astfile.write(astLang.unparse(node));}
         Walker walker = new Walker;
         walker.walkProgram(node);
         doBytecode(walker.bytecode);
-    };
-}
-
-Thunk cliAstHandler(string file) {
-    return {
-        dumpast = !dumpast;
-        if (file.length == 0) {
-            astfile = stdout;
-        } else {
-            astfile = File(file, "w");
-        }
-        outLang = "none";
     };
 }
 
@@ -385,9 +348,6 @@ void domain(string[] args) {
         case "--eval":
             todo ~= part1.cliEvalHandler;
             break;
-        case "--note":
-            todo ~= part1.cliNoteHandler;
-            break;
         case "--repl":
             todo ~= cliReplHandler;
             break;
@@ -405,9 +365,6 @@ void domain(string[] args) {
             break;
         case "--target":
             todo ~= part1.cliTargetHandler;
-            break;
-        case "--ast":
-            todo ~= part1.cliAstHandler;
             break;
         case "--command":
             todo ~= part1.cliCommandHandler;

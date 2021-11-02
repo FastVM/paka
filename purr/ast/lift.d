@@ -1,11 +1,9 @@
 module purr.ast.lift;
 
-import std.array;
-import std.stdio;
-import std.conv;
-import std.algorithm;
-import purr.err;
-import purr.ast.ast;
+import std.conv: to;
+import std.algorithm: canFind;
+import purr.ast.ast: Node, Form, Ident, Value, NodeKind;
+import purr.err: vmError, vmCheckError;
 
 string[] findVars(Node node) {
     string[] vars;

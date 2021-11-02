@@ -1,8 +1,8 @@
 module ext.paka.plugin;
 
-import ext.paka.parse.parse;
-import purr.plugin.plugin;
-import purr.plugin.plugins;
+import ext.paka.parse.parse: parseRaw, parsePrelude;
+import purr.plugin.plugin: Plugin;
+import purr.plugin.plugins: addPlugin;
 
 shared static this() {
     thisPlugin.addPlugin;

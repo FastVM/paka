@@ -1,8 +1,8 @@
 module purr.plugin.plugin;
 
-import purr.ast.ast;
+import purr.ast.ast: Node;
 import std.conv : to;
-import purr.srcloc;
+import purr.srcloc: SrcLoc;
 
 final class Plugin {
     Node function(SrcLoc code)[string] parsers;

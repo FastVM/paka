@@ -1,5 +1,5 @@
 
-import std.stdio;
+import std.stdio: writeln;
 
 int fib(int n)
 {

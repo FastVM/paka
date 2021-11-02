@@ -1,11 +1,9 @@
 module purr.parse;
 
 import std.conv : to;
-import purr.ast.ast;
-import purr.ast.walk;
-import purr.vm.bytecode;
-import purr.err;
-import purr.srcloc;
+import purr.ast.ast: Node;
+import purr.err: vmError;
+import purr.srcloc: SrcLoc;
 
 enum string bashLine = "#!";
 enum string langLine = "#?";

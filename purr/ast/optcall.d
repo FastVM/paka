@@ -1,7 +1,6 @@
 module purr.ast.optcall;
 
-import purr.ast.ast;
-import purr.ast.lift;
+import purr.ast.ast: Node;
 
 class CallOpt {
 	this() {

@@ -1,10 +1,10 @@
 module ext.paka.parse.op;
 
 import std.conv : to;
-import purr.err;
-import purr.ast.ast;
-import std.algorithm;
-import ext.paka.parse.util;
+import purr.err: vmFail;
+import purr.ast.ast: Node, Form, Ident, Value, genSym;
+import std.algorithm: canFind;
+import ext.paka.parse.util: UnaryOp, BinaryOp;
 
 enum string[] setMutOps = ["+=", "*=", "/=", "-=", "%="];
 
@@ -81,7 +81,6 @@ BinaryOp parseBinaryOp(string[] ops) {
                                 argsRest ~= arg;
                             }
                         }
-                        import std.stdio: writeln;
                         Node last = genSym;
                         Node setTo = lhsForm.getArg(0);
                         Node branch = new Form("return", rhs);

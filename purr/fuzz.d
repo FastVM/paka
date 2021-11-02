@@ -1,8 +1,8 @@
 module purr.fuzz;
 
-import core.runtime;
-
 version(Fuzz):
+
+import core.runtime;
 
 import std.stdio;
 import purr.err;
@@ -14,8 +14,6 @@ import purr.ast.walk;
 import purr.vm.bytecode;
 import purr.vm.state;
 import purr.parse;
-
-version(Fuzz):
 
 extern(C) int LLVMFuzzerTestOneInput(const(void*) data, size_t size) {
     Runtime.initialize;

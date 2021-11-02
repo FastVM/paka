@@ -1,20 +1,11 @@
 module purr.ast.walk;
 
-import core.memory;
 import std.conv : to;
-import std.stdio;
-import std.string;
-import std.algorithm;
-import std.ascii;
-import purr.ast.ast;
-import purr.srcloc;
-import purr.err;
-import purr.ast.lift;
-import purr.ast.optcall;
-import purr.plugin.plugins;
-import purr.vm.bytecode;
-
-__gshared bool dumpast = false;
+import purr.ast.ast: Node, Form, Ident, Value, NodeKind;
+import purr.err: vmError, vmCheckError;
+import purr.ast.lift: Lifter;
+import purr.ast.optcall: CallOpt;
+import purr.vm.bytecode: Opcode;
 
 enum jumpTmp = -1;
 
@@ -185,7 +176,6 @@ final class Walker {
 
     Reg walk(Node node, Reg target = null) {
         // writeln(bytecode.length, ": ", node);
-        stdout.flush;
         targets ~= target;
         nodes ~= node;
         scope (exit) {
