@@ -205,8 +205,10 @@ class Lifter {
                 }
             }
             Node lambda = new Form("lambda", new Form("args", argsForm.args), pre, lambdaBody);
-            Node built = new Form("do", preArray, new Form("array", lambda, arrayValues));
-            return built;
+            if (arrayValues.length != 0) {
+                lambda = new Form("do", preArray, new Form("array", lambda, arrayValues));
+            }
+            return lambda;
         case "var":
             return new Form("set", lift(form.getArg(0)), lift(form.getArg(1)));
         default:

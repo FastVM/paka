@@ -7,7 +7,7 @@ DC=gdc
 LD=$(DC)
 
 OPT_C=-Ofast
-OPT_D=-Os
+OPT_D=
 
 P=-p
 FPIC=-fPIC
@@ -18,7 +18,11 @@ else
 ifeq ($(DC),gdc)
 XLFLAGS=$(DL)-lgphobos $(DL)-lgdruntime $(DL)-lm $(DL)-lpthread
 else
+ifeq ($(DC),ldc2)
 XLFLAGS=$(DL)-L/usr/local/lib $(DL)-lphobos2-ldc $(DL)-ldruntime-ldc $(DL)-lm $(DL)-lz $(DL)-ldl $(DL)-lpthread
+else
+XLFLAGS=$(DL)-L/usr/local/lib $(DL)-lphobos2 $(DL)-lm $(DL)-lz $(DL)-ldl $(DL)-lpthread
+endif
 endif
 endif
 
@@ -42,8 +46,8 @@ endif
 endif
 
 ifeq ($(MI),1)
-MIMALLOC=$(DL)$(PWD)/minivm/lib/libmimalloc.a
-L_MIMALLOC=$(DL)$(PWD)/minivm/lib/libmimalloc.a
+MIMALLOC=$(DL)$(PWD)/minivm/lib/mimalloc/libmimalloc.a
+L_MIMALLOC=$(DL)$(PWD)/minivm/lib/mimalloc/libmimalloc.a
 C_MIMALLOC=-DVM_USE_MIMALLOC
 endif
 
@@ -64,7 +68,7 @@ minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(MIMALLOC)
 	$(LD) $(COBJS) $(LIB)/minivm/main/main.o $(LDO)$(BIN)/minivm $(LFLAGS) $(MIMALLOC) $(L_MIMALLOC) $(XLFLAGS) $(AFLAGS)
 
 $(MIMALLOC): .dummy
-	make -C minivm -f mimalloc.mak --no-print-directory CC=$(MICC) CFLAGS= LFLAGS=
+	$(MAKE) -C minivm -f deps.mak --no-print-directory CC="$(MICC)" CFLAGS="" LFLAGS=""
 
 $(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
 	@mkdir $(P) $(dir $@) $(LIB)

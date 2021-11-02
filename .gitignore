@@ -52,3 +52,4 @@ cosmopolitan.zip
 dump.rdb
 crash-*
 oom-*
+*.core
