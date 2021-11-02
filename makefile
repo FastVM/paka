@@ -2,8 +2,8 @@ PWD:=$(shell pwd)
 BIN:=$(PWD)/bin
 LIB:=$(PWD)/lib
 
-MICC=$(CC)
-DC=gdc
+MICC?=$(CC)
+DC?=gdc
 LD=$(DC)
 
 OPT_C=-Ofast

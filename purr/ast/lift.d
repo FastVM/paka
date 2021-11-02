@@ -195,11 +195,6 @@ class Lifter {
                     locals[name] = new Ident(name);
                 } 
             }
-            Node[] lambdaBody;
-            foreach (arg; form.sliceArg(1)) {
-                lambdaBody ~= lift(arg);
-            }
-            Node[] preArray;
             Node[] arrayValues;
             foreach (name; notFound) {
                 if (Node* val = name in oldLocals) {
@@ -208,9 +203,13 @@ class Lifter {
                     vmError("local name resolution failure: " ~ name);
                 }
             }
+            Node[] lambdaBody;
+            foreach (arg; form.sliceArg(1)) {
+                lambdaBody ~= lift(arg);
+            }
             Form lambda = new Form("lambda", new Form("args", argsForm.args), pre, lambdaBody);
             if (arrayValues.length != 0) {
-                lambda = new Form("do", preArray, new Form("array", lambda, arrayValues));
+                lambda = new Form("array", lambda, arrayValues);
             } else if (outname != null) {
                 lambda = new Form("def", new Ident(outname), lambda.sliceArg(0));
             }
