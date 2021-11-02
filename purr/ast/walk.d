@@ -48,8 +48,6 @@ final class Walker {
 
     int[][string][] jumpLocss;
     int[string][] jumpLabelss;
-    Node[][] captureValuess;
-    Reg[][] currentCaptures;
     double[string][] inNthCaptures;
 
     Reg[string][] localss;
@@ -60,15 +58,11 @@ final class Walker {
 
     Reg[] targets;
 
-    // int[string] funcs;
-    // int[][string] replaces;
+    int[string] funcs;
+    int[][string] replaces;
 
     ref Reg[string] locals() {
         return localss[$ - 1];
-    }
-
-    ref Reg[] currentCapture() {
-        return currentCaptures[$ - 1];
     }
 
     ref int[][string] jumpLocs() {
@@ -77,10 +71,6 @@ final class Walker {
 
     ref int[string] jumpLabels() {
         return jumpLabelss[$ - 1];
-    }
-
-    ref Node[] captureValues() {
-        return captureValuess[$ - 1];
     }
 
     void fixGotoLabels() {
@@ -102,36 +92,30 @@ final class Walker {
             Node cad = ca.optCalls(lifted);
             program = cad;
         }
-        // writeln(program);
         localss.length++;
         jumpLocss.length++;
         jumpLabelss.length++;
-        captureValuess.length++;
-        currentCaptures.length++;
         inNthCaptures.length++;
         scope (exit) {
             fixGotoLabels();
             localss.length--;
             jumpLocss.length--;
             jumpLabelss.length--;
-            captureValuess.length--;
-            currentCaptures.length--;
             inNthCaptures.length--;
         }
         bytecode = null;
         locals["this"] = new Reg(0);
         walk(program);
         bytecode ~= Opcode.exit;
-        // foreach (name, locs; replaces) {
-        //     if (int* setto = name in funcs) {
-        //         foreach (n; locs) {
-        //             bytecode[n .. n + jumpSize] = jump(*setto);
-        //         }
-        //     } else {
-        //         vmError("function not found: " ~ name);
-        //     }
-        // }
-        // writeln(regs);
+        foreach (name, locs; replaces) {
+            if (int* setto = name in funcs) {
+                foreach (n; locs) {
+                    bytecode[n .. n + jumpSize] = jump(*setto);
+                }
+            } else {
+                vmError("function not found: " ~ name);
+            }
+        }
     }
 
     uint[1] literal(bool val) {
@@ -163,26 +147,24 @@ final class Walker {
     }
 
     Reg alloc(Node isFor = null) {
-        if (isFor !is null) {
-            Reg reg = new Reg(regs.length + 1, isFor.to!string);
-            regs ~= reg;
-            return reg;
-        } else {
+        // if (isFor !is null) {
+        //     Reg reg = new Reg(regs.length + 1, isFor.to!string);
+        //     regs ~= reg;
+        //     return reg;
+        // } else {
             Reg reg = new Reg(regs.length + 1);
             regs ~= reg;
             return reg;
-        }
+        // }
     }
 
     Reg walk(Node node, Reg target = null) {
-        // writeln(bytecode.length, ": ", node);
         targets ~= target;
         nodes ~= node;
         scope (exit) {
             targets.length--;
             nodes.length--;
         }
-        // writeln(node);
         final switch (node.id) {
         case NodeKind.base:
             assert(false);
@@ -569,12 +551,6 @@ final class Walker {
             }
         case "var":
             if (Ident id = cast(Ident) form.getArg(0)) {
-                // if (Form lambda = cast(Form) form.getArg(1)) {
-                //     if (lambda.form == "lambda") {
-                //         string name = id.repr;
-                //         funcs[id.repr] = cast(int)(bytecode.length + 2);
-                //     }
-                // }
                 Reg target = alloc(id);
                 Reg from = walk(form.getArg(1), target);
                 locals[id.repr] = target;
@@ -627,12 +603,6 @@ final class Walker {
             return null;
         case "set":
             if (Ident id = cast(Ident) form.getArg(0)) {
-                // if (Form lambda = cast(Form) form.getArg(1)) {
-                //     if (lambda.form == "lambda") {
-                //         string name = id.repr;
-                //         funcs[id.repr] = cast(int)(bytecode.length + 7);
-                //     }
-                // }
                 Reg target;
                 if (Reg* ret = id.repr in locals) {
                     target = *ret;
@@ -730,21 +700,6 @@ final class Walker {
                 bytecode[j .. j + jumpSize] = jump(jumpFalseTo);
             }
             return outreg;
-            // case "unless":
-            //     Reg outreg = allocOut;
-            //     int[] jumpsFalseFrom = ifTrue(form.getArg(0));
-            //     walk(form.getArg(1), outreg);
-            //     bytecode ~= Opcode.jump_always;
-            //     int jumpOutFrom = cast(int) bytecode.length;
-            //     bytecode ~= jumpTmp;
-            //     int jumpFalseTo = cast(int) bytecode.length;
-            //     walk(form.getArg(2), outreg);
-            //     int jumpOutTo = cast(int) bytecode.length;
-            //     bytecode[jumpOutFrom .. jumpOutFrom + jumpSize] = jump(jumpOutTo);
-            //     foreach (jumpFalseFrom; jumpsFalseFrom) {
-            //         bytecode[jumpFalseFrom .. jumpFalseFrom + jumpSize] = jump(jumpFalseTo);
-            //     }
-            //     return outreg;
         case "while":
             bytecode ~= Opcode.jump;
             int jumpCondFrom = cast(int) bytecode.length;
@@ -1133,6 +1088,70 @@ final class Walker {
                 bytecode ~= rhs.reg;
                 return res;
             }
+        case "def":
+            Ident id = cast(Ident) form.getArg(0);
+            vmCheckError(id !is null, "interal: bad def");
+            Form argsForm = cast(Form) form.getArg(1);
+            vmCheckError(argsForm !is null, "function must take args");
+            vmCheckError(argsForm.form == "call" || argsForm.form == "args",
+                    "malformed args type (must be 'args' or 'call')");
+            string[] argnames;
+            foreach (arg; argsForm.args) {
+                Ident argid = cast(Ident) arg;
+                vmCheckError(argid !is null, "malformed arg");
+                argnames ~= argid.repr;
+            }
+            Reg lambdaReg = allocOut;
+            bytecode ~= Opcode.store_fun;
+            bytecode ~= lambdaReg.reg;
+            int refLength = cast(uint) bytecode.length;
+            bytecode ~= jumpTmp;
+            int refRegc = cast(uint) bytecode.length;
+            bytecode ~= 255;
+            Reg[] oldRegs = regs;
+            regs = null;
+            localss.length++;
+            int* ptr = null;
+            if (int* ptr_ = "rec" in funcs) {
+                ptr = ptr_;
+            }
+            funcs["rec"] = cast(int) bytecode.length;
+            funcs[id.repr] = cast(int) bytecode.length; 
+            foreach (index, arg; argnames) {
+                locals[arg] = alloc();
+            }
+            jumpLabelss.length++;
+            jumpLocss.length++;
+            inNthCaptures.length++;
+            Reg retreg;
+            foreach (arg; form.sliceArg(2)) {
+                retreg = walk(arg);
+            }
+            if (retreg !is null) {
+                bytecode ~= Opcode.ret;
+                bytecode ~= retreg.reg;
+            } else {
+                Reg reg = alloc();
+                bytecode ~= Opcode.store_none;
+                bytecode ~= reg.reg;
+                bytecode ~= Opcode.ret;
+                bytecode ~= reg.reg;
+            }
+            bytecode[refRegc] = cast(uint)(regs.length + 1);
+            regs = oldRegs;
+            fixGotoLabels();
+            localss.length--;
+            jumpLocss.length--;
+            jumpLabelss.length--;
+            inNthCaptures.length--;
+            bytecode ~= Opcode.fun_done;
+            bytecode[refLength .. refLength + jumpSize] = jump(cast(int) bytecode.length);
+            if (ptr is null) {
+                funcs.remove("rec");
+            } else {
+                funcs["rec"] = *ptr;
+            }
+            return lambdaReg;
         case "lambda":
             Form argsForm = cast(Form) form.getArg(0);
             vmCheckError(argsForm !is null, "function must take args");
@@ -1160,8 +1179,6 @@ final class Walker {
             }
             jumpLabelss.length++;
             jumpLocss.length++;
-            captureValuess.length++;
-            currentCaptures.length++;
             inNthCaptures.length++;
             Reg retreg;
             foreach (arg; form.sliceArg(1)) {
@@ -1183,25 +1200,9 @@ final class Walker {
             localss.length--;
             jumpLocss.length--;
             jumpLabelss.length--;
-            captureValuess.length--;
-            currentCaptures.length--;
             inNthCaptures.length--;
             bytecode ~= Opcode.fun_done;
             bytecode[refLength .. refLength + jumpSize] = jump(cast(int) bytecode.length);
-            if (captureValues.length != 0) {
-                Reg[] regs = [lambdaReg];
-                foreach (arg; captureValues) {
-                    Reg reg = walk(arg);
-                    regs ~= reg;
-                }
-                bytecode ~= Opcode.array_new;
-                bytecode ~= lambdaReg.reg;
-                bytecode ~= cast(uint) regs.length;
-                foreach (reg; regs) {
-                    bytecode ~= reg.reg;
-                }
-            }
-            // writeln(lambdaReg);
             return lambdaReg;
         case "type":
             Reg outreg = allocOut;
@@ -1216,6 +1217,44 @@ final class Walker {
             bytecode ~= reg.reg;
             return null;
         case "call":
+            if (Ident id = cast(Ident) form.getArg(0)) {
+                if (int *freg = id.repr in funcs) {
+                    Reg[] argRegs;
+                    foreach (index, arg; form.sliceArg(1)) {
+                        argRegs ~= walk(arg);
+                    }
+                    Reg outreg = allocOut;
+                    switch (argRegs.length) {
+                    case 0:
+                        bytecode ~= Opcode.static_call0;
+                        bytecode ~= outreg.reg;
+                        bytecode ~= jump(*freg);
+                        return outreg;
+                    case 1:
+                        bytecode ~= Opcode.static_call1;
+                        bytecode ~= outreg.reg;
+                        bytecode ~= jump(*freg);
+                        bytecode ~= argRegs[0].reg;
+                        return outreg;
+                    case 2:
+                        bytecode ~= Opcode.static_call2;
+                        bytecode ~= outreg.reg;
+                        bytecode ~= jump(*freg);
+                        bytecode ~= argRegs[0].reg;
+                        bytecode ~= argRegs[1].reg;
+                        return outreg;
+                    default:
+                        bytecode ~= Opcode.static_call;
+                        bytecode ~= outreg.reg;
+                        bytecode ~= jump(*freg);
+                        bytecode ~= cast(uint) argRegs.length;
+                        foreach (reg; argRegs) {
+                            bytecode ~= reg.reg;
+                        }
+                        return outreg;
+                    }
+                }
+            }
             Reg funreg = walk(form.getArg(0));
             Reg[] argRegs;
             foreach (index, arg; form.sliceArg(1)) {
@@ -1254,6 +1293,70 @@ final class Walker {
         case "return":
             if (Form call = cast(Form) form.getArg(0)) {
                 if (call.form == "call") {
+                    if (Ident id = cast(Ident) call.getArg(0)) {
+                        if (int* func = id.repr in funcs) {
+                            Reg[] argRegs;
+                            foreach (index, arg; call.sliceArg(1)) {
+                                Reg r = walk(arg);
+                                argRegs ~= r;
+                            }
+                            // this switch has a bug in argument order
+                            // i cannot figure it out, it is a fancy bug
+                            switch (argRegs.length) {
+                            case 0:
+                                bytecode ~= Opcode.jump;
+                                bytecode ~= jump(*func);
+                                return null;
+                            case 1:
+                                if (argRegs[0].repr != 1) {
+                                    bytecode ~= Opcode.store_reg;
+                                    bytecode ~= new Reg(1).reg;
+                                    bytecode ~= argRegs[0].reg;
+                                }
+                                bytecode ~= Opcode.jump;
+                                bytecode ~= jump(*func);
+                                return null;
+                            case 2:
+                                if (argRegs[1].repr == 1) {
+                                    bytecode ~= Opcode.store_reg;
+                                    bytecode ~= new Reg(0).reg;
+                                    bytecode ~= argRegs[1].reg;
+                                    argRegs[1] = new Reg(0);
+                                }
+                                if (argRegs[0].repr != 1) {
+                                    bytecode ~= Opcode.store_reg;
+                                    bytecode ~= new Reg(1).reg;
+                                    bytecode ~= argRegs[0].reg;
+                                }
+                                if (argRegs[1].repr != 2) {
+                                    bytecode ~= Opcode.store_reg;
+                                    bytecode ~= new Reg(2).reg;
+                                    bytecode ~= argRegs[1].reg;
+                                }
+                                bytecode ~= Opcode.jump;
+                                bytecode ~= jump(*func);
+                                return null;
+                            default:
+                                if (argRegs[0].repr != 1) {
+                                    bytecode ~= Opcode.store_reg;
+                                    bytecode ~= new Reg(1).reg;
+                                    bytecode ~= argRegs[0].reg;
+                                }
+                                foreach (i, v; argRegs[1..$]) {
+                                    Reg outreg = new Reg(i + 2);
+                                    if (v.repr == outreg.repr) {
+                                        continue;
+                                    }
+                                    bytecode ~= Opcode.store_reg;
+                                    bytecode ~= outreg.reg;
+                                    bytecode ~= v.reg;
+                                }
+                                bytecode ~= Opcode.jump;
+                                bytecode ~= jump(*func);
+                                return null;
+                            }
+                        }
+                    }
                     Reg func = walk(call.getArg(0));
                     Reg[] argRegs;
                     foreach (index, arg; call.sliceArg(1)) {

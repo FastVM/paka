@@ -107,6 +107,7 @@ class Lifter {
     Node[string] locals;
     Node[] nodes;
     size_t depth;
+    string outname;
 
     Node liftProgram(Node node) {
         locals["this"] = new Ident("this");
@@ -119,7 +120,12 @@ class Lifter {
         return new Form("do", pre, lifted);
     }
 
-    Node lift(Node node) {
+    Node lift(Node node, string outname_=null) {
+        string oldOutname = outname;
+        scope(exit) {
+            outname = oldOutname;
+        }
+        outname = outname_;
         nodes ~= node;
         scope (exit) {
             nodes.length--;
@@ -202,13 +208,19 @@ class Lifter {
                     vmError("local name resolution failure: " ~ name);
                 }
             }
-            Node lambda = new Form("lambda", new Form("args", argsForm.args), pre, lambdaBody);
+            Form lambda = new Form("lambda", new Form("args", argsForm.args), pre, lambdaBody);
             if (arrayValues.length != 0) {
                 lambda = new Form("do", preArray, new Form("array", lambda, arrayValues));
+            } else if (outname != null) {
+                lambda = new Form("def", new Ident(outname), lambda.sliceArg(0));
             }
-            return lambda;
+            return cast(Node) lambda;
         case "var":
-            return new Form("set", lift(form.getArg(0)), lift(form.getArg(1)));
+            if (Ident id = cast(Ident) form.getArg(0)) {
+                return new Form("set", lift(form.getArg(0)), lift(form.getArg(1), id.repr));
+            } else {
+                return new Form("set", lift(form.getArg(0)), lift(form.getArg(1)));
+            }
         default:
             Node[] args;
             foreach (arg; form.args) {
