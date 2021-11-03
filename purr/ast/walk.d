@@ -619,12 +619,12 @@ final class Walker {
                     bytecode ~= Opcode.box_set, bytecode ~= boxReg.reg;
                     bytecode ~= valueReg.reg;
                     return boxReg;
-                } else if (call.form == "deref") {
-                    Reg boxReg = walk(call.getArg(0));
-                    Reg valueReg = walk(form.getArg(1));
-                    bytecode ~= Opcode.ref_set, bytecode ~= boxReg.reg;
-                    bytecode ~= valueReg.reg;
-                    return boxReg;
+                // } else if (call.form == "deref") {
+                //     Reg boxReg = walk(call.getArg(0));
+                //     Reg valueReg = walk(form.getArg(1));
+                //     bytecode ~= Opcode.ref_set, bytecode ~= boxReg.reg;
+                //     bytecode ~= valueReg.reg;
+                //     return boxReg;
                 } else if (call.form == "do") {
                     Reg target = walk(form.getArg(0));
                     Reg from = walk(form.getArg(1), target);
@@ -1063,70 +1063,70 @@ final class Walker {
                 bytecode ~= rhs.reg;
                 return res;
             }
-        case "def":
-            Ident id = cast(Ident) form.getArg(0);
-            vmCheckError(id !is null, "interal: bad def");
-            Form argsForm = cast(Form) form.getArg(1);
-            vmCheckError(argsForm !is null, "function must take args");
-            vmCheckError(argsForm.form == "call" || argsForm.form == "args",
-                    "malformed args type (must be 'args' or 'call')");
-            string[] argnames;
-            foreach (arg; argsForm.args) {
-                Ident argid = cast(Ident) arg;
-                vmCheckError(argid !is null, "malformed arg");
-                argnames ~= argid.repr;
-            }
-            Reg lambdaReg = allocOut;
-            bytecode ~= Opcode.store_fun;
-            bytecode ~= lambdaReg.reg;
-            int refLength = cast(uint) bytecode.length;
-            bytecode ~= jumpTmp;
-            int refRegc = cast(uint) bytecode.length;
-            bytecode ~= 255;
-            Reg[] oldRegs = regs;
-            regs = null;
-            localss.length++;
-            int* ptr = null;
-            if (int* ptr_ = "rec" in funcs) {
-                ptr = ptr_;
-            }
-            funcs["rec"] = cast(int) bytecode.length;
-            funcs[id.repr] = cast(int) bytecode.length; 
-            foreach (index, arg; argnames) {
-                locals[arg] = alloc();
-            }
-            jumpLabelss.length++;
-            jumpLocss.length++;
-            inNthCaptures.length++;
-            Reg retreg;
-            foreach (arg; form.sliceArg(2)) {
-                retreg = walk(arg);
-            }
-            if (retreg !is null) {
-                bytecode ~= Opcode.ret;
-                bytecode ~= retreg.reg;
-            } else {
-                Reg reg = alloc();
-                bytecode ~= Opcode.store_none;
-                bytecode ~= reg.reg;
-                bytecode ~= Opcode.ret;
-                bytecode ~= reg.reg;
-            }
-            bytecode[refRegc] = cast(uint)(regs.length + 1);
-            regs = oldRegs;
-            fixGotoLabels();
-            localss.length--;
-            jumpLocss.length--;
-            jumpLabelss.length--;
-            inNthCaptures.length--;
-            bytecode ~= Opcode.fun_done;
-            bytecode[refLength .. refLength + jumpSize] = jump(cast(int) bytecode.length);
-            if (ptr is null) {
-                funcs.remove("rec");
-            } else {
-                funcs["rec"] = *ptr;
-            }
-            return lambdaReg;
+        // case "def":
+        //     Ident id = cast(Ident) form.getArg(0);
+        //     vmCheckError(id !is null, "interal: bad def");
+        //     Form argsForm = cast(Form) form.getArg(1);
+        //     vmCheckError(argsForm !is null, "function must take args");
+        //     vmCheckError(argsForm.form == "call" || argsForm.form == "args",
+        //             "malformed args type (must be 'args' or 'call')");
+        //     string[] argnames;
+        //     foreach (arg; argsForm.args) {
+        //         Ident argid = cast(Ident) arg;
+        //         vmCheckError(argid !is null, "malformed arg");
+        //         argnames ~= argid.repr;
+        //     }
+        //     Reg lambdaReg = allocOut;
+        //     bytecode ~= Opcode.store_fun;
+        //     bytecode ~= lambdaReg.reg;
+        //     int refLength = cast(uint) bytecode.length;
+        //     bytecode ~= jumpTmp;
+        //     int refRegc = cast(uint) bytecode.length;
+        //     bytecode ~= 255;
+        //     Reg[] oldRegs = regs;
+        //     regs = null;
+        //     localss.length++;
+        //     int* ptr = null;
+        //     if (int* ptr_ = "rec" in funcs) {
+        //         ptr = ptr_;
+        //     }
+        //     funcs["rec"] = cast(int) bytecode.length;
+        //     funcs[id.repr] = cast(int) bytecode.length; 
+        //     foreach (index, arg; argnames) {
+        //         locals[arg] = alloc();
+        //     }
+        //     jumpLabelss.length++;
+        //     jumpLocss.length++;
+        //     inNthCaptures.length++;
+        //     Reg retreg;
+        //     foreach (arg; form.sliceArg(2)) {
+        //         retreg = walk(arg);
+        //     }
+        //     if (retreg !is null) {
+        //         bytecode ~= Opcode.ret;
+        //         bytecode ~= retreg.reg;
+        //     } else {
+        //         Reg reg = alloc();
+        //         bytecode ~= Opcode.store_none;
+        //         bytecode ~= reg.reg;
+        //         bytecode ~= Opcode.ret;
+        //         bytecode ~= reg.reg;
+        //     }
+        //     bytecode[refRegc] = cast(uint)(regs.length + 1);
+        //     regs = oldRegs;
+        //     fixGotoLabels();
+        //     localss.length--;
+        //     jumpLocss.length--;
+        //     jumpLabelss.length--;
+        //     inNthCaptures.length--;
+        //     bytecode ~= Opcode.fun_done;
+        //     bytecode[refLength .. refLength + jumpSize] = jump(cast(int) bytecode.length);
+        //     if (ptr is null) {
+        //         funcs.remove("rec");
+        //     } else {
+        //         funcs["rec"] = *ptr;
+        //     }
+        //     return lambdaReg;
         case "lambda":
             Form argsForm = cast(Form) form.getArg(0);
             vmCheckError(argsForm !is null, "function must take args");

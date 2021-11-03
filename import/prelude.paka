@@ -1,12 +1,14 @@
 
-macro type.none {0}
-macro type.boolean {1}
-macro type.number {2}
-macro type.function {3}
-macro type.array {4}
-macro type.string {5}
-macro type.box {6}
-macro type.map {7}
+type = map{}
+
+type.none = 0
+type.boolean = 1
+type.number = 2
+type.function = 3
+type.array = 4
+type.string = 5
+type.box = 6
+type.map = 7
 
 ## lib stuff
 
@@ -98,11 +100,13 @@ def println(value) {
 
 ## effects
 
-macro effect.default {0}
-macro effect.type {1}
-macro effect.bounds {2}
-macro effect.div0 {3}
-macro effect.mod0 {4}
+effect = map{}
+
+effect.default = 0
+effect.type = 1
+effect.bounds = 2
+effect.div0 = 3
+effect.mod0 = 4
 
 handle effect.default {
     println("unhandled: effect not handled anywhere")

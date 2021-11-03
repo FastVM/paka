@@ -219,8 +219,6 @@ class Lifter {
             Form lambda = new Form("lambda", new Form("args", argsForm.args), pre, lambdaBody);
             if (arrayValues.length != 0) {
                 lambda = new Form("array", lambda, arrayValues);
-            } else if (outname != null) {
-                lambda = new Form("def", new Ident(outname), lambda.sliceArg(0));
             }
             return cast(Node) lambda;
         case "set":

@@ -116,6 +116,13 @@ Node delegate(Node) postExtend(TokenArray tokens) {
     }
     if (tokens.first.isOpen("(")) {
         return tokens.postCallExtend;
+    } else if (tokens.first.isOperator(".")) {
+        tokens.nextIs(Token.Type.operator, ".");
+        string id = tokens.first.value;
+        tokens.skip;
+        return (Node last) {
+            return new Form("index", last, new Value(id));
+        };
     } else if (tokens.first.isOpen("[")) {
         Node[][] arg = tokens.readOpen!"[]";
         if (arg.length != 1) {

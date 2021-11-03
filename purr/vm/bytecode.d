@@ -83,7 +83,7 @@ enum Opcode : uint {
     array_new,
     map_new,
     ref_get,
-    ref_set,
+    // ref_set,
     box_get,
     box_set,
     length,
