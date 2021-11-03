@@ -53,12 +53,15 @@ class Reader {
     size_t histIndex = 0;
 
     string style;
-    private fg[string][string] styles;
-    string[]delegate(string) colorize;
+    private {
+        fg[string][string] styles;
+        string[]delegate(string) colorize;
+    } 
 
     void setColors(string[]delegate(string) src) {
         colorize = src;
     }
+
 
     this(char[][] h, File i = stdin, File o = stdout) {
         history = h ~ [[]];
@@ -179,7 +182,7 @@ class Reader {
         char got = input.readKeyAbs;
         scope (exit) {
             foreach (i; 0 .. index) {
-                output.moveLeft;
+                output.moveLeft!false;
             }
             input.noRawMode(term);
             output.flush;
@@ -330,7 +333,7 @@ void printStill(bool fl = true, T...)(File output, T as) {
         count += got.length;
     }
     foreach (i; 0 .. count) {
-        output.moveLeft;
+        output.moveLeft!false;
     }
     static if (fl) {
         output.flush;
