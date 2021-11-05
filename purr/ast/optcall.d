@@ -3,11 +3,11 @@ module purr.ast.optcall;
 import purr.ast.ast: Node;
 
 class CallOpt {
-	this() {
+    this() {
 
-	}
+    }
 
-	Node optCalls(Node arg) {
-		return arg;
-	}
+    Node optCalls(Node arg) {
+        return arg;
+    }
 }

@@ -94,6 +94,7 @@ enum Opcode : uint {
     set_handler,
     return_handler,
     exit_handler,
+    sys_exec,
 }
 
 bool noOutputs(Opcode op) {

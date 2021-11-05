@@ -506,6 +506,13 @@ final class Walker {
             bytecode ~= objreg.reg;
             bytecode ~= index.reg;
             return outreg;
+        case "sys_exec":
+            Reg outreg = allocOut;
+            Reg objreg = walk(form.getArg(0), outreg);
+            bytecode ~= Opcode.sys_exec;
+            bytecode ~= outreg.reg;
+            bytecode ~= objreg.reg;
+            return outreg;
         case "length":
             Reg outreg = allocOut;
             Reg objreg = walk(form.getArg(0), outreg);

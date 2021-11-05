@@ -1,86 +1,50 @@
-PWD:=$(shell pwd)
-BIN:=$(PWD)/bin
-LIB:=$(PWD)/lib
-
-MICC?=$(CC)
-DC?=gdc
-LD=$(DC)
+BIN:=bin
+LIB:=lib
 
 OPT_C=-Ofast
 OPT_D=
 
+MICC=cc
+
 P=-p
 FPIC=-fPIC
 
-# LFLAGS+=$(FLAGS)
-# CFLAGS+=$(FLAGS)
-# DFLAGS+=$(FLAGS)
-
-ifeq ($(LD),$(DC))
-XLFLAGS=$(DLFLAGS)
-else
-ifeq ($(DC),gdc)
-XLFLAGS=$(DL)-lgphobos $(DL)-lgdruntime $(DL)-lm $(DL)-lpthread
-else
-ifeq ($(DC),ldc2)
-XLFLAGS=$(DL)-L/usr/local/lib $(DL)-lphobos2-ldc $(DL)-ldruntime-ldc $(DL)-lm $(DL)-lz $(DL)-ldl $(DL)-lpthread
-else
-XLFLAGS=$(DL)-L/usr/local/lib $(DL)-lphobos2 $(DL)-lm $(DL)-lz $(DL)-ldl $(DL)-lpthread
-endif
-endif
-endif
-
-ifeq ($(DC),gdc)
+.if $(DC) == gdc
 DO=-o
-else
+.else
 DO=-of
-endif
+.endif
 
-ifeq ($(LD),dmd)
-DL=-L
-LDO=-of
-else
-ifeq ($(LD),ldc2)
-DL=-L
-LDO=-of
-else
-DL=
-LDO=-o
-endif
-endif
+# MIMALLOC=$(DL)$(PWD)/minivm/lib/mimalloc/libmimalloc.a
+# L_MIMALLOC=$(DL)$(PWD)/minivm/lib/mimalloc/libmimalloc.a
+# C_MIMALLOC=-DVM_USE_MIMALLOC
 
-ifeq ($(MI),1)
-MIMALLOC=$(DL)$(PWD)/minivm/lib/mimalloc/libmimalloc.a
-L_MIMALLOC=$(DL)$(PWD)/minivm/lib/mimalloc/libmimalloc.a
-C_MIMALLOC=-DVM_USE_MIMALLOC
-endif
-
-DFILES:=$(shell find ext purr -type f -name '*.d')
-CFILES=$(shell find ext minivm/vm -type f -name '*.c')
-DOBJS=$(patsubst %.d,$(LIB)/%.o,$(DFILES))
-COBJS=$(patsubst %.c,$(LIB)/%.o,$(CFILES))
+DFILES!=find ext purr -type f -name '*.d'
+CFILES!=find ext minivm/vm -type f -name '*.c'
+DOBJS=$(DFILES:%.d=%.o)
+COBJS=$(CFILES:%.c=%.o)
 OBJS=$(DOBJS) $(COBJS)
+
+BINS=$(BIN)/purr $(BIN)/minivm
 
 default: $(BIN)/purr $(BIN)/minivm
 
 purr $(BIN)/purr: $(OBJS) $(MIMALLOC)
 	@mkdir $(P) $(BIN)
-	$(LD) $(OBJS) $(LDO)$(BIN)/purr $(patsubst %,$(DL)%,$(LFLAGS)) $(MIMALLOC) $(XLFLAGS)
+	$(DC) $(OBJS) $(LDO)$(BIN)/purr $(LFLAGS) $(MIMALLOC) 
 
-minivm $(BIN)/minivm: $(COBJS) $(LIB)/minivm/main/main.o $(MIMALLOC)
+minivm $(BIN)/minivm: $(COBJS) minivm/main/main.o $(MIMALLOC)
 	@mkdir $(P) $(BIN)
-	$(LD) $(COBJS) $(LIB)/minivm/main/main.o $(LDO)$(BIN)/minivm $(LFLAGS) $(MIMALLOC) $(L_MIMALLOC) $(XLFLAGS) $(AFLAGS)
+	$(CC) $(COBJS) minivm/main/main.o -o$(BIN)/minivm -lm $(LFLAGS) $(MIMALLOC) $(L_MIMALLOC)
 
 $(MIMALLOC): .dummy
-	$(MAKE) -C minivm -f deps.mak --no-print-directory CC="$(MICC)" CFLAGS="" LFLAGS=""
+	$(MAKE) -C minivm -f deps.mak default CC="$(MICC)" CFLAGS="" LFLAGS=""
 
-$(DOBJS): $(patsubst $(LIB)/%.o,%.d,$@)
-	@mkdir $(P) $(dir $@) $(LIB)
-	$(DC) -Jimport -c $(OPT_D) $(DO)$@ -Iminivm $(patsubst $(LIB)/%.o,%.d,$@) $(DFLAGS) $(AFLAGS)
+$(DOBJS): $(patsubst %.o,%.d,$@)
+	$(DC) -Jimport -c $(OPT_D) $(DO)$@ -Iminivm $(@:%.o=%.d) $(DFLAGS)
 
-$(COBJS) $(LIB)/minivm/main/main.o: $(patsubst $(LIB)/%.o,%.c,$@)
-	@mkdir $(P) $(dir $@) $(LIB)
-	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(patsubst $(LIB)/%.o,%.c,$@) -I./minivm $(C_MIMALLOC) $(CFLAGS) $(AFLAGS)
+$(COBJS) minivm/main/main.o: $(@:%.o=%.c)
+	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(@:%.o=%.c) -I./minivm $(C_MIMALLOC) $(CFLAGS)
 
 $(BIN) $(LIB):
 	mkdir $(P) $@
@@ -88,6 +52,4 @@ $(BIN) $(LIB):
 .dummy:
 
 clean:
-	$(MAKE) -C minivm -f makefile clean
-	$(MAKE) -C minivm -f mimalloc.mak clean
-	: rm -r $(BIN) $(LIB)
+	rm -rf $(OBJS) $(BINS)
