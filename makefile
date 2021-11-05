@@ -37,12 +37,6 @@ OBJS=$(DOBJS) $(COBJS)
 
 BINS=$(BIN)/purr $(BIN)/minivm
 
-PWD != pwd
-.for FILE in $(CFILES)
-XTMP != $(CC) -M -MV -o $(FILE:%.c=%.dep) $(FILE)
-.endfor
-
--include $(CFILES:%.c=%.dep)
 
 default: $(BINS)
 
@@ -61,7 +55,6 @@ $(DOBJS): $(@:%.o=%.d) $(REBUILD)
 	$(DC) -Jimport -c $(OPT_D) $(DO)$@ -Iminivm $(@:%.o=%.d) $(DFLAGS)
 
 $(COBJS) minivm/main/main.o: $(@:%.o=%.c) $(basename $@) $(REBUILD)
-	$(CC) -M -o $(@:%.o=%.dep) $(@:%.o=%.c)
 	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(@:%.o=%.c) -I./minivm $(C_MIMALLOC) $(CFLAGS)
 
 info:
@@ -69,5 +62,5 @@ info:
 
 .dummy:
 
-clean:
-	rm -rf $(OBJS) $(BINS) $(CFILES:%.c=$(PWD)/%.dep)
+clean: .dummy
+	rm -rf $(OBJS) $(BINS) 

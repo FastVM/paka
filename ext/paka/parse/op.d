@@ -32,9 +32,9 @@ Node call(Node fun, Node[] args) {
         if (id.repr == "length") {
             return new Form("length", args);
         }
-        if (id.repr == "sys_exec") {
-            return new Form("sys_exec", args);
-        }
+        // if (id.repr == "sys_exec") {
+        //     return new Form("sys_exec", args);
+        // }
         if (id.repr == "putchar") {
             return new Form("putchar", args);
         }
