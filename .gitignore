@@ -53,3 +53,4 @@ dump.rdb
 crash-*
 oom-*
 *.core
+*.dep
