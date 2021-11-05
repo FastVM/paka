@@ -19,9 +19,7 @@ Node readParenBody(ref TokenArray tokens, size_t start) {
     Node[] args;
     bool hasComma = false;
     while (!tokens.done && !tokens.first.isClose(")")) {
-        tokens.eat;
         args ~= tokens.readExpr(start);
-        tokens.eat;
         if (!tokens.done && tokens.first.isComma) {
             tokens.nextIs(Token.Type.comma);
             hasComma = true;
@@ -53,9 +51,7 @@ Node readOpen(string v)(ref TokenArray tokens) if (v == "[]") {
     tokens.nextIs(Token.Type.open, [v[0]]);
     Node[] args;
     outer: while (!tokens.first.isClose("]")) {
-        tokens.eat;
         args ~= tokens.readExpr(1);
-        tokens.eat;
         if (!tokens.first.isComma) {
             break;
         }
@@ -149,30 +145,9 @@ long parseNumberOnly(ref string input, size_t base) {
     return str.to!size_t(cast(uint) base);
 }
 
-size_t escapeNumber(ref string input) {
-    if (input[0] == '0') {
-        char ctrlchr = input[1];
-        input = input[2 .. $];
-        switch (ctrlchr) {
-        case 'b':
-            return input.parseNumberOnly(2);
-        case 'o':
-            return input.parseNumberOnly(8);
-        case 'x':
-            return input.parseNumberOnly(16);
-        default:
-            string why = "0 must be followed by one of: nbox";
-            throw new Exception("cannot have escape: " ~ why);
-        }
-    } else {
-        return input.parseNumberOnly(10);
-    }
-}
-
 /// reads first element of postfix expression
 alias readPostExpr = Spanning!readPostExprImpl;
 Node readPostExprImpl(ref TokenArray tokens) {
-    tokens.eat;
     Node last = void;
 redo:
     if (tokens.first.isKeyword("magic")) {
@@ -191,7 +166,6 @@ redo:
                 if (tokens.first.isComma) {
                     tokens.nextIs(Token.Type.comma);
                 }
-                tokens.eat;
                 tokens.nextIs(Token.type.close, ")");
                 last = new Form("if", cond, iftrue, iffalse);
             } else {
@@ -297,6 +271,8 @@ redo:
     } else if (tokens.first.isString) {
         last = new Value(tokens.first.value);
         tokens.nextIs(Token.Type.string);
+    } else if (tokens.first.isNone) {
+        return null;
     } else {
         vmFail("unexpected: " ~ tokens.first.type.to!string);
     }
@@ -311,7 +287,6 @@ Node readPreExprImpl(ref TokenArray tokens) {
         while (tokens.first.isOperator) {
             vals ~= tokens.first.value;
             tokens.nextIs(Token.Type.operator);
-            tokens.eat;
         }
         return parseUnaryOp(vals)(tokens.readPostExpr);
     }
@@ -356,19 +331,12 @@ Node readExprImpl(ref TokenArray tokens, size_t level) {
     }
     string[] opers;
     Node[] subNodes;
-    // if (prec[level].canFind("=")) {
-    //     subNodes ~= tokens.readParenBody(level + 1);
-    // } else {
-        subNodes ~= tokens.readExpr(level + 1);
-    // }
-    while (!tokens.done && tokens.first.isAnyOperator(prec[level])) {
+    Node first = tokens.readExpr(level + 1);
+    subNodes ~= first;
+    while (tokens.first.isAnyOperator(prec[level])) {
         opers ~= tokens.first.value;
         tokens.eat;
-        // if (prec[level].canFind("=")) {
-        //     subNodes ~= tokens.readParenBody(level + 1);
-        // } else {
-            subNodes ~= tokens.readExpr(level + 1);
-        // }
+        subNodes ~= tokens.readExpr(level + 1);
     }
     if (opers.length == 0) {
         return subNodes[0];
@@ -440,6 +408,5 @@ import std.stdio;
 Node parse(SrcLoc loc) {
     SrcLoc location = loc;
     Node ret = location.parsePasserine;
-    writeln(ret);
     return ret;
 }

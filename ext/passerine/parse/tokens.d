@@ -165,7 +165,7 @@ Token readToken(ref SrcLoc location) {
     }
     if (peek.isWhite && peek != '\n') {
         consume;
-        return consToken(Token.Type.none, " ");
+        return location.readToken;
     }
     if (peek == ';') {
         read;
