@@ -266,6 +266,9 @@ Token readToken(ref SrcLoc location) {
                 case 't':
                     ret ~= '\t';
                     break;
+                case '\\':
+                    ret ~= '\\';
+                    break;
                 case 's':
                     ret ~= ' ';
                     break;
