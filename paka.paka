@@ -128,7 +128,7 @@ def token_new(name, val) {
 }
 
 def tokenize_stream1(bsrc) {
-    ops_flat = ["+=", "=", "+", "-", "*", "/"]
+    ops_flat = ["=", "+", "-", "*", "/"]
     xop = 0
     while xop < length(ops_flat) {
         op = ops_flat[xop]
@@ -252,6 +252,7 @@ def read_expr(tokens, depth) {
         if first[0] != "op" {
             return ret
         }
+        stream_skip1(tokens)
         ret = [first[1], ret, read_expr(tokens, depth - 1)]
     }
 }
@@ -380,11 +381,16 @@ def emit_num(form, out) {
     return ret
 }
 
-def emit_add(form, out) {
+def emit_ident(form, out) {
+    res = findvar(out[2], form[1])
+    return res
+}
+
+def emit_binop(op, form, out) {
     r1 = emit_to(form[1], out)
     r2 = emit_to(form[2], out)
     ret = reg(out)
-    out[0] = out[0] ~ [opcode_add, ret, r1, r2]
+    out[0] = out[0] ~ [op, ret, r1, r2]
     return ret
 }
 
@@ -404,15 +410,56 @@ def emit_do(form, out) {
     return ret
 }
 
+def findvar(vars, name) {
+    i = 0
+    while i < length(vars) {
+        if vars[i][0] == name {
+            return vars[i][1]
+        }
+        i = i + 1
+    }
+    return none
+}
+
+def emit_set(form, out) {
+    found = findvar(out[2], form[1])
+    if found == none {
+        from = emit_to(form[2], out)
+        to = reg(out)
+        out[2] = out[2] ~ [[form[1][1], to]]
+        out[0] = out[0] ~ [opcode_store_reg, to, from]
+        return to
+    } else {
+        from = emit_to(form[2], out)
+        out[0] = out[0] ~ [opcode_store_reg, found, from]
+        return found
+    }
+}
+
 def emit_to(form, out) {
     if form[0] == "num" {
         return emit_num(form, out)
     }
     if form[0] == "+" {
-        return emit_add(form, out)
+        return emit_binop(opcode_add, form, out)
+    }
+    if form[0] == "-" {
+        return emit_binop(opcode_sub, form, out)
+    }
+    if form[0] == "*" {
+        return emit_binop(opcode_mul, form, out)
+    }
+    if form[0] == "/" {
+        return emit_binop(opcode_div, form, out)
+    }
+    if form[0] == "ident" {
+        return emit_ident(form, out)
     }
     if form[0] == "putchar" {
         return emit_putchar(form, out)
+    }
+    if form[0] == "=" {
+        return emit_set(form, out)
     }
     if form[0] == "do" {
         return emit_do(form, out)
@@ -420,11 +467,11 @@ def emit_to(form, out) {
 }
 
 def emit(form) {
-    out = [[], 0, map]
+    out = [[], 0, []]
     emit_to(form, out)
     out[0] = out[0] ~ [opcode_exit]
-    ## println(out[0])
+    println(out[0])
     return out[0]
 }
 
-exec(emit(parse(tokenize("putchar(52) putchar(57) putchar(56) putchar(52) putchar(10)"))))
+exec(emit(parse(tokenize("d = 100 putchar(d - 32)"))))
