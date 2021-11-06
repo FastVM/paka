@@ -506,13 +506,11 @@ final class Walker {
             bytecode ~= objreg.reg;
             bytecode ~= index.reg;
             return outreg;
-        // case "sys_exec":
-        //     Reg outreg = allocOut;
-        //     Reg objreg = walk(form.getArg(0), outreg);
-        //     bytecode ~= Opcode.sys_exec;
-        //     bytecode ~= outreg.reg;
-        //     bytecode ~= objreg.reg;
-        //     return outreg;
+        case "exec":
+            Reg objreg = walk(form.getArg(0));
+            bytecode ~= Opcode.exec;
+            bytecode ~= objreg.reg;
+            return null;
         case "length":
             Reg outreg = allocOut;
             Reg objreg = walk(form.getArg(0), outreg);
@@ -1273,104 +1271,117 @@ final class Walker {
                 return outreg;
             }
         case "return":
-            if (Form call = cast(Form) form.getArg(0)) {
-                if (call.form == "call") {
-                    if (Ident id = cast(Ident) call.getArg(0)) {
-                        if (int* func = id.repr in funcs) {
-                            Reg[] argRegs;
-                            foreach (index, arg; call.sliceArg(1)) {
-                                Reg r = walk(arg);
-                                argRegs ~= r;
-                            }
-                            // this switch has a bug in argument order
-                            // i cannot figure it out, it is a fancy bug
-                            switch (argRegs.length) {
-                            case 0:
-                                bytecode ~= Opcode.jump;
-                                bytecode ~= jump(*func);
-                                return null;
-                            case 1:
-                                if (argRegs[0].repr != 1) {
-                                    bytecode ~= Opcode.store_reg;
-                                    bytecode ~= new Reg(1).reg;
-                                    bytecode ~= argRegs[0].reg;
-                                }
-                                bytecode ~= Opcode.jump;
-                                bytecode ~= jump(*func);
-                                return null;
-                            case 2:
-                                if (argRegs[1].repr == 1) {
-                                    bytecode ~= Opcode.store_reg;
-                                    bytecode ~= new Reg(0).reg;
-                                    bytecode ~= argRegs[1].reg;
-                                    argRegs[1] = new Reg(0);
-                                }
-                                if (argRegs[0].repr != 1) {
-                                    bytecode ~= Opcode.store_reg;
-                                    bytecode ~= new Reg(1).reg;
-                                    bytecode ~= argRegs[0].reg;
-                                }
-                                if (argRegs[1].repr != 2) {
-                                    bytecode ~= Opcode.store_reg;
-                                    bytecode ~= new Reg(2).reg;
-                                    bytecode ~= argRegs[1].reg;
-                                }
-                                bytecode ~= Opcode.jump;
-                                bytecode ~= jump(*func);
-                                return null;
-                            default:
-                                if (argRegs[0].repr != 1) {
-                                    bytecode ~= Opcode.store_reg;
-                                    bytecode ~= new Reg(1).reg;
-                                    bytecode ~= argRegs[0].reg;
-                                }
-                                foreach (i, v; argRegs[1..$]) {
-                                    Reg outreg = new Reg(i + 2);
-                                    if (v.repr == outreg.repr) {
-                                        continue;
-                                    }
-                                    bytecode ~= Opcode.store_reg;
-                                    bytecode ~= outreg.reg;
-                                    bytecode ~= v.reg;
-                                }
-                                bytecode ~= Opcode.jump;
-                                bytecode ~= jump(*func);
-                                return null;
-                            }
-                        }
-                    }
-                    Reg func = walk(call.getArg(0));
-                    Reg[] argRegs;
-                    foreach (index, arg; call.sliceArg(1)) {
-                        argRegs ~= walk(arg);
-                    }
-                    switch (argRegs.length) {
-                    case 0:
-                        bytecode ~= Opcode.tail_call0;
-                        bytecode ~= func.reg;
-                        return null;
-                    case 1:
-                        bytecode ~= Opcode.tail_call1;
-                        bytecode ~= func.reg;
-                        bytecode ~= argRegs[0].reg;
-                        return null;
-                    case 2:
-                        bytecode ~= Opcode.tail_call2;
-                        bytecode ~= func.reg;
-                        bytecode ~= argRegs[0].reg;
-                        bytecode ~= argRegs[1].reg;
-                        return null;
-                    default:
-                        bytecode ~= Opcode.tail_call;
-                        bytecode ~= func.reg;
-                        bytecode ~= cast(uint) argRegs.length;
-                        foreach (reg; argRegs) {
-                            bytecode ~= reg.reg;
-                        }
-                        return null;
-                    }
-                }
-            }
+            // if (Form call = cast(Form) form.getArg(0)) {
+            //     if (call.form == "call") {
+            //         // if (Ident id = cast(Ident) call.getArg(0)) {
+            //         //     if (int* func = id.repr in funcs) {
+            //         //         Reg[] argRegs;
+            //         //         foreach (index, arg; call.sliceArg(1)) {
+            //         //             Reg r = walk(arg);
+            //         //             argRegs ~= r;
+            //         //         }
+            //         //         // this switch has a bug in argument order
+            //         //         // i cannot figure it out, it is a fancy bug
+            //         //         switch (argRegs.length) {
+            //         //         case 0:
+            //         //             bytecode ~= Opcode.jump;
+            //         //             bytecode ~= jump(*func);
+            //         //             return null;
+            //         //         case 1:
+            //         //             if (argRegs[0].repr != 1) {
+            //         //                 bytecode ~= Opcode.store_reg;
+            //         //                 bytecode ~= new Reg(1).reg;
+            //         //                 bytecode ~= argRegs[0].reg;
+            //         //             }
+            //         //             bytecode ~= Opcode.jump;
+            //         //             bytecode ~= jump(*func);
+            //         //             return null;
+            //         //         case 2:
+            //         //             if (argRegs[1].repr == 1) {
+            //         //                 bytecode ~= Opcode.store_reg;
+            //         //                 bytecode ~= new Reg(0).reg;
+            //         //                 bytecode ~= argRegs[1].reg;
+            //         //                 argRegs[1] = new Reg(0);
+            //         //             }
+            //         //             if (argRegs[0].repr != 1) {
+            //         //                 bytecode ~= Opcode.store_reg;
+            //         //                 bytecode ~= new Reg(1).reg;
+            //         //                 bytecode ~= argRegs[0].reg;
+            //         //             }
+            //         //             if (argRegs[1].repr != 2) {
+            //         //                 bytecode ~= Opcode.store_reg;
+            //         //                 bytecode ~= new Reg(2).reg;
+            //         //                 bytecode ~= argRegs[1].reg;
+            //         //             }
+            //         //             bytecode ~= Opcode.jump;
+            //         //             bytecode ~= jump(*func);
+            //         //             return null;
+            //         //         default:
+            //         //             // if (argRegs[0].repr != 1) {
+            //         //             //     bytecode ~= Opcode.store_reg;
+            //         //             //     bytecode ~= new Reg(1).reg;
+            //         //             //     bytecode ~= argRegs[0].reg;
+            //         //             // }
+            //         //             foreach (i, ref v; argRegs) {
+            //         //                 // Reg outreg = new Reg(i + 2);
+            //         //                 // if (v.repr == outreg.repr) {
+            //         //                 //     continue;
+            //         //                 // }
+            //         //                 Reg reg = alloc();
+            //         //                 bytecode ~= Opcode.store_reg;
+            //         //                 bytecode ~= v.reg;
+            //         //                 bytecode ~= reg.reg;
+            //         //                 v = reg;
+            //         //             }
+            //         //             foreach (i, ref v; argRegs) {
+            //         //                 bytecode ~= Opcode.store_reg;
+            //         //                 bytecode ~= new Reg(i + 1).reg;
+            //         //                 bytecode ~= v.reg;
+            //         //             }
+            //         //             bytecode ~= Opcode.jump;
+            //         //             bytecode ~= jump(*func);
+            //         //             return null;
+            //         //         }
+            //         //     }
+            //         // }
+            //         Reg func = walk(call.getArg(0));
+            //         Reg[] argRegs;
+            //         foreach (index, arg; call.sliceArg(1)) {
+            //             argRegs ~= walk(arg);
+            //         }
+            //         switch (argRegs.length) {
+            //         case 0:
+            //             bytecode ~= Opcode.tail_call0;
+            //             bytecode ~= func.reg;
+            //             return null;
+            //         case 1:
+            //             bytecode ~= Opcode.tail_call1;
+            //             bytecode ~= func.reg;
+            //             bytecode ~= argRegs[0].reg;
+            //             return null;
+            //         case 2:
+            //             bytecode ~= Opcode.tail_call2;
+            //             bytecode ~= func.reg;
+            //             if (argRegs[0].repr == 2) {
+            //                 vmError("interlan error in tail call");
+            //             }
+            //             if (argRegs[1].repr == 1) {
+            //                 vmError("interlan error in tail call");
+            //             }
+            //             bytecode ~= argRegs[0].reg;
+            //             bytecode ~= argRegs[1].reg;
+            //             return null;
+            //         default:
+            //             bytecode ~= Opcode.tail_call;
+            //             bytecode ~= func.reg;
+            //             bytecode ~= cast(uint) argRegs.length;
+            //             foreach (reg; argRegs) {
+            //                 bytecode ~= reg.reg;
+            //             }
+            //             return null;
+            //         }
+            //     }
+            // }
             Reg res = walk(form.getArg(0));
             bytecode ~= Opcode.ret;
             bytecode ~= res.reg;

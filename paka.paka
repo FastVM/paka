@@ -1,0 +1,323 @@
+### char utils
+
+def char_between(chr, pair) {
+    if pair[0] <= chr {
+        if chr <= pair[1] {
+            return true
+        }
+    }
+    return false
+}
+ 
+def char_isdigit(chr) {
+    if char_between(chr, "09") {
+        return true
+    } else {
+        return false
+    }
+}
+
+def char_isalpha(chr) {
+    if char_between(chr, "az") {
+        return true
+    }
+    if char_between(chr, "AZ") {
+        return true
+    }
+    return false
+}
+
+def char_id0(chr) {
+    if char_isalpha(chr) {
+        return true
+    }
+    if chr[0] == "_"[0] {
+        return true
+    }
+    return false
+}
+
+def char_id(chr) {
+    if char_id0(chr) {
+        return true
+    }
+    if char_isdigit(chr) {
+        return true
+    }
+    return false
+}
+
+### string utils
+
+def str_starts_with(src, items) {
+    if length(items) > length(src) {
+        return false
+    }
+    i = 0
+    while i < length(items) {
+        if items[i] != src[i] {
+            return false
+        }
+        i = i + 1
+    }
+    return true
+}
+
+### char stream utils
+
+def stream_new(src) {
+    return [src, 0]
+}
+
+def stream_peek(src) {
+    if src[1] >= length(src[0]) {
+        return 0
+    } else {
+        return src[0][src[1]]
+    }
+}
+
+def stream_skip1(src) {
+    if src[1] < length(src[0]) {
+        src[1] = src[1] + 1
+    }
+}
+
+def stream_skip(src, n) {
+    i = 0
+    while i < n {
+        stream_skip1(src)
+        i = i + 1
+    }
+}
+
+def stream_read(src) {
+    ret = stream_peek(src)
+    stream_skip1(src)
+    return ret
+}
+
+def stream_starts_swith(src, items) {
+    if length(items) + src[1] > length(src[0]) {
+        return false
+    }
+    i = 0
+    while i < length(items) {
+        if items[i] != src[0][src[1] + i] {
+            return false
+        }
+        i = i + 1
+    }
+    return true
+}
+
+### tokenizer
+
+def token_new(name, val) {
+    return [name, val]
+}
+
+def tokenize_stream1(bsrc) {
+    ops_flat = ["+=", "=", "+", "-", "*", "/"]
+    xop = 0
+    while xop < length(ops_flat) {
+        op = ops_flat[xop]
+        if stream_starts_swith(bsrc, op) {
+            stream_skip(bsrc, length(op))
+            return token_new("op", op)
+        }
+        xop = xop + 1
+    }
+    first = stream_peek(bsrc)
+    if first == " "[0] {
+        stream_skip1(bsrc)
+        return tokenize_stream1(bsrc)
+    }
+    if first == "\n"[0] {
+        stream_skip1(bsrc)
+        return tokenize_stream1(bsrc)
+    }
+    if char_isdigit(first) {
+        n = 0
+        while char_isdigit(stream_peek(bsrc)) {
+            n = n * 10 + stream_read(bsrc) - "0"[0]
+        }
+        return token_new("num", n)
+    }
+    if char_id0(first) {
+        xsrc = []
+        while char_id(stream_peek(bsrc)) {
+            xsrc = xsrc ~ [stream_read(bsrc)]
+        }
+        return token_new("ident", xsrc)
+    }
+    return stream_read(bsrc)
+}
+
+def tokenize(src) {
+    ssrc = stream_new(src) 
+    tokens = []
+    while true {
+        if stream_peek(ssrc) == 0 {
+            return tokens
+        }
+        tokens = tokens ~ [tokenize_stream1(ssrc)]
+    }
+}
+
+### parser
+
+def read_single(tokens) {
+    first = stream_peek(tokens)
+    if first == 0 {
+        return none
+    }
+    if first[0] == "num" {
+        stream_skip1(tokens)
+        return ["num", first[1]]
+    }
+    if first[0] == "ident" {
+        stream_skip1(tokens)
+        return ["ident", first[1]]
+    }
+    return none
+}
+
+def read_expr(tokens, depth) {
+    if depth <= 0 {
+        return read_single(tokens)
+    }
+    ret = read_expr(tokens, depth - 1)
+    while true {
+        first = stream_peek(tokens)
+        if first == 0 {
+            return ret
+        }
+        if first[0] != "op" {
+            return ret
+        }
+        stream_skip1(tokens)
+        ret = [first[1], ret, read_expr(tokens, depth - 1)]
+    }
+}
+
+def read_expr_base(tokens) {
+    return read_expr(tokens, 2)
+}
+
+def parse(tokens) {
+    xstream = stream_new(tokens)
+    return read_expr_base(xstream)
+}
+
+### opcodes walker
+
+op_num = 0
+opcode_exit = op_num op_num = op_num + 1
+opcode_store_reg = op_num op_num = op_num + 1
+opcode_store_none = op_num op_num = op_num + 1
+opcode_store_bool = op_num op_num = op_num + 1
+opcode_store_int = op_num op_num = op_num + 1
+opcode_store_fun = op_num op_num = op_num + 1
+opcode_fun_done = op_num op_num = op_num + 1
+opcode_equal = op_num op_num = op_num + 1
+opcode_equal_num = op_num op_num = op_num + 1
+opcode_not_equal = op_num op_num = op_num + 1
+opcode_not_equal_num = op_num op_num = op_num + 1
+opcode_less = op_num op_num = op_num + 1
+opcode_less_num = op_num op_num = op_num + 1
+opcode_greater = op_num op_num = op_num + 1
+opcode_greater_num = op_num op_num = op_num + 1
+opcode_less_than_equal = op_num op_num = op_num + 1
+opcode_less_than_equal_num = op_num op_num = op_num + 1
+opcode_greater_than_equal = op_num op_num = op_num + 1
+opcode_greater_than_equal_num = op_num op_num = op_num + 1
+opcode_jump = op_num op_num = op_num + 1
+opcode_branch_false = op_num op_num = op_num + 1
+opcode_branch_true = op_num op_num = op_num + 1
+opcode_branch_equal = op_num op_num = op_num + 1
+opcode_branch_equal_num = op_num op_num = op_num + 1
+opcode_branch_not_equal = op_num op_num = op_num + 1
+opcode_branch_not_equal_num = op_num op_num = op_num + 1
+opcode_branch_less = op_num op_num = op_num + 1
+opcode_branch_less_num = op_num op_num = op_num + 1
+opcode_branch_greater = op_num op_num = op_num + 1
+opcode_branch_greater_num = op_num op_num = op_num + 1
+opcode_branch_less_than_equal = op_num op_num = op_num + 1
+opcode_branch_less_than_equal_num = op_num op_num = op_num + 1
+opcode_branch_greater_than_equal = op_num op_num = op_num + 1
+opcode_branch_greater_than_equal_num = op_num op_num = op_num + 1
+opcode_inc = op_num op_num = op_num + 1
+opcode_inc_num = op_num op_num = op_num + 1
+opcode_dec = op_num op_num = op_num + 1
+opcode_dec_num = op_num op_num = op_num + 1
+opcode_add = op_num op_num = op_num + 1
+opcode_add_num = op_num op_num = op_num + 1
+opcode_sub = op_num op_num = op_num + 1
+opcode_sub_num = op_num op_num = op_num + 1
+opcode_mul = op_num op_num = op_num + 1
+opcode_mul_num = op_num op_num = op_num + 1
+opcode_div = op_num op_num = op_num + 1
+opcode_div_num = op_num op_num = op_num + 1
+opcode_mod = op_num op_num = op_num + 1
+opcode_mod_num = op_num op_num = op_num + 1
+opcode_concat = op_num op_num = op_num + 1
+opcode_static_call0 = op_num op_num = op_num + 1
+opcode_static_call1 = op_num op_num = op_num + 1
+opcode_static_call2 = op_num op_num = op_num + 1
+opcode_static_call = op_num op_num = op_num + 1
+opcode_tail_call0 = op_num op_num = op_num + 1
+opcode_tail_call1 = op_num op_num = op_num + 1
+opcode_tail_call2 = op_num op_num = op_num + 1
+opcode_tail_call = op_num op_num = op_num + 1
+opcode_call0 = op_num op_num = op_num + 1
+opcode_call1 = op_num op_num = op_num + 1
+opcode_call2 = op_num op_num = op_num + 1
+opcode_call = op_num op_num = op_num + 1
+opcode_return = op_num op_num = op_num + 1
+opcode_putchar = op_num op_num = op_num + 1
+opcode_ref_new = op_num op_num = op_num + 1
+opcode_box_new = op_num op_num = op_num + 1
+opcode_string_new = op_num op_num = op_num + 1
+opcode_array_new = op_num op_num = op_num + 1
+opcode_map_new = op_num op_num = op_num + 1
+opcode_ref_get = op_num op_num = op_num + 1
+opcode_box_get = op_num op_num = op_num + 1
+opcode_box_set = op_num op_num = op_num + 1
+opcode_length = op_num op_num = op_num + 1
+opcode_index_get = op_num op_num = op_num + 1
+opcode_index_set = op_num op_num = op_num + 1
+opcode_type = op_num op_num = op_num + 1
+opcode_call_handler = op_num op_num = op_num + 1
+opcode_set_handler = op_num op_num = op_num + 1
+opcode_return_handler = op_num op_num = op_num + 1
+opcode_exit_handler = op_num op_num = op_num + 1
+
+def reg(out) {
+    out[1] = out[1] + 1
+    return out[1]
+}
+
+def emit_to(form, out) {
+    if form[0] == "num" {
+        ret = reg(out)
+        out[0] = out[0] ~ [opcode_store_int, ret, form[1]]
+        return ret
+    }
+    if form[0] == "+" {
+        ret = reg(out)
+        r1 = emit_to(form[1], out)
+        r2 = emit_to(form[2], out)
+        out[0] = out[0] ~ [opcode_add, ret, r1, r2]
+        return ret
+    }
+}
+
+def emit(form) {
+    out = [[], 0]
+    res = emit_to(form, out)
+    out[0] = out[0] ~ [opcode_putchar, res]
+    return out[0]
+}
+
+exec(emit(parse(tokenize("49"))))
