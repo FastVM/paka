@@ -1,4 +1,4 @@
 
 import("lang/io.paka")
 
-puts("hello world")
+puts("Hello, World!") 

@@ -871,7 +871,7 @@ def emit_read(form, out) {
     r1 = emit_to(form[1], out)
     ret = reg(out)
     out[0] ~= [opcode("read"), ret, r1]
-    return none
+    return ret
 }
 
 def emit_import(form, out) {
@@ -967,11 +967,11 @@ def emit_to(form, out) {
     if form[0] == "length" {
         return emit_length(form, out)
     }
-    if form[0] == "dump" {
-        return emit_dump(form, out)
-    }
     if form[0] == "import" {
         return emit_import(form, out)
+    }
+    if form[0] == "dump" {
+        return emit_dump(form, out)
     }
     if form[0] == "read" {
         return emit_read(form, out)
@@ -1047,7 +1047,7 @@ def main(srcs) {
     tokens = tokenize(srcs[0])
     ast = parse(tokens)
     bc = emit(ast)
-    exec(bc, rest)
+    ## exec(bc, rest)
     dump("exec.bc", bc)
 }
 
