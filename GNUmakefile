@@ -19,3 +19,10 @@ stage2 bin/stage2: bin/stage1
 stage3 bin/stage3: bin/stage2
 	./bin/minivm bin/stage2 src/paka.paka
 	mv exec.bc bin/stage3
+
+clean: .dummy
+	$(MAKE) -C minivm clean
+	rm -r bin
+
+.dummy:
+
