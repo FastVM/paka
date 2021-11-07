@@ -124,7 +124,7 @@ def stream_starts_swith(src, items) {
 ### tokenizer
 
 def tokenize_stream1(bsrc) {
-    keywords = ["while", "if", "else"]
+    keywords = ["while", "if", "else", "def", "return"]
     ops_flat = ["<=", ">=", "==", "!=", "=", "+", "-", "%", "*", "/", "<", ">"]
     xop = 0
     while xop < length(ops_flat) {
@@ -171,7 +171,7 @@ def tokenize_stream1(bsrc) {
         while true {
             cur = stream_read(bsrc)
             if cur == 0 {
-                println("eof in str")
+                puts("eof in str")
                 exit
             }
             if cur == "\""[0] {
@@ -192,7 +192,7 @@ def tokenize_stream1(bsrc) {
                 ret = ret ~ [cur]
             }
         }
-        println("bad char")
+        puts("bad char")
         exit
     }
     if char_isdigit(first) {
@@ -222,7 +222,7 @@ def tokenize_stream1(bsrc) {
     if stream_peek(bsrc) == 0 {
         return 0
     }
-    println(["bad char", stream_peek(bsrc)])
+    puts("bad char")
     exit
 }
 
@@ -264,14 +264,17 @@ def read_post(tokens, last) {
             while true {
                 cur = stream_peek(tokens)
                 if cur == 0 {
-                    println("error 1")
+                    puts("error 1")
                     exit
                 }
                 if cur[0] == "close" {
                     stream_skip1(tokens)
                     return args
                 }
-                args = args ~ [read_expr_base(tokens)]
+                arg = read_expr_base(tokens)
+                if arg != none {
+                    args = args ~ [arg]
+                }
                 if cur[0] == "comma" {
                     stream_skip1(tokens)
                 }
@@ -311,7 +314,7 @@ def read_single(tokens) {
             while true {
                 cur = stream_peek(tokens)
                 if cur == 0 {
-                    println("error 2")
+                    puts("error 2")
                     exit
                 }
                 if cur[0] == "close" {
@@ -383,6 +386,17 @@ def read_stmt(tokens) {
         block = read_block(tokens)
         return ["while", expr, block]
     }
+    if first[0] == "def" {
+        stream_skip1(tokens)
+        expr = read_expr_base(tokens)
+        block = read_block(tokens)
+        return ["def", expr, block]
+    }
+    if first[0] == "return" {
+        stream_skip1(tokens)
+        expr = read_expr_base(tokens)
+        return ["return", expr]
+    }
     if first[0] == "if" {
         stream_skip1(tokens)
         expr = read_expr_base(tokens)
@@ -420,7 +434,7 @@ def read_block(tokens) {
         stream_skip1(tokens)
         return ret
     }
-    println("parser: block error")
+    puts("parser: block error")
     exit
 }
 
@@ -432,86 +446,89 @@ def parse(tokens) {
 
 ### opcodes walker
 
-op_num = 0
-opcode_exit = op_num op_num = op_num + 1
-opcode_store_reg = op_num op_num = op_num + 1
-opcode_store_none = op_num op_num = op_num + 1
-opcode_store_bool = op_num op_num = op_num + 1
-opcode_store_int = op_num op_num = op_num + 1
-opcode_store_fun = op_num op_num = op_num + 1
-opcode_fun_done = op_num op_num = op_num + 1
-opcode_equal = op_num op_num = op_num + 1
-opcode_equal_num = op_num op_num = op_num + 1
-opcode_not_equal = op_num op_num = op_num + 1
-opcode_not_equal_num = op_num op_num = op_num + 1
-opcode_less = op_num op_num = op_num + 1
-opcode_less_num = op_num op_num = op_num + 1
-opcode_greater = op_num op_num = op_num + 1
-opcode_greater_num = op_num op_num = op_num + 1
-opcode_less_than_equal = op_num op_num = op_num + 1
-opcode_less_than_equal_num = op_num op_num = op_num + 1
-opcode_greater_than_equal = op_num op_num = op_num + 1
-opcode_greater_than_equal_num = op_num op_num = op_num + 1
-opcode_jump = op_num op_num = op_num + 1
-opcode_branch_false = op_num op_num = op_num + 1
-opcode_branch_true = op_num op_num = op_num + 1
-opcode_branch_equal = op_num op_num = op_num + 1
-opcode_branch_equal_num = op_num op_num = op_num + 1
-opcode_branch_not_equal = op_num op_num = op_num + 1
-opcode_branch_not_equal_num = op_num op_num = op_num + 1
-opcode_branch_less = op_num op_num = op_num + 1
-opcode_branch_less_num = op_num op_num = op_num + 1
-opcode_branch_greater = op_num op_num = op_num + 1
-opcode_branch_greater_num = op_num op_num = op_num + 1
-opcode_branch_less_than_equal = op_num op_num = op_num + 1
-opcode_branch_less_than_equal_num = op_num op_num = op_num + 1
-opcode_branch_greater_than_equal = op_num op_num = op_num + 1
-opcode_branch_greater_than_equal_num = op_num op_num = op_num + 1
-opcode_inc = op_num op_num = op_num + 1
-opcode_inc_num = op_num op_num = op_num + 1
-opcode_dec = op_num op_num = op_num + 1
-opcode_dec_num = op_num op_num = op_num + 1
-opcode_add = op_num op_num = op_num + 1
-opcode_add_num = op_num op_num = op_num + 1
-opcode_sub = op_num op_num = op_num + 1
-opcode_sub_num = op_num op_num = op_num + 1
-opcode_mul = op_num op_num = op_num + 1
-opcode_mul_num = op_num op_num = op_num + 1
-opcode_div = op_num op_num = op_num + 1
-opcode_div_num = op_num op_num = op_num + 1
-opcode_mod = op_num op_num = op_num + 1
-opcode_mod_num = op_num op_num = op_num + 1
-opcode_concat = op_num op_num = op_num + 1
-opcode_static_call0 = op_num op_num = op_num + 1
-opcode_static_call1 = op_num op_num = op_num + 1
-opcode_static_call2 = op_num op_num = op_num + 1
-opcode_static_call = op_num op_num = op_num + 1
-opcode_tail_call0 = op_num op_num = op_num + 1
-opcode_tail_call1 = op_num op_num = op_num + 1
-opcode_tail_call2 = op_num op_num = op_num + 1
-opcode_tail_call = op_num op_num = op_num + 1
-opcode_call0 = op_num op_num = op_num + 1
-opcode_call1 = op_num op_num = op_num + 1
-opcode_call2 = op_num op_num = op_num + 1
-opcode_call = op_num op_num = op_num + 1
-opcode_return = op_num op_num = op_num + 1
-opcode_putchar = op_num op_num = op_num + 1
-opcode_ref_new = op_num op_num = op_num + 1
-opcode_box_new = op_num op_num = op_num + 1
-opcode_string_new = op_num op_num = op_num + 1
-opcode_array_new = op_num op_num = op_num + 1
-opcode_map_new = op_num op_num = op_num + 1
-opcode_ref_get = op_num op_num = op_num + 1
-opcode_box_get = op_num op_num = op_num + 1
-opcode_box_set = op_num op_num = op_num + 1
-opcode_length = op_num op_num = op_num + 1
-opcode_index_get = op_num op_num = op_num + 1
-opcode_index_set = op_num op_num = op_num + 1
-opcode_type = op_num op_num = op_num + 1
-opcode_call_handler = op_num op_num = op_num + 1
-opcode_set_handler = op_num op_num = op_num + 1
-opcode_return_handler = op_num op_num = op_num + 1
-opcode_exit_handler = op_num op_num = op_num + 1
+def opcode(name) {
+    if name == "exit" { return 0 }
+    if name == "store_reg" { return 1 }
+    if name == "store_none" { return 2 }
+    if name == "store_bool" { return 3 }
+    if name == "store_int" { return 4 }
+    if name == "store_fun" { return 5 }
+    if name == "fun_done" { return 6 }
+    if name == "equal" { return 7 }
+    if name == "equal_num" { return 8 }
+    if name == "not_equal" { return 9 }
+    if name == "not_equal_num" { return 10 }
+    if name == "less" { return 11 }
+    if name == "less_num" { return 12 }
+    if name == "greater" { return 13 }
+    if name == "greater_num" { return 14 }
+    if name == "less_than_equal" { return 15 }
+    if name == "less_than_equal_num" { return 16 }
+    if name == "greater_than_equal" { return 17 }
+    if name == "greater_than_equal_num" { return 18 }
+    if name == "jump" { return 19 }
+    if name == "branch_false" { return 20 }
+    if name == "branch_true" { return 21 }
+    if name == "branch_equal" { return 22 }
+    if name == "branch_equal_num" { return 23 }
+    if name == "branch_not_equal" { return 24 }
+    if name == "branch_not_equal_num" { return 25 }
+    if name == "branch_less" { return 26 }
+    if name == "branch_less_num" { return 27 }
+    if name == "branch_greater" { return 28 }
+    if name == "branch_greater_num" { return 29 }
+    if name == "branch_less_than_equal" { return 30 }
+    if name == "branch_less_than_equal_num" { return 31 }
+    if name == "branch_greater_than_equal" { return 32 }
+    if name == "branch_greater_than_equal_num" { return 33 }
+    if name == "inc" { return 34 }
+    if name == "inc_num" { return 35 }
+    if name == "dec" { return 36 }
+    if name == "dec_num" { return 37 }
+    if name == "add" { return 38 }
+    if name == "add_num" { return 39 }
+    if name == "sub" { return 40 }
+    if name == "sub_num" { return 41 }
+    if name == "mul" { return 42 }
+    if name == "mul_num" { return 43 }
+    if name == "div" { return 44 }
+    if name == "div_num" { return 45 }
+    if name == "mod" { return 46 }
+    if name == "mod_num" { return 47 }
+    if name == "concat" { return 48 }
+    if name == "static_call0" { return 49 }
+    if name == "static_call1" { return 50 }
+    if name == "static_call2" { return 51 }
+    if name == "static_call" { return 52 }
+    if name == "tail_call0" { return 53 }
+    if name == "tail_call1" { return 54 }
+    if name == "tail_call2" { return 55 }
+    if name == "tail_call" { return 56 }
+    if name == "call0" { return 57 }
+    if name == "call1" { return 58 }
+    if name == "call2" { return 59 }
+    if name == "call" { return 60 }
+    if name == "return" { return 61 }
+    if name == "putchar" { return 62 }
+    if name == "ref_new" { return 63 }
+    if name == "box_new" { return 64 }
+    if name == "string_new" { return 65 }
+    if name == "array_new" { return 66 }
+    if name == "map_new" { return 67 }
+    if name == "ref_get" { return 68 }
+    if name == "box_get" { return 69 }
+    if name == "box_set" { return 70 }
+    if name == "length" { return 71 }
+    if name == "index_get" { return 72 }
+    if name == "index_set" { return 73 }
+    if name == "type" { return 74 }
+    if name == "call_handler" { return 75 }
+    if name == "set_handler" { return 76 }
+    if name == "return_handler" { return 77 }
+    if name == "exit_handler" { return 78 }
+    puts(name)
+    exit
+}
 
 def reg(out) {
     out[1] = out[1] + 1
@@ -520,12 +537,16 @@ def reg(out) {
 
 def emit_num(form, out) {
     ret = reg(out)
-    out[0] = out[0] ~ [opcode_store_int, ret, form[1]]
+    out[0] = out[0] ~ [opcode("store_int"), ret, form[1]]
     return ret
 }
 
 def emit_ident(form, out) {
     res = findvar(out[2], form[1])
+    if res == none {
+        puts(str_to_array("compile error: undefined: ") ~ form[1])
+        exit
+    }
     return res
 }
 
@@ -539,14 +560,14 @@ def emit_binop(op, form, out) {
 
 def emit_putchar(form, out) {
     r1 = emit_to(form[1], out)
-    out[0] = out[0] ~ [opcode_putchar, r1]
+    out[0] = out[0] ~ [opcode("putchar"), r1]
     return none
 }
 
 def emit_length(form, out) {
     r1 = emit_to(form[1], out)
     ret = reg(out)
-    out[0] = out[0] ~ [opcode_length, ret, r1]
+    out[0] = out[0] ~ [opcode("length"), ret, r1]
     return ret
 }
 
@@ -576,13 +597,61 @@ def emit_set(form, out) {
         from = emit_to(form[2], out)
         to = reg(out)
         out[2] = out[2] ~ [[form[1][1], to]]
-        out[0] = out[0] ~ [opcode_store_reg, to, from]
+        out[0] = out[0] ~ [opcode("store_reg"), to, from]
         return to
     } else {
         from = emit_to(form[2], out)
-        out[0] = out[0] ~ [opcode_store_reg, found, from]
+        out[0] = out[0] ~ [opcode("store_reg"), found, from]
         return found
     }
+}
+
+def emit_def(form, out) {
+    call = form[1]
+    body = form[2]
+    tmp1 = out[1]
+    tmp2 = out[2]
+    out[2] = []
+    i = 2
+    while i < length(call) {
+        out[2] = out[2] ~ [[call[i][1], i - 1]]
+        i = i + 1
+    }
+    out[1] = i - 1
+    jout = length(out[0]) + 1
+    nregs = length(out[0]) + 2
+    out[0] = out[0] ~ [opcode("jump"), "jump", 256]
+    out[3] = out[3] ~ [[call[1][1], length(out[0])]]
+    resreg = emit_to(body, out)
+    if resreg == none {
+        out[0] = out[0] ~ [opcode("store_none"), 0, opcode("return"), 0]
+    } else {
+        out[0] = out[0] ~ [opcode("return"), resreg]
+    }
+    out[0] = out[0] ~ [opcode("fun_done")]
+    out[0][nregs] = out[1]
+    out[1] = tmp1
+    out[2] = tmp2
+    out[0][jout] = length(out[0])
+    return none
+}
+
+def emit_return(form, out) {
+    rreg = emit_to(form[1], out)
+    out[0] = out[0] ~ [opcode("return"), rreg]
+    return none
+}
+
+def emit_call(form, out) {
+    regs = []
+    i = 2
+    while i < length(form) {
+        regs = regs ~ [emit_to(form[i], out)]
+        i = i + 1
+    }
+    ret = reg(out)
+    out[0] = out[0] ~ [opcode("static_call"), ret, "link", form[1][1], length(regs)] ~ regs
+    return ret
 }
 
 def emit_while(form, out) {
@@ -590,9 +659,9 @@ def emit_while(form, out) {
     cond = emit_to(form[1], out)
     sout = length(out[0]) + 2
     sfall = length(out[0]) + 4
-    out[0] = out[0] ~ [opcode_branch_true, sfall, 0, cond]
+    out[0] = out[0] ~ [opcode("branch_true"), sfall, "jump", cond]
     emit_to(form[2], out)
-    out[0] = out[0] ~ [opcode_jump, jredo]
+    out[0] = out[0] ~ [opcode("jump"), jredo]
     out[0][sout] = length(out[0])
     return none
 }
@@ -601,15 +670,15 @@ def emit_if(form, out) {
     cond = emit_to(form[1], out)
     st = length(out[0]) + 1
     sf = length(out[0]) + 2
-    out[0] = out[0] ~ [opcode_branch_true, 0, 0, cond]
+    out[0] = out[0] ~ [opcode("branch_true"), "jump", "jump", cond]
     jt = length(out[0])
     emit_to(form[2], out)
     so1 = length(out[0]) + 1
-    out[0] = out[0] ~ [opcode_jump, 0]
+    out[0] = out[0] ~ [opcode("jump"), "jump"]
     jf = length(out[0])
     emit_to(form[3], out)
     so2 = length(out[0]) + 1
-    out[0] = out[0] ~ [opcode_jump, 0]
+    out[0] = out[0] ~ [opcode("jump"), "jump"]
     jout = length(out[0])
     out[0][st] = jt
     out[0][sf] = jf
@@ -626,7 +695,7 @@ def emit_array(form, out) {
         i = i + 1
     }
     ret = reg(out)
-    out[0] = out[0] ~ [opcode_array_new, ret, length(regs)] ~ regs
+    out[0] = out[0] ~ [opcode("array_new"), ret, length(regs)] ~ regs
     return ret
 }
 
@@ -638,7 +707,7 @@ def emit_str(form, out) {
         i = i + 1
     }
     ret = reg(out)
-    out[0] = out[0] ~ [opcode_string_new, ret, length(chrs)] ~ chrs
+    out[0] = out[0] ~ [opcode("string_new"), ret, length(chrs)] ~ chrs
     return ret
 }
 
@@ -647,40 +716,49 @@ def emit_to(form, out) {
         return emit_num(form, out)
     }
     if form[0] == "+" {
-        return emit_binop(opcode_add, form, out)
+        return emit_binop(opcode("add"), form, out)
     }
     if form[0] == "-" {
-        return emit_binop(opcode_sub, form, out)
+        return emit_binop(opcode("sub"), form, out)
     }
     if form[0] == "*" {
-        return emit_binop(opcode_mul, form, out)
+        return emit_binop(opcode("mul"), form, out)
     }
     if form[0] == "/" {
-        return emit_binop(opcode_div, form, out)
+        return emit_binop(opcode("div"), form, out)
     }
     if form[0] == "%" {
-        return emit_binop(opcode_mod, form, out)
+        return emit_binop(opcode("mod"), form, out)
     }
     if form[0] == "<" {
-        return emit_binop(opcode_less, form, out)
+        return emit_binop(opcode("less"), form, out)
     }
     if form[0] == ">" {
-        return emit_binop(opcode_greater, form, out)
+        return emit_binop(opcode("greater"), form, out)
     }
     if form[0] == "<=" {
-        return emit_binop(opcode_less_than_equal, form, out)
+        return emit_binop(opcode("less_than_equal"), form, out)
     }
     if form[0] == ">=" {
-        return emit_binop(opcode_greater_than_equal, form, out)
+        return emit_binop(opcode("greater_than_equal"), form, out)
     }
     if form[0] == "==" {
-        return emit_binop(opcode_equal, form, out)
+        return emit_binop(opcode("equal"), form, out)
     }
     if form[0] == "!=" {
-        return emit_binop(opcode_not_equal, form, out)
+        return emit_binop(opcode("not_equal"), form, out)
     }
     if form[0] == "index" {
-        return emit_binop(opcode_index_get, form, out)
+        return emit_binop(opcode("index_get"), form, out)
+    }
+    if form[0] == "def" {
+        return emit_def(form, out)
+    }
+    if form[0] == "return" {
+        return emit_return(form, out)
+    }
+    if form[0] == "call" {
+        return emit_call(form, out)
     }
     if form[0] == "ident" {
         return emit_ident(form, out)
@@ -709,22 +787,46 @@ def emit_to(form, out) {
     if form[0] == "do" {
         return emit_do(form, out)
     }
+    puts("unknwon form: " ~ form[0])
+    exit
+}
+
+def link(out) {
+    ret = []
+    i = 0
+    while i < length(out[0]) {
+        if out[0][i] == "link" {
+            i = i + 1
+            func = findvar(out[3], out[0][i])
+            if func == none {
+                puts(str_to_array("link error: undefined: ") ~ out[0][i])
+                exit
+            }
+            ret = ret ~ [func]
+        } else {
+            ret = ret ~ [out[0][i]]
+        }
+        i = i + 1
+    }
+    return ret
 }
 
 def emit(form) {
-    out = [[], 0, []]
+    out = [[], 0, [[str_to_array("args"), 0]], []]
     emit_to(form, out)
-    out[0] = out[0] ~ [opcode_exit]
-    println(out[0])
-    return out[0]
+    out[0] = out[0] ~ [opcode("exit")]
+    linked = link(out)
+    return linked
 }
 
-exec(emit(parse(tokenize("
-    x = \"123\"
+### main
+
+def main(srcs) {
     i = 0
-    while i < length(x) {
-        putchar(x[i])
+    while i < length(srcs) {
+        exec(emit(parse(tokenize(srcs[i]))))
         i = i + 1
     }
-    putchar(10)
-"))))
+}
+
+main(args)

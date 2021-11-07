@@ -32,103 +32,23 @@ string lang = "paka";
 string astLang = "paka";
 File astfile;
 
-State* state;
 Node[] nodes;
 
-shared static this() {
-    state = vm_state_new();
-}
+State *state;
 
-shared static ~this() {
-    vm_state_del(state);
-}
-
-shared static this() {
-    addStyle("paka", [
-        "space": Color.init,
-        "keyword": Color.light_white,
-        "flow": Color.light_magenta,
-        "ident": Color.white,
-        "number": Color.light_yellow,
-        "string": Color.light_cyan,
-    ]);
-}
-
-string[] last;
-
-string[] pakaColors(string src) {
-
-    Node parsed;
-
-    try {
-        parsed = SrcLoc(1, 1, "__color__", src).parse(lang);
-    } catch (Problem e) {
-        string[] ret2 = last;
-        ret2.length = src.length;
-        return ret2;
-    }
-
-    string[] ret = new string[src.length];
-
-    foreach (index, chr; src) {
-        ret[index] = "space";
-    }
-
-    void light(Node node) {
-        string name = null;
-        if (Value val = cast(Value) node) {
-            if (val.info == typeid(string)) {
-                name = "string";
-            }
-            if (val.info == typeid(double)) {
-                name = "number";
-            }
-            if (val.info == typeid(int)) {
-                name = "number";
-            }
-            if (val.info == typeid(bool)) {
-                name = "keyword";
-            }
-            if (val.info == typeid(null)) {
-                name = "keyword";
-            }
-        }
-        if (Ident id = cast(Ident) node) {
-            name = "ident";
-        }
-
-        if (name is null) {
-            name = "space";
-        }
-
-        if (node.fixed && node.file == "__color__") {
-            foreach(i; node.offset .. node.offset + node.src.length) {
-                ret[i] = name;
-            } 
-        }
-
-        if (Form form = cast(Form) node) {
-            foreach (arg; form.args) {
-                light(arg);
-            }
-        }
-    }
-    light(parsed);
-
-    // foreach (index, chr; src) {
-    //     if ("(){}[]".canFind(chr)) {
-    //         ret[index] = "space";
-    //     }
-    // }
-
-    last = ret;
-
-    return ret;
-}
+// shared static this() {
+//     addStyle("paka", [
+//         "space": Color.init,
+//         "keyword": Color.light_white,
+//         "flow": Color.light_magenta,
+//         "ident": Color.white,
+//         "number": Color.light_yellow,
+//         "string": Color.light_cyan,
+//     ]);
+// }
 
 Node convert(Node node) {
-    return nodes.replify(node);
-    // return node;
+    return node;
 } 
 
 void doBytecode(uint[] bc) {
@@ -143,58 +63,6 @@ void doBytecode(uint[] bc) {
         break;
     }
 }
-
-Thunk cliReplHandler()
-{
-    return {
-        size_t line = 1;
-        bool doExit = false;
-        char[][] history;
-        Reader reader = new Reader(history);
-        reader.style = "paka";
-        reader.setColors(src => src.pakaColors);
-        scope(exit) {
-            history = reader.history;
-        }
-        while (!stdin.eof) {
-            bool setExit = false;
-            try {
-                string src = reader.readln("(" ~ line.to!string ~ ")> ");
-                SrcLoc code = SrcLoc(line, 1, "__repl__", src);
-                Node parsed = code.parse(lang);
-                Node doMain = convert(parsed);
-                Walker walker = new Walker;
-                walker.walkProgram(doMain);
-                doBytecode(walker.bytecode);
-                line += 1;
-            } catch (Problem prob) {
-                writeln("error: ", prob.msg);
-            } catch (ExitException ee) {
-                writeln;
-                if (ee.letter == 'L') {
-                    continue;
-                } else if (ee.letter == 'C') {
-                    if (doExit) {
-                        writeln("Closing REPL"); 
-                        break;
-                    } else {
-                        writeln("Got Ctrl-C, one more to close this REPL"); 
-                        setExit = true;
-                    }
-                } else {
-                    writeln("Got Ctrl-" ~ ee.letter ~ ", closing this REPL");
-                    break;
-                }
-            }
-            if (setExit) {
-                doExit = true;
-            } else {
-                doExit = false;
-            }
-        }
-    };
-}
-
 
 Thunk cliCommandHandler(immutable string cmd)
 {
@@ -307,11 +175,20 @@ Thunk cliDebugHandler() {
 
 void domain(string[] args) {
     args = args[1 .. $];
-    Thunk[] todo;
     if (args.length == 0) {
-        todo ~= cliReplHandler;
+        vmError("no cli args given");
     }
-    foreach_reverse (arg; args) {
+    Thunk[] todo;
+    size_t end = args.length;
+    size_t begin = args.length;
+    foreach (index, arg; args) {
+        if (arg == "--") {
+            end = index ;
+            begin = index + 1;
+            break;
+        }
+    }
+    foreach_reverse (arg; args[0..end]) {
         string[] parts = arg.split("=").array;
         string part1() {
             assert(parts.length != 0);
@@ -348,9 +225,6 @@ void domain(string[] args) {
         case "--eval":
             todo ~= part1.cliEvalHandler;
             break;
-        case "--repl":
-            todo ~= cliReplHandler;
-            break;
         case "--time":
             todo[$ - 1] = todo[$ - 1].cliTimeHandler;
             break;
@@ -373,6 +247,15 @@ void domain(string[] args) {
             todo ~= cliDebugHandler;
             break;
         }
+    }
+    const(char)*[] vmargs;
+    foreach (arg; args[begin..$]) {
+        vmargs ~= (arg ~ "\0").ptr;
+    }
+    state = vm_state_new(vmargs.length, vmargs.ptr);
+    scope(exit)
+    {
+        vm_state_del(state);
     }
     foreach_reverse (fun; todo) {
         fun();

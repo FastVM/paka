@@ -104,7 +104,7 @@ final class Walker {
             inNthCaptures.length--;
         }
         bytecode = null;
-        locals["this"] = new Reg(0);
+        locals["args"] = new Reg(0);
         walk(program);
         bytecode ~= Opcode.exit;
         foreach (name, locs; replaces) {

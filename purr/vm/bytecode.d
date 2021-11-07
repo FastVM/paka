@@ -9,7 +9,7 @@ struct State;
 
 extern (C) {
     void vm_run(State* state, size_t len, void* func);
-    State* vm_state_new();
+    State* vm_state_new(size_t len, const(char)** ents);
     void vm_state_del(State *);
 }
 

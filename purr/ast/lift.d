@@ -119,7 +119,7 @@ class Lifter {
     string outname;
 
     Node liftProgram(Node node) {
-        locals["this"] = new Ident("this");
+        locals["args"] = new Ident("args");
         Node[] pre;
         foreach (name; findVars(node)) {
             locals[name] = new Ident(name);
