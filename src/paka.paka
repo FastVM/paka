@@ -516,83 +516,32 @@ def opcode(name) {
     if name == "store_none" { return 2 }
     if name == "store_bool" { return 3 }
     if name == "store_int" { return 4 }
-    if name == "store_fun" { return 5 }
-    if name == "fun_done" { return 6 }
-    if name == "equal" { return 7 }
-    if name == "equal_num" { return 8 }
-    if name == "not_equal" { return 9 }
-    if name == "not_equal_num" { return 10 }
-    if name == "less" { return 11 }
-    if name == "less_num" { return 12 }
-    if name == "greater" { return 13 }
-    if name == "greater_num" { return 14 }
-    if name == "less_than_equal" { return 15 }
-    if name == "less_than_equal_num" { return 16 }
-    if name == "greater_than_equal" { return 17 }
-    if name == "greater_than_equal_num" { return 18 }
-    if name == "jump" { return 19 }
-    if name == "branch_false" { return 20 }
-    if name == "branch_true" { return 21 }
-    if name == "branch_equal" { return 22 }
-    if name == "branch_equal_num" { return 23 }
-    if name == "branch_not_equal" { return 24 }
-    if name == "branch_not_equal_num" { return 25 }
-    if name == "branch_less" { return 26 }
-    if name == "branch_less_num" { return 27 }
-    if name == "branch_greater" { return 28 }
-    if name == "branch_greater_num" { return 29 }
-    if name == "branch_less_than_equal" { return 30 }
-    if name == "branch_less_than_equal_num" { return 31 }
-    if name == "branch_greater_than_equal" { return 32 }
-    if name == "branch_greater_than_equal_num" { return 33 }
-    if name == "inc" { return 34 }
-    if name == "inc_num" { return 35 }
-    if name == "dec" { return 36 }
-    if name == "dec_num" { return 37 }
-    if name == "add" { return 38 }
-    if name == "add_num" { return 39 }
-    if name == "sub" { return 40 }
-    if name == "sub_num" { return 41 }
-    if name == "mul" { return 42 }
-    if name == "mul_num" { return 43 }
-    if name == "div" { return 44 }
-    if name == "div_num" { return 45 }
-    if name == "mod" { return 46 }
-    if name == "mod_num" { return 47 }
-    if name == "concat" { return 48 }
-    if name == "static_call0" { return 49 }
-    if name == "static_call1" { return 50 }
-    if name == "static_call2" { return 51 }
-    if name == "static_call" { return 52 }
-    if name == "tail_call0" { return 53 }
-    if name == "tail_call1" { return 54 }
-    if name == "tail_call2" { return 55 }
-    if name == "tail_call" { return 56 }
-    if name == "call0" { return 57 }
-    if name == "call1" { return 58 }
-    if name == "call2" { return 59 }
-    if name == "call" { return 60 }
-    if name == "return" { return 61 }
-    if name == "putchar" { return 62 }
-    if name == "ref_new" { return 63 }
-    if name == "box_new" { return 64 }
-    if name == "string_new" { return 65 }
-    if name == "array_new" { return 66 }
-    if name == "map_new" { return 67 }
-    if name == "ref_get" { return 68 }
-    if name == "box_get" { return 69 }
-    if name == "box_set" { return 70 }
-    if name == "length" { return 71 }
-    if name == "index_get" { return 72 }
-    if name == "index_set" { return 73 }
-    if name == "type" { return 74 }
-    if name == "call_handler" { return 75 }
-    if name == "set_handler" { return 76 }
-    if name == "return_handler" { return 77 }
-    if name == "exit_handler" { return 78 }
-    if name == "exec" { return 79 }
-    if name == "extend" { return 80 }
-    if name == "push" { return 81 }
+    if name == "equal" { return 5 }
+    if name == "not_equal" { return 6 }
+    if name == "less" { return 7 }
+    if name == "greater" { return 8 }
+    if name == "less_than_equal" { return 9 }
+    if name == "greater_than_equal" { return 10 }
+    if name == "jump" { return 11 }
+    if name == "branch" { return 12 }
+    if name == "add" { return 13 }
+    if name == "sub" { return 14 }
+    if name == "mul" { return 15 }
+    if name == "div" { return 16 }
+    if name == "mod" { return 17 }
+    if name == "concat" { return 18 }
+    if name == "static_call" { return 19 }
+    if name == "return" { return 20 }
+    if name == "putchar" { return 21 }
+    if name == "string_new" { return 22 }
+    if name == "array_new" { return 23 }
+    if name == "length" { return 24 }
+    if name == "index_get" { return 25 }
+    if name == "index_set" { return 26 }
+    if name == "type" { return 27 }
+    if name == "exec" { return 28 }
+    if name == "extend" { return 29 }
+    if name == "push" { return 30 }
     debug_puts(str_to_array("unknown opcode: ") ~ name)
     exit
 }
@@ -639,7 +588,7 @@ def emit_binop(op, form, out) {
     r1 = emit_to(form[1], out)
     r2 = emit_to(form[2], out)
     ret = reg(out)
-    out[0] ~= [op, ret, r1, r2]
+    out[0] ~= [opcode(op), ret, r1, r2]
     return ret
 }
 
@@ -755,7 +704,6 @@ def emit_def(form, out) {
     } else {
         out[0] ~= [opcode("return"), resreg]
     }
-    out[0] ~= [opcode("fun_done")]
     out[0][nregs] = out[1]
     out[1] = tmp1
     out[2] = tmp2
@@ -791,7 +739,7 @@ def emit_while(form, out) {
     cond = emit_to(form[1], out)
     sout = length(out[0]) + 2
     sfall = length(out[0]) + 4
-    out[0] ~= [opcode("branch_true"), sfall, "jump", cond]
+    out[0] ~= [opcode("branch"), sfall, "jump", cond]
     emit_to(form[2], out)
     out[0] ~= [opcode("jump"), jredo]
     out[0][sout] = length(out[0])
@@ -802,7 +750,7 @@ def emit_if(form, out) {
     cond = emit_to(form[1], out)
     st = length(out[0]) + 1
     sf = length(out[0]) + 2
-    out[0] ~= [opcode("branch_true"), "jump", "jump", cond]
+    out[0] ~= [opcode("branch"), "jump", "jump", cond]
     jt = length(out[0])
     emit_to(form[2], out)
     so1 = length(out[0]) + 1
@@ -860,43 +808,43 @@ def emit_to(form, out) {
         return emit_extend(form, out)
     }
     if form[0] == "~" {
-        return emit_binop(opcode("concat"), form, out)
+        return emit_binop("concat", form, out)
     }
     if form[0] == "+" {
-        return emit_binop(opcode("add"), form, out)
+        return emit_binop("add", form, out)
     }
     if form[0] == "-" {
-        return emit_binop(opcode("sub"), form, out)
+        return emit_binop("sub", form, out)
     }
     if form[0] == "*" {
-        return emit_binop(opcode("mul"), form, out)
+        return emit_binop("mul", form, out)
     }
     if form[0] == "/" {
-        return emit_binop(opcode("div"), form, out)
+        return emit_binop("div", form, out)
     }
     if form[0] == "%" {
-        return emit_binop(opcode("mod"), form, out)
+        return emit_binop("mod", form, out)
     }
     if form[0] == "<" {
-        return emit_binop(opcode("less"), form, out)
+        return emit_binop("less", form, out)
     }
     if form[0] == ">" {
-        return emit_binop(opcode("greater"), form, out)
+        return emit_binop("greater", form, out)
     }
     if form[0] == "<=" {
-        return emit_binop(opcode("less_than_equal"), form, out)
+        return emit_binop("less_than_equal", form, out)
     }
     if form[0] == ">=" {
-        return emit_binop(opcode("greater_than_equal"), form, out)
+        return emit_binop("greater_than_equal", form, out)
     }
     if form[0] == "==" {
-        return emit_binop(opcode("equal"), form, out)
+        return emit_binop("equal", form, out)
     }
     if form[0] == "!=" {
-        return emit_binop(opcode("not_equal"), form, out)
+        return emit_binop("not_equal", form, out)
     }
     if form[0] == "index" {
-        return emit_binop(opcode("index_get"), form, out)
+        return emit_binop("index_get", form, out)
     }
     if form[0] == "def" {
         return emit_def(form, out)
@@ -979,11 +927,7 @@ def emit(form) {
 
 def main(srcs) {
     if length(srcs) < 1 {
-        debug_puts(str_to_array("too few args: ") ~ [48 + length(srcs)] )
         exit
-    }
-    if srcs[0] == "--" {
-        return none
     }
     rest = []
     i = 1

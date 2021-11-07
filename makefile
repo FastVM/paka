@@ -1,66 +1,28 @@
-BIN:=bin
-LIB:=lib
 
-OPT_C=-Ofast
-OPT_D=
+BOOT ?= bins/build4.bc
 
-MICC=cc
+default: stage3
 
-P=-p
-FPIC=-fPIC
+bin/minivm: minivm
+	$(MAKE) -C minivme
+	mkdir -p bin
+	cp minivm/bin/minivm bin/minivm
 
-.if $(DC) == gdc
-DO=-o
-.else
-DO=-of
-.endif
+stage1 bin/stage1: bin/minivm
+	./bin/minivm $(BOOT) src/paka.paka
+	mv exec.bc bin/stage1
 
-.if defined(MI)
-.if $(MI) == 1
-MIMALLOC=$(DL)$(PWD)/minivm/lib/mimalloc/libmimalloc.a
-L_MIMALLOC=$(DL)$(PWD)/minivm/lib/mimalloc/libmimalloc.a
-C_MIMALLOC=-DVM_USE_MIMALLOC
-.endif
-.endif
+stage2 bin/stage2: bin/stage1
+	./bin/minivm bin/stage1 src/paka.paka
+	mv exec.bc bin/stage2
 
-.if defined(RE)
-.if $(RE) == 1
-REBUILD=.dummy
-.endif
-.endif
+stage3 bin/stage3: bin/stage2
+	./bin/minivm bin/stage2 src/paka.paka
+	mv exec.bc bin/stage3
 
-DFILES!=find ext purr -type f -name '*.d'
-CFILES!=find ext minivm/vm -type f -name '*.c'
-DOBJS=$(DFILES:%.d=%.o)
-COBJS=$(CFILES:%.c=%.o)
-OBJS=$(DOBJS) $(COBJS)
-
-BINS=$(BIN)/purr $(BIN)/minivm
-
-
-default: $(BINS)
-
-purr $(BIN)/purr: $(OBJS) $(MIMALLOC) $(REBUILD)
-	@mkdir $(P) $(BIN)
-	$(DC) $(OBJS) $(DO)$(BIN)/purr $(LFLAGS) $(MIMALLOC)
-
-minivm $(BIN)/minivm: $(COBJS) minivm/main/main.o $(MIMALLOC) $(REBUILD)
-	@mkdir $(P) $(BIN)
-	$(CC) $(COBJS) minivm/main/main.o -o$(BIN)/minivm -lm $(LFLAGS) $(MIMALLOC) $(L_MIMALLOC)
-
-$(MIMALLOC): .dummy
-	$(MAKE) -C minivm -f deps.mak default CC="$(MICC)" CFLAGS="" LFLAGS=""
-
-$(DOBJS): $(@:%.o=%.d) $(REBUILD)
-	$(DC) -Jimport -c $(OPT_D) $(DO)$@ -Iminivm $(@:%.o=%.d) $(DFLAGS)
-
-$(COBJS) minivm/main/main.o: $(@:%.o=%.c) $(basename $@) $(REBUILD)
-	$(CC) $(FPIC) -c $(OPT_C) -o $@ $(@:%.o=%.c) -I./minivm $(C_MIMALLOC) $(CFLAGS)
-
-info:
-	@echo $(XCUR)
+clean: .dummy
+	$(MAKE) -C minivm clean
+	rm -r bin
 
 .dummy:
 
-clean: .dummy
-	rm -rf $(OBJS) $(BINS) 
