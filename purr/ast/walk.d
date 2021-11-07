@@ -1,5 +1,6 @@
 module purr.ast.walk;
 
+import std.stdio: writeln;
 import std.conv : to;
 import purr.ast.ast: Node, Form, Ident, Value, NodeKind;
 import purr.err: vmError, vmCheckError;
@@ -54,7 +55,7 @@ final class Walker {
 
     Reg[] regs;
 
-    uint[] bytecode;
+    int[] bytecode;
 
     Reg[] targets;
 
@@ -118,18 +119,18 @@ final class Walker {
         }
     }
 
-    uint[1] literal(bool val) {
+    int[1] literal(bool val) {
         return [cast(uint) val];
     }
 
-    uint[1] jump(int val) {
+    int[1] jump(int val) {
         return [cast(uint) val];
     }
 
-    uint[1] literal(double val) {
+    int[1] literal(double val) {
         vmCheckError(val % 1 == 0, "floats are broken, sadly");
         int inum = cast(int) val;
-        return cast(uint[])[inum];
+        return cast(int[])[inum];
     }
 
     Reg allocOut() {
@@ -508,8 +509,10 @@ final class Walker {
             return outreg;
         case "exec":
             Reg objreg = walk(form.getArg(0));
+            Reg argreg = walk(form.getArg(1));
             bytecode ~= Opcode.exec;
             bytecode ~= objreg.reg;
+            bytecode ~= argreg.reg;
             return null;
         case "length":
             Reg outreg = allocOut;

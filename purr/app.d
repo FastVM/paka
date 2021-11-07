@@ -51,7 +51,7 @@ Node convert(Node node) {
     return node;
 } 
 
-void doBytecode(uint[] bc) {
+void doBytecode(int[] bc) {
     final switch (outLang) {
     case "bc":
         File("out.bc", "wb").rawWrite(bc);
