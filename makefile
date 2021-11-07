@@ -1,5 +1,5 @@
 
-BOOT ?= bins/build4.bc
+BOOT ?= bins/build6.bc
 
 default: stage3
 
@@ -12,11 +12,11 @@ stage1 bin/stage1: bin/minivm
 	./bin/minivm $(BOOT) src/paka.paka
 	mv exec.bc bin/stage1
 
-stage2 bin/stage2: bin/stage1
+stage2 bin/stage2: stage1
 	./bin/minivm bin/stage1 src/paka.paka
 	mv exec.bc bin/stage2
 
-stage3 bin/stage3: bin/stage2
+stage3 bin/stage3: stage2
 	./bin/minivm bin/stage2 src/paka.paka
 	mv exec.bc bin/stage3
 

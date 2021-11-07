@@ -62,7 +62,7 @@ def char_id0(chr) {
     if char_isalpha(chr) {
         return true
     }
-    if chr == "_"[0] {
+    if chr == '_' {
         return true
     }
     return false
@@ -147,7 +147,7 @@ def stream_starts_swith(src, items) {
     }
     return true
 }
-
+## 
 def tokenize_stream1(bsrc) {
     keywords = ["while", "if", "else", "def", "return", "exit", "true", "false", "none"]
     ops_flat = ["<=", ">=", "==", "!=", "~=", "=", "~", "+", "-", "%", "*", "/", "<", ">"]
@@ -161,34 +161,69 @@ def tokenize_stream1(bsrc) {
         xop = xop + 1
     }
     first = stream_peek(bsrc)
-    if first == " "[0] {
+    if first == ' ' {
         stream_skip1(bsrc)
         return tokenize_stream1(bsrc)
-    }
-    if first == "("[0] {
-        return ["open", stream_read(), bsrc[1]]
-    }
-    if first == ")"[0] {
-        return ["close", stream_read(), bsrc[1]]
-    }
-    if first == "{"[0] {
-        return ["open", stream_read(), bsrc[1]]
-    }
-    if first == "}"[0] {
-        return ["close", stream_read(), bsrc[1]]
-    }
-    if first == "["[0] {
-        return ["open", stream_read(), bsrc[1]]
-    }
-    if first == "]"[0] {
-        return ["close", stream_read(), bsrc[1]]
-    }
-    if first == ","[0] {
-        return ["comma", stream_read(), bsrc[1]]
     }
     if first == "\n"[0] {
         stream_skip1(bsrc)
         return tokenize_stream1(bsrc)
+    }
+    if first == '#' {
+        stream_skip1(bsrc)
+        while true {
+            cur = stream_read(bsrc)
+            if cur == "\n"[0] {
+                return tokenize_stream1(bsrc)
+            }
+        }
+    }
+    if first == '(' {
+        return ["open", stream_read(), bsrc[1]]
+    }
+    if first == ')' {
+        return ["close", stream_read(), bsrc[1]]
+    }
+    if first == '{' {
+        return ["open", stream_read(), bsrc[1]]
+    }
+    if first == '}' {
+        return ["close", stream_read(), bsrc[1]]
+    }
+    if first == '[' {
+        return ["open", stream_read(), bsrc[1]]
+    }
+    if first == ']' {
+        return ["close", stream_read(), bsrc[1]]
+    }
+    if first == ',' {
+        return ["comma", stream_read(), bsrc[1]]
+    }
+    if first == ''' {
+        stream_skip1(bsrc)
+        cur = stream_read(bsrc)
+        if cur == "\\"[0] {
+            cur = stream_read(bsrc)
+            if stream_read() != ''' {
+                debug_puts("unterminated char literal")
+                exit
+            }
+            if cur == 'n' {
+                return ["num", "\n"[0], bsrc[1]]
+            } 
+            if cur == "\""[0] {
+                return ["num", cur, bsrc[1]]
+            }
+            if cur == "\\"[0] {
+                return ["num", cur, bsrc[1]]
+            }
+        } else {
+            if stream_read() != ''' {
+                debug_puts("unterminated char literal")
+                exit
+            }
+            return ["num", cur, bsrc[1]]
+        }
     }
     if first == "\""[0] {
         stream_skip1(bsrc)
@@ -204,7 +239,7 @@ def tokenize_stream1(bsrc) {
             }
             if cur == "\\"[0] {
                 cur = stream_read(bsrc)
-                if cur == "n"[0] {
+                if cur == 'n' {
                     ret ~= ["\n"[0]]
                 } 
                 if cur == "\""[0] {
@@ -223,7 +258,7 @@ def tokenize_stream1(bsrc) {
     if char_isdigit(first) {
         n = 0
         while char_isdigit(stream_peek(bsrc)) {
-            n = n * 10 + stream_read(bsrc) - "0"[0]
+            n = n * 10 + stream_read(bsrc) - '0'
         }
         return ["num", n, bsrc[1]]
     }
@@ -272,13 +307,13 @@ def read_post(tokens, last) {
         return last
     }
     if first[0] == "open" {
-        if first[1] == "["[0] {
+        if first[1] == '[' {
             stream_skip1(tokens)
             index = read_expr_base(tokens)
             stream_skip1(tokens)
             return read_post(tokens, ["index", last, index])
         }
-        if first[1] == "("[0] {
+        if first[1] == '(' {
             stream_skip1(tokens)
             args = ["call", last]
             if last[0] == "putchar" {
@@ -356,7 +391,7 @@ def read_single(tokens) {
         return ["ident", first[1]]
     }
     if first[0] == "open" {
-        if first[1] == "["[0] {
+        if first[1] == '[' {
             stream_skip1(tokens)
             args = ["array"]
             while true {
@@ -376,7 +411,7 @@ def read_single(tokens) {
                 }
             } 
         }
-        if first[1] == "("[0] {
+        if first[1] == '(' {
             stream_skip1(tokens)
             ret = read_expr_base(tokens)
             stream_skip1(tokens)
