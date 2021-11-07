@@ -1,5 +1,5 @@
 
-BOOT ?= bins/build7.bc
+BOOT ?= bins/build8.bc
 
 default: stage3
 
