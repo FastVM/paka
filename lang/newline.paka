@@ -1,4 +1,0 @@
-x = 2
-y = 3
-println([x, y])
-a = "ayy" b = "bee" println([a, b])
