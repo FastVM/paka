@@ -4,9 +4,9 @@ BOOT ?= bins/build4.bc
 default: stage3
 
 bin/minivm: minivm
-	$(MAKE) -C minivme
+	$(MAKE) -C minivm
 	mkdir -p bin
-	cp minivm/bin/minivm bin/minivm
+	cp minivm/minivm bin/minivm
 
 stage1 bin/stage1: bin/minivm
 	./bin/minivm $(BOOT) src/paka.paka
