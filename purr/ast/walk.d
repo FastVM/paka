@@ -24,8 +24,8 @@ class Reg {
         sym = s;
     }
 
-    uint reg() {
-        return (cast(uint) repr);
+    int reg() {
+        return (cast(int) repr);
     }
 
     override bool opEquals(Object other) {
@@ -120,11 +120,11 @@ final class Walker {
     }
 
     int[1] literal(bool val) {
-        return [cast(uint) val];
+        return [cast(int) val];
     }
 
     int[1] jump(int val) {
-        return [cast(uint) val];
+        return [val];
     }
 
     int[1] literal(double val) {
@@ -488,7 +488,7 @@ final class Walker {
             }
             bytecode ~= Opcode.array_new;
             bytecode ~= outreg.reg;
-            bytecode ~= cast(uint) regs.length;
+            bytecode ~= cast(int) regs.length;
             foreach (reg; regs) {
                 bytecode ~= reg.reg;
             }
@@ -1087,9 +1087,9 @@ final class Walker {
         //     Reg lambdaReg = allocOut;
         //     bytecode ~= Opcode.store_fun;
         //     bytecode ~= lambdaReg.reg;
-        //     int refLength = cast(uint) bytecode.length;
+        //     int refLength = cast(int) bytecode.length;
         //     bytecode ~= jumpTmp;
-        //     int refRegc = cast(uint) bytecode.length;
+        //     int refRegc = cast(int) bytecode.length;
         //     bytecode ~= 255;
         //     Reg[] oldRegs = regs;
         //     regs = null;
@@ -1120,7 +1120,7 @@ final class Walker {
         //         bytecode ~= Opcode.ret;
         //         bytecode ~= reg.reg;
         //     }
-        //     bytecode[refRegc] = cast(uint)(regs.length + 1);
+        //     bytecode[refRegc] = cast(int)(regs.length + 1);
         //     regs = oldRegs;
         //     fixGotoLabels();
         //     localss.length--;
@@ -1149,9 +1149,9 @@ final class Walker {
             Reg lambdaReg = allocOut;
             bytecode ~= Opcode.store_fun;
             bytecode ~= lambdaReg.reg;
-            int refLength = cast(uint) bytecode.length;
+            int refLength = cast(int) bytecode.length;
             bytecode ~= jumpTmp;
-            int refRegc = cast(uint) bytecode.length;
+            int refRegc = cast(int) bytecode.length;
             bytecode ~= 255;
             Reg[] oldRegs = regs;
             regs = null;
@@ -1177,7 +1177,7 @@ final class Walker {
                 bytecode ~= Opcode.ret;
                 bytecode ~= reg.reg;
             }
-            bytecode[refRegc] = cast(uint)(regs.length + 1);
+            bytecode[refRegc] = cast(int)(regs.length + 1);
             regs = oldRegs;
             fixGotoLabels();
             localss.length--;
@@ -1230,7 +1230,7 @@ final class Walker {
                         bytecode ~= Opcode.static_call;
                         bytecode ~= outreg.reg;
                         bytecode ~= jump(*freg);
-                        bytecode ~= cast(uint) argRegs.length;
+                        bytecode ~= cast(int) argRegs.length;
                         foreach (reg; argRegs) {
                             bytecode ~= reg.reg;
                         }
@@ -1267,7 +1267,7 @@ final class Walker {
                 bytecode ~= Opcode.call;
                 bytecode ~= outreg.reg;
                 bytecode ~= funreg.reg;
-                bytecode ~= cast(uint) argRegs.length;
+                bytecode ~= cast(int) argRegs.length;
                 foreach (reg; argRegs) {
                     bytecode ~= reg.reg;
                 }
@@ -1377,7 +1377,7 @@ final class Walker {
             //         default:
             //             bytecode ~= Opcode.tail_call;
             //             bytecode ~= func.reg;
-            //             bytecode ~= cast(uint) argRegs.length;
+            //             bytecode ~= cast(int) argRegs.length;
             //             foreach (reg; argRegs) {
             //                 bytecode ~= reg.reg;
             //             }
@@ -1422,7 +1422,7 @@ final class Walker {
             Reg ret = allocOut;
             bytecode ~= Opcode.store_bool;
             bytecode ~= ret.reg;
-            bytecode ~= cast(uint)*cast(bool*) val.value;
+            bytecode ~= cast(int)*cast(bool*) val.value;
             return ret;
         } else if (val.info == typeid(int)) {
             Reg ret = allocOut;
@@ -1441,9 +1441,9 @@ final class Walker {
             Reg outreg = allocOut;
             bytecode ~= Opcode.string_new;
             bytecode ~= outreg.reg;
-            bytecode ~= cast(uint) src.length;
+            bytecode ~= cast(int) src.length;
             foreach (chr; src) {
-                bytecode ~= cast(uint) chr;
+                bytecode ~= cast(int) chr;
             }
             return outreg;
         } else {

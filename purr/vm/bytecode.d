@@ -13,7 +13,7 @@ extern (C) {
     void vm_state_del(State *);
 }
 
-enum Opcode : uint {
+enum Opcode : int {
     exit,
     store_reg,
     store_none,

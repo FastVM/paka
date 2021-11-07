@@ -24,7 +24,7 @@ def debug_putn_gte0(n) {
 
 def debug_putn(n) {
     if n < 0 {
-        puts("-")
+        debug_put("-")
         debug_putn_gte0(0 - n)
     } else {
         debug_putn_gte0(n)
@@ -156,7 +156,7 @@ def tokenize_stream1(bsrc) {
         op = ops_flat[xop]
         if stream_starts_swith(bsrc, op) {
             stream_skip(bsrc, length(op))
-            return ["op", op]
+            return ["op", op, bsrc[1]]
         }
         xop = xop + 1
     }
@@ -166,25 +166,25 @@ def tokenize_stream1(bsrc) {
         return tokenize_stream1(bsrc)
     }
     if first == "("[0] {
-        return ["open", stream_read()]
+        return ["open", stream_read(), bsrc[1]]
     }
     if first == ")"[0] {
-        return ["close", stream_read()]
+        return ["close", stream_read(), bsrc[1]]
     }
     if first == "{"[0] {
-        return ["open", stream_read()]
+        return ["open", stream_read(), bsrc[1]]
     }
     if first == "}"[0] {
-        return ["close", stream_read()]
+        return ["close", stream_read(), bsrc[1]]
     }
     if first == "["[0] {
-        return ["open", stream_read()]
+        return ["open", stream_read(), bsrc[1]]
     }
     if first == "]"[0] {
-        return ["close", stream_read()]
+        return ["close", stream_read(), bsrc[1]]
     }
     if first == ","[0] {
-        return ["comma", stream_read()]
+        return ["comma", stream_read(), bsrc[1]]
     }
     if first == "\n"[0] {
         stream_skip1(bsrc)
@@ -200,7 +200,7 @@ def tokenize_stream1(bsrc) {
                 exit
             }
             if cur == "\""[0] {
-                return ["str", ret]
+                return ["str", ret, bsrc[1]]
             }
             if cur == "\\"[0] {
                 cur = stream_read(bsrc)
@@ -225,7 +225,7 @@ def tokenize_stream1(bsrc) {
         while char_isdigit(stream_peek(bsrc)) {
             n = n * 10 + stream_read(bsrc) - "0"[0]
         }
-        return ["num", n]
+        return ["num", n, bsrc[1]]
     }
     if char_id0(first) {
         xsrc = []
@@ -236,11 +236,11 @@ def tokenize_stream1(bsrc) {
                 ki = 0
                 while ki < length(keywords) {
                     if str_to_array(keywords[ki]) == xsrc {
-                        return [keywords[ki], xsrc]
+                        return [keywords[ki], xsrc, bsrc[1]]
                     }
                     ki = ki + 1
                 }
-                return ["ident", xsrc]
+                return ["ident", xsrc, bsrc[1]]
             }
         }
     }
@@ -259,6 +259,9 @@ def tokenize(src) {
             return tokens
         }
         token = tokenize_stream1(ssrc)
+        if token == 0 {
+            return tokens
+        }
         tokens = tokens ~ [token]
     }
 }
@@ -287,6 +290,9 @@ def read_post(tokens, last) {
             if last[0] == "length" {
                 args = ["length"]
             }
+            if last[0] == "type" {
+                args = ["type"]
+            }
             while true {
                 cur = stream_peek(tokens)
                 if cur == 0 {
@@ -298,10 +304,8 @@ def read_post(tokens, last) {
                     return read_post(tokens, args)
                 }
                 arg = read_expr_base(tokens)
-                if arg != none {
-                    args = args ~ [arg]
-                }
-                if cur[0] == "comma" {
+                args = args ~ [arg]
+                if stream_peek(tokens)[0] == "comma" {
                     stream_skip1(tokens)
                 }
             } 
@@ -317,11 +321,11 @@ def read_single(tokens) {
     }
     if first[0] == "true" {
         stream_skip1(tokens)
-        return ["bool", true]
+        return ["true"]
     }
     if first[0] == "false" {
         stream_skip1(tokens)
-        return ["bool", false]
+        return ["false"]
     }
     if first[0] == "none" {
         stream_skip1(tokens)
@@ -345,6 +349,9 @@ def read_single(tokens) {
         } 
         if first[1] == str_to_array("length") {
             return ["length"]
+        }
+        if first[1] == str_to_array("type") {
+            return ["type"]
         } 
         return ["ident", first[1]]
     }
@@ -363,10 +370,8 @@ def read_single(tokens) {
                     return args
                 }
                 expr = read_expr_base(tokens)
-                if expr != none {
-                    args = args ~ [expr]
-                }
-                if cur[0] == "comma" {
+                args = args ~ [expr]
+                if stream_peek(tokens)[0] == "comma" {
                     stream_skip1(tokens)
                 }
             } 
@@ -378,7 +383,16 @@ def read_single(tokens) {
             return ret
         }
     }
-    return none
+    debug_put("@")
+    debug_putn(first[2])
+    debug_puts("")
+    debug_put("error: unexpected ")
+    debug_put(first[0])
+    debug_put(": `")
+    debug_put(first[1])
+    debug_put("`")
+    debug_puts("")
+    exit
 }
 
 def parse_is_not_in(op, some) {
@@ -447,9 +461,12 @@ def read_stmt(tokens) {
         expr = read_expr_base(tokens)
         block1 = read_block(tokens)
         block2 = ["do"]
-        if stream_peek(tokens)[0] == "else" {
-            stream_skip1(tokens)
-            block2 = read_block(tokens)
+        first = stream_peek(tokens)
+        if first != 0 {
+            if first[0] == "else" {
+                stream_skip1(tokens)
+                block2 = read_block(tokens)
+            }
         }
         return ["if", expr, block1, block2]
     }
@@ -474,12 +491,15 @@ def read_block_body(tokens) {
 
 def read_block(tokens) {
     first = stream_peek(tokens)
-    if first == ["open", "{"[0]] {
+    if first[0] == "open" {
         stream_skip1(tokens)
         ret = read_block_body(tokens)
         stream_skip1(tokens)
         return ret
     }
+    debug_put("@")
+    debug_putn(first[2])
+    debug_puts("")
     debug_puts("parser: block error")
     exit
 }
@@ -586,13 +606,15 @@ def emit_num(form, out) {
     return ret
 }
 
-def emit_bool(form, out) {
+def emit_true(form, out) {
     ret = reg(out)
-    if out[1] {
-        out[0] = out[0] ~ [opcode("store_bool"), ret, 1]
-    } else {
-        out[0] = out[0] ~ [opcode("store_bool"), ret, 0]
-    }
+    out[0] = out[0] ~ [opcode("store_bool"), ret, 1]
+    return ret
+}
+
+def emit_false(form, out) {
+    ret = reg(out)
+    out[0] = out[0] ~ [opcode("store_bool"), ret, 0]
     return ret
 }
 
@@ -639,6 +661,13 @@ def emit_length(form, out) {
     return ret
 }
 
+def emit_type(form, out) {
+    r1 = emit_to(form[1], out)
+    ret = reg(out)
+    out[0] = out[0] ~ [opcode("type"), ret, r1]
+    return ret
+}
+
 def emit_do(form, out) {
     i = 1
     while i < length(form) {
@@ -660,18 +689,30 @@ def findvar(vars, name) {
 }
 
 def emit_set(form, out) {
-    found = findvar(out[2], form[1][1])
-    if found == none {
-        from = emit_to(form[2], out)
-        to = reg(out)
-        out[2] = out[2] ~ [[form[1][1], to]]
-        out[0] = out[0] ~ [opcode("store_reg"), to, from]
-        return to
-    } else {
-        from = emit_to(form[2], out)
-        out[0] = out[0] ~ [opcode("store_reg"), found, from]
-        return found
+    if form[1][0] == "ident" {
+        found = findvar(out[2], form[1][1])
+        if found == none {
+            from = emit_to(form[2], out)
+            to = reg(out)
+            out[2] = out[2] ~ [[form[1][1], to]]
+            out[0] = out[0] ~ [opcode("store_reg"), to, from]
+            return to
+        } else {
+            from = emit_to(form[2], out)
+            out[0] = out[0] ~ [opcode("store_reg"), found, from]
+            return found
+        }
     }
+    if form[1][0] == "index" {
+        array = emit_to(form[1][1], out)
+        index = emit_to(form[1][2], out)
+        from = emit_to(form[2], out)
+        out[0] = out[0] ~ [opcode("index_set"), array, index, from]
+        return array
+    }
+    debug_put("cannot set to: ")
+    debug_puts(form[1][0])
+    exit
 }
 
 def emit_def(form, out) {
@@ -723,7 +764,7 @@ def emit_call(form, out) {
         i = i + 1
     }
     ret = reg(out)
-    out[0] = out[0] ~ [opcode("static_call"), ret, "link", form[1][1], length(regs)] ~ regs
+    out[0] = out[0] ~ [opcode("static_call"), ret, form[1][1], length(regs)] ~ regs
     return ret
 }
 
@@ -788,8 +829,11 @@ def emit_to(form, out) {
     if form[0] == "num" {
         return emit_num(form, out)
     }
-    if form[0] == "bool" {
-        return emit_bool(form, out)
+    if form[0] == "true" {
+        return emit_true(form, out)
+    }
+    if form[0] == "false" {
+        return emit_false(form, out)
     }
     if form[0] == "none" {
         return emit_none(form, out)
@@ -857,6 +901,9 @@ def emit_to(form, out) {
     if form[0] == "length" {
         return emit_length(form, out)
     }
+    if form[0] == "type" {
+        return emit_type(form, out)
+    }
     if form[0] == "array" {
         return emit_array(form, out)
     }
@@ -880,14 +927,16 @@ def emit_to(form, out) {
 }
 
 def link(out) {
+    link_type = type([])
     ret = []
     i = 0
     while i < length(out[0]) {
-        if out[0][i] == "link" {
-            i = i + 1
-            func = findvar(out[3], out[0][i])
+        cur = out[0][i] 
+        if type(cur) == link_type {
+            func = findvar(out[3], cur)
             if func == none {
-                debug_puts(str_to_array("link error: undefined: ") ~ out[0][i])
+                debug_put("link error: undefined: ")
+                debug_puts(cur)
                 exit
             }
             ret = ret ~ [func]
@@ -918,11 +967,6 @@ def main(srcs) {
         tokens = tokenize(srcs[0])
         ast = parse(tokens)
         bc = emit(ast)
-        i = 0
-        while i < length(bc) {
-            debug_putn(i)
-            debug_puts("\n")
-        }
         exec(bc, rest)
     } else {
         debug_puts(str_to_array("too few args: ") ~ [48 + length(srcs)] )
