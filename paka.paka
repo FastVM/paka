@@ -591,7 +591,8 @@ def opcode(name) {
     if name == "return_handler" { return 77 }
     if name == "exit_handler" { return 78 }
     if name == "exec" { return 79 }
-    if name == "push" { return 80 }
+    if name == "extend" { return 80 }
+    if name == "push" { return 81 }
     debug_puts(str_to_array("unknown opcode: ") ~ name)
     exit
 }
@@ -648,10 +649,19 @@ def emit_putchar(form, out) {
     return none
 }
 
-def emit_push(form, out) {
+def emit_extend(form, out) {
     r1 = emit_to(form[1], out)
-    r2 = emit_to(form[2], out)
-    out[0] ~= [opcode("push"), r1, r2]
+    if form[2][0] == "array" {
+        i = 1
+        while i < length(form[2]) {
+            rn = emit_to(form[2][i], out)
+            out[0] ~= [opcode("push"), r1, rn] 
+            i = i + 1    
+        }
+    } else {
+        r2 = emit_to(form[2], out)
+        out[0] ~= [opcode("extend"), r1, r2]
+    }
     return r1
 }
 
@@ -847,7 +857,7 @@ def emit_to(form, out) {
         return emit_none(form, out)
     }
     if form[0] == "~=" {
-        return emit_push(form, out)
+        return emit_extend(form, out)
     }
     if form[0] == "~" {
         return emit_binop(opcode("concat"), form, out)
