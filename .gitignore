@@ -54,3 +54,4 @@ crash-*
 oom-*
 *.core
 *.dep
+exec.bc

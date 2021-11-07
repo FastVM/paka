@@ -1,0 +1,15 @@
+
+def put(str) {
+    i = 0
+    while i < length(str) {
+        putchar(str[i])
+        i = i + 1
+    }
+}
+
+def puts(str) {
+    put(str)
+    putchar(10)
+}
+
+puts("hello world")
