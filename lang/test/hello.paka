@@ -1,0 +1,4 @@
+
+import("lang/io.paka")
+
+puts("hello world")

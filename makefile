@@ -1,10 +1,10 @@
 
-BOOT ?= bins/build6.bc
+BOOT ?= bins/build7.bc
 
 default: stage3
 
 bin/minivm: minivm
-	$(MAKE) -C minivm
+	$(MAKE) -C minivm OPT="$(OPT)"
 	mkdir -p bin
 	cp minivm/minivm bin/minivm
 

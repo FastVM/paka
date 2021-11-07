@@ -325,6 +325,18 @@ def read_post(tokens, last) {
             if last[0] == "length" {
                 args = ["length"]
             }
+            if last[0] == "dump" {
+                args = ["dump"]
+            }
+            if last[0] == "import" {
+                args = ["import"]
+            }
+            if last[0] == "read" {
+                args = ["read"]
+            }
+            if last[0] == "write" {
+                args = ["write"]
+            }
             if last[0] == "type" {
                 args = ["type"]
             }
@@ -384,6 +396,18 @@ def read_single(tokens) {
         } 
         if first[1] == str_to_array("length") {
             return ["length"]
+        }
+        if first[1] == str_to_array("dump") {
+            return ["dump"]
+        }
+        if first[1] == str_to_array("write") {
+            return ["write"]
+        }
+        if first[1] == str_to_array("read") {
+            return ["read"]
+        }
+        if first[1] == str_to_array("import") {
+            return ["import"]
         }
         if first[1] == str_to_array("type") {
             return ["type"]
@@ -577,6 +601,9 @@ def opcode(name) {
     if name == "exec" { return 28 }
     if name == "extend" { return 29 }
     if name == "push" { return 30 }
+    if name == "dump" { return 31 }
+    if name == "read" { return 32 }
+    if name == "write" { return 33 }
     debug_puts(str_to_array("unknown opcode: ") ~ name)
     exit
 }
@@ -826,6 +853,41 @@ def emit_str(form, out) {
     return ret
 }
 
+def emit_dump(form, out) {
+    r1 = emit_to(form[1], out)
+    r2 = emit_to(form[2], out)
+    out[0] ~= [opcode("dump"), r1, r2]
+    return none
+}
+
+def emit_write(form, out) {
+    r1 = emit_to(form[1], out)
+    r2 = emit_to(form[2], out)
+    out[0] ~= [opcode("write"), r1, r2]
+    return none
+}
+
+def emit_read(form, out) {
+    r1 = emit_to(form[1], out)
+    ret = reg(out)
+    out[0] ~= [opcode("read"), ret, r1]
+    return none
+}
+
+def emit_import(form, out) {
+    src = read(form[1][1])
+    if src == none {
+        debug_put("cannot find file: ")
+        debug_puts(form[1][1])
+        exit
+    } else {
+        tokens = tokenize(src)
+        ast = parse(tokens)
+        emit_to(ast, out)
+        return none
+    }
+}
+
 def emit_to(form, out) {
     if form[0] == "num" {
         return emit_num(form, out)
@@ -905,6 +967,18 @@ def emit_to(form, out) {
     if form[0] == "length" {
         return emit_length(form, out)
     }
+    if form[0] == "dump" {
+        return emit_dump(form, out)
+    }
+    if form[0] == "import" {
+        return emit_import(form, out)
+    }
+    if form[0] == "read" {
+        return emit_read(form, out)
+    }
+    if form[0] == "write" {
+        return emit_write(form, out)
+    }
     if form[0] == "type" {
         return emit_type(form, out)
     }
@@ -974,6 +1048,7 @@ def main(srcs) {
     ast = parse(tokens)
     bc = emit(ast)
     exec(bc, rest)
+    dump("exec.bc", bc)
 }
 
 main(args)

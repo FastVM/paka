@@ -11,5 +11,3 @@ def puts(str) {
     put(str)
     putchar(10)
 }
-
-puts("hello world")
