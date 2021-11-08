@@ -1,9 +1,10 @@
 
-BOOT ?= bins/build13.bc
+BOOT ?= bins/build14.bc
 
 default: bin/stage3
 
 bin/stage1: src/paka.paka
+	mkdir -p bin
 	./minivm/minivm $(BOOT) src/paka.paka -o $@
 
 bin/stage2: bin/stage1
