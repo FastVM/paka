@@ -177,25 +177,25 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
         }
     }
     if first == '(' {
-        return ["open", stream_read(), bsrc[1]]
+        return ["open", stream_read(bsrc), bsrc[1]]
     }
     if first == ')' {
-        return ["close", stream_read(), bsrc[1]]
+        return ["close", stream_read(bsrc), bsrc[1]]
     }
     if first == '{' {
-        return ["open", stream_read(), bsrc[1]]
+        return ["open", stream_read(bsrc), bsrc[1]]
     }
     if first == '}' {
-        return ["close", stream_read(), bsrc[1]]
+        return ["close", stream_read(bsrc), bsrc[1]]
     }
     if first == '[' {
-        return ["open", stream_read(), bsrc[1]]
+        return ["open", stream_read(bsrc), bsrc[1]]
     }
     if first == ']' {
-        return ["close", stream_read(), bsrc[1]]
+        return ["close", stream_read(bsrc), bsrc[1]]
     }
     if first == ',' {
-        return ["comma", stream_read(), bsrc[1]]
+        return ["comma", stream_read(bsrc), bsrc[1]]
     }
     if first == ''' {
         stream_skip1(bsrc)
