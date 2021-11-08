@@ -1,24 +1,21 @@
 
 BOOT ?= bins/build9.bc
 
-default: stage3
+default: bin/stage3
 
 bin/minivm: minivm
 	$(MAKE) -C minivm
 	mkdir -p bin
 	cp minivm/minivm bin/minivm
 
-stage1 bin/stage1: bin/minivm
-	./bin/minivm $(BOOT) src/paka.paka
-	mv exec.bc bin/stage1
+bin/stage1: bin/minivm
+	./bin/minivm $(BOOT) src/paka.paka -o $@
 
-stage2 bin/stage2: stage1
-	./bin/minivm bin/stage1 src/paka.paka
-	mv exec.bc bin/stage2
+bin/stage2: bin/stage1
+	./bin/minivm bin/stage1 src/paka.paka -o $@
 
-stage3 bin/stage3: stage2
-	./bin/minivm bin/stage2 src/paka.paka
-	mv exec.bc bin/stage3
+bin/stage3: bin/stage2
+	./bin/minivm bin/stage2 src/paka.paka -o $@
 
 clean: .dummy
 	$(MAKE) -C minivm clean

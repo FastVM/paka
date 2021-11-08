@@ -1,5 +1,5 @@
 
-def debug_put(str) {
+def put(str) {
     i = 0
     while i < length(str) {
         putchar(str[i])
@@ -7,27 +7,27 @@ def debug_put(str) {
     }
 }
 
-def debug_puts(str) {
-    debug_put(str)
+def puts(str) {
+    put(str)
     putchar(10)
 }
 
-def debug_putn_gte0(n) {
+def putn_gte0(n) {
     if n >= 10 {
         lowest = n % 10
-        debug_putn_gte0((n - lowest) / 10)
+        putn_gte0((n - lowest) / 10)
         putchar(lowest + 48)
     } else {
         putchar(n % 10 + 48)
     }
 }
 
-def debug_putn(n) {
+def putn(n) {
     if n < 0 {
-        debug_put("-")
-        debug_putn_gte0(0 - n)
+        put("-")
+        putn_gte0(0 - n)
     } else {
-        debug_putn_gte0(n)
+        putn_gte0(n)
     }
 }
 
@@ -60,6 +60,9 @@ def char_isalpha(chr) {
 
 def char_id0(chr) {
     if char_isalpha(chr) {
+        return true
+    }
+    if chr == '.' {
         return true
     }
     if chr == '_' {
@@ -203,7 +206,7 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
         if cur == "\\"[0] {
             cur = stream_read(bsrc)
             if stream_read() != ''' {
-                debug_puts("unterminated char literal")
+                puts("unterminated char literal")
                 exit
             }
             if cur == 'n' {
@@ -217,7 +220,7 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
             }
         } else {
             if stream_read() != ''' {
-                debug_puts("unterminated char literal")
+                puts("unterminated char literal")
                 exit
             }
             return ["num", cur, bsrc[1]]
@@ -229,7 +232,7 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
         while true {
             cur = stream_read(bsrc)
             if cur == 0 {
-                debug_puts("eof in str")
+                puts("eof in str")
                 exit
             }
             if cur == "\""[0] {
@@ -250,7 +253,7 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
                 ret ~= [cur]
             }
         }
-        debug_puts("bad char")
+        puts("bad char")
         exit
     }
     if char_isdigit(first) {
@@ -280,12 +283,12 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
     if first == 0 {
         return 0
     }
-    debug_puts(str_to_array("bad char: ") ~ [first])
+    puts(str_to_array("bad char: ") ~ [first])
     exit
 }
 
 def tokenize(src) {
-    keywords = ["while", "if", "else", "def", "return", "exit", "true", "false", "none"]
+    keywords = ["while", "if", "else", "def", "enum", "return", "macro", "exit", "true", "false", "none"]
     ops_flat = ["<=", ">=", "==", "!=", "~=", "=", "~", "+", "-", "%", "*", "/", "<", ">"]
     ssrc = stream_new(src) 
     tokens = []
@@ -301,6 +304,34 @@ def tokenize(src) {
     }
 }
 
+def read_call(tokens, args, state) {
+    got = stream_read(tokens)
+    if got == 0 {
+        puts("error: got eof, wanted `(`")
+        exit
+    }
+    if got[0] != "open" {
+        puts("error: wanted `(`")
+        exit
+    }
+    while true {
+        cur = stream_peek(tokens)
+        if cur == 0 {
+            puts("error 1")
+            exit
+        }
+        if cur[0] == "close" {
+            stream_skip1(tokens)
+            return read_post(tokens, args, state)
+        }
+        arg = read_expr_base(tokens, state)
+        args ~= [arg]
+        if stream_peek(tokens)[0] == "comma" {
+            stream_skip1(tokens)
+        }
+    }
+}
+
 def read_post(tokens, last, state) {
     first = stream_peek(tokens)
     if first == 0 {
@@ -311,51 +342,11 @@ def read_post(tokens, last, state) {
             stream_skip1(tokens)
             index = read_expr_base(tokens, state)
             stream_skip1(tokens)
-            return read_post(tokens, ["index", last, index], state)
+            return read_post(tokens, [vm_emit_nameof("index"), last, index], state)
         }
         if first[1] == '(' {
-            stream_skip1(tokens)
-            args = ["call", last]
-            if last[0] == "putchar" {
-                args = ["putchar"]
-            }
-            if last[0] == "exec" {
-                args = ["exec"]
-            }
-            if last[0] == "length" {
-                args = ["length"]
-            }
-            if last[0] == "dump" {
-                args = ["dump"]
-            }
-            if last[0] == "import" {
-                args = ["import"]
-            }
-            if last[0] == "read" {
-                args = ["read"]
-            }
-            if last[0] == "write" {
-                args = ["write"]
-            }
-            if last[0] == "type" {
-                args = ["type"]
-            }
-            while true {
-                cur = stream_peek(tokens)
-                if cur == 0 {
-                    debug_puts("error 1")
-                    exit
-                }
-                if cur[0] == "close" {
-                    stream_skip1(tokens)
-                    return read_post(tokens, args, state)
-                }
-                arg = read_expr_base(tokens, state)
-                args ~= [arg]
-                if stream_peek(tokens)[0] == "comma" {
-                    stream_skip1(tokens)
-                }
-            } 
+            args = [vm_emit_nameof("call"), last] 
+            return read_call(tokens, args, state)
         }
     }
     return last
@@ -368,60 +359,60 @@ def read_single(tokens, state) {
     }
     if first[0] == "true" {
         stream_skip1(tokens)
-        return ["true"]
+        return [vm_emit_nameof("true")]
     }
-    if first[0] == "false" {
+    if first[0] == ("false") {
         stream_skip1(tokens)
-        return ["false"]
+        return [vm_emit_nameof("false")]
     }
-    if first[0] == "none" {
+    if first[0] == ("none") {
         stream_skip1(tokens)
-        return ["none"]
+        return [vm_emit_nameof("none")]
     }
-    if first[0] == "num" {
+    if first[0] == ("num") {
         stream_skip1(tokens)
-        return ["num", first[1]]
+        return [vm_emit_nameof("num"), first[1]]
     }
-    if first[0] == "str" {
+    if first[0] == ("str") {
         stream_skip1(tokens)
-        return ["str", first[1]]
+        return [vm_emit_nameof("str"), first[1]]
     }
-    if first[0] == "ident" {
+    if first[0] == ("ident") {
         stream_skip1(tokens)
-        if first[1] == str_to_array("exec") {
-            return ["exec"]
+        if first[1] == str_to_array(vm_emit_nameof("exec")) {
+            return read_call(tokens, [vm_emit_nameof("exec")], state)
         } 
         if first[1] == str_to_array("putchar") {
-            return ["putchar"]
+            return read_call(tokens, ["putchar"], state)
         } 
-        if first[1] == str_to_array("length") {
-            return ["length"]
+        if first[1] == str_to_array(vm_emit_nameof("length")) {
+            return read_call(tokens, [vm_emit_nameof("length")], state)
         }
-        if first[1] == str_to_array("dump") {
-            return ["dump"]
+        if first[1] == str_to_array(vm_emit_nameof("dump")) {
+            return read_call(tokens, [vm_emit_nameof("dump")], state)
         }
-        if first[1] == str_to_array("write") {
-            return ["write"]
+        if first[1] == str_to_array(vm_emit_nameof("write")) {
+            return read_call(tokens, [vm_emit_nameof("write")], state)
         }
-        if first[1] == str_to_array("read") {
-            return ["read"]
+        if first[1] == str_to_array(vm_emit_nameof("read")) {
+            return read_call(tokens, [vm_emit_nameof("read")], state)
         }
-        if first[1] == str_to_array("import") {
-            return ["import"]
+        if first[1] == str_to_array(vm_emit_nameof("import")) {
+            return read_call(tokens, [vm_emit_nameof("import")], state)
         }
-        if first[1] == str_to_array("type") {
-            return ["type"]
+        if first[1] == str_to_array(vm_emit_nameof("type")) {
+            return read_call(tokens, [vm_emit_nameof("type")], state)
         } 
-        return ["ident", first[1]]
+        return [vm_emit_nameof("ident"), first[1]]
     }
     if first[0] == "open" {
         if first[1] == '[' {
             stream_skip1(tokens)
-            args = ["array"]
+            args = [vm_emit_nameof("array")]
             while true {
                 cur = stream_peek(tokens)
                 if cur == 0 {
-                    debug_puts("error 2")
+                    puts("error 2")
                     exit
                 }
                 if cur[0] == "close" {
@@ -442,15 +433,15 @@ def read_single(tokens, state) {
             return ret
         }
     }
-    debug_put("@")
-    debug_putn(first[2])
-    debug_puts("")
-    debug_put("error: unexpected ")
-    debug_put(first[0])
-    debug_put(": `")
-    debug_put(first[1])
-    debug_put("`")
-    debug_puts("")
+    put("@")
+    putn(first[2])
+    puts("")
+    put("error: unexpected ")
+    put(first[0])
+    put(": `")
+    put(first[1])
+    put("`")
+    puts("")
     exit
 }
 
@@ -494,32 +485,51 @@ def read_expr_base(tokens, state) {
 
 def read_stmt(tokens, state) {
     first = stream_peek(tokens)
-    if first[0] == "while" {
+    if first[0] == ("while") {
         stream_skip1(tokens)
         expr = read_expr_base(tokens, state)
         block = read_block(tokens, state)
-        return ["while", expr, block]
+        return [vm_emit_nameof("while"), expr, block]
     }
-    if first[0] == "def" {
+    if first[0] == ("def") {
         stream_skip1(tokens)
         expr = read_expr_base(tokens, state)
         block = read_block(tokens, state)
-        return ["def", expr, block]
+        return [vm_emit_nameof("def"), expr, block]
     }
-    if first[0] == "return" {
+    if first[0] == ("return") {
         stream_skip1(tokens)
         expr = read_expr_base(tokens, state)
-        return ["return", expr]
+        return [vm_emit_nameof("return"), expr]
     }
-    if first[0] == "exit" {
+    if first[0] == ("macro") {
         stream_skip1(tokens)
-        return ["exit"]
+        name = stream_read(tokens)
+        if name == 0 {
+            puts("macro cannot be last word in file")
+            exit
+        }
+        if name[0] != "ident" {
+            puts("macro needs to be followed by identifer")
+            exit
+        }
+        expr = read_block(tokens, state)
+        return [vm_emit_nameof("macro"), name, expr]
     }
-    if first[0] == "if" {
+    if first[0] == ("enum") {
+        stream_skip1(tokens)
+        expr = read_expr_base(tokens, state)
+        return [vm_emit_nameof("enum"), expr]
+    }
+    if first[0] == ("exit") {
+        stream_skip1(tokens)
+        return [vm_emit_nameof("exit")]
+    }
+    if first[0] == ("if") {
         stream_skip1(tokens)
         expr = read_expr_base(tokens, state)
         block1 = read_block(tokens, state)
-        block2 = ["do"]
+        block2 = [vm_emit_nameof("do")]
         first = stream_peek(tokens)
         if first != 0 {
             if first[0] == "else" {
@@ -527,14 +537,14 @@ def read_stmt(tokens, state) {
                 block2 = read_block(tokens, state)
             }
         }
-        return ["if", expr, block1, block2]
+        return [vm_emit_nameof("if"), expr, block1, block2]
     }
     ret = read_expr_base(tokens, state)
     return ret
 }
 
 def read_block_body(tokens, state) {
-    ret = ["do"]
+    ret = [vm_emit_nameof("do")]
     while true {
         first = stream_peek(tokens)
         if first == 0 {
@@ -556,10 +566,10 @@ def read_block(tokens, state) {
         stream_skip1(tokens)
         return ret
     }
-    debug_put("@")
-    debug_putn(first[2])
-    debug_puts("")
-    debug_puts("parser: block error")
+    put("@")
+    putn(first[2])
+    puts("")
+    puts("parser: block error")
     exit
 }
 
@@ -572,7 +582,7 @@ def parse(tokens) {
 }
 
 def opcode(name) {
-    if name == "exit" { return 0 }
+    if name == vm_emit_nameof("exit") { return 0 }
     if name == "store_reg" { return 1 }
     if name == "store_none" { return 2 }
     if name == "store_bool" { return 3 }
@@ -606,7 +616,7 @@ def opcode(name) {
     if name == "dump" { return 31 }
     if name == "read" { return 32 }
     if name == "write" { return 33 }
-    debug_puts(str_to_array("unknown opcode: ") ~ name)
+    puts(str_to_array("unknown opcode: ") ~ name)
     exit
 }
 
@@ -639,15 +649,6 @@ def emit_none(form, out) {
     return ret
 }
 
-def emit_ident(form, out) {
-    res = findvar(out[2], form[1])
-    if res == none {
-        debug_puts(str_to_array("compile error: undefined: ") ~ form[1])
-        exit
-    }
-    return res
-}
-
 def emit_binop(op, form, out) {
     r1 = emit_to(form[1], out)
     r2 = emit_to(form[2], out)
@@ -664,7 +665,7 @@ def emit_putchar(form, out) {
 
 def emit_extend(form, out) {
     r1 = emit_to(form[1], out)
-    if form[2][0] == "array" {
+    if form[2][0] == vm_emit_nameof("array") {
         i = 1
         while i < length(form[2]) {
             rn = emit_to(form[2][i], out)
@@ -711,6 +712,7 @@ def emit_do(form, out) {
 def findvar(vars, name) {
     i = 0
     while i < length(vars) {
+        puts(vars[i][0])
         if vars[i][0] == name {
             return vars[i][1]
         }
@@ -719,8 +721,24 @@ def findvar(vars, name) {
     return none
 }
 
+def emit_ident(form, out) {
+    res = findvar(out[2], form[1])
+    if res != none {
+        return res
+    }
+    res = findvar(out[5], form[1])
+    if res != none {
+        oreg = reg(out) 
+        out[0] ~= [opcode("store_int"), oreg, res]
+        return oreg
+    }
+    puts(str_to_array("undefined ident: ") ~ form[1])
+    exit
+
+}
+
 def emit_set(form, out) {
-    if form[1][0] == "ident" {
+    if form[1][0] == vm_emit_nameof("ident") {
         found = findvar(out[2], form[1][1])
         if found == none {
             from = emit_to(form[2], out)
@@ -734,16 +752,28 @@ def emit_set(form, out) {
             return found
         }
     }
-    if form[1][0] == "index" {
+    if form[1][0] == vm_emit_nameof("index") {
         array = emit_to(form[1][1], out)
         index = emit_to(form[1][2], out)
         from = emit_to(form[2], out)
         out[0] ~= [opcode("index_set"), array, index, from]
         return array
     }
-    debug_put("cannot set to: ")
-    debug_puts(form[1][0])
+    put("cannot set to: ")
+    puts(form[1][0])
     exit
+}
+
+def emit_macro(form, out) {
+    name = form[1][1]
+    idents = []
+    where = 1
+    while where < length(form[2]) {
+        name = form[1][1] ~ ['.'] ~ form[2][where][1]
+        out[5] ~= [[name, where]]
+        where = where + 1
+    }
+
 }
 
 def emit_def(form, out) {
@@ -879,8 +909,8 @@ def emit_read(form, out) {
 def emit_import(form, out) {
     src = read(out[4][0] ~ ['/'] ~ str_to_array(form[1][1]))
     if src == none {
-        debug_put("cannot find file: ")
-        debug_puts(form[1][1])
+        put("cannot find file: ")
+        puts(form[1][1])
         exit
     } else {
         tokens = tokenize(src)
@@ -889,18 +919,21 @@ def emit_import(form, out) {
         return none
     }
 }
+def vm_emit_nameof(named) {
+    return named
+}
 
 def emit_to(form, out) {
-    if form[0] == "num" {
+    if form[0] == vm_emit_nameof("num") {
         return emit_num(form, out)
     }
-    if form[0] == "true" {
+    if form[0] == vm_emit_nameof("true") {
         return emit_true(form, out)
     }
-    if form[0] == "false" {
+    if form[0] == vm_emit_nameof("false") {
         return emit_false(form, out)
     }
-    if form[0] == "none" {
+    if form[0] == vm_emit_nameof("none") {
         return emit_none(form, out)
     }
     if form[0] == "~=" {
@@ -942,67 +975,71 @@ def emit_to(form, out) {
     if form[0] == "!=" {
         return emit_binop("not_equal", form, out)
     }
-    if form[0] == "index" {
+    if form[0] == vm_emit_nameof("index") {
         return emit_binop("index_get", form, out)
     }
-    if form[0] == "def" {
+    if form[0] == vm_emit_nameof("def") {
         return emit_def(form, out)
     }
-    if form[0] == "return" {
+    if form[0] == vm_emit_nameof("return") {
         return emit_return(form, out)
     }
-    if form[0] == "exit" {
+    if form[0] == vm_emit_nameof("macro") {
+        return emit_macro(form, out)
+    }
+    if form[0] == vm_emit_nameof("exit") {
         return emit_exit(form, out)
     }
-    if form[0] == "call" {
+    if form[0] == vm_emit_nameof("call") {
         return emit_call(form, out)
     }
-    if form[0] == "ident" {
+    if form[0] == vm_emit_nameof("ident") {
         return emit_ident(form, out)
     }
     if form[0] == "putchar" {
         return emit_putchar(form, out)
     }
-    if form[0] == "exec" {
+    if form[0] == vm_emit_nameof("exec") {
         return emit_exec(form, out)
     }
-    if form[0] == "length" {
+    if form[0] == vm_emit_nameof("length") {
         return emit_length(form, out)
     }
-    if form[0] == "import" {
+    if form[0] == vm_emit_nameof("import") {
         return emit_import(form, out)
     }
-    if form[0] == "dump" {
+    if form[0] == vm_emit_nameof("dump") {
         return emit_dump(form, out)
     }
-    if form[0] == "read" {
+    if form[0] == vm_emit_nameof("read") {
         return emit_read(form, out)
     }
-    if form[0] == "write" {
+    if form[0] == vm_emit_nameof("write") {
         return emit_write(form, out)
     }
-    if form[0] == "type" {
+    if form[0] == vm_emit_nameof("type") {
         return emit_type(form, out)
     }
-    if form[0] == "array" {
+    if form[0] == vm_emit_nameof("array") {
         return emit_array(form, out)
     }
-    if form[0] == "str" {
+    if form[0] == vm_emit_nameof("str") {
         return emit_str(form, out)
     }
-    if form[0] == "while" {
+    if form[0] == vm_emit_nameof("while") {
         return emit_while(form, out)
     }
-    if form[0] == "if" {
+    if form[0] == vm_emit_nameof("if") {
         return emit_if(form, out)
     }
     if form[0] == "=" {
         return emit_set(form, out)
     }
-    if form[0] == "do" {
+
+    if form[0] == vm_emit_nameof("do") {
         return emit_do(form, out)
     }
-    debug_puts("unknwon form: " ~ form[0])
+    puts("unknown form: " ~ form[0])
     exit
 }
 
@@ -1015,8 +1052,8 @@ def emit_link(out) {
         if type(cur) == link_type {
             func = findvar(out[3], cur)
             if func == none {
-                debug_put("link error: undefined: ")
-                debug_puts(cur)
+                put("link error: undefined: ")
+                puts(cur)
                 exit
             }
             ret ~= [func]
@@ -1029,7 +1066,7 @@ def emit_link(out) {
 }
 
 def emit(form, path) {
-    out = [[], 0, [[str_to_array("args"), 0]], [], [path, []]]
+    out = [[], 0, [[str_to_array("args"), 0]], [], [path, []], path, []]
     emit_to(form, out)
     out[0] ~= [opcode("exit")]
     linked = emit_link(out)
@@ -1080,7 +1117,7 @@ def main(argv) {
                 }
             } else {
                 if srcfile != none {
-                    debug_puts("only one source can be provided")
+                    puts("only one source can be provided")
                     exit
                 }
                 srcfile = arg
@@ -1089,13 +1126,13 @@ def main(argv) {
         }
     }
     if srcfile == none {
-        debug_puts("no sources provided")
+        puts("no sources provided")
         exit
     }
     src = read(srcfile)
     if src == none {
-        debug_put("no such file: ")
-        debug_puts(src)
+        put("no such file: ")
+        puts(src)
     }
     tokens = tokenize(src)
     ast = parse(tokens)
