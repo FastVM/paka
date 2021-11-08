@@ -147,10 +147,8 @@ def stream_starts_swith(src, items) {
     }
     return true
 }
-## 
-def tokenize_stream1(bsrc) {
-    keywords = ["while", "if", "else", "def", "return", "exit", "true", "false", "none"]
-    ops_flat = ["<=", ">=", "==", "!=", "~=", "=", "~", "+", "-", "%", "*", "/", "<", ">"]
+
+def tokenize_stream1(bsrc, keywords, ops_flat) {
     xop = 0
     while xop < length(ops_flat) {
         op = ops_flat[xop]
@@ -163,18 +161,18 @@ def tokenize_stream1(bsrc) {
     first = stream_peek(bsrc)
     if first == ' ' {
         stream_skip1(bsrc)
-        return tokenize_stream1(bsrc)
+        return tokenize_stream1(bsrc, keywords, ops_flat)
     }
-    if first == "\n"[0] {
+    if first == 10 {
         stream_skip1(bsrc)
-        return tokenize_stream1(bsrc)
+        return tokenize_stream1(bsrc, keywords, ops_flat)
     }
     if first == '#' {
         stream_skip1(bsrc)
         while true {
             cur = stream_read(bsrc)
-            if cur == "\n"[0] {
-                return tokenize_stream1(bsrc)
+            if cur == 10 {
+                return tokenize_stream1(bsrc, keywords, ops_flat)
             }
         }
     }
@@ -209,7 +207,7 @@ def tokenize_stream1(bsrc) {
                 exit
             }
             if cur == 'n' {
-                return ["num", "\n"[0], bsrc[1]]
+                return ["num", 10, bsrc[1]]
             } 
             if cur == "\""[0] {
                 return ["num", cur, bsrc[1]]
@@ -240,7 +238,7 @@ def tokenize_stream1(bsrc) {
             if cur == "\\"[0] {
                 cur = stream_read(bsrc)
                 if cur == 'n' {
-                    ret ~= ["\n"[0]]
+                    ret ~= [10]
                 } 
                 if cur == "\""[0] {
                     ret ~= ["\""[0]]
@@ -287,13 +285,15 @@ def tokenize_stream1(bsrc) {
 }
 
 def tokenize(src) {
+    keywords = ["while", "if", "else", "def", "return", "exit", "true", "false", "none"]
+    ops_flat = ["<=", ">=", "==", "!=", "~=", "=", "~", "+", "-", "%", "*", "/", "<", ">"]
     ssrc = stream_new(src) 
     tokens = []
     while true {
         if stream_peek(ssrc) == 0 {
             return tokens
         }
-        token = tokenize_stream1(ssrc)
+        token = tokenize_stream1(ssrc, keywords, ops_flat)
         if token == 0 {
             return tokens
         }
@@ -301,7 +301,7 @@ def tokenize(src) {
     }
 }
 
-def read_post(tokens, last) {
+def read_post(tokens, last, state) {
     first = stream_peek(tokens)
     if first == 0 {
         return last
@@ -309,9 +309,9 @@ def read_post(tokens, last) {
     if first[0] == "open" {
         if first[1] == '[' {
             stream_skip1(tokens)
-            index = read_expr_base(tokens)
+            index = read_expr_base(tokens, state)
             stream_skip1(tokens)
-            return read_post(tokens, ["index", last, index])
+            return read_post(tokens, ["index", last, index], state)
         }
         if first[1] == '(' {
             stream_skip1(tokens)
@@ -348,9 +348,9 @@ def read_post(tokens, last) {
                 }
                 if cur[0] == "close" {
                     stream_skip1(tokens)
-                    return read_post(tokens, args)
+                    return read_post(tokens, args, state)
                 }
-                arg = read_expr_base(tokens)
+                arg = read_expr_base(tokens, state)
                 args ~= [arg]
                 if stream_peek(tokens)[0] == "comma" {
                     stream_skip1(tokens)
@@ -361,7 +361,7 @@ def read_post(tokens, last) {
     return last
 }
 
-def read_single(tokens) {
+def read_single(tokens, state) {
     first = stream_peek(tokens)
     if first == 0 {
         return none
@@ -428,7 +428,7 @@ def read_single(tokens) {
                     stream_skip1(tokens)
                     return args
                 }
-                expr = read_expr_base(tokens)
+                expr = read_expr_base(tokens, state)
                 args ~= [expr]
                 if stream_peek(tokens)[0] == "comma" {
                     stream_skip1(tokens)
@@ -437,7 +437,7 @@ def read_single(tokens) {
         }
         if first[1] == '(' {
             stream_skip1(tokens)
-            ret = read_expr_base(tokens)
+            ret = read_expr_base(tokens, state)
             stream_skip1(tokens)
             return ret
         }
@@ -465,12 +465,12 @@ def parse_is_not_in(op, some) {
     return true
 }
 
-def read_expr(tokens, depth) {
-    ops = [["=", "~="], ["<", ">", "<=", ">=", "==", "!="], ["~", "+", "-"], ["%", "*", "/"]]
+def read_expr(tokens, depth, state) {
+    ops = state[0]
     if depth >= length(ops) {
-        return read_post(tokens, read_single(tokens))
+        return read_post(tokens, read_single(tokens, state), state)
     }
-    ret = read_expr(tokens, depth + 1)
+    ret = read_expr(tokens, depth + 1, state)
     while true {
         first = stream_peek(tokens)
         if first == 0 {
@@ -483,32 +483,32 @@ def read_expr(tokens, depth) {
             return ret
         }
         stream_skip1(tokens)
-        ret = [first[1], ret, read_expr(tokens, depth + 1)]
+        ret = [first[1], ret, read_expr(tokens, depth + 1, state)]
     }
 }
 
-def read_expr_base(tokens) {
-    ret = read_expr(tokens, 0)
+def read_expr_base(tokens, state) {
+    ret = read_expr(tokens, 0, state)
     return ret
 }
 
-def read_stmt(tokens) {
+def read_stmt(tokens, state) {
     first = stream_peek(tokens)
     if first[0] == "while" {
         stream_skip1(tokens)
-        expr = read_expr_base(tokens)
-        block = read_block(tokens)
+        expr = read_expr_base(tokens, state)
+        block = read_block(tokens, state)
         return ["while", expr, block]
     }
     if first[0] == "def" {
         stream_skip1(tokens)
-        expr = read_expr_base(tokens)
-        block = read_block(tokens)
+        expr = read_expr_base(tokens, state)
+        block = read_block(tokens, state)
         return ["def", expr, block]
     }
     if first[0] == "return" {
         stream_skip1(tokens)
-        expr = read_expr_base(tokens)
+        expr = read_expr_base(tokens, state)
         return ["return", expr]
     }
     if first[0] == "exit" {
@@ -517,23 +517,23 @@ def read_stmt(tokens) {
     }
     if first[0] == "if" {
         stream_skip1(tokens)
-        expr = read_expr_base(tokens)
-        block1 = read_block(tokens)
+        expr = read_expr_base(tokens, state)
+        block1 = read_block(tokens, state)
         block2 = ["do"]
         first = stream_peek(tokens)
         if first != 0 {
             if first[0] == "else" {
                 stream_skip1(tokens)
-                block2 = read_block(tokens)
+                block2 = read_block(tokens, state)
             }
         }
         return ["if", expr, block1, block2]
     }
-    ret = read_expr_base(tokens)
+    ret = read_expr_base(tokens, state)
     return ret
 }
 
-def read_block_body(tokens) {
+def read_block_body(tokens, state) {
     ret = ["do"]
     while true {
         first = stream_peek(tokens)
@@ -543,16 +543,16 @@ def read_block_body(tokens) {
         if first[0] == "close" {
             return ret
         }
-        stmt = read_stmt(tokens)
+        stmt = read_stmt(tokens, state)
         ret ~= [stmt]
     }
 }
 
-def read_block(tokens) {
+def read_block(tokens, state) {
     first = stream_peek(tokens)
     if first[0] == "open" {
         stream_skip1(tokens)
-        ret = read_block_body(tokens)
+        ret = read_block_body(tokens, state)
         stream_skip1(tokens)
         return ret
     }
@@ -565,7 +565,9 @@ def read_block(tokens) {
 
 def parse(tokens) {
     xstream = stream_new(tokens)
-    ret = read_block_body(xstream)
+    ops = [["=", "~="], ["<", ">", "<=", ">=", "==", "!="], ["~", "+", "-"], ["%", "*", "/"]]
+    state = [ops]
+    ret = read_block_body(xstream, state)
     return ret
 }
 

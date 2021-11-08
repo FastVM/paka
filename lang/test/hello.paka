@@ -1,6 +1,4 @@
 
-## import("../io.paka")
 import("../io.paka")
 
 puts("Hello, World!") 
-                                                                   
