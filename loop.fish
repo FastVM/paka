@@ -1,5 +1,7 @@
+echo building bin/minivm
+gmake -C minivm -Bj10 > /dev/null
 echo building bin/stage1
-gmake -j8 bin/stage1 > /dev/null
+gmake -B bin/stage1 > /dev/null
 for cur in (seq (math $argv[1] - 1))
     set next (math $cur + 1)
     echo building bin/stage$next

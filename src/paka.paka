@@ -1,5 +1,4 @@
 
-
 macro vm {
     ast.num
     ast.true
@@ -63,6 +62,17 @@ macro opcode {
     do_dump
     do_read
     do_write
+}
+
+macro token {
+    open
+    close
+    op
+    str
+    num
+    ident
+    comma
+    keyword
 }
 
 def put(str) {
@@ -223,7 +233,7 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
         op = ops_flat[xop]
         if stream_starts_swith(bsrc, op) {
             stream_skip(bsrc, length(op))
-            return ["op", op, bsrc[1]]
+            return [token.op, op, bsrc[1]]
         }
         xop = xop + 1
     }
@@ -246,25 +256,25 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
         }
     }
     if first == '(' {
-        return ["open", stream_read(bsrc), bsrc[1]]
+        return [token.open, stream_read(bsrc), bsrc[1]]
     }
     if first == ')' {
-        return ["close", stream_read(bsrc), bsrc[1]]
+        return [token.close, stream_read(bsrc), bsrc[1]]
     }
     if first == '{' {
-        return ["open", stream_read(bsrc), bsrc[1]]
+        return [token.open, stream_read(bsrc), bsrc[1]]
     }
     if first == '}' {
-        return ["close", stream_read(bsrc), bsrc[1]]
+        return [token.close, stream_read(bsrc), bsrc[1]]
     }
     if first == '[' {
-        return ["open", stream_read(bsrc), bsrc[1]]
+        return [token.open, stream_read(bsrc), bsrc[1]]
     }
     if first == ']' {
-        return ["close", stream_read(bsrc), bsrc[1]]
+        return [token.close, stream_read(bsrc), bsrc[1]]
     }
     if first == ',' {
-        return ["comma", stream_read(bsrc), bsrc[1]]
+        return [token.comma, stream_read(bsrc), bsrc[1]]
     }
     if first == ''' {
         stream_skip1(bsrc)
@@ -276,20 +286,20 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
                 exit
             }
             if cur == 'n' {
-                return ["num", 10, bsrc[1]]
+                return [token.num, 10, bsrc[1]]
             } 
             if cur == "\""[0] {
-                return ["num", cur, bsrc[1]]
+                return [token.num, cur, bsrc[1]]
             }
             if cur == "\\"[0] {
-                return ["num", cur, bsrc[1]]
+                return [token.num, cur, bsrc[1]]
             }
         } else {
             if stream_read() != ''' {
                 puts("unterminated char literal")
                 exit
             }
-            return ["num", cur, bsrc[1]]
+            return [token.num, cur, bsrc[1]]
         }
     }
     if first == "\""[0] {
@@ -302,7 +312,7 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
                 exit
             }
             if cur == "\""[0] {
-                return ["str", ret, bsrc[1]]
+                return [token.str, ret, bsrc[1]]
             }
             if cur == "\\"[0] {
                 cur = stream_read(bsrc)
@@ -327,7 +337,7 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
         while char_isdigit(stream_peek(bsrc)) {
             n = n * 10 + stream_read(bsrc) - '0'
         }
-        return ["num", n, bsrc[1]]
+        return [token.num, n, bsrc[1]]
     }
     if char_id0(first) {
         xsrc = []
@@ -338,11 +348,11 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
                 ki = 0
                 while ki < length(keywords) {
                     if str_to_array(keywords[ki]) == xsrc {
-                        return [keywords[ki], xsrc, bsrc[1]]
+                        return [token.keyword, xsrc, bsrc[1]]
                     }
                     ki = ki + 1
                 }
-                return ["ident", xsrc, bsrc[1]]
+                return [token.ident, xsrc, bsrc[1]]
             }
         }
     }
@@ -376,7 +386,7 @@ def read_call(tokens, args, state) {
         puts("error: got eof, wanted `(`")
         exit
     }
-    if got[0] != "open" {
+    if got[0] != token.open {
         puts("error: wanted `(`")
         exit
     }
@@ -386,13 +396,13 @@ def read_call(tokens, args, state) {
             puts("error 1")
             exit
         }
-        if cur[0] == "close" {
+        if cur[0] == token.close {
             stream_skip1(tokens)
             return read_post(tokens, args, state)
         }
         arg = read_expr_base(tokens, state)
         args ~= [arg]
-        if stream_peek(tokens)[0] == "comma" {
+        if stream_peek(tokens)[0] == token.comma {
             stream_skip1(tokens)
         }
     }
@@ -403,7 +413,7 @@ def read_post(tokens, last, state) {
     if first == 0 {
         return last
     }
-    if first[0] == "open" {
+    if first[0] == token.open {
         if first[1] == '[' {
             stream_skip1(tokens)
             index = read_expr_base(tokens, state)
@@ -423,27 +433,15 @@ def read_single(tokens, state) {
     if first == 0 {
         return none
     }
-    if first[0] == "true" {
-        stream_skip1(tokens)
-        return [vm.ast.true]
-    }
-    if first[0] == ("false") {
-        stream_skip1(tokens)
-        return [vm.ast.false]
-    }
-    if first[0] == ("none") {
-        stream_skip1(tokens)
-        return [vm.ast.none]
-    }
-    if first[0] == ("num") {
+    if first[0] == (token.num) {
         stream_skip1(tokens)
         return [vm.ast.num, first[1]]
     }
-    if first[0] == ("str") {
+    if first[0] == (token.str) {
         stream_skip1(tokens)
         return [vm.ast.str, first[1]]
     }
-    if first[0] == ("ident") {
+    if first[0] == (token.ident) {
         stream_skip1(tokens)
         if first[1] == "exec" {
             return read_call(tokens, [vm.ast.exec], state)
@@ -471,23 +469,19 @@ def read_single(tokens, state) {
         } 
         return [vm.ast.ident, first[1]]
     }
-    if first[0] == "open" {
+    if first[0] == token.open {
         if first[1] == '[' {
             stream_skip1(tokens)
             args = [vm.ast.array]
             while true {
                 cur = stream_peek(tokens)
-                if cur == 0 {
-                    puts("error 2")
-                    exit
-                }
-                if cur[0] == "close" {
+                if cur[0] == token.close {
                     stream_skip1(tokens)
                     return args
                 }
                 expr = read_expr_base(tokens, state)
                 args ~= [expr]
-                if stream_peek(tokens)[0] == "comma" {
+                if stream_peek(tokens)[0] == token.comma {
                     stream_skip1(tokens)
                 }
             } 
@@ -499,11 +493,22 @@ def read_single(tokens, state) {
             return ret
         }
     }
-    put("@")
-    putn(first[2])
-    puts("")
+    if first[0] == token.keyword {
+        if first[1] == "true" {
+            stream_skip1(tokens)
+            return [vm.ast.true]
+        }
+        if first[1] == ("false") {
+            stream_skip1(tokens)
+            return [vm.ast.false]
+        }
+        if first[1] == ("none") {
+            stream_skip1(tokens)
+            return [vm.ast.none]
+        }
+    }
     put("error: unexpected ")
-    put(first[0])
+    putn(first[0])
     put(": `")
     put(first[1])
     put("`")
@@ -533,7 +538,7 @@ def read_expr(tokens, depth, state) {
         if first == 0 {
             return ret
         }
-        if first[0] != "op" {
+        if first[0] != token.op {
             return ret
         }
         if parse_is_not_in(first[1], ops[depth]) {
@@ -551,62 +556,61 @@ def read_expr_base(tokens, state) {
 
 def read_stmt(tokens, state) {
     first = stream_peek(tokens)
-    if first[0] == ("while") {
-        stream_skip1(tokens)
-        expr = read_expr_base(tokens, state)
-        block = read_block(tokens, state)
-        return [vm.ast.while, expr, block]
-    }
-    if first[0] == ("def") {
-        stream_skip1(tokens)
-        expr = read_expr_base(tokens, state)
-        block = read_block(tokens, state)
-        return [vm.ast.def, expr, block]
-    }
-    if first[0] == ("return") {
-        stream_skip1(tokens)
-        expr = read_expr_base(tokens, state)
-        return [vm.ast.return, expr]
-    }
-    if first[0] == ("macro") {
-        stream_skip1(tokens)
-        name = stream_read(tokens)
-        if name == 0 {
-            puts("macro cannot be last word in file")
-            exit
+    if first[0] == token.keyword {
+        if first[1] == "while" {
+            stream_skip1(tokens)
+            expr = read_expr_base(tokens, state)
+            block = read_block(tokens, state)
+            return [vm.ast.while, expr, block]
         }
-        if name[0] != "ident" {
-            puts("macro needs to be followed by identifer")
-            exit
+        if first[1] == "def" {
+            stream_skip1(tokens)
+            expr = read_expr_base(tokens, state)
+            block = read_block(tokens, state)
+            return [vm.ast.def, expr, block]
         }
-        expr = read_block(tokens, state)
-        return [vm.ast.macro, name, expr]
-    }
-    if first[0] == ("enum") {
-        stream_skip1(tokens)
-        expr = read_expr_base(tokens, state)
-        return [vm.ast.enum, expr]
-    }
-    if first[0] == ("exit") {
-        stream_skip1(tokens)
-        return [vm.ast.exit]
-    }
-    if first[0] == ("if") {
-        stream_skip1(tokens)
-        expr = read_expr_base(tokens, state)
-        block1 = read_block(tokens, state)
-        block2 = [vm.ast.do]
-        first = stream_peek(tokens)
-        if first != 0 {
-            if first[0] == "else" {
-                stream_skip1(tokens)
-                block2 = read_block(tokens, state)
+        if first[1] == "return" {
+            stream_skip1(tokens)
+            expr = read_expr_base(tokens, state)
+            return [vm.ast.return, expr]
+        }
+        if first[1] == "macro" {
+            stream_skip1(tokens)
+            name = stream_read(tokens)
+            if name[0] != token.ident {
+                puts("macro needs to be followed by identifer")
+                exit
             }
+            expr = read_block(tokens, state)
+            return [vm.ast.macro, name, expr]
         }
-        return [vm.ast.if, expr, block1, block2]
+        if first[1] == "enum" {
+            stream_skip1(tokens)
+            expr = read_expr_base(tokens, state)
+            return [vm.ast.enum, expr]
+        }
+        if first[1] == "exit" {
+            stream_skip1(tokens)
+            return [vm.ast.exit]
+        }
+        if first[1] == "if" {
+            stream_skip1(tokens)
+            expr = read_expr_base(tokens, state)
+            block1 = read_block(tokens, state)
+            block2 = [vm.ast.do]
+            first = stream_peek(tokens)
+            if first[0] == token.keyword {
+                if first[1] == "else" {
+                    stream_skip1(tokens)
+                    block2 = read_block(tokens, state)
+                }
+            }
+            return [vm.ast.if, expr, block1, block2]
+        }
+    } else {
+        ret = read_expr_base(tokens, state)
+        return ret
     }
-    ret = read_expr_base(tokens, state)
-    return ret
 }
 
 def read_block_body(tokens, state) {
@@ -616,7 +620,7 @@ def read_block_body(tokens, state) {
         if first == 0 {
             return ret
         }
-        if first[0] == "close" {
+        if first[0] == token.close {
             return ret
         }
         stmt = read_stmt(tokens, state)
@@ -626,7 +630,7 @@ def read_block_body(tokens, state) {
 
 def read_block(tokens, state) {
     first = stream_peek(tokens)
-    if first[0] == "open" {
+    if first[0] == token.open {
         stream_skip1(tokens)
         ret = read_block_body(tokens, state)
         stream_skip1(tokens)
@@ -645,45 +649,6 @@ def parse(tokens) {
     state = [ops]
     ret = read_block_body(xstream, state)
     return ret
-}
-
-def xopcode(name) {
-    if name == "exit" { return 0 }
-    if name == "store_reg" { return 1 }
-    if name == "store_none" { return 2 }
-    if name == "store_bool" { return 3 }
-    if name == "store_int" { return 4 }
-    if name == "equal" { return 5 }
-    if name == "not_equal" { return 6 }
-    if name == "less" { return 7 }
-    if name == "greater" { return 8 }
-    if name == "less_than_equal" { return 9 }
-    if name == "greater_than_equal" { return 10 }
-    if name == "jump" { return 11 }
-    if name == "branch" { return 12 }
-    if name == "add" { return 13 }
-    if name == "sub" { return 14 }
-    if name == "mul" { return 15 }
-    if name == "div" { return 16 }
-    if name == "mod" { return 17 }
-    if name == "concat" { return 18 }
-    if name == "static_call" { return 19 }
-    if name == "return" { return 20 }
-    if name == "putchar" { return 21 }
-    if name == "string_new" { return 22 }
-    if name == "array_new" { return 23 }
-    if name == "length" { return 24 }
-    if name == "index_get" { return 25 }
-    if name == "index_set" { return 26 }
-    if name == "type" { return 27 }
-    if name == "exec" { return 28 }
-    if name == "extend" { return 29 }
-    if name == "push" { return 30 }
-    if name == "dump" { return 31 }
-    if name == "read" { return 32 }
-    if name == "write" { return 33 }
-    puts(str_to_array("unknown opcode: ") ~ name)
-    exit
 }
 
 def reg(out) {
@@ -778,10 +743,10 @@ def emit_do(form, out) {
 def findvar(vars, name) {
     i = 0
     while i < length(vars) {
-        if vars[i][0] == name {
-            return vars[i][1]
+        if vars[i] == name {
+            return vars[i + 1]
         }
-        i = i + 1
+        i = i + 2
     }
     return none
 }
@@ -808,7 +773,7 @@ def emit_set(form, out) {
         if found == none {
             from = emit_to(form[2], out)
             to = reg(out)
-            out[2] ~= [[form[1][1], to]]
+            out[2] ~= [form[1][1], to]
             out[0] ~= [opcode.do_store_reg, to, from]
             return to
         } else {
@@ -835,7 +800,7 @@ def emit_macro(form, out) {
     where = 1
     while where < length(form[2]) {
         name = form[1][1] ~ ['.'] ~ form[2][where][1]
-        out[5] ~= [[name, where]]
+        out[5] ~= [name, where]
         where = where + 1
     }
 }
@@ -848,14 +813,14 @@ def emit_def(form, out) {
     out[2] = []
     i = 2
     while i < length(call) {
-        out[2] ~= [[call[i][1], i - 1]]
+        out[2] ~= [call[i][1], i - 1]
         i = i + 1
     }
     out[1] = i - 1
     jout = length(out[0]) + 1
     nregs = length(out[0]) + 2
-    out[0] ~= [opcode.do_jump, "jump", 256]
-    out[3] ~= [[call[1][1], length(out[0])]]
+    out[0] ~= [opcode.do_jump, 0, 256]
+    out[3] ~= [call[1][1], length(out[0])]
     resreg = emit_to(body, out)
     if resreg == none {
         out[0] ~= [opcode.do_store_none, 0, opcode.do_return, 0]
@@ -897,7 +862,7 @@ def emit_while(form, out) {
     cond = emit_to(form[1], out)
     sout = length(out[0]) + 2
     sfall = length(out[0]) + 4
-    out[0] ~= [opcode.do_branch, sfall, "jump", cond]
+    out[0] ~= [opcode.do_branch, sfall, 0, cond]
     emit_to(form[2], out)
     out[0] ~= [opcode.do_jump, jredo]
     out[0][sout] = length(out[0])
@@ -908,15 +873,15 @@ def emit_if(form, out) {
     cond = emit_to(form[1], out)
     st = length(out[0]) + 1
     sf = length(out[0]) + 2
-    out[0] ~= [opcode.do_branch, "jump", "jump", cond]
+    out[0] ~= [opcode.do_branch, 0, 0, cond]
     jt = length(out[0])
     emit_to(form[2], out)
     so1 = length(out[0]) + 1
-    out[0] ~= [opcode.do_jump, "jump"]
+    out[0] ~= [opcode.do_jump, 0]
     jf = length(out[0])
     emit_to(form[3], out)
     so2 = length(out[0]) + 1
-    out[0] ~= [opcode.do_jump, "jump"]
+    out[0] ~= [opcode.do_jump, 0]
     jout = length(out[0])
     out[0][st] = jt
     out[0][sf] = jf
@@ -1129,7 +1094,7 @@ def emit_link(out) {
 }
 
 def emit(form, path) {
-    out = [[], 0, [[str_to_array("args"), 0]], [], [path, []], []]
+    out = [[], 0, [str_to_array("args"), 0], [], [path, []], []]
     emit_to(form, out)
     out[0] ~= [0]
     linked = emit_link(out)
