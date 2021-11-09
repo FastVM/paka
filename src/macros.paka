@@ -1,0 +1,76 @@
+
+macro vm {
+    ast.num
+    ast.true
+    ast.false
+    ast.none
+    ast.index
+    ast.def
+    ast.return
+    ast.macro
+    ast.exit
+    ast.call
+    ast.ident
+    ast.exec
+    ast.length
+    ast.import
+    ast.dump
+    ast.read
+    ast.write
+    ast.type
+    ast.array
+    ast.str
+    ast.while
+    ast.if
+    ast.do
+    ast.index
+    ast.putchar
+    ast.enum
+}
+
+macro opcode {
+    do_store_reg
+    do_store_none
+    do_store_bool
+    do_store_int
+    do_equal
+    do_not_equal
+    do_less
+    do_greater
+    do_less_than_equal
+    do_greater_than_equal
+    do_jump
+    do_branch
+    do_add
+    do_sub
+    do_mul
+    do_div
+    do_mod
+    do_concat
+    do_static_call
+    do_return
+    do_putchar
+    do_string_new
+    do_array_new
+    do_length
+    do_index_get
+    do_index_set
+    do_type
+    do_exec
+    do_extend
+    do_push
+    do_dump
+    do_read
+    do_write
+}
+
+macro token {
+    open
+    close
+    op
+    str
+    num
+    ident
+    comma
+    keyword
+}

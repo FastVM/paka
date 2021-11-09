@@ -1,0 +1,22 @@
+
+def file_dir_len(filename) {
+    i = length(filename)
+    while i > 0 {
+        i = i - 1
+        if filename[i] == '/' {
+            return i
+        }
+    }
+    return 0
+}
+
+def file_dir(filename) {
+    i = 0
+    n = file_dir_len(filename)
+    ret = []
+    while i < n {
+        ret ~= [filename[i]]
+        i = i + 1
+    }
+    return ret
+}

@@ -1,0 +1,272 @@
+
+
+def read_call(tokens, args, state) {
+    got = stream_read(tokens)
+    if got == 0 {
+        puts("error: got eof, wanted `(`")
+        exit
+    }
+    if got[0] != token.open {
+        puts("error: wanted `(`")
+        exit
+    }
+    while true {
+        cur = stream_peek(tokens)
+        if cur == 0 {
+            puts("error 1")
+            exit
+        }
+        if cur[0] == token.close {
+            stream_skip1(tokens)
+            return read_post(tokens, args, state)
+        }
+        arg = read_expr_base(tokens, state)
+        args ~= [arg]
+        if stream_peek(tokens)[0] == token.comma {
+            stream_skip1(tokens)
+        }
+    }
+}
+
+def read_post(tokens, last, state) {
+    first = stream_peek(tokens)
+    if first == 0 {
+        return last
+    }
+    if first[0] == token.open {
+        if first[1] == '[' {
+            stream_skip1(tokens)
+            index = read_expr_base(tokens, state)
+            stream_skip1(tokens)
+            return read_post(tokens, [vm.ast.index, last, index], state)
+        }
+        if first[1] == '(' {
+            args = [vm.ast.call, last] 
+            return read_call(tokens, args, state)
+        }
+    }
+    return last
+}
+
+def read_single(tokens, state) {
+    first = stream_peek(tokens)
+    if first == 0 {
+        return none
+    }
+    if first[0] == (token.num) {
+        stream_skip1(tokens)
+        return [vm.ast.num, first[1]]
+    }
+    if first[0] == (token.str) {
+        stream_skip1(tokens)
+        return [vm.ast.str, first[1]]
+    }
+    if first[0] == (token.ident) {
+        stream_skip1(tokens)
+        if first[1] == "exec" {
+            return read_call(tokens, [vm.ast.exec], state)
+        } 
+        if first[1] == "putchar" {
+            return read_call(tokens, [vm.ast.putchar], state)
+        } 
+        if first[1] == "length" {
+            return read_call(tokens, [vm.ast.length], state)
+        }
+        if first[1] == "dump" {
+            return read_call(tokens, [vm.ast.dump], state)
+        }
+        if first[1] == "write" {
+            return read_call(tokens, [vm.ast.write], state)
+        }
+        if first[1] == "read" {
+            return read_call(tokens, [vm.ast.read], state)
+        }
+        if first[1] == "import" {
+            return read_call(tokens, [vm.ast.import], state)
+        }
+        if first[1] == "type" {
+            return read_call(tokens, [vm.ast.type], state)
+        } 
+        return [vm.ast.ident, first[1]]
+    }
+    if first[0] == token.open {
+        if first[1] == '[' {
+            stream_skip1(tokens)
+            args = [vm.ast.array]
+            while true {
+                cur = stream_peek(tokens)
+                if cur[0] == token.close {
+                    stream_skip1(tokens)
+                    return args
+                }
+                expr = read_expr_base(tokens, state)
+                args ~= [expr]
+                if stream_peek(tokens)[0] == token.comma {
+                    stream_skip1(tokens)
+                }
+            } 
+        }
+        if first[1] == '(' {
+            stream_skip1(tokens)
+            ret = read_expr_base(tokens, state)
+            stream_skip1(tokens)
+            return ret
+        }
+    }
+    if first[0] == token.keyword {
+        if first[1] == "true" {
+            stream_skip1(tokens)
+            return [vm.ast.true]
+        }
+        if first[1] == ("false") {
+            stream_skip1(tokens)
+            return [vm.ast.false]
+        }
+        if first[1] == ("none") {
+            stream_skip1(tokens)
+            return [vm.ast.none]
+        }
+    }
+    put("error: unexpected ")
+    putn(first[0])
+    put(": `")
+    put(first[1])
+    put("`")
+    puts("")
+    exit
+}
+
+def parse_is_not_in(op, some) {
+    i = 0
+    while i < length(some) {
+        if op == some[i] {
+            return false
+        }
+        i = i + 1
+    }
+    return true
+}
+
+def read_expr(tokens, depth, state) {
+    ops = state[0]
+    if depth >= length(ops) {
+        return read_post(tokens, read_single(tokens, state), state)
+    }
+    ret = read_expr(tokens, depth + 1, state)
+    while true {
+        first = stream_peek(tokens)
+        if first == 0 {
+            return ret
+        }
+        if first[0] != token.op {
+            return ret
+        }
+        if parse_is_not_in(first[1], ops[depth]) {
+            return ret
+        }
+        stream_skip1(tokens)
+        ret = [first[1], ret, read_expr(tokens, depth + 1, state)]
+    }
+}
+
+def read_expr_base(tokens, state) {
+    ret = read_expr(tokens, 0, state)
+    return ret
+}
+
+def read_stmt(tokens, state) {
+    first = stream_peek(tokens)
+    if first[0] == token.keyword {
+        if first[1] == "while" {
+            stream_skip1(tokens)
+            expr = read_expr_base(tokens, state)
+            block = read_block(tokens, state)
+            return [vm.ast.while, expr, block]
+        }
+        if first[1] == "def" {
+            stream_skip1(tokens)
+            expr = read_expr_base(tokens, state)
+            block = read_block(tokens, state)
+            return [vm.ast.def, expr, block]
+        }
+        if first[1] == "return" {
+            stream_skip1(tokens)
+            expr = read_expr_base(tokens, state)
+            return [vm.ast.return, expr]
+        }
+        if first[1] == "macro" {
+            stream_skip1(tokens)
+            name = stream_read(tokens)
+            if name[0] != token.ident {
+                puts("macro needs to be followed by identifer")
+                exit
+            }
+            expr = read_block(tokens, state)
+            return [vm.ast.macro, name, expr]
+        }
+        if first[1] == "enum" {
+            stream_skip1(tokens)
+            expr = read_expr_base(tokens, state)
+            return [vm.ast.enum, expr]
+        }
+        if first[1] == "exit" {
+            stream_skip1(tokens)
+            return [vm.ast.exit]
+        }
+        if first[1] == "if" {
+            stream_skip1(tokens)
+            expr = read_expr_base(tokens, state)
+            block1 = read_block(tokens, state)
+            block2 = [vm.ast.do]
+            first = stream_peek(tokens)
+            if first[0] == token.keyword {
+                if first[1] == "else" {
+                    stream_skip1(tokens)
+                    block2 = read_block(tokens, state)
+                }
+            }
+            return [vm.ast.if, expr, block1, block2]
+        }
+    } else {
+        ret = read_expr_base(tokens, state)
+        return ret
+    }
+}
+
+def read_block_body(tokens, state) {
+    ret = [vm.ast.do]
+    while true {
+        first = stream_peek(tokens)
+        if first == 0 {
+            return ret
+        }
+        if first[0] == token.close {
+            return ret
+        }
+        stmt = read_stmt(tokens, state)
+        ret ~= [stmt]
+    }
+}
+
+def read_block(tokens, state) {
+    first = stream_peek(tokens)
+    if first[0] == token.open {
+        stream_skip1(tokens)
+        ret = read_block_body(tokens, state)
+        stream_skip1(tokens)
+        return ret
+    }
+    put("@")
+    putn(first[2])
+    puts("")
+    puts("parser: block error")
+    exit
+}
+
+def parse(tokens) {
+    xstream = stream_new(tokens)
+    ops = [["=", "~="], ["<", ">", "<=", ">=", "==", "!="], ["~", "+", "-"], ["%", "*", "/"]]
+    state = [ops]
+    ret = read_block_body(xstream, state)
+    return ret
+}

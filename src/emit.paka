@@ -1,0 +1,457 @@
+
+def reg(out) {
+    out[1] = out[1] + 1
+    return out[1]
+}
+
+def emit_num(form, out) {
+    ret = reg(out)
+    out[0] ~= [opcode.do_store_int, ret, form[1]]
+    return ret
+}
+
+def emit_true(form, out) {
+    ret = reg(out)
+    out[0] ~= [opcode.do_store_bool, ret, 1]
+    return ret
+}
+
+def emit_false(form, out) {
+    ret = reg(out)
+    out[0] ~= [opcode.do_store_bool, ret, 0]
+    return ret
+}
+
+def emit_none(form, out) {
+    ret = reg(out)
+    out[0] ~= [opcode.do_store_none, ret]
+    return ret
+}
+
+def emit_binop(op, form, out) {
+    r1 = emit_to(form[1], out)
+    r2 = emit_to(form[2], out)
+    ret = reg(out)
+    out[0] ~= [op, ret, r1, r2]
+    return ret
+}
+
+def emit_putchar(form, out) {
+    r1 = emit_to(form[1], out)
+    out[0] ~= [opcode.do_putchar, r1]
+    return none
+}
+
+def emit_extend(form, out) {
+    r1 = emit_to(form[1], out)
+    if form[2][0] == vm.ast.array {
+        i = 1
+        while i < length(form[2]) {
+            rn = emit_to(form[2][i], out)
+            out[0] ~= [opcode.do_push, r1, rn] 
+            i = i + 1    
+        }
+    } else {
+        r2 = emit_to(form[2], out)
+        out[0] ~= [opcode.do_extend, r1, r2]
+    }
+    return r1
+}
+
+def emit_exec(form, out) {
+    r1 = emit_to(form[1], out)
+    r2 = emit_to(form[2], out)
+    out[0] ~= [opcode.do_exec, r1, r2]
+    return none
+}
+
+def emit_length(form, out) {
+    r1 = emit_to(form[1], out)
+    ret = reg(out)
+    out[0] ~= [opcode.do_length, ret, r1]
+    return ret
+}
+
+def emit_type(form, out) {
+    r1 = emit_to(form[1], out)
+    ret = reg(out)
+    out[0] ~= [opcode.do_type, ret, r1]
+    return ret
+}
+
+def emit_do(form, out) {
+    i = 1
+    while i < length(form) {
+        emit_to(form[i], out)
+        i = i + 1
+    } 
+    return none
+}
+
+def findvar(vars, name) {
+    i = 0
+    while i < length(vars) {
+        if vars[i] == name {
+            return vars[i + 1]
+        }
+        i = i + 2
+    }
+    return none
+}
+
+def emit_ident(form, out) {
+    res = findvar(out[2], form[1])
+    if res != none {
+        return res
+    }
+    res = findvar(out[5], form[1])
+    if res != none {
+        oreg = reg(out)
+        out[0] ~= [opcode.do_store_int, oreg, res]
+        return oreg
+    }
+    puts(str_to_array("undefined ident: ") ~ form[1])
+    exit
+
+}
+
+def emit_set(form, out) {
+    if form[1][0] == vm.ast.ident {
+        found = findvar(out[2], form[1][1])
+        if found == none {
+            from = emit_to(form[2], out)
+            to = reg(out)
+            out[2] ~= [form[1][1], to]
+            out[0] ~= [opcode.do_store_reg, to, from]
+            return to
+        } else {
+            from = emit_to(form[2], out)
+            out[0] ~= [opcode.do_store_reg, found, from]
+            return found
+        }
+    }
+    if form[1][0] == vm.ast.index {
+        array = emit_to(form[1][1], out)
+        index = emit_to(form[1][2], out)
+        from = emit_to(form[2], out)
+        out[0] ~= [opcode.do_index_set, array, index, from]
+        return array
+    }
+    put("cannot set to: ")
+    puts(form[1][0])
+    exit
+}
+
+def emit_macro(form, out) {
+    name = form[1][1]
+    idents = []
+    where = 1
+    while where < length(form[2]) {
+        name = form[1][1] ~ ['.'] ~ form[2][where][1]
+        out[5] ~= [name, where]
+        where = where + 1
+    }
+}
+
+def emit_def(form, out) {
+    call = form[1]
+    body = form[2]
+    tmp1 = out[1]
+    tmp2 = out[2]
+    out[2] = []
+    i = 2
+    while i < length(call) {
+        out[2] ~= [call[i][1], i - 1]
+        i = i + 1
+    }
+    out[1] = i - 1
+    jout = length(out[0]) + 1
+    nregs = length(out[0]) + 2
+    out[0] ~= [opcode.do_jump, 0, 256]
+    out[3] ~= [call[1][1], length(out[0])]
+    resreg = emit_to(body, out)
+    if resreg == none {
+        out[0] ~= [opcode.do_store_none, 0, opcode.do_return, 0]
+    } else {
+        out[0] ~= [opcode.do_return, resreg]
+    }
+    out[0][nregs] = out[1]
+    out[1] = tmp1
+    out[2] = tmp2
+    out[0][jout] = length(out[0])
+    return none
+}
+
+def emit_return(form, out) {
+    rreg = emit_to(form[1], out)
+    out[0] ~= [opcode.do_return, rreg]
+    return none
+}
+
+def emit_exit(form, out) {
+    out[0] ~= [0]
+    return none
+}
+
+def emit_call(form, out) {
+    regs = []
+    i = 2
+    while i < length(form) {
+        regs ~= [emit_to(form[i], out)]
+        i = i + 1
+    }
+    ret = reg(out)
+    out[0] = out[0] ~ [opcode.do_static_call, ret, form[1][1], length(regs)] ~ regs
+    return ret
+}
+
+def emit_while(form, out) {
+    jredo = length(out[0])
+    cond = emit_to(form[1], out)
+    sout = length(out[0]) + 2
+    sfall = length(out[0]) + 4
+    out[0] ~= [opcode.do_branch, sfall, 0, cond]
+    emit_to(form[2], out)
+    out[0] ~= [opcode.do_jump, jredo]
+    out[0][sout] = length(out[0])
+    return none
+}
+
+def emit_if(form, out) {
+    cond = emit_to(form[1], out)
+    st = length(out[0]) + 1
+    sf = length(out[0]) + 2
+    out[0] ~= [opcode.do_branch, 0, 0, cond]
+    jt = length(out[0])
+    emit_to(form[2], out)
+    so1 = length(out[0]) + 1
+    out[0] ~= [opcode.do_jump, 0]
+    jf = length(out[0])
+    emit_to(form[3], out)
+    so2 = length(out[0]) + 1
+    out[0] ~= [opcode.do_jump, 0]
+    jout = length(out[0])
+    out[0][st] = jt
+    out[0][sf] = jf
+    out[0][so1] = jout
+    out[0][so2] = jout
+    return none
+}
+
+def emit_array(form, out) {
+    regs = []
+    i = 1
+    while i < length(form) {
+        regs ~= [emit_to(form[i], out)]
+        i = i + 1
+    }
+    ret = reg(out)
+    out[0] = out[0] ~ [opcode.do_array_new, ret, length(regs)] ~ regs
+    return ret
+}
+
+def emit_str(form, out) {
+    chrs = []
+    i = 0
+    while i < length(form[1]) {
+        chrs ~= [form[1][i]]
+        i = i + 1
+    }
+    ret = reg(out)
+    out[0] = out[0] ~ [opcode.do_string_new, ret, length(chrs)] ~ chrs
+    return ret
+}
+
+def emit_dump(form, out) {
+    r1 = emit_to(form[1], out)
+    r2 = emit_to(form[2], out)
+    out[0] ~= [opcode.do_dump, r1, r2]
+    return none
+}
+
+def emit_write(form, out) {
+    r1 = emit_to(form[1], out)
+    r2 = emit_to(form[2], out)
+    out[0] ~= [opcode.do_write, r1, r2]
+    return none
+}
+
+def emit_read(form, out) {
+    r1 = emit_to(form[1], out)
+    ret = reg(out)
+    out[0] ~= [opcode.do_read, ret, r1]
+    return ret
+}
+
+def emit_import(form, out) {
+    name = out[4][0] ~ ['/'] ~ form[1][1]
+    i = 0
+    while i < length(out[4][1]) {
+        existing = out[4][1][i]
+        if existing == name {
+            return none
+        }
+        i = i + 1
+    }
+    out[4][1] ~= [name]
+    src = read(name)
+    if src == none {
+        put("file not found: ")
+        puts(form[1][1])
+        exit
+    } else {
+        tokens = tokenize(src)
+        ast = parse(tokens)
+        emit_to(ast, out)
+        return none
+    }
+}
+
+def emit_to(form, out) {
+    if form[0] == vm.ast.num {
+        return emit_num(form, out)
+    }
+    if form[0] == vm.ast.true {
+        return emit_true(form, out)
+    }
+    if form[0] == vm.ast.false {
+        return emit_false(form, out)
+    }
+    if form[0] == vm.ast.none {
+        return emit_none(form, out)
+    }
+    if form[0] == vm.ast.index {
+        return emit_binop(opcode.do_index_get, form, out)
+    }
+    if form[0] == vm.ast.def {
+        return emit_def(form, out)
+    }
+    if form[0] == vm.ast.return {
+        return emit_return(form, out)
+    }
+    if form[0] == vm.ast.macro {
+        return emit_macro(form, out)
+    }
+    if form[0] == vm.ast.exit {
+        return emit_exit(form, out)
+    }
+    if form[0] == vm.ast.call {
+        return emit_call(form, out)
+    }
+    if form[0] == vm.ast.ident {
+        return emit_ident(form, out)
+    }
+    if form[0] == vm.ast.putchar {
+        return emit_putchar(form, out)
+    }
+    if form[0] == vm.ast.exec {
+        return emit_exec(form, out)
+    }
+    if form[0] == vm.ast.length {
+        return emit_length(form, out)
+    }
+    if form[0] == vm.ast.import {
+        return emit_import(form, out)
+    }
+    if form[0] == vm.ast.dump {
+        return emit_dump(form, out)
+    }
+    if form[0] == vm.ast.read {
+        return emit_read(form, out)
+    }
+    if form[0] == vm.ast.write {
+        return emit_write(form, out)
+    }
+    if form[0] == vm.ast.type {
+        return emit_type(form, out)
+    }
+    if form[0] == vm.ast.array {
+        return emit_array(form, out)
+    }
+    if form[0] == vm.ast.str {
+        return emit_str(form, out)
+    }
+    if form[0] == vm.ast.while {
+        return emit_while(form, out)
+    }
+    if form[0] == vm.ast.if {
+        return emit_if(form, out)
+    }
+    if form[0] == vm.ast.do {
+        return emit_do(form, out)
+    }
+    if form[0] == "=" {
+        return emit_set(form, out)
+    }
+    if form[0] == "~=" {
+        return emit_extend(form, out)
+    }
+    if form[0] == "~" {
+        return emit_binop(opcode.do_concat, form, out)
+    }
+    if form[0] == "+" {
+        return emit_binop(opcode.do_add, form, out)
+    }
+    if form[0] == "-" {
+        return emit_binop(opcode.do_sub, form, out)
+    }
+    if form[0] == "*" {
+        return emit_binop(opcode.do_mul, form, out)
+    }
+    if form[0] == "/" {
+        return emit_binop(opcode.do_div, form, out)
+    }
+    if form[0] == "%" {
+        return emit_binop(opcode.do_mod, form, out)
+    }
+    if form[0] == "<" {
+        return emit_binop(opcode.do_less, form, out)
+    }
+    if form[0] == ">" {
+        return emit_binop(opcode.do_greater, form, out)
+    }
+    if form[0] == "<=" {
+        return emit_binop(opcode.do_less_than_equal, form, out)
+    }
+    if form[0] == ">=" {
+        return emit_binop(opcode.do_greater_than_equal, form, out)
+    }
+    if form[0] == "==" {
+        return emit_binop(opcode.do_equal, form, out)
+    }
+    if form[0] == "!=" {
+        return emit_binop(opcode.do_not_equal, form, out)
+    }
+    puts("unknown form: " ~ form[0])
+    exit
+}
+
+def emit_link(out) {
+    link_type = type([])
+    ret = []
+    i = 0
+    while i < length(out[0]) {
+        cur = out[0][i] 
+        if type(cur) == link_type {
+            func = findvar(out[3], cur)
+            if func == none {
+                put("link error: undefined: ")
+                puts(cur)
+                exit
+            }
+            ret ~= [func]
+        } else {
+            ret ~= [out[0][i]]
+        }
+        i = i + 1
+    }
+    return ret
+}
+
+def emit(form, path) {
+    out = [[], 0, ["args", 0], [], [file_dir(path), [path]], []]
+    emit_to(form, out)
+    out[0] ~= [0]
+    linked = emit_link(out)
+    return linked
+}

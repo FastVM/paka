@@ -11,3 +11,22 @@ def puts(str) {
     put(str)
     putchar(10)
 }
+
+def putn_gte0(n) {
+    if n >= 10 {
+        lowest = n % 10
+        putn_gte0((n - lowest) / 10)
+        putchar(lowest + 48)
+    } else {
+        putchar(n % 10 + 48)
+    }
+}
+
+def putn(n) {
+    if n < 0 {
+        put("-")
+        putn_gte0(0 - n)
+    } else {
+        putn_gte0(n)
+    }
+}
