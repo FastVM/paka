@@ -1,5 +1,5 @@
 
-BOOT ?= bins/build15.bc
+BOOT ?= bins/boot.bc
 
 default: bin/stage3
 
