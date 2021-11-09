@@ -3,7 +3,10 @@ BOOT ?= bins/boot.bc
 
 default: bin/stage3
 
-bin/stage1: src/paka.paka
+minivm/minivm: minivm/vm minivm/main
+	$(MAKE) -C minivm
+
+bin/stage1: minivm/minivm src/paka.paka
 	mkdir -p bin
 	./minivm/minivm $(BOOT) src/paka.paka -o $@
 
