@@ -1,5 +1,5 @@
 
-def tokenize_stream1(bsrc, keywords, ops_flat) {
+def paka_tokenize_stream1(bsrc, keywords, ops_flat) {
     xop = 0
     while xop < length(ops_flat) {
         op = ops_flat[xop]
@@ -12,18 +12,18 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
     first = stream_peek(bsrc)
     if first == ' ' {
         stream_skip1(bsrc)
-        return tokenize_stream1(bsrc, keywords, ops_flat)
+        return paka_tokenize_stream1(bsrc, keywords, ops_flat)
     }
     if first == 10 {
         stream_skip1(bsrc)
-        return tokenize_stream1(bsrc, keywords, ops_flat)
+        return paka_tokenize_stream1(bsrc, keywords, ops_flat)
     }
     if first == '#' {
         stream_skip1(bsrc)
         while true {
             cur = stream_read(bsrc)
             if cur == 10 {
-                return tokenize_stream1(bsrc, keywords, ops_flat)
+                return paka_tokenize_stream1(bsrc, keywords, ops_flat)
             }
         }
     }
@@ -135,7 +135,7 @@ def tokenize_stream1(bsrc, keywords, ops_flat) {
     exit
 }
 
-def tokenize(src) {
+def paka_tokenize(src) {
     keywords = ["while", "if", "else", "def", "enum", "return", "macro", "exit", "true", "false", "none"]
     ops_flat = ["<=", ">=", "==", "!=", "~=", "=", "~", "+", "-", "%", "*", "/", "<", ">"]
     ssrc = stream_new(src) 
@@ -144,7 +144,7 @@ def tokenize(src) {
         if stream_peek(ssrc) == 0 {
             return tokens
         }
-        token = tokenize_stream1(ssrc, keywords, ops_flat)
+        token = paka_tokenize_stream1(ssrc, keywords, ops_flat)
         if token == 0 {
             return tokens
         }

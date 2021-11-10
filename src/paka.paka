@@ -6,8 +6,8 @@ import("../lang/file.paka")
 import("macros.paka")
 import("strs.paka")
 import("stream.paka")
-import("lex.paka")
-import("read.paka")
+import("paka/lex.paka")
+import("paka/read.paka")
 import("emit.paka")
 
 def main(argv) {
@@ -49,8 +49,8 @@ def main(argv) {
         put("no such file: ")
         puts(src)
     }
-    tokens = tokenize(src)
-    ast = parse(tokens)
+    tokens = paka_tokenize(src)
+    ast = paka_parse(tokens)
     bc = emit(ast, srcfile)
     if run {
         exec(bc, rest)

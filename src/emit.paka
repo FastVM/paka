@@ -300,8 +300,8 @@ def emit_import(form, out) {
         puts(form[1][1])
         exit
     } else {
-        tokens = tokenize(src)
-        ast = parse(tokens)
+        tokens = paka_tokenize(src)
+        ast = paka_parse(tokens)
         emit_to(ast, out)
         return none
     }

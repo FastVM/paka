@@ -1,20 +1,23 @@
 
 BOOT ?= bins/boot.bc
+VM ?= ./bin/minivm
 
 default: bin/stage3
 
-minivm/minivm: minivm/vm minivm/main
-	$(MAKE) -C minivm
-
-bin/stage1: minivm/minivm src/paka.paka
+./bin/minivm: minivm/vm minivm/main
 	mkdir -p bin
-	./minivm/minivm $(BOOT) src/paka.paka -o $@
+	$(MAKE) -C minivm
+	cp minivm/minivm $@
+
+bin/stage1: $(VM) src/paka.paka
+	mkdir -p bin
+	$(VM) $(BOOT) src/paka.paka -o $@
 
 bin/stage2: bin/stage1
-	./minivm/minivm bin/stage1 src/paka.paka -o $@
+	$(VM) bin/stage1 src/paka.paka -o $@
 
 bin/stage3: bin/stage2
-	./minivm/minivm bin/stage2 src/paka.paka -o $@
+	$(VM) bin/stage2 src/paka.paka -o $@
 
 clean: .dummy
 	$(MAKE) -C minivm clean
