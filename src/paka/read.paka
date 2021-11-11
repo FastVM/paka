@@ -2,11 +2,7 @@
 
 def paka_read_call(tokens, args, state) {
     got = stream_read(tokens)
-    if got == 0 {
-        puts("error: got eof, wanted `(`")
-        exit
-    }
-    if got[0] != token.open {
+    if got != token.open.paren {
         puts("error: wanted `(`")
         exit
     }
@@ -16,13 +12,13 @@ def paka_read_call(tokens, args, state) {
             puts("error 1")
             exit
         }
-        if cur[0] == token.close {
+        if cur == token.close.paren {
             stream_skip1(tokens)
             return paka_read_post(tokens, args, state)
         }
         arg = paka_read_expr_base(tokens, state)
         args ~= [arg]
-        if stream_peek(tokens)[0] == token.comma {
+        if stream_peek(tokens) == token.comma {
             stream_skip1(tokens)
         }
     }
@@ -33,17 +29,15 @@ def paka_read_post(tokens, last, state) {
     if first == 0 {
         return last
     }
-    if first[0] == token.open {
-        if first[1] == '[' {
-            stream_skip1(tokens)
-            index = paka_read_expr_base(tokens, state)
-            stream_skip1(tokens)
-            return paka_read_post(tokens, [vm.ast.index, last, index], state)
-        }
-        if first[1] == '(' {
-            args = [vm.ast.call, last] 
-            return paka_read_call(tokens, args, state)
-        }
+    if first == token.open.square {
+        stream_skip1(tokens)
+        index = paka_read_expr_base(tokens, state)
+        stream_skip1(tokens)
+        return paka_read_post(tokens, [vm.ast.index, last, index], state)
+    }
+    if first == token.open.paren {
+        args = [vm.ast.call, last] 
+        return paka_read_call(tokens, args, state)
     }
     return last
 }
@@ -52,6 +46,45 @@ def paka_read_single(tokens, state) {
     first = stream_peek(tokens)
     if first == 0 {
         return none
+    }
+    if first == token.open.square {
+        stream_skip1(tokens)
+        args = [vm.ast.array]
+        while true {
+            cur = stream_peek(tokens)
+            if cur == token.close.square {
+                stream_skip1(tokens)
+                return args
+            }
+            expr = paka_read_expr_base(tokens, state)
+            args ~= [expr]
+            if stream_peek(tokens) == token.comma {
+                stream_skip1(tokens)
+            }
+        } 
+    }
+    if first == token.open.paren {
+        stream_skip1(tokens)
+        ret = paka_read_expr_base(tokens, state)
+        stream_skip1(tokens)
+        return ret
+    }
+    if first == token.keyword.true {
+        stream_skip1(tokens)
+        return [vm.ast.true] 
+    }
+    if first == token.keyword.false {
+        stream_skip1(tokens)
+        return [vm.ast.false]
+    }
+    if first == token.keyword.none {
+        stream_skip1(tokens)
+        return [vm.ast.none]
+    }
+    if type(first) == type(0) {
+        put("bad token: ")
+        println(first)
+        exit
     }
     if first[0] == (token.num) {
         stream_skip1(tokens)
@@ -89,50 +122,8 @@ def paka_read_single(tokens, state) {
         } 
         return [vm.ast.ident, first[1]]
     }
-    if first[0] == token.open {
-        if first[1] == '[' {
-            stream_skip1(tokens)
-            args = [vm.ast.array]
-            while true {
-                cur = stream_peek(tokens)
-                if cur[0] == token.close {
-                    stream_skip1(tokens)
-                    return args
-                }
-                expr = paka_read_expr_base(tokens, state)
-                args ~= [expr]
-                if stream_peek(tokens)[0] == token.comma {
-                    stream_skip1(tokens)
-                }
-            } 
-        }
-        if first[1] == '(' {
-            stream_skip1(tokens)
-            ret = paka_read_expr_base(tokens, state)
-            stream_skip1(tokens)
-            return ret
-        }
-    }
-    if first[0] == token.keyword {
-        if first[1] == "true" {
-            stream_skip1(tokens)
-            return [vm.ast.true]
-        }
-        if first[1] == ("false") {
-            stream_skip1(tokens)
-            return [vm.ast.false]
-        }
-        if first[1] == ("none") {
-            stream_skip1(tokens)
-            return [vm.ast.none]
-        }
-    }
     put("error: unexpected ")
-    putn(first[0])
-    put(": `")
-    put(first[1])
-    put("`")
-    puts("")
+    println(first)
     exit
 }
 
@@ -158,6 +149,9 @@ def paka_read_expr(tokens, depth, state) {
         if first == 0 {
             return ret
         }
+        if type(first) == type(0) {
+            return ret
+        }
         if first[0] != token.op {
             return ret
         }
@@ -176,61 +170,47 @@ def paka_read_expr_base(tokens, state) {
 
 def paka_read_stmt(tokens, state) {
     first = stream_peek(tokens)
-    if first[0] == token.keyword {
-        if first[1] == "while" {
-            stream_skip1(tokens)
-            expr = paka_read_expr_base(tokens, state)
-            block = paka_read_block(tokens, state)
-            return [vm.ast.while, expr, block]
-        }
-        if first[1] == "def" {
-            stream_skip1(tokens)
-            expr = paka_read_expr_base(tokens, state)
-            block = paka_read_block(tokens, state)
-            return [vm.ast.def, expr, block]
-        }
-        if first[1] == "return" {
-            stream_skip1(tokens)
-            expr = paka_read_expr_base(tokens, state)
-            return [vm.ast.return, expr]
-        }
-        if first[1] == "macro" {
-            stream_skip1(tokens)
-            name = stream_read(tokens)
-            if name[0] != token.ident {
-                puts("macro needs to be followed by identifer")
-                exit
-            }
-            expr = paka_read_block(tokens, state)
-            return [vm.ast.macro, name, expr]
-        }
-        if first[1] == "enum" {
-            stream_skip1(tokens)
-            expr = paka_read_expr_base(tokens, state)
-            return [vm.ast.enum, expr]
-        }
-        if first[1] == "exit" {
-            stream_skip1(tokens)
-            return [vm.ast.exit]
-        }
-        if first[1] == "if" {
-            stream_skip1(tokens)
-            expr = paka_read_expr_base(tokens, state)
-            block1 = paka_read_block(tokens, state)
-            block2 = [vm.ast.do]
-            first = stream_peek(tokens)
-            if first[0] == token.keyword {
-                if first[1] == "else" {
-                    stream_skip1(tokens)
-                    block2 = paka_read_block(tokens, state)
-                }
-            }
-            return [vm.ast.if, expr, block1, block2]
-        }
-    } else {
-        ret = paka_read_expr_base(tokens, state)
-        return ret
+    if first == token.keyword.while {
+        stream_skip1(tokens)
+        expr = paka_read_expr_base(tokens, state)
+        block = paka_read_block(tokens, state)
+        return [vm.ast.while, expr, block]
     }
+    if first == token.keyword.def {
+        stream_skip1(tokens)
+        expr = paka_read_expr_base(tokens, state)
+        block = paka_read_block(tokens, state)
+        return [vm.ast.def, expr, block]
+    }
+    if first == token.keyword.return {
+        stream_skip1(tokens)
+        expr = paka_read_expr_base(tokens, state)
+        return [vm.ast.return, expr]
+    }
+    if first == token.keyword.macro {
+        stream_skip1(tokens)
+        name = stream_read(tokens)
+        expr = paka_read_block(tokens, state)
+        return [vm.ast.macro, name, expr]
+    }
+    if first == token.keyword.exit {
+        stream_skip1(tokens)
+        return [vm.ast.exit]
+    }
+    if first == token.keyword.if {
+        stream_skip1(tokens)
+        expr = paka_read_expr_base(tokens, state)
+        block1 = paka_read_block(tokens, state)
+        block2 = [vm.ast.do]
+        first = stream_peek(tokens)
+        if first == token.keyword.else {
+            stream_skip1(tokens)
+            block2 = paka_read_block(tokens, state)
+        }
+        return [vm.ast.if, expr, block1, block2]
+    }
+    ret = paka_read_expr_base(tokens, state)
+    return ret
 }
 
 def paka_read_block_body(tokens, state) {
@@ -240,7 +220,7 @@ def paka_read_block_body(tokens, state) {
         if first == 0 {
             return ret
         }
-        if first[0] == token.close {
+        if first == token.close.curly {
             return ret
         }
         stmt = paka_read_stmt(tokens, state)
@@ -250,14 +230,14 @@ def paka_read_block_body(tokens, state) {
 
 def paka_read_block(tokens, state) {
     first = stream_peek(tokens)
-    if first[0] == token.open {
+    if first == token.open.curly {
         stream_skip1(tokens)
         ret = paka_read_block_body(tokens, state)
         stream_skip1(tokens)
         return ret
     }
     put("@")
-    putn(first[2])
+    println(first)
     puts("")
     puts("parser: block error")
     exit

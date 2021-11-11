@@ -1,52 +1,50 @@
 
-def paka_tokenize_stream1(bsrc, keywords, ops_flat) {
-    xop = 0
-    while xop < length(ops_flat) {
-        op = ops_flat[xop]
-        if stream_starts_swith(bsrc, op) {
-            stream_skip(bsrc, length(op))
-            return [token.op, op, bsrc[1]]
-        }
-        xop = xop + 1
-    }
+def paka_tokenize_stream1(bsrc, ops_flat) {
     first = stream_peek(bsrc)
     if first == ' ' {
         stream_skip1(bsrc)
-        return paka_tokenize_stream1(bsrc, keywords, ops_flat)
+        return paka_tokenize_stream1(bsrc, ops_flat)
     }
     if first == 10 {
         stream_skip1(bsrc)
-        return paka_tokenize_stream1(bsrc, keywords, ops_flat)
+        return paka_tokenize_stream1(bsrc, ops_flat)
     }
     if first == '#' {
         stream_skip1(bsrc)
         while true {
             cur = stream_read(bsrc)
             if cur == 10 {
-                return paka_tokenize_stream1(bsrc, keywords, ops_flat)
+                return paka_tokenize_stream1(bsrc, ops_flat)
             }
         }
     }
     if first == '(' {
-        return [token.open, stream_read(bsrc), bsrc[1]]
+        stream_skip1()
+        return token.open.paren
     }
     if first == ')' {
-        return [token.close, stream_read(bsrc), bsrc[1]]
+        stream_skip1()
+        return token.close.paren
     }
     if first == '{' {
-        return [token.open, stream_read(bsrc), bsrc[1]]
+        stream_skip1()
+        return token.open.curly
     }
     if first == '}' {
-        return [token.close, stream_read(bsrc), bsrc[1]]
+        stream_skip1()
+        return token.close.curly
     }
     if first == '[' {
-        return [token.open, stream_read(bsrc), bsrc[1]]
+        stream_skip1()
+        return token.open.square
     }
     if first == ']' {
-        return [token.close, stream_read(bsrc), bsrc[1]]
+        stream_skip1()
+        return token.close.square
     }
     if first == ',' {
-        return [token.comma, stream_read(bsrc), bsrc[1]]
+        stream_skip1()
+        return token.comma
     }
     if first == ''' {
         stream_skip1(bsrc)
@@ -58,20 +56,20 @@ def paka_tokenize_stream1(bsrc, keywords, ops_flat) {
                 exit
             }
             if cur == 'n' {
-                return [token.num, 10, bsrc[1]]
+                return [token.num, 10]
             } 
             if cur == "\""[0] {
-                return [token.num, cur, bsrc[1]]
+                return [token.num, cur]
             }
             if cur == "\\"[0] {
-                return [token.num, cur, bsrc[1]]
+                return [token.num, cur]
             }
         } else {
             if stream_read() != ''' {
                 puts("unterminated char literal")
                 exit
             }
-            return [token.num, cur, bsrc[1]]
+            return [token.num, cur]
         }
     }
     if first == "\""[0] {
@@ -84,7 +82,7 @@ def paka_tokenize_stream1(bsrc, keywords, ops_flat) {
                 exit
             }
             if cur == "\""[0] {
-                return [token.str, ret, bsrc[1]]
+                return [token.str, ret]
             }
             if cur == "\\"[0] {
                 cur = stream_read(bsrc)
@@ -104,12 +102,21 @@ def paka_tokenize_stream1(bsrc, keywords, ops_flat) {
         puts("bad char")
         exit
     }
+    xop = 0
+    while xop < length(ops_flat) {
+        op = ops_flat[xop]
+        if stream_starts_swith(bsrc, op) {
+            stream_skip(bsrc, length(op))
+            return [token.op, op]
+        }
+        xop = xop + 1
+    }
     if char_isdigit(first) {
         n = 0
         while char_isdigit(stream_peek(bsrc)) {
             n = n * 10 + stream_read(bsrc) - '0'
         }
-        return [token.num, n, bsrc[1]]
+        return [token.num, n]
     }
     if char_id0(first) {
         xsrc = []
@@ -117,14 +124,65 @@ def paka_tokenize_stream1(bsrc, keywords, ops_flat) {
             if char_id(stream_peek(bsrc)) {
                 xsrc ~= [stream_read(bsrc)]
             } else {
-                ki = 0
-                while ki < length(keywords) {
-                    if keywords[ki] == xsrc {
-                        return [token.keyword, xsrc, bsrc[1]]
+                n0 = xsrc[0]
+                if n0 == 'w' {
+                    if xsrc == "while" {
+                        return token.keyword.while
                     }
-                    ki = ki + 1
+                    return [token.ident, xsrc]
                 }
-                return [token.ident, xsrc, bsrc[1]]
+                if n0 == 'i' {
+                    if xsrc == "if" {
+                        return token.keyword.if
+                    }
+                    return [token.ident, xsrc]
+                }
+                if n0 == 'e' {
+                    if xsrc == "else" {
+                        return token.keyword.else
+                    }
+                    if xsrc == "exit" {
+                        return token.keyword.exit
+                    }
+                    return [token.ident, xsrc]
+                }
+                if n0 == 'd' {
+                    if xsrc == "def" {
+                        return token.keyword.def
+                    }
+                    return [token.ident, xsrc]
+                }
+                if n0 == 'r' {
+                    if xsrc == "return" {
+                        return token.keyword.return
+                    }
+                    return [token.ident, xsrc]
+                }
+                if n0 == 't' {
+                    if xsrc == "true" {
+                        return token.keyword.true
+                    }
+                    return [token.ident, xsrc]
+                }
+                if n0 == 'f' {
+                    if xsrc == "false" {
+                        return token.keyword.false
+                    }
+                    return [token.ident, xsrc]
+                }
+                if n0 == 'n' {
+                    if xsrc == "none" {
+                        return token.keyword.none
+                    }
+                    return [token.ident, xsrc]
+                }
+                if n0 == 'm' {
+                    if xsrc == "macro" {
+                        return token.keyword.macro
+                    }
+                    return [token.ident, xsrc]
+                }
+                return [token.ident, xsrc]
             }
         }
     }
@@ -136,7 +194,6 @@ def paka_tokenize_stream1(bsrc, keywords, ops_flat) {
 }
 
 def paka_tokenize(src) {
-    keywords = ["while", "if", "else", "def", "enum", "return", "macro", "exit", "true", "false", "none"]
     ops_flat = ["<=", ">=", "==", "!=", "~=", "=", "~", "+", "-", "%", "*", "/", "<", ">"]
     ssrc = stream_new(src) 
     tokens = []
@@ -144,7 +201,7 @@ def paka_tokenize(src) {
         if stream_peek(ssrc) == 0 {
             return tokens
         }
-        token = paka_tokenize_stream1(ssrc, keywords, ops_flat)
+        token = paka_tokenize_stream1(ssrc, ops_flat)
         if token == 0 {
             return tokens
         }

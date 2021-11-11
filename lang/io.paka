@@ -30,3 +30,46 @@ def putn(n) {
         putn_gte0(n)
     }
 }
+
+def print(n) {
+    if type(n) == type(0) {
+        putn(n)
+        return none
+    }
+    if type(n) == type("") {
+        put(n)
+        return none
+    }
+    if type(n) == type([]) {
+        put("[")
+        i = 0
+        while i < length(n) {
+            if i != 0 {
+                put(", ")
+            }
+            print(n[i])
+            i = i + 1
+        }
+        put("]")
+        return none
+    }
+    if n == true {
+        put("true")
+        return none
+    }
+    if n == false {
+        put("false")
+        return none
+    }
+    if n == none {
+        put("none")
+        return none
+    }
+    put("?")
+    return none
+}
+
+def println(n) {
+    print(n)
+    putchar(10)
+}
