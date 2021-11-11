@@ -155,17 +155,16 @@ def emit_macro(form, out) {
 
 def jump(out) {
     count = length(out[3])
-    item = [count]
-    out[3] ~= [item]
-    return item
+    out[3] ~= [count]
+    return count
 }
 
 def goto(jump) {
-    return [link.jump, jump[0]] 
+    return [link.jump, jump] 
 }
 
 def label(jump) {
-    return [link.label, jump[0]]
+    return [link.label, jump]
 }
 
 def emit_def(form, out) {
@@ -183,7 +182,7 @@ def emit_def(form, out) {
     out[1] = i - 1
     nregs = length(out[0]) + 2
     out[0] ~= [opcode.do_jump, goto(jover), 256]
-    out[0] ~= [[link.label, call[1][1]]]
+    out[0] ~= [[link.func, call[1][1]]]
     resreg = emit_to(body, out)
     if resreg == none {
         out[0] ~= [opcode.do_store_none, 0, opcode.do_return, 0]
@@ -216,7 +215,7 @@ def emit_call(form, out) {
         i = i + 1
     }
     ret = reg(out)
-    out[0] = out[0] ~ [opcode.do_static_call, ret, [link.jump, form[1][1]], length(regs)] ~ regs
+    out[0] = out[0] ~ [opcode.do_static_call, ret, [link.call, form[1][1]], length(regs)] ~ regs
     return ret
 }
 
@@ -448,9 +447,16 @@ def emit_link(out) {
     while i < length(out[0]) {
         cur = out[0][i]
         if type(cur) == array_type {
-            if cur[0] == link.label {
+            if cur[0] == link.func {
                 func_locs ~= [cur[1], length(sized_ops)]
-            } else {
+            }
+            if cur[0] == link.label {
+                out[3][cur[1]] = length(sized_ops)
+            }
+            if cur[0] == link.call {
+                sized_ops ~= [cur]
+            }
+            if cur[0] == link.jump {
                 sized_ops ~= [cur]
             }
         } else {
@@ -464,6 +470,9 @@ def emit_link(out) {
         cur = sized_ops[i] 
         if type(cur) == array_type {
             if cur[0] == link.jump {
+                ret ~= [out[3][cur[1]]]
+            }
+            if cur[0] == link.call {
                 func = findvar(func_locs, cur[1])
                 finds = finds + 1
                 if func == none {
