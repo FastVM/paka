@@ -15,6 +15,7 @@ macro vm {
     ast.length
     ast.import
     ast.dump
+    ast.readc
     ast.read
     ast.write
     ast.type

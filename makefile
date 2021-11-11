@@ -1,5 +1,5 @@
 
-BOOT ?= bins/boot.bc
+BOOT ?= bins/boot2.bc
 VM ?= ./bin/minivm
 
 default: bin/stage3

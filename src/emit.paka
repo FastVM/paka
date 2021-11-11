@@ -287,6 +287,26 @@ def emit_write(form, out) {
     return none
 }
 
+def emit_readc(form, out) {
+    name = out[4][0] ~ ['/'] ~ form[1][1]
+    src = read(name)
+    if src == none {
+        put("file not found for readc: ")
+        puts(form[1][1])
+        exit
+    } else {
+        chrs = []
+        i = 0
+        while i < length(src) {
+            chrs ~= [src[i]]
+            i = i + 1
+        }
+        ret = reg(out)
+        out[0] = out[0] ~ [opcode.do_string_new, ret, length(chrs)] ~ chrs
+        return none
+    }
+}
+
 def emit_read(form, out) {
     r1 = emit_to(form[1], out)
     ret = reg(out)
@@ -307,7 +327,7 @@ def emit_import(form, out) {
     out[4][1] ~= [name]
     src = read(name)
     if src == none {
-        put("file not found: ")
+        put("file not found for import: ")
         puts(form[1][1])
         exit
     } else {
@@ -367,6 +387,9 @@ def emit_to(form, out) {
     }
     if ty == vm.ast.dump {
         return emit_dump(form, out)
+    }
+    if ty == vm.ast.readc {
+        return emit_readc(form, out)
     }
     if ty == vm.ast.read {
         return emit_read(form, out)

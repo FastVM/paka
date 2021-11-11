@@ -10,6 +10,13 @@ import("paka/lex.paka")
 import("paka/read.paka")
 import("emit.paka")
 
+def get_io() {
+    src = readc("../lang/io.paka")
+    tokens = paka_tokenize(src)
+    ast = paka_parse(tokens)
+    return ast
+}
+
 def main(argv) {
     run = false
     outfile = "exec.bc"
@@ -30,6 +37,21 @@ def main(argv) {
                     i = i + 1
                     outfile = argv[i]
                 }
+                if arg[1] == 'e' {
+                    i = i + 1
+                    tokens = paka_tokenize(argv[i])
+                    ast1 = paka_parse(tokens)
+                    ast2 = [vm.ast.do, get_io(), ast1]
+                    println(ast2)
+                    bc = emit(ast2, ['/'])
+                    i = i + 1
+                    while i < length(argv) {
+                        rest ~= [argv[i]]
+                        i = i + 1
+                    }
+                    exec(bc, rest)
+                    return none
+                }
             } else {
                 if srcfile != none {
                     puts("only one source can be provided")
@@ -46,8 +68,8 @@ def main(argv) {
     }
     src = read(srcfile)
     if src == none {
-        put("no such file: ")
-        puts(src)
+        puts("cannot read file")
+        exit
     }
     tokens = paka_tokenize(src)
     ast = paka_parse(tokens)

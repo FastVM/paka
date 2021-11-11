@@ -111,6 +111,9 @@ def paka_read_single(tokens, state) {
         if first[1] == "write" {
             return paka_read_call(tokens, [vm.ast.write], state)
         }
+        if first[1] == "readc" {
+            return paka_read_call(tokens, [vm.ast.readc], state)
+        }
         if first[1] == "read" {
             return paka_read_call(tokens, [vm.ast.read], state)
         }
