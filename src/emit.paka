@@ -80,12 +80,13 @@ def emit_type(form, out) {
 }
 
 def emit_do(form, out) {
+    ret = none
     i = 1
     while i < length(form) {
-        emit_to(form[i], out)
+        ret = emit_to(form[i], out)
         i = i + 1
     } 
-    return none
+    return ret
 }
 
 def findvar(vars, name) {
