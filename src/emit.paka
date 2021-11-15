@@ -215,7 +215,8 @@ def emit_call(form, out) {
         i = i + 1
     }
     ret = reg(out)
-    out[0] = out[0] ~ [opcode.do_static_call, ret, [link.call, form[1][1]], length(regs)] ~ regs
+    out[0] ~= [opcode.do_static_call, ret, [link.call, form[1][1]], length(regs)]
+    out[0] ~= regs
     return ret
 }
 
@@ -257,7 +258,8 @@ def emit_array(form, out) {
         i = i + 1
     }
     ret = reg(out)
-    out[0] = out[0] ~ [opcode.do_array_new, ret, length(regs)] ~ regs
+    out[0] ~= [opcode.do_array_new, ret, length(regs)]
+    out[0] ~= regs
     return ret
 }
 
@@ -269,7 +271,8 @@ def emit_str(form, out) {
         i = i + 1
     }
     ret = reg(out)
-    out[0] = out[0] ~ [opcode.do_string_new, ret, length(chrs)] ~ chrs
+    out[0] ~= [opcode.do_string_new, ret, length(chrs)]
+    out[0] ~= chrs
     return ret
 }
 
@@ -302,7 +305,8 @@ def emit_readc(form, out) {
             i = i + 1
         }
         ret = reg(out)
-        out[0] = out[0] ~ [opcode.do_string_new, ret, length(chrs)] ~ chrs
+        out[0] ~= [opcode.do_string_new, ret, length(chrs)]
+        out[0] ~= chrs
         return none
     }
 }
