@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+NAME=$(dirname $0)
+
+$NAME/bin/minivm $NAME/bins/boot.bc "$@"
