@@ -1,0 +1,26 @@
+
+def token_stream_new(src) {
+    ops_flat = ["<=", ">=", "==", "!=", "~=", "=", "~", "+", "-", "%", "*", "/", "<", ">"]
+    ssrc = stream_new(src)
+    return [ops_flat, ssrc, none]
+}
+
+def token_stream_read(tokens) {
+    ret = token_stream_peek(tokens)
+    token_stream_skip1(tokens)
+    return ret
+}
+
+def token_stream_peek(tokens) {
+    if tokens[2] == none {
+        tokens[2] = paka_tokenize_stream1(tokens[1], tokens[0])
+    }
+    return tokens[2]
+}
+
+def token_stream_skip1(tokens) {
+    if tokens[2] == none {
+        paka_tokenize_stream1(tokens[1], tokens[0])
+    }
+    tokens[2] = none
+}

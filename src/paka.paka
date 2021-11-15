@@ -6,6 +6,7 @@ import("../lang/file.paka")
 import("macros.paka")
 import("strs.paka")
 import("stream.paka")
+import("paka/token.paka")
 import("paka/lex.paka")
 import("paka/read.paka")
 import("emit.paka")
@@ -89,8 +90,7 @@ def println(n) {
 }
 
     "
-    tokens = paka_tokenize(src)
-    ast = paka_parse(tokens)
+    ast = paka_parse(src)
     return ast
 }
 
@@ -124,8 +124,7 @@ def main(argv) {
                 }
                 if arg[1] == 'e' {
                     i = i + 1
-                    tokens = paka_tokenize("none " ~ argv[i])
-                    ast1 = paka_parse(tokens)
+                    ast1 = paka_parse("none " ~ argv[i])
                     ast2 = [vm.ast.do, vm_prelude(), vm_set(ast1), vm_put()]
                     bc = emit(ast2, ['/'])
                     i = i + 1
@@ -155,8 +154,7 @@ def main(argv) {
         puts("cannot read file")
         exit
     }
-    tokens = paka_tokenize(src)
-    ast = paka_parse(tokens)
+    ast = paka_parse(src)
     bc = emit(ast, srcfile)
     if run {
         exec(bc, rest)

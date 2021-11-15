@@ -8,6 +8,8 @@ macro vm {
     ast.def
     ast.return
     ast.macro
+    ast.switch
+    ast.when
     ast.exit
     ast.call
     ast.ident
@@ -71,6 +73,7 @@ macro token {
     close.paren
     close.square
     close.curly
+    colon
     comma
     keyword.while
     keyword.if
@@ -78,6 +81,8 @@ macro token {
     keyword.def
     keyword.return
     keyword.macro
+    keyword.switch
+    keyword.when
     keyword.exit
     keyword.true
     keyword.false

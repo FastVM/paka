@@ -1,0 +1,6 @@
+switch 0 {
+    when 0 {
+        putchar('q')
+    }
+}
+putchar(10)
