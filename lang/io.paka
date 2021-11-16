@@ -36,10 +36,6 @@ def print(n) {
         putn(n)
         return none
     }
-    if type(n) == type("") {
-        put(n)
-        return none
-    }
     if type(n) == type([]) {
         put("[")
         i = 0

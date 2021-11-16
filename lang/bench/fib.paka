@@ -1,0 +1,19 @@
+
+import("../io.paka")
+import("../conv.paka")
+
+def fib(n) {
+    if n < 2 {
+        return n
+    } else {
+        return fib(n-2) + fib(n-1)
+    }
+}
+
+if length(args) == 0 {
+    puts("error: need an integer argument")
+    exit
+}
+
+n = to_int(args[0])
+println(fib(n))
