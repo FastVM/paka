@@ -473,7 +473,8 @@ def emit_to(form, out) {
     if ty == "!=" {
         return emit_binop(opcode.do_not_equal, form, out)
     }
-    puts("unknown form: " ~ form[0])
+    puts("unknown form: ")
+    println(form[0])
     exit
 }
 
