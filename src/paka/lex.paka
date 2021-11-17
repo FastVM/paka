@@ -185,6 +185,12 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                     }
                     return [token.ident, xsrc]
                 }
+                if n0 == 's' {
+                    if xsrc == "static" {
+                        return token.keyword.static
+                    }
+                    return [token.ident, xsrc]
+                }
                 return [token.ident, xsrc]
             }
         }

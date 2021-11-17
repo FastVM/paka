@@ -2,4 +2,4 @@
 
 NAME=$(dirname $0)
 
-$NAME/bin/minivm $NAME/bins/boot.bc "$@"
+$NAME/bin/minivm $NAME/bin/stage3 "$@"

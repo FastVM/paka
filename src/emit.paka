@@ -493,7 +493,6 @@ def emit_link(out) {
         i = i + 1 
     }
     i = 0
-    finds = 0
     while i < length(sized_ops) {
         cur = sized_ops[i] 
         if type(cur) == array_type {
@@ -502,7 +501,6 @@ def emit_link(out) {
             }
             if cur[0] == link.call {
                 func = findvar(func_locs, cur[1])
-                finds = finds + 1
                 if func == none {
                     if type(cur[1]) == type(0) {
                         put("link error: undefined label: ")
@@ -526,6 +524,7 @@ def emit_link(out) {
 
 def emit(form, path) {
     out = [[], 0, ["args", 0], [], [file_dir(path), [path]], []]
+    form = ctfe_unfold(form)
     emit_to(form, out)
     out[0] ~= [0]
     linked = emit_link(out)

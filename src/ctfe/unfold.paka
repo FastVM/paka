@@ -1,0 +1,138 @@
+
+def ctfe_unfold_const(form, state) {
+    return form
+}
+
+def ctfe_unfold_copy(form, state) {
+    ret = [form[0]]
+    i = 1
+    while i < length(form) {
+        ret ~= [ctfe_unfold(form[i])]
+        i = i + 1
+    }
+    return ret
+}
+
+def ctfe_unfold(form, state) {
+    ty = form[0]
+    if ty == vm.ast.num {
+        return ctfe_unfold_const(form, state)
+    }
+    if ty == vm.ast.true {
+        return ctfe_unfold_const(form, state)
+    }
+    if ty == vm.ast.false {
+        return ctfe_unfold_const(form, state)
+    }
+    if ty == vm.ast.none {
+        return ctfe_unfold_const(form, state)
+    }
+    if ty == vm.ast.str {
+        return ctfe_unfold_const(form, state)
+    }
+    if ty == vm.ast.ident {
+        return ctfe_unfold_const(form, state)
+    }
+    if ty == vm.ast.index {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.def {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.return {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.macro {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.exit {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.call {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.putchar {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.exec {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.length {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.import {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.dump {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.readc {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.read {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.write {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.type {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.array {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.while {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.if {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == vm.ast.do {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "=" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "~=" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "~" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "+" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "-" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "*" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "/" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "%" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "<" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == ">" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "<=" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == ">=" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "==" {
+        return ctfe_unfold_copy(form, state)
+    }
+    if ty == "!=" {
+        return ctfe_unfold_copy(form, state)
+    }
+    put("unknown form: ")
+    println(form)
+    exit
+}
