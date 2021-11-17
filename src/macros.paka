@@ -87,7 +87,6 @@ macro token {
     keyword.false
     keyword.none
     keyword.static
-
     op
     str
     num
@@ -99,4 +98,9 @@ macro link {
     label
     call
     func
+}
+
+macro ctfe {
+    state.run
+    state.ret
 }

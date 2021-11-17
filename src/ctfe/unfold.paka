@@ -7,7 +7,7 @@ def ctfe_unfold_copy(form, state) {
     ret = [form[0]]
     i = 1
     while i < length(form) {
-        ret ~= [ctfe_unfold(form[i])]
+        ret ~= [ctfe_unfold(form[i], state)]
         i = i + 1
     }
     return ret
@@ -37,6 +37,7 @@ def ctfe_unfold(form, state) {
         return ctfe_unfold_copy(form, state)
     }
     if ty == vm.ast.def {
+        state[0] ~= [form[1][1][1], form]
         return ctfe_unfold_copy(form, state)
     }
     if ty == vm.ast.return {
@@ -90,6 +91,9 @@ def ctfe_unfold(form, state) {
     if ty == vm.ast.do {
         return ctfe_unfold_copy(form, state)
     }
+    if ty == vm.ast.static {
+        return ctfe_unfold_copy(form, state)
+    }
     if ty == "=" {
         return ctfe_unfold_copy(form, state)
     }
@@ -132,7 +136,7 @@ def ctfe_unfold(form, state) {
     if ty == "!=" {
         return ctfe_unfold_copy(form, state)
     }
-    put("unknown form: ")
+    put("unfold: unknown form: ")
     println(form)
     exit
 }
