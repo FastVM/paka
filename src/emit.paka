@@ -342,15 +342,6 @@ def emit_import(form, out) {
     }
 }
 
-def emit_switch(form, out) {
-    val = form[1]
-    i = 2
-    while i < length(form) {
-        println(form[i])
-        i = i + 1
-    }
-}
-
 def emit_to(form, out) {
     ty = form[0]
     if ty == vm.ast.num {
@@ -376,9 +367,6 @@ def emit_to(form, out) {
     }
     if ty == vm.ast.macro {
         return emit_macro(form, out)
-    }
-    if ty == vm.ast.switch {
-        return emit_switch(form, out)
     }
     if ty == vm.ast.exit {
         return emit_exit(form, out)

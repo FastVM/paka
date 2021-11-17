@@ -8,7 +8,6 @@ macro vm {
     ast.def
     ast.return
     ast.macro
-    ast.switch
     ast.when
     ast.exit
     ast.call
@@ -81,7 +80,6 @@ macro token {
     keyword.def
     keyword.return
     keyword.macro
-    keyword.switch
     keyword.when
     keyword.exit
     keyword.true

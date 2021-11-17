@@ -185,12 +185,6 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                     }
                     return [token.ident, xsrc]
                 }
-                if n0 == 's' {
-                    if xsrc == "switch" {
-                        return token.keyword.switch
-                    }
-                    return [token.ident, xsrc]
-                }
                 return [token.ident, xsrc]
             }
         }
