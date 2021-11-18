@@ -380,7 +380,8 @@ def ctfe_exec_real(form, state) {
         return none
     }
     if ty == vm.ast.exit {
-        puts("cannot `exit` in static {...}")
+        puts("encountered `exit` in static {...}")
+        puts("no output will be written and no bytecode will be run")
         exit
     }
     if ty == vm.ast.call {
