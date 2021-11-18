@@ -19,7 +19,7 @@ def ctfe_unfold_import(form, state) {
     while i < length(state[3][1]) {
         existing = state[3][1][i]
         if existing == name {
-            return [vm.ast.none]
+            return [vm.ast.do]
         }
         i = i + 1
     }
@@ -28,6 +28,38 @@ def ctfe_unfold_import(form, state) {
     ast = paka_parse(src)
     full = ctfe_unfold(ast, state)
     return full
+}
+
+def ctfe_unfold_macro(form, state) {
+    name = form[1][1]
+    idents = []
+    where = 1
+    while where < length(form[2]) {
+        ok = false
+        if form[2][where][0] == vm.ast.ident {
+            fullname = form[1][1] ~ ['.'] ~ form[2][where][1]
+            ast = [vm.ast.num, where]
+            state[0] ~= [fullname, ast]
+            ok = true
+        }
+        if form[2][where][0] == "=" {
+            setto = form[2][where][1]
+            val = form[2][where][2]
+            if setto[0] != vm.ast.ident {
+                puts("enum macro given bad value on left hand size of `=`")
+                exit
+            }
+            fullname = form[1][1] ~ ['.'] ~ setto[1]
+            state[0] ~= [fullname, val]
+            ok = true
+        }
+        if ok == false {
+            println("that is not valid in a macro")
+            exit
+        }
+        where = where + 1
+    }
+    return [vm.ast.do]
 }
 
 def ctfe_unfold(form, state) {
@@ -61,7 +93,7 @@ def ctfe_unfold(form, state) {
         return ctfe_unfold_copy(form, state)
     }
     if ty == vm.ast.macro {
-        return ctfe_unfold_const(form, state)
+        return ctfe_unfold_macro(form, state)
     }
     if ty == vm.ast.exit {
         return ctfe_unfold_copy(form, state)

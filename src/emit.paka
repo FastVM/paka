@@ -132,17 +132,6 @@ def emit_set(form, out) {
     exit
 }
 
-def emit_macro(form, out) {
-    name = form[1][1]
-    idents = []
-    where = 1
-    while where < length(form[2]) {
-        name = form[1][1] ~ ['.'] ~ form[2][where][1]
-        out[4] ~= [name, where]
-        where = where + 1
-    }
-}
-
 def jump(out) {
     count = length(out[3])
     out[3] ~= [count]
@@ -330,9 +319,6 @@ def emit_to(form, out) {
     }
     if ty == vm.ast.return {
         return emit_return(form, out)
-    }
-    if ty == vm.ast.macro {
-        return emit_macro(form, out)
     }
     if ty == vm.ast.exit {
         return emit_exit(form, out)

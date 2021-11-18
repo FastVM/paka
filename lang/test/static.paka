@@ -10,7 +10,7 @@ def fib(n) {
 }
 
 x = static {
-    fib(30)
+    fib(5)
 }
 
 println(x)

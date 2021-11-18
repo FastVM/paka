@@ -1,0 +1,7 @@
+macro ns {
+    x = 52
+    y
+}
+
+putchar(static {ns.x})
+putchar(10)

@@ -3,12 +3,21 @@
 
 def ctfe_exec_ident(form, state) {
     ret = findvar(state[1], form[1])
+    if ret != none {
+        return ret
+    }
+    ret = findvar(state[0], form[1])
     if ret == none {
         put("ctfe: undefined ident: ")
         puts(ret)
         exit
     }
-    return ret
+    if ret == vm.ast.def {
+        put("ctfe: undefined ident (valid function though): ")
+        puts(ret)
+        exit
+    }
+    return ctfe_exec_real(ret, state)
 }
 
 def ctfe_exec_index(form, state) {
@@ -473,9 +482,31 @@ def ctfe_exec_const(form, state) {
     return form
 }
 
+def ctfe_exec_const_ident(form, state) {
+    val = findvar(state[0], form[1])
+    if val == none {
+        return form
+    }
+    if val[0] != vm.ast.def {
+        return ctfe_exec(val)
+    } else {
+        return form
+    }
+}
+
 def ctfe_exec_copy(form, state) {
     ret = [form[0]]
     i = 1
+    while i < length(form) {
+        ret ~= [ctfe_exec(form[i], state)]
+        i = i + 1
+    }
+    return ret
+}
+
+def ctfe_exec_copy_call(form, state) {
+    ret = [form[0], form[1]]
+    i = 2
     while i < length(form) {
         ret ~= [ctfe_exec(form[i], state)]
         i = i + 1
@@ -528,7 +559,7 @@ def ctfe_exec(form, state) {
         return ctfe_exec_const(form, state)
     }
     if ty == vm.ast.ident {
-        return ctfe_exec_const(form, state)
+        return ctfe_exec_const_ident(form, state)
     }
     if ty == vm.ast.index {
         return ctfe_exec_copy(form, state)
@@ -547,7 +578,7 @@ def ctfe_exec(form, state) {
         return ctfe_exec_copy(form, state)
     }
     if ty == vm.ast.call {
-        return ctfe_exec_copy(form, state)
+        return ctfe_exec_copy_call(form, state)
     }
     if ty == vm.ast.putchar {
         return ctfe_exec_copy(form, state)
