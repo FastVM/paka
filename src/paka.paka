@@ -108,9 +108,10 @@ def vm_put() {
 
 def main(argv) {
     run = false
-    outfile = "exec.bc"
+    outfile = none
     srcfile = none
     rest = []
+    outlang = "minivm"
     i = 0
     while i < length(argv) {
         arg = argv[i]
@@ -125,6 +126,10 @@ def main(argv) {
                 if arg[1] == 'o' {
                     i = i + 1
                     outfile = argv[i]
+                }
+                if arg[1] == 'l' {
+                    i = i + 1
+                    outlang = argv[i]
                 }
                 if arg[1] == 'e' {
                     i = i + 1
@@ -159,11 +164,27 @@ def main(argv) {
         exit
     }
     ast = paka_parse(src)
-    bc = emit(ast, srcfile)
+    if outfile == none {
+        if outlang == "minivm" {
+            outfile = "exec.bc"
+        }
+        if outlang == "scheme" {
+            outfile = "out.scm"
+        }
+    }
     if run {
+        if outlang != "minivm" {
+            puts("cannot directly run any lang other than `-l minivm`")
+            exit
+        }
+        bc = emit(ast, srcfile)
         exec(bc, rest)
     } else {
-        dump(outfile, bc)
+        if outlang == "minivm" {
+            bc = emit(ast, srcfile)
+            dump(outfile, bc)
+            exit
+        }
     }
 }
 

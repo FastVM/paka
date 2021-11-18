@@ -141,9 +141,9 @@ def ctfe_exec_call(form, state) {
         vars ~= [fulldef[1][i][1], res]
         i = i + 1
     }
-    nstate = [state[0], vars, ctfe.state.run, none]
+    nstate = [state[0], vars, ctfe.state.run, state[3], none]
     ctfe_exec_real(fulldef[2], nstate)
-    return nstate[3]
+    return nstate[4]
 }
 
 def ctfe_exec_extend(form, state) {
@@ -338,7 +338,6 @@ def ctfe_exec_putchar(form, state) {
 
 def ctfe_exec_real(form, state) {
     ty = form[0]
-    ## println(form)
     if ty == vm.ast.num {
         return form[1]
     }
@@ -365,7 +364,7 @@ def ctfe_exec_real(form, state) {
     }
     if ty == vm.ast.return {
         state[2] = ctfe.state.ret
-        state[3] = ctfe_exec_real(form[1], state)
+        state[4] = ctfe_exec_real(form[1], state)
         return none
     }
     if ty == vm.ast.macro {
@@ -559,9 +558,6 @@ def ctfe_exec(form, state) {
     if ty == vm.ast.length {
         return ctfe_exec_copy(form, state)
     }
-    if ty == vm.ast.import {
-        return ctfe_exec_copy(form, state)
-    }
     if ty == vm.ast.dump {
         return ctfe_exec_copy(form, state)
     }
@@ -636,7 +632,7 @@ def ctfe_exec(form, state) {
     if ty == "!=" {
         return ctfe_exec_copy(form, state)
     }
-    put("unfold: unknown form: ")
+    put("eval: unknown form: ")
     println(form)
     exit
 }

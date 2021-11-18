@@ -94,7 +94,7 @@ def emit_ident(form, out) {
     if res != none {
         return res
     }
-    res = findvar(out[5], form[1])
+    res = findvar(out[4], form[1])
     if res != none {
         oreg = reg(out)
         out[0] ~= [opcode.do_store_int, oreg, res]
@@ -138,7 +138,7 @@ def emit_macro(form, out) {
     where = 1
     while where < length(form[2]) {
         name = form[1][1] ~ ['.'] ~ form[2][where][1]
-        out[5] ~= [name, where]
+        out[4] ~= [name, where]
         where = where + 1
     }
 }
@@ -308,29 +308,6 @@ def emit_read(form, out) {
     return ret
 }
 
-def emit_import(form, out) {
-    name = out[4][0] ~ ['/'] ~ form[1][1]
-    i = 0
-    while i < length(out[4][1]) {
-        existing = out[4][1][i]
-        if existing == name {
-            return none
-        }
-        i = i + 1
-    }
-    out[4][1] ~= [name]
-    src = read(name)
-    if src == none {
-        put("file not found for import: ")
-        puts(form[1][1])
-        exit
-    } else {
-        ast = paka_parse(src)
-        emit_to(ast, out)
-        return none
-    }
-}
-
 def emit_to(form, out) {
     ty = form[0]
     if ty == vm.ast.num {
@@ -374,9 +351,6 @@ def emit_to(form, out) {
     }
     if ty == vm.ast.length {
         return emit_length(form, out)
-    }
-    if ty == vm.ast.import {
-        return emit_import(form, out)
     }
     if ty == vm.ast.dump {
         return emit_dump(form, out)
@@ -512,8 +486,8 @@ def emit_link(out) {
 }
 
 def emit(form, path) {
-    out = [[], 0, ["args", 0], [], [file_dir(path), [path]], []]
-    form = ctfe_run(form)
+    out = [[], 0, ["args", 0], [], []]
+    form = ctfe_run(form, path)
     emit_to(form, out)
     out[0] ~= [0]
     linked = emit_link(out)

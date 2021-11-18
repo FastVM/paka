@@ -199,7 +199,7 @@ def paka_read_stmt(tokens, state) {
         token_stream_skip1(tokens)
         name = token_stream_read(tokens)
         block = paka_read_block(tokens, state)
-        return [vm.ast.macro, name, block]
+        return [vm.ast.macro, [vm.ast.ident, name[1]], block]
     }
     if first == token.keyword.when {
         token_stream_skip1(tokens)
