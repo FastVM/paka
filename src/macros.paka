@@ -64,6 +64,8 @@ macro opcode {
     do_dump
     do_read
     do_write
+    do_load_global
+    do_dynamic_call
 }
 
 macro token {

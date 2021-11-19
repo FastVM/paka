@@ -1,0 +1,21 @@
+
+import("../io.paka")
+
+
+def zero(n) {
+    return n + 0
+}
+
+def one(x) {
+    return x + 1
+}
+
+def two(n) {
+    return n + 2
+}
+
+a = [zero, one, two]
+
+putchar(a[0](99))
+putchar(a[1](99))
+putchar(a[2](99))

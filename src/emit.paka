@@ -100,9 +100,9 @@ def emit_ident(form, out) {
         out[0] ~= [opcode.do_store_int, oreg, res]
         return oreg
     }
-    puts(str_to_array("undefined ident: ") ~ form[1])
-    exit
-
+    oreg = reg(out)
+    out[0] ~= [opcode.do_store_int, oreg, [link.call, form[1]]]
+    return oreg
 }
 
 def emit_set(form, out) {
@@ -187,16 +187,36 @@ def emit_exit(form, out) {
 }
 
 def emit_call(form, out) {
-    regs = []
-    i = 2
-    while i < length(form) {
-        regs ~= [emit_to(form[i], out)]
-        i = i + 1
+    if form[1][0] == vm.ast.ident {
+        local = findvar(out[2], form[1][1])
+        regs = []
+        i = 2
+        while i < length(form) {
+            regs ~= [emit_to(form[i], out)]
+            i = i + 1
+        }
+        ret = reg(out)
+        if local == none {
+            out[0] ~= [opcode.do_static_call, ret, [link.call, form[1][1]], length(regs)]
+        } else {
+            out[0] ~= [opcode.do_dynamic_call, ret, local, length(regs)]
+        }
+        out[0] ~= regs
+        return ret
+    } else {
+        funcreg = emit_to(form[1], out)
+        regs = []
+        i = 2
+        while i < length(form) {
+            regs ~= [emit_to(form[i], out)]
+            i = i + 1
+        }
+        ret = reg(out)
+        println(ret)
+        out[0] ~= [opcode.do_dynamic_call, ret, funcreg, length(regs)]
+        out[0] ~= regs
+        return ret
     }
-    ret = reg(out)
-    out[0] ~= [opcode.do_static_call, ret, [link.call, form[1][1]], length(regs)]
-    out[0] ~= regs
-    return ret
 }
 
 def emit_while(form, out) {
