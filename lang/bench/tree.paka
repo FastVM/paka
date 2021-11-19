@@ -7,9 +7,9 @@ def bottom_up_tree(item, depth) {
         i = item + item
         left = bottom_up_tree(i-1, depth - 1)
         right = bottom_up_tree(i, depth - 1)
-        return [item, left, right]
+        return static [item, left, right]
     } else {
-        return [item]
+        return static [item]
     }
 }
 

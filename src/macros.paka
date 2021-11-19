@@ -28,6 +28,7 @@ macro vm {
     ast.index
     ast.putchar
     ast.static
+    ast.static_array
 }
 
 macro opcode {
@@ -66,6 +67,8 @@ macro opcode {
     do_write
     do_load_global
     do_dynamic_call
+    do_static_array_new
+    do_static_concat
 }
 
 macro token {
