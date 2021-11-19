@@ -3,5 +3,13 @@ macro ns {
     y
 }
 
-putchar(static {ns.x})
-putchar(10)
+macro names {
+    x = 1
+    y = 20 + 5
+}
+
+import("../io.paka")
+
+println(static {ns.x})
+
+println(names.y)
