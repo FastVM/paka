@@ -47,6 +47,17 @@ def paka_read_single(tokens, state) {
     if first == 0 {
         return none
     }
+    if first == token.keyword.thread {
+        token_stream_skip1(tokens)
+        first = token_stream_peek(tokens)
+        if first == token.open.curly {
+            arg = [vm.ast.none]
+        } else {
+            arg = paka_read_single(tokens)            
+        }
+        block = paka_read_block(tokens, state)
+        return [vm.ast.thread, arg, block]
+    }
     if first == token.keyword.static {
         token_stream_skip1(tokens)
         first = token_stream_peek(tokens)

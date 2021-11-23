@@ -330,6 +330,16 @@ def emit_read(form, out) {
     return ret
 }
 
+def emit_thread(form, out) {
+    ents = emit(form[2], out[5])
+    buf = reg(out)
+    out[0] ~= [opcode.do_string_new, buf, length(ents)]
+    out[0] ~= ents
+    r2 = emit_to(form[1], out)
+    out[0] ~= [opcode.do_exec, buf, r2]
+    return none
+}
+
 def emit_to(form, out) {
     ty = form[0]
     if ty == vm.ast.num {
@@ -404,6 +414,9 @@ def emit_to(form, out) {
     if ty == vm.ast.do {
         return emit_do(form, out)
     }
+    if ty == vm.ast.thread {
+        return emit_thread(form, out)
+    }
     if ty == "=" {
         return emit_set(form, out)
     }
@@ -449,7 +462,7 @@ def emit_to(form, out) {
     if ty == "!=" {
         return emit_binop(opcode.do_not_equal, form, out)
     }
-    put("unknown form: ")
+    put("emit: form:unknown form: ")
     println(form)
     exit
 }
@@ -511,7 +524,7 @@ def emit_link(out) {
 }
 
 def emit(form, path) {
-    out = [[], 0, ["args", 0], [], []]
+    out = [[], 0, ["args", 0], [], [], path]
     form = ctfe_run(form, path)
     emit_to(form, out)
     out[0] ~= [0]

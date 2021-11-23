@@ -146,6 +146,9 @@ def ctfe_unfold(form, state) {
     if ty == vm.ast.static {
         return ctfe_unfold_copy(form, state)
     }
+    if ty == vm.ast.thread {
+        return ctfe_unfold_const(form, state)
+    }
     if ty == "=" {
         return ctfe_unfold_copy(form, state)
     }

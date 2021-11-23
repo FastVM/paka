@@ -626,6 +626,9 @@ def ctfe_exec(form, state) {
     if ty == vm.ast.do {
         return ctfe_exec_copy(form, state)
     }
+    if ty == vm.ast.thread {
+        return ctfe_exec_copy(form, state)
+    }
     if ty == vm.ast.static {
         real = ctfe_exec_real(form[1], state)
         ast = ctfe_real_to_ast(real)

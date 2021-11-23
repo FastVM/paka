@@ -2,6 +2,7 @@
 macro vm {
     ast.num
     ast.true
+    ast.thread
     ast.false
     ast.none
     ast.index
@@ -89,6 +90,7 @@ macro token {
     keyword.when
     keyword.exit
     keyword.true
+    keyword.thread
     keyword.false
     keyword.none
     keyword.static
