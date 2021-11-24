@@ -36,6 +36,21 @@ def emit_binop(op, form, out) {
     return ret
 }
 
+
+def emit_binop2(op_reg, op_num, form, out) {
+    r1 = emit_to(form[1], out)
+    if form[2][0] == vm.ast.num {
+        ret = reg(out)
+        out[0] ~= [op_num, ret, r1, form[2][1]]
+        return ret
+    } else {
+        r2 = emit_to(form[2], out)
+        ret = reg(out)
+        out[0] ~= [op_reg, ret, r1, r2]
+        return ret
+    }
+}
+
 def emit_putchar(form, out) {
     r1 = emit_to(form[1], out)
     out[0] ~= [opcode.do_putchar, r1]
@@ -247,9 +262,65 @@ def emit_call(form, out) {
 }
 
 def emit_branch_alike(cond, jfalse, jtrue, out) {
+    if cond[0] == "==" {
+        lhs = emit_to(cond[1], out)
+        if cond[2][0] == vm.ast.num {
+            out[0] ~= [opcode.do_branch_equal_int, lhs, cond[2][1], goto(jfalse), goto(jtrue)]
+        } else {
+            rhs = emit_to(cond[2], out)
+            out[0] ~= [opcode.do_branch_equal, lhs, rhs, goto(jfalse), goto(jtrue)]
+        }
+        return none
+    }
+    if cond[0] == "!=" {
+        lhs = emit_to(cond[1], out)
+        if cond[2][0] == vm.ast.num {
+            out[0] ~= [opcode.do_branch_not_equal_int, lhs, cond[2][1], goto(jfalse), goto(jtrue)]
+        } else {
+            rhs = emit_to(cond[2], out)
+            out[0] ~= [opcode.do_branch_not_equal, lhs, rhs, goto(jfalse), goto(jtrue)]
+        }
+        return none
+    }
+    if cond[0] == "<" {
+        lhs = emit_to(cond[1], out)
+        if cond[2][0] == vm.ast.num {
+            out[0] ~= [opcode.do_branch_less_int, lhs, cond[2][1], goto(jfalse), goto(jtrue)]
+        } else {
+            rhs = emit_to(cond[2], out)
+            out[0] ~= [opcode.do_branch_less, lhs, rhs, goto(jfalse), goto(jtrue)]
+        }
+        return none
+    }
+    if cond[0] == ">" {
+        lhs = emit_to(cond[1], out)
+        if cond[2][0] == vm.ast.num {
+            out[0] ~= [opcode.do_branch_greater_int, lhs, cond[2][1], goto(jfalse), goto(jtrue)]
+        } else {
+            rhs = emit_to(cond[2], out)
+            out[0] ~= [opcode.do_branch_greater, lhs, rhs, goto(jfalse), goto(jtrue)]
+        }
+        return none
+    }
+    if cond[0] == "<=" {
+        lhs = emit_to(cond[1], out)
+        rhs = emit_to(cond[2], out)
+        out[0] ~= [opcode.do_branch_less_than_equal, lhs, rhs, goto(jfalse), goto(jtrue)]
+        return none
+    }
+    if cond[0] == ">=" {
+        lhs = emit_to(cond[1], out)
+        if cond[2][0] == vm.ast.num {
+            out[0] ~= [opcode.do_branch_greater_than_equal_int, lhs, cond[2][1], goto(jfalse), goto(jtrue)]
+        } else {
+            rhs = emit_to(cond[2], out)
+            out[0] ~= [opcode.do_branch_greater_than_equal, lhs, rhs, goto(jfalse), goto(jtrue)]
+        }
+        return none
+    }
     reg = emit_to(cond, out)
-    ## out[0] ~= [opcode.do_branch_true, goto(jtrue), goto(jfalse), reg]
     out[0] ~= [opcode.do_branch_bool, reg, goto(jfalse), goto(jtrue)]
+    return none
 }
 
 def emit_while(form, out) {
@@ -461,10 +532,10 @@ def emit_to(form, out) {
         return emit_binop(opcode.do_static_concat, form, out)
     }
     if ty == "+" {
-        return emit_binop(opcode.do_add, form, out)
+        return emit_binop2(opcode.do_add, opcode.do_inc, form, out)
     }
     if ty == "-" {
-        return emit_binop(opcode.do_sub, form, out)
+        return emit_binop2(opcode.do_sub, opcode.do_dec, form, out)
     }
     if ty == "*" {
         return emit_binop(opcode.do_mul, form, out)
