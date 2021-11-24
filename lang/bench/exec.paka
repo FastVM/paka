@@ -1,5 +1,12 @@
+
 i = 0
-while i < 100000 {
-    thread i {}
+while i < 8 {
+    thread {
+        j = 0
+        while j < 125000 {
+            thread {}
+            j = j + 1
+        }
+    }
     i = i + 1
 }

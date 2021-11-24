@@ -186,6 +186,33 @@ def emit_exit(form, out) {
     return none
 }
 
+def emit_call_static_opt(name, args, out) {
+    ret = reg(out)
+    if length(args) == 0 {
+        out[0] ~= [opcode.do_static_call0, ret, [link.call, name]]
+        out[0] ~= args
+        return ret
+    }
+    if length(args) == 1 {
+        out[0] ~= [opcode.do_static_call1, ret, [link.call, name]]
+        out[0] ~= args
+        return ret
+    }
+    if length(args) == 2 {
+        out[0] ~= [opcode.do_static_call2, ret, [link.call, name]]
+        out[0] ~= args
+        return ret
+    }
+    if length(args) == 3 {
+        out[0] ~= [opcode.do_static_call3, ret, [link.call, name]]
+        out[0] ~= args
+        return ret
+    }
+    out[0] ~= [opcode.do_static_call, ret, [link.call, name], length(args)]
+    out[0] ~= args
+    return ret
+}
+
 def emit_call(form, out) {
     if form[1][0] == vm.ast.ident {
         local = findvar(out[2], form[1][1])
@@ -195,13 +222,13 @@ def emit_call(form, out) {
             regs ~= [emit_to(form[i], out)]
             i = i + 1
         }
-        ret = reg(out)
         if local == none {
-            out[0] ~= [opcode.do_static_call, ret, [link.call, form[1][1]], length(regs)]
+            ret = emit_call_static_opt(form[1][1], regs, out)
         } else {
+            ret = reg(out)
             out[0] ~= [opcode.do_dynamic_call, ret, local, length(regs)]
+            out[0] ~= regs
         }
-        out[0] ~= regs
         return ret
     } else {
         funcreg = emit_to(form[1], out)
@@ -219,13 +246,18 @@ def emit_call(form, out) {
     }
 }
 
+def emit_branch_alike(cond, jfalse, jtrue, out) {
+    reg = emit_to(cond, out)
+    ## out[0] ~= [opcode.do_branch_true, goto(jtrue), goto(jfalse), reg]
+    out[0] ~= [opcode.do_branch_bool, reg, goto(jfalse), goto(jtrue)]
+}
+
 def emit_while(form, out) {
     jredo = jump(out)
     jtrue = jump(out)
     jfalse = jump(out)
     out[0] ~= [label(jredo)]
-    cond = emit_to(form[1], out)
-    out[0] ~= [opcode.do_branch, goto(jtrue), goto(jfalse), cond]
+    emit_branch_alike(form[1], jfalse, jtrue, out)
     out[0] ~= [label(jtrue)]
     emit_to(form[2], out)
     out[0] ~= [opcode.do_jump, goto(jredo)]
@@ -237,8 +269,7 @@ def emit_if(form, out) {
     jout = jump(out)
     jtrue = jump(out)
     jfalse = jump(out)
-    cond = emit_to(form[1], out)
-    out[0] ~= [opcode.do_branch, goto(jtrue), goto(jfalse), cond]
+    emit_branch_alike(form[1], jfalse, jtrue, out)
     out[0] ~= [label(jtrue)]
     emit_to(form[2], out)
     out[0] ~= [opcode.do_jump, goto(jout)]
