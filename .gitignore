@@ -14,8 +14,8 @@ __dummy.html
 a.out
 app
 callgrind*
-default.profdata
-default.profraw
+*.profdata
+*.profraw
 dlang
 dub.selections.json
 dub_platform_probe*
