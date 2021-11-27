@@ -1,6 +1,6 @@
 
-import("../io.paka")
-import("../conv.paka")
+import("../lang/io.paka")
+import("../lang/conv.paka")
 
 def bottom_up_tree(item, depth) {
     if depth != 0 {
