@@ -1,4 +1,4 @@
 [submodule "minivm"]
     path = minivm
-    url = https://github.com/shawsumma/minivm
-    branch = nyoka
+    url = https://github.com/fastvm/minivm
+    branch = main
