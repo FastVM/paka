@@ -165,6 +165,9 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                     if xsrc == "true" {
                         return token.keyword.true
                     }
+                    if xsrc == "thread" {
+                        return token.keyword.thread
+                    }
                     return [token.ident, xsrc]
                 }
                 if n0 == 'f' {

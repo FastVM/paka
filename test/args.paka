@@ -1,0 +1,4 @@
+
+import("../io.paka")
+
+println(args)
