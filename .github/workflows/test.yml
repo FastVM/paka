@@ -1,0 +1,10 @@
+name: Actions Test
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - run: make -B CC=cc CFLAGS+=-fsanitize=undefined LFLAGS+=-fsanitize=undefined OPT=-g3
