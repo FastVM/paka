@@ -1,7 +1,7 @@
 name: Actions Test
 on: [push]
 jobs:
-  build:
+  build-ubsan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -10,9 +10,20 @@ jobs:
       - run: make -B CC=cc CFLAGS+=-fsanitize=undefined LFLAGS+=-fsanitize=undefined OPT=-g3
       - uses: actions/upload-artifact@v2
         with:
-          name: minivm-linux
+          name: minivm-linux-debug
           path: bin/minivm
       - uses: actions/upload-artifact@v2
         with:
           name: stage3
           path: bin/stage3
+  build-opt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - run: make -B CC=cc CFLAGS+=-flto LFLAGS+=-flto OPT=-Ofast
+      - uses: actions/upload-artifact@v2
+        with:
+          name: minivm-linux-opt
+          path: bin/minivm
