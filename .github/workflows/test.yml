@@ -10,8 +10,9 @@ jobs:
       - run: make -B CC=cc CFLAGS+=-fsanitize=undefined LFLAGS+=-fsanitize=undefined OPT=-g3
       - uses: actions/upload-artifact@v2
         with:
-          name: files
-          path: |
-            bin/stage3
-            bin/minivm
-        
+          name: minivm-linux
+          path: bin/minivm
+      - uses: actions/upload-artifact@v2
+        with:
+          name: stage3
+          path: bin/stage3
