@@ -1,7 +1,7 @@
 
 ## TODO: make macros handled in here
 
-def ctfe_exec_ident(form, state) {
+def pass_ctfe_ident(form, state) {
     ret = findvar(state[1], form[1])
     if ret != none {
         return ret
@@ -17,12 +17,12 @@ def ctfe_exec_ident(form, state) {
         puts(ret)
         exit
     }
-    return ctfe_exec_real(ret, state)
+    return pass_ctfe_real(ret, state)
 }
 
-def ctfe_exec_index(form, state) {
-    arr = ctfe_exec_real(form[1], state)
-    ind = ctfe_exec_real(form[2], state)
+def pass_ctfe_index(form, state) {
+    arr = pass_ctfe_real(form[1], state)
+    ind = pass_ctfe_real(form[2], state)
     if type(arr) != type([]) {
         puts("ctfe: attempt to index non-array")
         exit
@@ -42,8 +42,8 @@ def ctfe_exec_index(form, state) {
     return ret
 }
 
-def ctfe_exec_length(form, state) {
-    arr = ctfe_exec_real(form[1], state)
+def pass_ctfe_length(form, state) {
+    arr = pass_ctfe_real(form[1], state)
     if type(arr) != type([]) {
         puts("ctfe: attempt to find length of non-array")
         exit
@@ -52,44 +52,44 @@ def ctfe_exec_length(form, state) {
     return ret
 }
 
-def ctfe_exec_array(form, state) {
+def pass_ctfe_array(form, state) {
     arr = []
     i = 1
     while i < length(form) {
-        arr ~= ctfe_exec_real(form[i], state)
+        arr ~= pass_ctfe_real(form[i], state)
         i = i + 1
     }
     return arr
 }
 
-def ctfe_exec_while(form, state) {
+def pass_ctfe_while(form, state) {
     while true {
-        cond = ctfe_exec_real(form[1], state)
+        cond = pass_ctfe_real(form[1], state)
         if cond == false {
             return none
         }
-        then = ctfe_exec_real(form[2], state)
+        then = pass_ctfe_real(form[2], state)
         if state[2] != ctfe.state.run {
             return none
         }
     }
 }
 
-def ctfe_exec_if(form, state) {
-    cond = ctfe_exec_real(form[1], state)
+def pass_ctfe_if(form, state) {
+    cond = pass_ctfe_real(form[1], state)
     if cond {
-        ctfe_exec_real(form[2], state)
+        pass_ctfe_real(form[2], state)
     } else {
-        ctfe_exec_real(form[3], state)
+        pass_ctfe_real(form[3], state)
     }
     return none
 }
 
-def ctfe_exec_set(form, state) {
+def pass_ctfe_set(form, state) {
     if form[1][0] == vm.ast.ident {
         vars = state[1]
         name = form[1][1]
-        setto = ctfe_exec_real(form[2])
+        setto = pass_ctfe_real(form[2])
         i = 0
         while i < length(vars) {
             if vars[i] == name {
@@ -101,9 +101,9 @@ def ctfe_exec_set(form, state) {
         return setto
     }
     if form[1][0] == vm.ast.index {
-        arr = ctfe_exec_real(form[1][1])
-        ind = ctfe_exec_real(form[1][2])
-        val = ctfe_exec_real(form[2])
+        arr = pass_ctfe_real(form[1][1])
+        ind = pass_ctfe_real(form[1][2])
+        val = pass_ctfe_real(form[2])
         if type(arr) != type([]) {
             puts("ctfe: attempt to index non-array")
             exit
@@ -123,11 +123,11 @@ def ctfe_exec_set(form, state) {
     }
 }
 
-def ctfe_exec_type(form, state) {
-    return type(ctfe_exec_real(form[1]))
+def pass_ctfe_type(form, state) {
+    return type(pass_ctfe_real(form[1]))
 }
 
-def ctfe_exec_call(form, state) {
+def pass_ctfe_call(form, state) {
     fulldef = findvar(state[0], form[1][1])
     if fulldef == none {
         puts("cannot find function in ctfe: " ~ form[1][1])
@@ -146,18 +146,18 @@ def ctfe_exec_call(form, state) {
     vars = []
     i = 2
     while i < length(fulldef[1]) {
-        res = ctfe_exec_real(form[i], state)
+        res = pass_ctfe_real(form[i], state)
         vars ~= [fulldef[1][i][1], res]
         i = i + 1
     }
-    nstate = [state[0], vars, ctfe.state.run, state[3], none]
-    ctfe_exec_real(fulldef[2], nstate)
-    return nstate[4]
+    nstate = [state[0], vars, ctfe.state.run, none]
+    pass_ctfe_real(fulldef[2], nstate)
+    return nstate[3]
 }
 
-def ctfe_exec_extend(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_extend(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type([]) {
         puts("ctfe: attemt to extend non-array")
         exit
@@ -170,9 +170,9 @@ def ctfe_exec_extend(form, state) {
     return lhs
 }
 
-def ctfe_exec_concat(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_concat(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type([]) {
         puts("ctfe: attemt to concat non-number")
         exit
@@ -184,9 +184,9 @@ def ctfe_exec_concat(form, state) {
     return lhs ~ rhs
 }
 
-def ctfe_exec_add(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_add(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type(0) {
         puts("ctfe: attemt to add non-number")
         exit
@@ -198,9 +198,9 @@ def ctfe_exec_add(form, state) {
     return lhs + rhs
 }
 
-def ctfe_exec_sub(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_sub(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type(0) {
         puts("ctfe: attemt to sub non-number")
         exit
@@ -212,9 +212,9 @@ def ctfe_exec_sub(form, state) {
     return lhs - rhs
 }
 
-def ctfe_exec_mul(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_mul(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type(0) {
         puts("ctfe: attemt to mul non-number")
         exit
@@ -226,9 +226,9 @@ def ctfe_exec_mul(form, state) {
     return lhs * rhs
 }
 
-def ctfe_exec_div(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_div(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type(0) {
         puts("ctfe: attemt to div non-number")
         exit
@@ -244,9 +244,9 @@ def ctfe_exec_div(form, state) {
     return lhs / rhs
 }
 
-def ctfe_exec_mod(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_mod(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type(0) {
         puts("ctfe: attemt to mod non-number")
         exit
@@ -262,9 +262,9 @@ def ctfe_exec_mod(form, state) {
     return lhs % rhs
 }
 
-def ctfe_exec_lt(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_lt(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type(0) {
         puts("ctfe: attemt to use < on non-number")
     }
@@ -275,9 +275,9 @@ def ctfe_exec_lt(form, state) {
 }
 
 
-def ctfe_exec_gt(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_gt(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type(0) {
         puts("ctfe: attemt to use > on non-number")
     }
@@ -287,9 +287,9 @@ def ctfe_exec_gt(form, state) {
     return lhs > rhs
 }
 
-def ctfe_exec_lte(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_lte(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type(0) {
         puts("ctfe: attemt to use <= on non-number")
     }
@@ -299,9 +299,9 @@ def ctfe_exec_lte(form, state) {
     return lhs <= rhs
 }
 
-def ctfe_exec_gte(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_gte(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     if type(lhs) != type(0) {
         puts("ctfe: attemt to use >= on non-number")
     }
@@ -311,33 +311,33 @@ def ctfe_exec_gte(form, state) {
     return lhs >= rhs
 }
 
-def ctfe_exec_eq(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_eq(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     return lhs == rhs
 }
 
-def ctfe_exec_neq(form, state) {
-    lhs = ctfe_exec_real(form[1], state)
-    rhs = ctfe_exec_real(form[2], state)
+def pass_ctfe_neq(form, state) {
+    lhs = pass_ctfe_real(form[1], state)
+    rhs = pass_ctfe_real(form[2], state)
     return lhs != rhs
 }
 
-def ctfe_exec_do(form, state) {
+def pass_ctfe_do(form, state) {
     cur = none
     i = 1
     while i < length(form) {
         if state[2] != ctfe.state.run {
             return cur
         }
-        cur = ctfe_exec_real(form[i], state)
+        cur = pass_ctfe_real(form[i], state)
         i = i + 1
     }
     return cur
 }
 
-def ctfe_exec_putchar(form, state) {
-    val = ctfe_exec_real(form[1], state)
+def pass_ctfe_putchar(form, state) {
+    val = pass_ctfe_real(form[1], state)
     if type(val) != type(0) {
         puts("ctfe: attempt to putchar a non-number")
     }
@@ -345,7 +345,7 @@ def ctfe_exec_putchar(form, state) {
     return none
 }
 
-def ctfe_exec_real(form, state) {
+def pass_ctfe_real(form, state) {
     ty = form[0]
     if ty == vm.ast.num {
         return form[1]
@@ -363,17 +363,17 @@ def ctfe_exec_real(form, state) {
         return form[1]
     }
     if ty == vm.ast.ident {
-        return ctfe_exec_ident(form, state)
+        return pass_ctfe_ident(form, state)
     }
     if ty == vm.ast.index {
-        return ctfe_exec_index(form, state)
+        return pass_ctfe_index(form, state)
     }
     if ty == vm.ast.def {
         return none
     }
     if ty == vm.ast.return {
         state[2] = ctfe.state.ret
-        state[4] = ctfe_exec_real(form[1], state)
+        state[3] = pass_ctfe_real(form[1], state)
         return none
     }
     if ty == vm.ast.macro {
@@ -385,17 +385,17 @@ def ctfe_exec_real(form, state) {
         exit
     }
     if ty == vm.ast.call {
-        return ctfe_exec_call(form, state)
+        return pass_ctfe_call(form, state)
     }
     if ty == vm.ast.putchar {
-        return ctfe_exec_putchar(form, state)
+        return pass_ctfe_putchar(form, state)
     }
     if ty == vm.ast.exec {
         puts("cannot `exec(...)` in static {...}")
         exit
     }
     if ty == vm.ast.length {
-        return ctfe_exec_length(form, state)
+        return pass_ctfe_length(form, state)
     }
     if ty == vm.ast.dump {
         puts("cannot `dump(...)` in static {...}")
@@ -414,70 +414,70 @@ def ctfe_exec_real(form, state) {
         exit
     }
     if ty == vm.ast.type {
-        return ctfe_exec_type(form, state)
+        return pass_ctfe_type(form, state)
     }
     if ty == vm.ast.array {
-        return ctfe_exec_array(form, state)
+        return pass_ctfe_array(form, state)
     }
     if ty == vm.ast.static_array {
-        return ctfe_exec_array(form, state)
+        return pass_ctfe_array(form, state)
     }
     if ty == vm.ast.while {
-        return ctfe_exec_while(form, state)
+        return pass_ctfe_while(form, state)
     }
     if ty == vm.ast.if {
-        return ctfe_exec_if(form, state)
+        return pass_ctfe_if(form, state)
     }
     if ty == vm.ast.do {
-        return ctfe_exec_do(form, state)
+        return pass_ctfe_do(form, state)
     }
     if ty == vm.ast.static {
-        return ctfe_exec_real(form[1], state)
+        return pass_ctfe_real(form[1], state)
     }
     if ty == "=" {
-        return ctfe_exec_set(form, state)
+        return pass_ctfe_set(form, state)
     }
     if ty == "~=" {
-        return ctfe_exec_extend(form, state)
+        return pass_ctfe_extend(form, state)
     }
     if ty == "~" {
-        return ctfe_exec_concat(form, state)
+        return pass_ctfe_concat(form, state)
     }
     if ty == "++" {
-        return ctfe_exec_concat(form, state)
+        return pass_ctfe_concat(form, state)
     }
     if ty == "+" {
-        return ctfe_exec_add(form, state)
+        return pass_ctfe_add(form, state)
     }
     if ty == "-" {
-        return ctfe_exec_sub(form, state)
+        return pass_ctfe_sub(form, state)
     }
     if ty == "*" {
-        return ctfe_exec_mul(form, state)
+        return pass_ctfe_mul(form, state)
     }
     if ty == "/" {
-        return ctfe_exec_div(form, state)
+        return pass_ctfe_div(form, state)
     }
     if ty == "%" {
-        return ctfe_exec_mod(form, state)
+        return pass_ctfe_mod(form, state)
     }
     if ty == "<" {
-        return ctfe_exec_lt(form, state)
+        return pass_ctfe_lt(form, state)
     }
     if ty == ">" {
-        return ctfe_exec_gt(form, state)
+        return pass_ctfe_gt(form, state)
     }
     if ty == "<=" {
-        return ctfe_exec_lte(form, state)
+        return pass_ctfe_lte(form, state)
     }
     if ty == ">=" {
-        return ctfe_exec_gte(form, state)
+        return pass_ctfe_gte(form, state)
     }
     if ty == "==" {
-        return ctfe_exec_eq(form, state)
+        return pass_ctfe_eq(form, state)
     }
     if ty == "!=" {
-        return ctfe_exec_neq(form, state)
+        return pass_ctfe_neq(form, state)
     }
     put("exec: unknown form: ")
     println(form)
@@ -485,37 +485,37 @@ def ctfe_exec_real(form, state) {
 }
 
 
-def ctfe_exec_const(form, state) {
+def pass_ctfe_const(form, state) {
     return form
 }
 
-def ctfe_exec_const_ident(form, state) {
+def pass_ctfe_const_ident(form, state) {
     val = findvar(state[0], form[1])
     if val == none {
         return form
     }
     if val[0] != vm.ast.def {
-        return ctfe_exec(val)
+        return pass_ctfe(val)
     } else {
         return form
     }
 }
 
-def ctfe_exec_copy(form, state) {
+def pass_ctfe_copy(form, state) {
     ret = [form[0]]
     i = 1
     while i < length(form) {
-        ret ~= [ctfe_exec(form[i], state)]
+        ret ~= [pass_ctfe(form[i], state)]
         i = i + 1
     }
     return ret
 }
 
-def ctfe_exec_copy_call(form, state) {
+def pass_ctfe_copy_call(form, state) {
     ret = [form[0], form[1]]
     i = 2
     while i < length(form) {
-        ret ~= [ctfe_exec(form[i], state)]
+        ret ~= [pass_ctfe(form[i], state)]
         i = i + 1
     }
     return ret
@@ -548,136 +548,136 @@ def ctfe_real_to_ast(val) {
     exit
 }
 
-def ctfe_exec(form, state) {
+def pass_ctfe(form, state) {
     ty = form[0]
     if ty == vm.ast.num {
-        return ctfe_exec_const(form, state)
+        return pass_ctfe_const(form, state)
     }
     if ty == vm.ast.true {
-        return ctfe_exec_const(form, state)
+        return pass_ctfe_const(form, state)
     }
     if ty == vm.ast.false {
-        return ctfe_exec_const(form, state)
+        return pass_ctfe_const(form, state)
     }
     if ty == vm.ast.none {
-        return ctfe_exec_const(form, state)
+        return pass_ctfe_const(form, state)
     }
     if ty == vm.ast.str {
-        return ctfe_exec_const(form, state)
+        return pass_ctfe_const(form, state)
     }
     if ty == vm.ast.ident {
-        return ctfe_exec_const_ident(form, state)
+        return pass_ctfe_const_ident(form, state)
     }
     if ty == vm.ast.index {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.def {
         state[0] ~= [form[1][1], form[2]]
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.return {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.macro {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.exit {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.call {
-        return ctfe_exec_copy_call(form, state)
+        return pass_ctfe_copy_call(form, state)
     }
     if ty == vm.ast.putchar {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.exec {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.length {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.dump {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.readc {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.read {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.write {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.type {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.array {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.static_array {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.while {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.if {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.do {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.thread {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.static {
-        real = ctfe_exec_real(form[1], state)
+        real = pass_ctfe_real(form[1], state)
         ast = ctfe_real_to_ast(real)
         return ast
     }
     if ty == "=" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "~=" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "~" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "++" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "+" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "-" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "*" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "/" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "%" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "<" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == ">" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "<=" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == ">=" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "==" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     if ty == "!=" {
-        return ctfe_exec_copy(form, state)
+        return pass_ctfe_copy(form, state)
     }
     put("eval: unknown form: ")
     println(form)

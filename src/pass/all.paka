@@ -1,0 +1,8 @@
+
+def ctfe_run(ast, path) {
+    ast = pass_import(ast, path)
+    state = [[], [], ctfe.state.run, none]
+    ast = pass_macro_resolve(ast, state)
+    ast = pass_ctfe(ast, state)
+    return ast
+}
