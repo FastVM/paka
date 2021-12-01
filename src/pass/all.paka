@@ -1,4 +1,8 @@
 
+import("ctfe.paka")
+import("import.paka")
+import("resolve.paka")
+
 def ctfe_run(ast, path) {
     ast = pass_import(ast, path)
     state = [[], [], ctfe.state.run, none]

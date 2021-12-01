@@ -26,7 +26,9 @@ def pass_import_resolve_import(form, state) {
     state[1] ~= [name]
     src = read(name)
     ast = paka_parse(src)
-    full = pass_import_state(ast, state)
+    xstate = [file_dir(name), state[1]]
+    full = pass_import_state(ast, xstate)
+    state[1] = xstate[1]
     return full
 }
 
