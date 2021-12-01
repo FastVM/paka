@@ -4,7 +4,7 @@ import("treegen.paka")
 import("tablegen.paka")
 
 asrcs = [
-    "src/emit.paka", "src/findvar.paka", "src/macros.paka", "src/paka.paka", "src/stream.paka", "src/strs.paka",
+    "src/emit.paka", "src/findvar.paka", "src/macros.paka", "src/main.paka", "src/stream.paka", "src/strs.paka",
     "src/ctfe/eval.paka", "src/ctfe/run.paka", "src/ctfe/unfold.paka",
     "src/paka/lex.paka", "src/paka/read.paka", "src/paka/token.paka"
 ]

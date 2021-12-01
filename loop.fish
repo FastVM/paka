@@ -7,5 +7,5 @@ cp bins/boot.bc bin/stage0
 for cur in (seq 0 (math $argv[1] - 1))
     set next (math $cur + 1)
     echo building bin/stage$next
-    ./minivm/minivm bin/stage$cur -o bin/stage$next src/paka.paka
+    ./minivm/minivm bin/stage$cur -o bin/stage$next src/main.paka
 end
