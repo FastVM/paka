@@ -2,10 +2,10 @@
 import("../lang/io.paka")
 import("../lang/conv.paka")
 import("../lang/file.paka")
+import("../lang/stream.paka")
+import("../lang/strs.paka")
 
 import("macros.paka")
-import("strs.paka")
-import("stream.paka")
 import("findvar.paka")
 import("paka/all.paka")
 import("pass/all.paka")
