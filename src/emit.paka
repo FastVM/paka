@@ -446,18 +446,16 @@ def emit_thread(form, out) {
 }
 
 def emit_foreach(form, out) {
-    valreg = emit(form[2], out)
+    valreg = emit_to(form[2], out)
     lenreg = reg(out)
     indreg = reg(out)
     out[0] ~= [opcode.do_length, lenreg, valreg]
     out[0] ~= [opcode.do_store_int, indreg, 0]
     ## retreg = reg(out)
     ## out[0] ~= [opcode.do_array_new, retreg, 0]
-    jredo = jump(out)
     jtrue = jump(out)
     jfalse = jump(out)
-    out[0] ~= [label(jredo)]
-    out[0] ~= [opcode.do_branch_less, goto(jfalse), goto(jtrue), indreg, lenreg]
+    out[0] ~= [opcode.do_branch_less, indreg, lenreg, goto(jfalse), goto(jtrue)]
     out[0] ~= [label(jtrue)]
     varreg = reg(out)
     out[2] ~= [form[1][1], varreg]
@@ -467,7 +465,7 @@ def emit_foreach(form, out) {
     ##     out[0] ~= [opcode.do_push, retreg, tmpreg]
     ## }
     out[0] ~= [opcode.do_inc, indreg, indreg, 1]
-    out[0] ~= [opcode.do_branch_less, goto(jfalse), goto(jtrue), indreg, lenreg]
+    out[0] ~= [opcode.do_branch_less, indreg, lenreg, goto(jfalse), goto(jtrue)]
     out[0] ~= [label(jfalse)]
     ## return retreg
     return none
