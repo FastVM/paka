@@ -484,11 +484,6 @@ def pass_ctfe_real(form, state) {
     exit
 }
 
-
-def pass_ctfe_const(form, state) {
-    return form
-}
-
 def pass_ctfe_const_ident(form, state) {
     val = findvar(state[0], form[1])
     if val == none {
@@ -550,20 +545,8 @@ def ctfe_real_to_ast(val) {
 
 def pass_ctfe(form, state) {
     ty = form[0]
-    if ty == vm.ast.num {
-        return pass_ctfe_const(form, state)
-    }
-    if ty == vm.ast.true {
-        return pass_ctfe_const(form, state)
-    }
-    if ty == vm.ast.false {
-        return pass_ctfe_const(form, state)
-    }
-    if ty == vm.ast.none {
-        return pass_ctfe_const(form, state)
-    }
-    if ty == vm.ast.str {
-        return pass_ctfe_const(form, state)
+    if util_ast_is_literal(ty) {
+        return form
     }
     if ty == vm.ast.ident {
         return pass_ctfe_const_ident(form, state)

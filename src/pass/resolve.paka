@@ -1,8 +1,4 @@
 
-def pass_macro_resolve_const(form, state) {
-    return form
-}
-
 def pass_macro_resolve_copy(form, state) {
     ret = [form[0]]
     i = 1
@@ -48,22 +44,22 @@ def pass_macro_resolve_macro(form, state) {
 def pass_macro_resolve(form, state) {
     ty = form[0]
     if ty == vm.ast.num {
-        return pass_macro_resolve_const(form, state)
+        return form
     }
     if ty == vm.ast.true {
-        return pass_macro_resolve_const(form, state)
+        return form
     }
     if ty == vm.ast.false {
-        return pass_macro_resolve_const(form, state)
+        return form
     }
     if ty == vm.ast.none {
-        return pass_macro_resolve_const(form, state)
+        return form
     }
     if ty == vm.ast.str {
-        return pass_macro_resolve_const(form, state)
+        return form
     }
     if ty == vm.ast.ident {
-        return pass_macro_resolve_const(form, state)
+        return form
     }
     if ty == vm.ast.index {
         return pass_macro_resolve_copy(form, state)
@@ -127,7 +123,7 @@ def pass_macro_resolve(form, state) {
         return pass_macro_resolve_copy(form, state)
     }
     if ty == vm.ast.thread {
-        return pass_macro_resolve_const(form, state)
+        return form
     }
     if ty == "=" {
         return pass_macro_resolve_copy(form, state)

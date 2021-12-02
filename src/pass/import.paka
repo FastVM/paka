@@ -1,8 +1,4 @@
 
-def pass_import_const(form, state) {
-    return form
-}
-
 def pass_import_copy(form, state) {
     ret = [form[0]]
     i = 1
@@ -35,22 +31,22 @@ def pass_import_resolve_import(form, state) {
 def pass_import_state(form, state) {
     ty = form[0]
     if ty == vm.ast.num {
-        return pass_import_const(form, state)
+        return form
     }
     if ty == vm.ast.true {
-        return pass_import_const(form, state)
+        return form
     }
     if ty == vm.ast.false {
-        return pass_import_const(form, state)
+        return form
     }
     if ty == vm.ast.none {
-        return pass_import_const(form, state)
+        return form
     }
     if ty == vm.ast.str {
-        return pass_import_const(form, state)
+        return form
     }
     if ty == vm.ast.ident {
-        return pass_import_const(form, state)
+        return form
     }
     if ty == vm.ast.index {
         return pass_import_copy(form, state)

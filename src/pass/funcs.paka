@@ -1,0 +1,29 @@
+
+def pass_func_foreach(form, state) {
+    i = 1
+    while i < length(form) {
+        pass_funcs_state(form[i], state)
+        i = i + 1
+    }
+}
+
+def pass_funcs_state(form, state) {
+    ty = form[0]
+    if util_ast_is_literal(ty) {
+        return none
+    }
+    if ty == vm.ast.ident {
+        return none
+    }
+    if ty == vm.ast.def {
+        state ~= [form[1][1][1], form]
+        return none
+    }
+    pass_func_foreach(form, state)
+}
+
+def pass_funcs_collect(form) {
+    state = []
+    pass_funcs_state(form, state)
+    return state
+}

@@ -11,6 +11,8 @@ import("paka/all.paka")
 import("pass/all.paka")
 import("emit.paka")
 
+import("util/ast.paka")
+
 
 def vm_set(s) {
     return [vm.ast.do, ["=", [vm.ast.ident, "_ret"], s]]

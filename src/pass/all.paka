@@ -2,11 +2,18 @@
 import("ctfe.paka")
 import("import.paka")
 import("resolve.paka")
+import("funcs.paka")
 
 def ctfe_run(ast, path) {
     ast = pass_import(ast, path)
     state = [[], [], ctfe.state.run, none]
     ast = pass_macro_resolve(ast, state)
     ast = pass_ctfe(ast, state)
+    ## funcs = pass_funcs_collect(ast)
+    ## i = 0
+    ## while i < length(funcs) {
+    ##     puts(funcs[i])
+    ##     i = i + 2
+    ## }
     return ast
 }
