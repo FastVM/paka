@@ -1,0 +1,107 @@
+
+import("../lang/io.paka")
+
+def stream_new(src) {
+    return [src, 0]
+}
+
+def stream_is_done(src) {
+    return src[1] >= length(src[0])
+}
+
+def stream_peek(src) {
+    if stream_is_done(src) {
+        return none
+    } else {
+        return src[0][src[1]]
+    }
+}
+
+def stream_skip(src) {
+    if src[1] < length(src[0]) {
+        src[1] = src[1] + 1
+    } 
+}
+
+def stream_read(src) {
+    ret = stream_peek(src)
+    stream_skip(src)
+    return ret
+}
+
+def is_digit(chr) {
+    if chr < '0' {
+        return false
+    }
+    if chr > '9' {
+        return false
+    }
+    return true
+}
+
+def stream_read_int(stream) {
+    ret = 0
+    while true {
+        chr = stream_read(stream)
+        if is_digit(chr) {
+            ret = ret * 10 + chr - '0'
+        } else {
+            return ret
+        }
+    }
+}
+
+def stream_read_ints(stream) {
+    ret = []
+    while true {
+        chr = stream_is_done(stream)
+        if stream_is_done(stream) {
+            return ret
+        } else {
+            ret ~= [stream_read_int(stream)]
+        }
+    }
+}
+
+def count_ints(nums) {
+    first = nums[0]
+    ret = 0
+    i = 1
+    while i < length(nums) {
+        next = nums[i]
+        if next > first {
+            ret = ret + 1
+        }
+        first = next
+        i = i + 1
+    }
+    return ret
+}
+
+def count_window(nums, i) {
+    return nums[i - 2] + nums[i - 1] + nums[i]
+}
+
+def count_runs(nums) {
+    ret = 0
+    i = 3
+    while i < length(nums) {
+        last = count_window(nums, i - 1)
+        next = count_window(nums, i)
+        if last < next {
+            ret = ret + 1
+        }
+        i = i + 1
+    } 
+    return ret
+}
+
+src = read("aoc/day1.txt")
+stream = stream_new(src)
+ints = stream_read_ints(stream)
+count = count_ints(ints)
+put("part1: ")
+println(count)
+count = count_runs(ints)
+put("part2: ")
+println(count)
