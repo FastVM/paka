@@ -124,11 +124,14 @@ def emit_set(form, out) {
     if form[1][0] == vm.ast.ident {
         found = findvar(out[2], form[1][1])
         if found == none {
+            ## from = emit_to(form[2], out)
+            ## to = reg(out)
+            ## out[2] ~= [form[1][1], to]
+            ## out[0] ~= [opcode.do_store_reg, to, from]
+            ## return to
             from = emit_to(form[2], out)
-            to = reg(out)
-            out[2] ~= [form[1][1], to]
-            out[0] ~= [opcode.do_store_reg, to, from]
-            return to
+            out[2] ~= [form[1][1], from]
+            return from
         } else {
             from = emit_to(form[2], out)
             out[0] ~= [opcode.do_store_reg, found, from]
@@ -442,6 +445,34 @@ def emit_thread(form, out) {
     return none
 }
 
+def emit_foreach(form, out) {
+    valreg = emit(form[2], out)
+    lenreg = reg(out)
+    indreg = reg(out)
+    out[0] ~= [opcode.do_length, lenreg, valreg]
+    out[0] ~= [opcode.do_store_int, indreg, 0]
+    ## retreg = reg(out)
+    ## out[0] ~= [opcode.do_array_new, retreg, 0]
+    jredo = jump(out)
+    jtrue = jump(out)
+    jfalse = jump(out)
+    out[0] ~= [label(jredo)]
+    out[0] ~= [opcode.do_branch_less, goto(jfalse), goto(jtrue), indreg, lenreg]
+    out[0] ~= [label(jtrue)]
+    varreg = reg(out)
+    out[2] ~= [form[1][1], varreg]
+    out[0] ~= [opcode.do_index_get, varreg, valreg, indreg]
+    tmpreg = emit_to(form[3], out)
+    ## if tmpreg != none {
+    ##     out[0] ~= [opcode.do_push, retreg, tmpreg]
+    ## }
+    out[0] ~= [opcode.do_inc, indreg, indreg, 1]
+    out[0] ~= [opcode.do_branch_less, goto(jfalse), goto(jtrue), indreg, lenreg]
+    out[0] ~= [label(jfalse)]
+    ## return retreg
+    return none
+}
+
 def emit_to(form, out) {
     ty = form[0]
     if ty == vm.ast.num {
@@ -518,6 +549,9 @@ def emit_to(form, out) {
     }
     if ty == vm.ast.thread {
         return emit_thread(form, out)
+    }
+    if ty == vm.ast.foreach {
+        return emit_foreach(form, out)
     }
     if ty == "=" {
         return emit_set(form, out)

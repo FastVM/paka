@@ -33,7 +33,7 @@ def pass_macro_resolve_macro(form, state) {
             ok = true
         }
         if ok == false {
-            println("that is not valid in a macro")
+            puts("that is not valid in a macro")
             exit
         }
         where = where + 1

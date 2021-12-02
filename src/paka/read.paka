@@ -58,6 +58,18 @@ def paka_read_single(tokens, state) {
         block = paka_read_block(tokens, state)
         return [vm.ast.thread, arg, block]
     }
+    if first == token.keyword.foreach {
+        token_stream_skip1(tokens)
+        ident = paka_read_single(tokens)
+        next = token_stream_read(tokens)
+        if next != [token.op, ":"] {
+            puts("error: expected colon after foreach's variable")
+            exit
+        }
+        expr = paka_read_expr_base(tokens, state)
+        block = paka_read_block(tokens, state)
+        return [vm.ast.foreach, ident, expr, block]
+    }
     if first == token.keyword.static {
         token_stream_skip1(tokens)
         first = token_stream_peek(tokens)
@@ -211,13 +223,6 @@ def paka_read_stmt(tokens, state) {
         expr = paka_read_expr_base(tokens, state)
         block = paka_read_block(tokens, state)
         return [vm.ast.while, expr, block]
-    }
-    if first == token.keyword.foreach {
-        token_stream_skip1(tokens)
-        ident = paka_read_single(tokens)
-        expr = paka_read_expr_base(tokens, state)
-        block = paka_read_block(tokens, state)
-        return [vm.ast.foreach, ident, expr, block]
     }
     if first == token.keyword.def {
         token_stream_skip1(tokens)
