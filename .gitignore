@@ -55,3 +55,4 @@ oom-*
 *.core
 *.dep
 exec.bc
+aoc/*.txt
