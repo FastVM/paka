@@ -29,6 +29,7 @@ macro vm {
     ast.index
     ast.putchar
     ast.static
+    ast.foreach
     ast.static_array
 }
 
@@ -113,6 +114,7 @@ macro token {
     keyword.false
     keyword.none
     keyword.static
+    keyword.foreach
     op
     str
     num

@@ -43,131 +43,21 @@ def pass_macro_resolve_macro(form, state) {
 
 def pass_macro_resolve(form, state) {
     ty = form[0]
-    if ty == vm.ast.num {
-        return form
-    }
-    if ty == vm.ast.true {
-        return form
-    }
-    if ty == vm.ast.false {
-        return form
-    }
-    if ty == vm.ast.none {
-        return form
-    }
-    if ty == vm.ast.str {
+    if util_ast_is_literal(ty) {
         return form
     }
     if ty == vm.ast.ident {
         return form
     }
-    if ty == vm.ast.index {
-        return pass_macro_resolve_copy(form, state)
+    if ty == vm.ast.thread {
+        return form
+    }
+    if ty == vm.ast.macro {
+        return pass_macro_resolve_macro(form, state)
     }
     if ty == vm.ast.def {
         state[0] ~= [form[1][1][1], form]
         return pass_macro_resolve_copy(form, state)
     }
-    if ty == vm.ast.return {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.macro {
-        return pass_macro_resolve_macro(form, state)
-    }
-    if ty == vm.ast.exit {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.call {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.putchar {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.exec {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.length {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.dump {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.readc {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.read {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.write {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.type {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.array {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.static_array {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.while {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.if {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.do {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.static {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == vm.ast.thread {
-        return form
-    }
-    if ty == "=" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "~=" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "~" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "+" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "-" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "*" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "/" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "%" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "<" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == ">" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "<=" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == ">=" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "==" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    if ty == "!=" {
-        return pass_macro_resolve_copy(form, state)
-    }
-    put("unfold: unknown form: ")
-    println(form)
-    exit
+    return pass_macro_resolve_copy(form, state)
 }

@@ -75,6 +75,11 @@ def pass_ctfe_while(form, state) {
     }
 }
 
+def pass_ctfe_foreach(form, state) {
+    puts("error: ctfe foreach: go yell at shaw to fix foeach")
+    exit
+}
+
 def pass_ctfe_if(form, state) {
     cond = pass_ctfe_real(form[1], state)
     if cond {
@@ -425,6 +430,9 @@ def pass_ctfe_real(form, state) {
     if ty == vm.ast.while {
         return pass_ctfe_while(form, state)
     }
+    if ty == vm.ast.foreach {
+        return pass_ctfe_foreach(form, state)
+    }
     if ty == vm.ast.if {
         return pass_ctfe_if(form, state)
     }
@@ -551,118 +559,13 @@ def pass_ctfe(form, state) {
     if ty == vm.ast.ident {
         return pass_ctfe_const_ident(form, state)
     }
-    if ty == vm.ast.index {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.def {
-        state[0] ~= [form[1][1], form[2]]
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.return {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.macro {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.exit {
-        return pass_ctfe_copy(form, state)
-    }
     if ty == vm.ast.call {
         return pass_ctfe_copy_call(form, state)
-    }
-    if ty == vm.ast.putchar {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.exec {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.length {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.dump {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.readc {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.read {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.write {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.type {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.array {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.static_array {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.while {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.if {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.do {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == vm.ast.thread {
-        return pass_ctfe_copy(form, state)
     }
     if ty == vm.ast.static {
         real = pass_ctfe_real(form[1], state)
         ast = ctfe_real_to_ast(real)
         return ast
     }
-    if ty == "=" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "~=" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "~" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "++" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "+" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "-" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "*" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "/" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "%" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "<" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == ">" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "<=" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == ">=" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "==" {
-        return pass_ctfe_copy(form, state)
-    }
-    if ty == "!=" {
-        return pass_ctfe_copy(form, state)
-    }
-    put("eval: unknown form: ")
-    println(form)
-    exit
+    return pass_ctfe_copy(form, state)
 }

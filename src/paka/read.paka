@@ -212,6 +212,13 @@ def paka_read_stmt(tokens, state) {
         block = paka_read_block(tokens, state)
         return [vm.ast.while, expr, block]
     }
+    if first == token.keyword.foreach {
+        token_stream_skip1(tokens)
+        ident = paka_read_single(tokens)
+        expr = paka_read_expr_base(tokens, state)
+        block = paka_read_block(tokens, state)
+        return [vm.ast.foreach, ident, expr, block]
+    }
     if first == token.keyword.def {
         token_stream_skip1(tokens)
         expr = paka_read_expr_base(tokens, state)

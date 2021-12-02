@@ -34,135 +34,16 @@ def pass_import_resolve_import(form, state) {
 
 def pass_import_state(form, state) {
     ty = form[0]
-    if ty == vm.ast.num {
-        return form
-    }
-    if ty == vm.ast.true {
-        return form
-    }
-    if ty == vm.ast.false {
-        return form
-    }
-    if ty == vm.ast.none {
-        return form
-    }
-    if ty == vm.ast.str {
+    if util_ast_is_literal(ty) {
         return form
     }
     if ty == vm.ast.ident {
         return form
     }
-    if ty == vm.ast.index {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.def {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.return {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.macro {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.exit {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.call {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.putchar {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.exec {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.length {
-        return pass_import_copy(form, state)
-    }
     if ty == vm.ast.import {
         return pass_import_resolve_import(form, state)
     }
-    if ty == vm.ast.dump {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.readc {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.read {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.write {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.type {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.array {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.static_array {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.while {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.if {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.do {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.static {
-        return pass_import_copy(form, state)
-    }
-    if ty == vm.ast.thread {
-        return pass_import_copy(form, state)
-    }
-    if ty == "=" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "~=" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "~" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "+" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "-" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "*" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "/" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "%" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "<" {
-        return pass_import_copy(form, state)
-    }
-    if ty == ">" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "<=" {
-        return pass_import_copy(form, state)
-    }
-    if ty == ">=" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "==" {
-        return pass_import_copy(form, state)
-    }
-    if ty == "!=" {
-        return pass_import_copy(form, state)
-    }
-    put("unfold: unknown form: ")
-    println(form)
-    exit
+    return pass_import_copy(form, state)
 }
 
 def pass_import(form, path) {
