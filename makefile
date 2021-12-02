@@ -9,15 +9,15 @@ default: bin/stage3
 	$(MAKE) -C minivm
 	cp minivm/minivm $@
 
-bin/stage1: $(VM) src/paka.paka
+bin/stage1: $(VM) src/main.paka
 	mkdir -p bin
-	$(VM) $(BOOT) src/paka.paka -o $@
+	$(VM) $(BOOT) src/main.paka -o $@
 
 bin/stage2: bin/stage1
-	$(VM) bin/stage1 src/paka.paka -o $@
+	$(VM) bin/stage1 src/main.paka -o $@
 
 bin/stage3: bin/stage2
-	$(VM) bin/stage2 src/paka.paka -o $@
+	$(VM) bin/stage2 src/main.paka -o $@
 
 clean: .dummy
 	$(MAKE) -C minivm clean

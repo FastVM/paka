@@ -1,0 +1,177 @@
+
+def pass_macro_resolve_const(form, state) {
+    return form
+}
+
+def pass_macro_resolve_copy(form, state) {
+    ret = [form[0]]
+    i = 1
+    while i < length(form) {
+        ret ~= [pass_macro_resolve(form[i], state)]
+        i = i + 1
+    }
+    return ret
+}
+
+def pass_macro_resolve_macro(form, state) {
+    name = form[1][1]
+    idents = []
+    where = 1
+    while where < length(form[2]) {
+        ok = false
+        if form[2][where][0] == vm.ast.ident {
+            fullname = form[1][1] ~ ['.'] ~ form[2][where][1]
+            ast = [vm.ast.num, where]
+            state[0] ~= [fullname, ast]
+            ok = true
+        }
+        if form[2][where][0] == "=" {
+            setto = form[2][where][1]
+            val = form[2][where][2]
+            if setto[0] != vm.ast.ident {
+                puts("enum macro given bad value on left hand size of `=`")
+                exit
+            }
+            fullname = form[1][1] ~ ['.'] ~ setto[1]
+            state[0] ~= [fullname, val]
+            ok = true
+        }
+        if ok == false {
+            println("that is not valid in a macro")
+            exit
+        }
+        where = where + 1
+    }
+    return [vm.ast.do]
+}
+
+def pass_macro_resolve(form, state) {
+    ty = form[0]
+    if ty == vm.ast.num {
+        return pass_macro_resolve_const(form, state)
+    }
+    if ty == vm.ast.true {
+        return pass_macro_resolve_const(form, state)
+    }
+    if ty == vm.ast.false {
+        return pass_macro_resolve_const(form, state)
+    }
+    if ty == vm.ast.none {
+        return pass_macro_resolve_const(form, state)
+    }
+    if ty == vm.ast.str {
+        return pass_macro_resolve_const(form, state)
+    }
+    if ty == vm.ast.ident {
+        return pass_macro_resolve_const(form, state)
+    }
+    if ty == vm.ast.index {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.def {
+        state[0] ~= [form[1][1][1], form]
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.return {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.macro {
+        return pass_macro_resolve_macro(form, state)
+    }
+    if ty == vm.ast.exit {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.call {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.putchar {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.exec {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.length {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.dump {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.readc {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.read {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.write {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.type {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.array {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.static_array {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.while {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.if {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.do {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.static {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == vm.ast.thread {
+        return pass_macro_resolve_const(form, state)
+    }
+    if ty == "=" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "~=" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "~" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "+" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "-" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "*" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "/" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "%" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "<" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == ">" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "<=" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == ">=" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "==" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    if ty == "!=" {
+        return pass_macro_resolve_copy(form, state)
+    }
+    put("unfold: unknown form: ")
+    println(form)
+    exit
+}

@@ -201,6 +201,6 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
     if first == 0 {
         return 0
     }
-    puts(str_to_array("bad char: ") ~ [first])
+    puts("bad char: " ~ [first])
     exit
 }

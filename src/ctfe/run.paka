@@ -1,6 +1,0 @@
-def ctfe_run(ast, path) {
-    state = [[], [], ctfe.state.run, [file_dir(path), [path]], none]
-    copy = ctfe_unfold(ast, state)
-    ret = ctfe_exec(copy, state)
-    return ret
-}

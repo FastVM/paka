@@ -62,13 +62,3 @@ def str_starts_with(src, items) {
     }
     return true
 }
-
-def str_to_array(src) {
-    ret = []
-    i = 0
-    while i < length(src) {
-        ret ~= [src[i]]
-        i = i + 1
-    }
-    return ret
-}
