@@ -35,12 +35,10 @@ def stream_starts_swith(src, items) {
     if length(items) + src[1] > length(src[0]) {
         return false
     }
-    i = 0
-    while i < length(items) {
-        if items[i] != src[0][src[1] + i] {
+    foreach item_chr @i: items {
+        if item_chr != src[0][src[1] + i] {
             return false
         }
-        i = i + 1
     }
     return true
 }

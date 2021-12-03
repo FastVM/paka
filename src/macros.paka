@@ -31,6 +31,7 @@ macro vm {
     ast.putchar
     ast.static
     ast.foreach
+    ast.value_key
     ast.static_array
 }
 

@@ -1,9 +1,7 @@
 
 def put(str) {
-    i = 0
-    while i < length(str) {
-        putchar(str[i])
-        i = i + 1
+    foreach chr: str {
+        putchar(chr)
     }
 }
 
@@ -38,13 +36,11 @@ def print(n) {
     }
     if type(n) == type([]) {
         put("[")
-        i = 0
-        while i < length(n) {
-            if i != 0 {
+        foreach elem @index: n {
+            if index != 0 {
                 put(", ")
             }
-            print(n[i])
-            i = i + 1
+            print(elem)
         }
         put("]")
         return none
