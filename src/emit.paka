@@ -451,6 +451,11 @@ def emit_foreach_reverse(form, out) {
     valreg = emit_to(form[2], out)
     indreg = reg(out)
     out[0] ~= [opcode.do_length, indreg, valreg]
+    offset = findvar(form[4][1], "skip")
+    if offset != none {
+        sub = emit_to(offset, out)
+        out[0] ~= [opcode.do_sub, indreg, indreg, sub]
+    }
     jtrue = jump(out)
     jfalse = jump(out)
     out[0] ~= [opcode.do_branch_greater_int, indreg, 0, goto(jfalse), goto(jtrue)]
@@ -480,9 +485,14 @@ def emit_foreach_reverse(form, out) {
 def emit_foreach_forward(form, out) {
     valreg = emit_to(form[2], out)
     lenreg = reg(out)
-    indreg = reg(out)
     out[0] ~= [opcode.do_length, lenreg, valreg]
-    out[0] ~= [opcode.do_store_int, indreg, 0]
+    offset = findvar(form[4][1], "skip")
+    if offset != none {
+        indreg = emit_to(offset, out)
+    } else {
+        indreg = reg(out)
+        out[0] ~= [opcode.do_store_int, indreg, 0]
+    }
     jtrue = jump(out)
     jfalse = jump(out)
     out[0] ~= [opcode.do_branch_less, indreg, lenreg, goto(jfalse), goto(jtrue)]

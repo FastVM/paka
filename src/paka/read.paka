@@ -42,18 +42,19 @@ def paka_read_post(tokens, last, state) {
     return last
 }
 
-def paka_read_foreach_attrs(tokens) {
+def paka_read_foreach_attrs(tokens, state) {
     first = token_stream_peek(tokens)
     if type(first) == type(0) {
         return []
     }
     if first == [token.ident, "reverse"] {
         token_stream_skip1(tokens)
-        return ["reverse", true] ~ paka_read_foreach_attrs(tokens)
+        return ["reverse", true] ~ paka_read_foreach_attrs(tokens, state)
     }
-    if first == [token.ident, "collect"] {
+    if first == [token.ident, "skip"] {
         token_stream_skip1(tokens)
-        return ["collect", true] ~ paka_read_foreach_attrs(tokens)
+        ent = paka_read_single(tokens, state)
+        return ["skip", ent] ~ paka_read_foreach_attrs(tokens, state)
     }
     return []
 }
@@ -95,7 +96,7 @@ def paka_read_single(tokens, state) {
     }
     if first == token.keyword.foreach {
         token_stream_skip1(tokens)
-        attrs = [vm.ast.attrs, paka_read_foreach_attrs(tokens)]
+        attrs = [vm.ast.attrs, paka_read_foreach_attrs(tokens, state)]
         idents = [paka_read_foreach_var(tokens, state)]
         while token_stream_peek(tokens) == token.comma {
             token_stream_skip1(tokens)
