@@ -102,14 +102,11 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
         puts("bad char")
         exit
     }
-    xop = 0
-    while xop < length(ops_flat) {
-        op = ops_flat[xop]
+    foreach op: ops_flat {
         if stream_starts_swith(bsrc, op) {
             stream_skip(bsrc, length(op))
             return [token.op, op]
         }
-        xop = xop + 1
     }
     if char_isdigit(first) {
         n = 0

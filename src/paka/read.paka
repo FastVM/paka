@@ -217,12 +217,10 @@ def paka_read_single(tokens, state) {
 }
 
 def parse_is_not_in(op, some) {
-    i = 0
-    while i < length(some) {
-        if op == some[i] {
+    foreach ent: some {
+        if op == ent {
             return false
         }
-        i = i + 1
     }
     return true
 }
