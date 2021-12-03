@@ -120,17 +120,12 @@ def emit_set(form, out) {
     if form[1][0] == vm.ast.ident {
         found = findvar(out[2], form[1][1])
         if found == none {
-            ## from = emit_to(form[2], out)
-            ## to = reg(out)
-            ## out[2] ~= [form[1][1], to]
-            ## out[0] ~= [opcode.do_store_reg, to, from]
-            ## return to
             from = emit_to(form[2], out)
-            out[2] ~= [form[1][1], from]
-            return from
+            to = reg(out)
+            out[2] ~= [form[1][1], to]
+            out[0] ~= [opcode.do_store_reg, to, from]
+            return to
         } else {
-            ## put("mut: ")
-            ## puts(form[1][1])
             from = emit_to(form[2], out)
             out[0] ~= [opcode.do_store_reg, found, from]
             return found
@@ -249,7 +244,6 @@ def emit_call(form, out) {
             regs ~= [emit_to(arg, out)]
         } 
         ret = reg(out)
-        println(ret)
         out[0] ~= [opcode.do_dynamic_call, ret, funcreg, length(regs)]
         out[0] ~= regs
         return ret
@@ -461,10 +455,11 @@ def emit_foreach_forward(form, out) {
     lenreg = reg(out)
     out[0] ~= [opcode.do_length, lenreg, valreg]
     offset = findvar(form[4][1], "skip")
+    indreg = reg(out)
     if offset != none {
-        indreg = emit_to(offset, out)
+        xreg = emit_to(offset, out)
+        out[0] ~= [opcode.do_store_reg, indreg, xreg]
     } else {
-        indreg = reg(out)
         out[0] ~= [opcode.do_store_int, indreg, 0]
     }
     jtrue = jump(out)
@@ -500,6 +495,7 @@ def emit_foreach(form, out) {
         emit_foreach_forward(form, out)
     }
 }
+
 
 def emit_to(form, out) {
     ty = form[0]
@@ -633,7 +629,6 @@ def emit_to(form, out) {
 
 def emit_link(out) {
     array_type = type([])
-    ret = []
     func_locs = []
     sized_ops = []
     foreach cur: out[0] {
@@ -654,7 +649,8 @@ def emit_link(out) {
             sized_ops ~= [cur]
         }
     }
-    foreach chr: sized_ops {
+    ret = []
+    foreach cur: sized_ops {
         if type(cur) == array_type {
             if cur[0] == link.jump {
                 ret ~= [out[3][cur[1]]]
