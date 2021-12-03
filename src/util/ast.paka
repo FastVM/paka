@@ -15,5 +15,8 @@ def util_ast_is_literal(ty) {
     if ty == vm.ast.str {
         return true
     }
+    if ty == vm.ast.attrs {
+        return true
+    }
     return false
 }

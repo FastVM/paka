@@ -1,0 +1,12 @@
+
+def ir_func_name(block) {
+    return block[0]
+}
+
+def ir_func_entry(block) {
+    return block[1]
+}
+
+def ir_func_new(name) {
+    return [name, ir_block_new()]
+}

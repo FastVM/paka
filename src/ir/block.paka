@@ -1,0 +1,12 @@
+
+def ir_block_instrs(block) {
+    return block[0]
+}
+
+def ir_block_branch(block) {
+    return block[1]
+}
+
+def ir_block_new() {
+    return [[], none] 
+}

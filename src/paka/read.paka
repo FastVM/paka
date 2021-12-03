@@ -42,6 +42,18 @@ def paka_read_post(tokens, last, state) {
     return last
 }
 
+def paka_read_foreach_attrs(tokens) {
+    first = token_stream_peek(tokens)
+    if type(first) == type(0) {
+        return []
+    }
+    if first == [token.ident, "reverse"] {
+        token_stream_skip1()
+        return ["reverse", true] ~ paka_read_foreach_attrs(tokens)
+    }
+    return []
+}
+
 def paka_read_single(tokens, state) {
     first = token_stream_peek(tokens)
     if first == 0 {
@@ -60,7 +72,12 @@ def paka_read_single(tokens, state) {
     }
     if first == token.keyword.foreach {
         token_stream_skip1(tokens)
-        ident = paka_read_single(tokens)
+        attrs = [vm.ast.attrs, paka_read_foreach_attrs(tokens)]
+        idents = [paka_read_single(tokens)]
+        while token_stream_peek(tokens) == token.comma {
+            token_stream_skip1(tokens)
+            idents ~= [paka_read_single(tokens)]
+        }
         next = token_stream_read(tokens)
         if next != [token.op, ":"] {
             puts("error: expected colon after foreach's variable")
@@ -68,7 +85,7 @@ def paka_read_single(tokens, state) {
         }
         expr = paka_read_expr_base(tokens, state)
         block = paka_read_block(tokens, state)
-        return [vm.ast.foreach, ident, expr, block]
+        return [vm.ast.foreach, idents, expr, block, attrs]
     }
     if first == token.keyword.static {
         token_stream_skip1(tokens)

@@ -26,6 +26,7 @@ macro vm {
     ast.while
     ast.if
     ast.do
+    ast.attrs
     ast.index
     ast.putchar
     ast.static

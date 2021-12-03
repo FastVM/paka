@@ -1,11 +1,9 @@
 
 def findvar(vars, name) {
-    i = 0
-    while i < length(vars) {
-        if vars[i] == name {
-            return vars[i + 1]
+    foreach k, v: vars {
+        if k == name {
+            return v
         }
-        i = i + 2
     }
     return none
 }
