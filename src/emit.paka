@@ -650,28 +650,28 @@ def emit_link(out) {
         }
     }
     ret = []
-    foreach cur: sized_ops {
-        if type(cur) == array_type {
-            if cur[0] == link.jump {
-                ret ~= [out[3][cur[1]]]
+    foreach op: sized_ops {
+        if type(op) == array_type {
+            if op[0] == link.jump {
+                ret ~= [out[3][op[1]]]
             }
-            if cur[0] == link.call {
-                func = findvar(func_locs, cur[1])
+            if op[0] == link.call {
+                func = findvar(func_locs, op[1])
                 if func == none {
-                    if type(cur[1]) == type(0) {
+                    if type(op[1]) == type(0) {
                         put("link error: undefined label: ")
-                        putn(cur[1])
+                        putn(op[1])
                         puts("")
                     } else {
                         put("link error: undefined: ")
-                        puts(cur[1])
+                        puts(op[1])
                     }
                     exit
                 }
                 ret ~= [func]
             }
         } else {
-            ret ~= [cur]
+            ret ~= [op]
         }
     }
     return ret
