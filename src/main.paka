@@ -10,18 +10,9 @@ import("findvar.paka")
 import("paka/all.paka")
 import("pass/all.paka")
 import("ir/ir.paka")
-import("emit.paka")
+import("backend/emit.paka")
 
 import("util/ast.paka")
-
-
-def vm_set(s) {
-    return [vm.ast.do, ["=", [vm.ast.ident, "_ret"], s]]
-}
-
-def vm_put() {
-    return [vm.ast.if, ["!=", [vm.ast.ident, "_ret"], [vm.ast.none]], [vm.ast.call, [vm.ast.ident, "println"], [vm.ast.ident, "_ret"]], [vm.ast.do]]
-}
 
 def vm_exec(n, bc, rest) {
     i = 0
@@ -64,8 +55,7 @@ def main(argv) {
                 if arg[1] == 'e' {
                     i = i + 1
                     ast1 = paka_parse("none " ~ argv[i])
-                    ast2 = [vm.ast.do, vm_set(ast1), vm_put()]
-                    bc = emit(ast2, ['/'])
+                    bc = emit(ast1, ['/'])
                     i = i + 1
                     while i < length(argv) {
                         rest ~= [argv[i]]

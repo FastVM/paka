@@ -47,7 +47,7 @@ macro opcode {
     do_less_than_equal = 9
     do_greater_than_equal = 10
     do_jump = 11
-    do_branch_true = 12
+    do_func = 12
     do_add = 13
     do_sub = 14
     do_mul = 15
@@ -124,10 +124,10 @@ macro token {
 }
 
 macro link {
-    jump
-    label
-    call
-    func
+    jump = 0-1
+    label = 0-2
+    call = 0-3
+    func = 0-4
 }
 
 macro ctfe {

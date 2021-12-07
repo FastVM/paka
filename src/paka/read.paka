@@ -73,7 +73,6 @@ def paka_read_foreach_var(tokens, state) {
         index = paka_read_single(tokens, state)
         return [vm.ast.value_key, var, index]
     }
-    println(first)
     puts("error: foreach vars: wanted `,` or `:` or `@` after variable")
     exit
 }
@@ -169,7 +168,6 @@ def paka_read_single(tokens, state) {
     }
     if type(first) == type(0) {
         put("bad token: ")
-        println(first)
         exit
     }
     if first[0] == (token.num) {
@@ -212,7 +210,6 @@ def paka_read_single(tokens, state) {
         return [vm.ast.ident, first[1]]
     }
     put("error: unexpected ")
-    println(first)
     exit
 }
 
@@ -330,7 +327,7 @@ def paka_read_block(tokens, state) {
         return ret
     }
     put("@")
-    println(first)
+    putnln(first)
     puts("")
     puts("parser: block error")
     exit

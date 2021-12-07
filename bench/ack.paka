@@ -13,4 +13,4 @@ def tak(x, y, z) {
     }
 }
 
-println(tak(57, 49, 84))
+putnln(tak(57, 49, 84))

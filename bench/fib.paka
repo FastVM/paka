@@ -14,5 +14,5 @@ if length(args) == 0 {
     puts("error: need an integer argument")
 } else {
     n = to_int(args[0])
-    println(fib(n))
+    putnln(fib(n))
 }

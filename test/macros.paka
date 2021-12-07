@@ -10,6 +10,6 @@ macro names {
 
 import("../io.paka")
 
-println(static {ns.x})
+putnln(static {ns.x})
 
-println(names.y)
+putnln(names.y)

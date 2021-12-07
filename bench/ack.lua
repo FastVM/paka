@@ -11,4 +11,4 @@ local function tak(x, y, z)
     end
 end
 
-print(tak(57, 49, 84))
+putnln(tak(57, 49, 84))

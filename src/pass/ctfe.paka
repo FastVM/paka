@@ -1,6 +1,4 @@
 
-## TODO: make macros handled in here
-
 def pass_ctfe_ident(form, state) {
     ret = findvar(state[1], form[1])
     if ret != none {
@@ -482,7 +480,6 @@ def pass_ctfe_real(form, state) {
         return pass_ctfe_neq(form, state)
     }
     put("exec: unknown form: ")
-    println(form)
     exit
 }
 
@@ -537,7 +534,6 @@ def ctfe_real_to_ast(val) {
         return ret
     }
     put("cannot turn value into ast: ")
-    println(val)
     exit
 }
 

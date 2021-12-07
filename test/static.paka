@@ -13,4 +13,4 @@ x = static {
     fib(5)
 }
 
-println(x)
+putnln(x)
