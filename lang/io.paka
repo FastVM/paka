@@ -34,39 +34,39 @@ def putnln(n) {
     puts("")
 }
 
-## def print(n) {
-##     if type(n) == type(0) {
-##         putnln(n)
-##         return none
-##     }
-##     if type(n) == type([]) {
-##         put("[")
-##         foreach elem @index: n {
-##             if index != 0 {
-##                 put(", ")
-##             }
-##             print(elem)
-##         }
-##         put("]")
-##         return none
-##     }
-##     if n == true {
-##         put("true")
-##         return none
-##     }
-##     if n == false {
-##         put("false")
-##         return none
-##     }
-##     if n == none {
-##         put("none")
-##         return none
-##     }
-##     put("?")
-##     return none
-## }
+def print(n) {
+    if type(n) == type(0) {
+        putnln(n)
+        return none
+    }
+    if type(n) == type([]) {
+        put("[")
+        foreach elem @index: n {
+            if index != 0 {
+                put(", ")
+            }
+            print(elem)
+        }
+        put("]")
+        return none
+    }
+    if n == true {
+        put("true")
+        return none
+    }
+    if n == false {
+        put("false")
+        return none
+    }
+    if n == none {
+        put("none")
+        return none
+    }
+    put("?")
+    return none
+}
 
-## def println(n) {
-##     print(n)
-##     putchar(10)
-## }
+def println(n) {
+    print(n)
+    putchar(10)
+}
