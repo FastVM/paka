@@ -149,6 +149,10 @@ def jump(out) {
     return count
 }
 
+def goto(jump) {
+    return [link.jump, jump] 
+}
+
 def label(jump) {
     return [link.label, jump]
 }
@@ -165,8 +169,8 @@ def emit_def(form, out) {
     }
     out[1] = i - 1
     nregs = length(out[0]) + 2
-    out[0] ~= [opcode.do_func, link.jump, jover, 256]
-    out[0] ~= [link.func, call[1][1]]
+    out[0] ~= [opcode.do_jump, goto(jover), 256]
+    out[0] ~= [[link.func, call[1][1]]]
     resreg = emit_to(body, out)
     if resreg == none {
         out[0] ~= [opcode.do_store_none, 0, opcode.do_return, 0]
@@ -176,7 +180,7 @@ def emit_def(form, out) {
     out[0][nregs] = out[1]
     out[1] = tmp1
     out[2] = tmp2
-    out[0] ~= [link.label, jover]
+    out[0] ~= [label(jover)]
     return none
 }
 
@@ -194,18 +198,27 @@ def emit_exit(form, out) {
 def emit_call_static_opt(name, args, out) {
     ret = reg(out)
     if length(args) == 0 {
-        out[0] ~= [opcode.do_static_call0, ret, link.call, name] ~ args
+        out[0] ~= [opcode.do_static_call0, ret, [link.call, name]]
+        out[0] ~= args
         return ret
     }
     if length(args) == 1 {
-        out[0] ~= [opcode.do_static_call1, ret, link.call, name] ~ args
+        out[0] ~= [opcode.do_static_call1, ret, [link.call, name]]
+        out[0] ~= args
         return ret
     }
     if length(args) == 2 {
-        out[0] ~= [opcode.do_static_call2, ret, link.call, name] ~ args
+        out[0] ~= [opcode.do_static_call2, ret, [link.call, name]]
+        out[0] ~= args
         return ret
     }
-    out[0] ~= [opcode.do_static_call, ret, link.call, name, length(args)] ~ args
+    if length(args) == 3 {
+        out[0] ~= [opcode.do_static_call3, ret, [link.call, name]]
+        out[0] ~= args
+        return ret
+    }
+    out[0] ~= [opcode.do_static_call, ret, [link.call, name], length(args)]
+    out[0] ~= args
     return ret
 }
 
@@ -220,7 +233,8 @@ def emit_call(form, out) {
             ret = emit_call_static_opt(form[1][1], regs, out)
         } else {
             ret = reg(out)
-            out[0] ~= [opcode.do_dynamic_call, ret, local, length(regs)] ~ regs
+            out[0] ~= [opcode.do_dynamic_call, ret, local, length(regs)]
+            out[0] ~= regs
         }
         return ret
     } else {
@@ -230,7 +244,8 @@ def emit_call(form, out) {
             regs ~= [emit_to(arg, out)]
         } 
         ret = reg(out)
-        out[0] ~= [opcode.do_dynamic_call, ret, funcreg, length(regs)] ~ regs
+        out[0] ~= [opcode.do_dynamic_call, ret, funcreg, length(regs)]
+        out[0] ~= regs
         return ret
     }
 }
@@ -239,61 +254,61 @@ def emit_branch_alike(cond, jfalse, jtrue, out) {
     if cond[0] == "==" {
         lhs = emit_to(cond[1], out)
         if cond[2][0] == vm.ast.num {
-            out[0] ~= [opcode.do_branch_equal_int, lhs, cond[2][1], link.jump, jfalse, link.jump, jtrue]
+            out[0] ~= [opcode.do_branch_equal_int, lhs, cond[2][1], goto(jfalse), goto(jtrue)]
         } else {
             rhs = emit_to(cond[2], out)
-            out[0] ~= [opcode.do_branch_equal, lhs, rhs, link.jump, jfalse, link.jump, jtrue]
+            out[0] ~= [opcode.do_branch_equal, lhs, rhs, goto(jfalse), goto(jtrue)]
         }
         return none
     }
     if cond[0] == "!=" {
         lhs = emit_to(cond[1], out)
         if cond[2][0] == vm.ast.num {
-            out[0] ~= [opcode.do_branch_not_equal_int, lhs, cond[2][1], link.jump, jfalse, link.jump, jtrue]
+            out[0] ~= [opcode.do_branch_not_equal_int, lhs, cond[2][1], goto(jfalse), goto(jtrue)]
         } else {
             rhs = emit_to(cond[2], out)
-            out[0] ~= [opcode.do_branch_not_equal, lhs, rhs, link.jump, jfalse, link.jump, jtrue]
+            out[0] ~= [opcode.do_branch_not_equal, lhs, rhs, goto(jfalse), goto(jtrue)]
         }
         return none
     }
     if cond[0] == "<" {
         lhs = emit_to(cond[1], out)
         if cond[2][0] == vm.ast.num {
-            out[0] ~= [opcode.do_branch_less_int, lhs, cond[2][1], link.jump, jfalse, link.jump, jtrue]
+            out[0] ~= [opcode.do_branch_less_int, lhs, cond[2][1], goto(jfalse), goto(jtrue)]
         } else {
             rhs = emit_to(cond[2], out)
-            out[0] ~= [opcode.do_branch_less, lhs, rhs, link.jump, jfalse, link.jump, jtrue]
+            out[0] ~= [opcode.do_branch_less, lhs, rhs, goto(jfalse), goto(jtrue)]
         }
         return none
     }
     if cond[0] == ">" {
         lhs = emit_to(cond[1], out)
         if cond[2][0] == vm.ast.num {
-            out[0] ~= [opcode.do_branch_greater_int, lhs, cond[2][1], link.jump, jfalse, link.jump, jtrue]
+            out[0] ~= [opcode.do_branch_greater_int, lhs, cond[2][1], goto(jfalse), goto(jtrue)]
         } else {
             rhs = emit_to(cond[2], out)
-            out[0] ~= [opcode.do_branch_greater, lhs, rhs, link.jump, jfalse, link.jump, jtrue]
+            out[0] ~= [opcode.do_branch_greater, lhs, rhs, goto(jfalse), goto(jtrue)]
         }
         return none
     }
     if cond[0] == "<=" {
         lhs = emit_to(cond[1], out)
         rhs = emit_to(cond[2], out)
-        out[0] ~= [opcode.do_branch_less_than_equal, lhs, rhs, link.jump, jfalse, link.jump, jtrue]
+        out[0] ~= [opcode.do_branch_less_than_equal, lhs, rhs, goto(jfalse), goto(jtrue)]
         return none
     }
     if cond[0] == ">=" {
         lhs = emit_to(cond[1], out)
         if cond[2][0] == vm.ast.num {
-            out[0] ~= [opcode.do_branch_greater_than_equal_int, lhs, cond[2][1], link.jump, jfalse, link.jump, jtrue]
+            out[0] ~= [opcode.do_branch_greater_than_equal_int, lhs, cond[2][1], goto(jfalse), goto(jtrue)]
         } else {
             rhs = emit_to(cond[2], out)
-            out[0] ~= [opcode.do_branch_greater_than_equal, lhs, rhs, link.jump, jfalse, link.jump, jtrue]
+            out[0] ~= [opcode.do_branch_greater_than_equal, lhs, rhs, goto(jfalse), goto(jtrue)]
         }
         return none
     }
     reg = emit_to(cond, out)
-    out[0] ~= [opcode.do_branch_bool, reg, link.jump, jfalse, link.jump, jtrue]
+    out[0] ~= [opcode.do_branch_bool, reg, goto(jfalse), goto(jtrue)]
     return none
 }
 
@@ -301,12 +316,12 @@ def emit_while(form, out) {
     jredo = jump(out)
     jtrue = jump(out)
     jfalse = jump(out)
-    out[0] ~= [link.label, jredo]
+    out[0] ~= [label(jredo)]
     emit_branch_alike(form[1], jfalse, jtrue, out)
-    out[0] ~= [link.label, jtrue]
+    out[0] ~= [label(jtrue)]
     emit_to(form[2], out)
-    out[0] ~= [opcode.do_jump, link.jump, jredo]
-    out[0] ~= [link.label, jfalse]
+    out[0] ~= [opcode.do_jump, goto(jredo)]
+    out[0] ~= [label(jfalse)]
     return none
 }
 
@@ -315,12 +330,13 @@ def emit_if(form, out) {
     jtrue = jump(out)
     jfalse = jump(out)
     emit_branch_alike(form[1], jfalse, jtrue, out)
-    out[0] ~= [link.label, jtrue]
+    out[0] ~= [label(jtrue)]
     emit_to(form[2], out)
-    out[0] ~= [opcode.do_jump, link.jump, jout]
-    out[0] ~= [link.label, jfalse]
+    out[0] ~= [opcode.do_jump, goto(jout)]
+    out[0] ~= [label(jfalse)]
     emit_to(form[3], out)
-    out[0] ~= [link.label, jout]
+    ## out[0] ~= [opcode.do_jump, goto(jout)]
+    out[0] ~= [label(jout)]
     return none
 }
 
@@ -330,7 +346,8 @@ def emit_array(form, out) {
         regs ~= [emit_to(ent, out)]
     }
     ret = reg(out)
-    out[0] ~= [opcode.do_array_new, ret, length(regs)] ~ regs
+    out[0] ~= [opcode.do_array_new, ret, length(regs)]
+    out[0] ~= regs
     return ret
 }
 
@@ -340,13 +357,15 @@ def emit_static_array(form, out) {
         regs ~= [emit_to(ent, out)]
     }
     ret = reg(out)
-    out[0] ~= [opcode.do_static_array_new, ret, length(regs)] ~ regs
+    out[0] ~= [opcode.do_static_array_new, ret, length(regs)]
+    out[0] ~= regs
     return ret
 }
 
 def emit_str(form, out) {
     ret = reg(out)
-    out[0] ~= [opcode.do_string_new, ret, length(form[1])] ~ form[1]
+    out[0] ~= [opcode.do_string_new, ret, length(form[1])]
+    out[0] ~= form[1]
     return ret
 }
 
@@ -373,7 +392,8 @@ def emit_readc(form, out) {
         exit
     } else {
         ret = reg(out)
-        out[0] ~= [opcode.do_string_new, ret, length(src)] ~ src
+        out[0] ~= [opcode.do_string_new, ret, length(src)]
+        out[0] ~= src
         return none
     }
 }
@@ -383,6 +403,16 @@ def emit_read(form, out) {
     ret = reg(out)
     out[0] ~= [opcode.do_read, ret, r1]
     return ret
+}
+
+def emit_thread(form, out) {
+    ents = emit(form[2], out[5])
+    buf = reg(out)
+    out[0] ~= [opcode.do_string_new, buf, length(ents)]
+    out[0] ~= ents
+    r2 = emit_to(form[1], out)
+    out[0] ~= [opcode.do_exec, buf, r2]
+    return none
 }
 
 def emit_foreach_reverse(form, out) {
@@ -396,8 +426,8 @@ def emit_foreach_reverse(form, out) {
     }
     jtrue = jump(out)
     jfalse = jump(out)
-    out[0] ~= [opcode.do_branch_greater_int, indreg, 0, link.jump, jfalse, link.jump, jtrue]
-    out[0] ~= [link.label, jtrue]
+    out[0] ~= [opcode.do_branch_greater_int, indreg, 0, goto(jfalse), goto(jtrue)]
+    out[0] ~= [label(jtrue)]
     foreach ent: form[1] {
         if ent[0] == vm.ast.ident {
             varreg = reg(out)
@@ -415,8 +445,8 @@ def emit_foreach_reverse(form, out) {
         }
     }
     tmpreg = emit_to(form[3], out)
-    out[0] ~= [opcode.do_branch_greater_int, indreg, 0, link.jump, jfalse, link.jump, jtrue]
-    out[0] ~= [link.label, jfalse]
+    out[0] ~= [opcode.do_branch_greater_int, indreg, 0, goto(jfalse), goto(jtrue)]
+    out[0] ~= [label(jfalse)]
     return none
 }
 
@@ -434,8 +464,8 @@ def emit_foreach_forward(form, out) {
     }
     jtrue = jump(out)
     jfalse = jump(out)
-    out[0] ~= [opcode.do_branch_less, indreg, lenreg, link.jump, jfalse, link.jump, jtrue]
-    out[0] ~= [link.label, jtrue]
+    out[0] ~= [opcode.do_branch_less, indreg, lenreg, goto(jfalse), goto(jtrue)]
+    out[0] ~= [label(jtrue)]
     foreach ent: form[1] {
         if ent[0] == vm.ast.ident {
             varreg = reg(out)
@@ -453,8 +483,8 @@ def emit_foreach_forward(form, out) {
         }
     }
     tmpreg = emit_to(form[3], out)
-    out[0] ~= [opcode.do_branch_less, indreg, lenreg, link.jump, jfalse, link.jump, jtrue]
-    out[0] ~= [link.label, jfalse]
+    out[0] ~= [opcode.do_branch_less, indreg, lenreg, goto(jfalse), goto(jtrue)]
+    out[0] ~= [label(jfalse)]
     return none
 }
 
@@ -541,6 +571,9 @@ def emit_to(form, out) {
     if ty == vm.ast.do {
         return emit_do(form, out)
     }
+    if ty == vm.ast.thread {
+        return emit_thread(form, out)
+    }
     if ty == vm.ast.foreach {
         return emit_foreach(form, out)
     }
@@ -590,61 +623,62 @@ def emit_to(form, out) {
         return emit_binop(opcode.do_not_equal, form, out)
     }
     put("emit: form:unknown form: ")
+    println(form)
     exit
 }
 
 def emit_link(out) {
+    array_type = type([])
     func_locs = []
     sized_ops = []
-    i = 0
-    max = length(out[0])
-    while i < max {
-        cur = out[0][i]
-        if cur < 0 {
-            i = i + 1
-            next = out[0][i]
-            if cur == link.func {
-                func_locs ~= [next, length(sized_ops)]
+    foreach cur: out[0] {
+        if type(cur) == array_type {
+            if cur[0] == link.func {
+                func_locs ~= [cur[1], length(sized_ops)]
             }
-            if cur == link.label {
-                out[3][next] = length(sized_ops)
+            if cur[0] == link.label {
+                out[3][cur[1]] = length(sized_ops)
             }
-            if cur == link.call {
-                sized_ops ~= [cur, next]
+            if cur[0] == link.call {
+                sized_ops ~= [cur]
             }
-            if cur == link.jump {
-                sized_ops ~= [cur, next]
+            if cur[0] == link.jump {
+                sized_ops ~= [cur]
             }
         } else {
             sized_ops ~= [cur]
         }
-        i = i + 1
     }
     ret = []
-    i = 0
-    max = length(out[0])
-    while i < max {
-        cur = out[0][i]
-        if cur < 0 {
-            i = i + 1
-            next = out[0][i]
-            if cur == link.jump {
-                ret ~= [out[3][next]]
+    foreach op: sized_ops {
+        if type(op) == array_type {
+            if op[0] == link.jump {
+                ret ~= [out[3][op[1]]]
             }
-            if cur == link.call {
-                func = findvar(func_locs, next)
+            if op[0] == link.call {
+                func = findvar(func_locs, op[1])
+                if func == none {
+                    if type(op[1]) == type(0) {
+                        put("link error: undefined label: ")
+                        putn(op[1])
+                        puts("")
+                    } else {
+                        put("link error: undefined: ")
+                        puts(op[1])
+                    }
+                    exit
+                }
                 ret ~= [func]
             }
         } else {
-            ret ~= [cur]
+            ret ~= [op]
         }
-        i = i + 1
     }
     return ret
 }
 
 def emit(form, path) {
-    out = [[], 0, ["args", 0], [], []]
+    out = [[], 0, ["args", 0], [], [], path]
     form = ctfe_run(form, path)
     emit_to(form, out)
     out[0] ~= [0]
