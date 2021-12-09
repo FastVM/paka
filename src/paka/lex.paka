@@ -162,9 +162,6 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                     if xsrc == "true" {
                         return token.keyword.true
                     }
-                    if xsrc == "thread" {
-                        return token.keyword.thread
-                    }
                     return [token.ident, xsrc]
                 }
                 if n0 == 'f' {
@@ -185,12 +182,6 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                 if n0 == 'm' {
                     if xsrc == "macro" {
                         return token.keyword.macro
-                    }
-                    return [token.ident, xsrc]
-                }
-                if n0 == 's' {
-                    if xsrc == "static" {
-                        return token.keyword.static
                     }
                     return [token.ident, xsrc]
                 }

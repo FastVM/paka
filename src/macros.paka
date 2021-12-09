@@ -2,7 +2,6 @@
 macro vm {
     ast.num
     ast.true
-    ast.thread
     ast.false
     ast.none
     ast.index
@@ -29,7 +28,6 @@ macro vm {
     ast.attrs
     ast.index
     ast.putchar
-    ast.static
     ast.foreach
     ast.value_key
     ast.static_array
@@ -112,7 +110,6 @@ macro token {
     keyword.when
     keyword.exit
     keyword.true
-    keyword.thread
     keyword.false
     keyword.none
     keyword.static
@@ -128,9 +125,4 @@ macro link {
     label = 0-2
     call = 0-3
     func = 0-4
-}
-
-macro ctfe {
-    state.run
-    state.ret
 }

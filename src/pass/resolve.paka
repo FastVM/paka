@@ -16,7 +16,7 @@ def pass_macro_resolve_macro(form, state) {
         if form[2][where][0] == vm.ast.ident {
             fullname = form[1][1] ~ ['.'] ~ form[2][where][1]
             ast = [vm.ast.num, where]
-            state[0] ~= [fullname, ast]
+            state ~= [fullname, ast]
             ok = true
         }
         if form[2][where][0] == "=" {
@@ -27,7 +27,7 @@ def pass_macro_resolve_macro(form, state) {
                 exit
             }
             fullname = form[1][1] ~ ['.'] ~ setto[1]
-            state[0] ~= [fullname, val]
+            state ~= [fullname, val]
             ok = true
         }
         if ok == false {
@@ -45,16 +45,16 @@ def pass_macro_resolve(form, state) {
         return form
     }
     if ty == vm.ast.ident {
-        return form
-    }
-    if ty == vm.ast.thread {
+        val = findvar(state, form[1])
+        if val != none {
+            return val
+        }
         return form
     }
     if ty == vm.ast.macro {
         return pass_macro_resolve_macro(form, state)
     }
     if ty == vm.ast.def {
-        state[0] ~= [form[1][1][1], form]
         return pass_macro_resolve_copy(form, state)
     }
     return pass_macro_resolve_copy(form, state)

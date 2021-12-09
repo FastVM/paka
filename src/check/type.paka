@@ -1,0 +1,30 @@
+
+def check_types_remove_foreach(form, state) {
+    ret = [form[0]]
+    i = 1
+    while i < length(form) {
+        ret ~= [check_types_remove_state(form[i], state)]
+        i = i + 1
+    }
+    return ret
+}
+
+def check_types_remove_state(form, state) {
+    ty = form[0]
+    if util_ast_is_literal(ty) {
+        return form
+    }
+    if ty == vm.ast.ident {
+        return form
+    }
+    if ty == ":" {
+        return check_types_remove_foreach(form[1], state)
+    }
+    return check_types_remove_foreach(form, state)
+}
+
+def check_types_remove(form) {
+    funcs = pass_funcs_collect(form)
+    ret = check_types_remove_state(form, funcs)
+    return ret
+}

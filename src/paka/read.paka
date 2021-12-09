@@ -82,17 +82,6 @@ def paka_read_single(tokens, state) {
     if first == 0 {
         return none
     }
-    if first == token.keyword.thread {
-        token_stream_skip1(tokens)
-        first = token_stream_peek(tokens)
-        if first == token.open.curly {
-            arg = [vm.ast.none]
-        } else {
-            arg = paka_read_single(tokens, state)            
-        }
-        block = paka_read_block(tokens, state)
-        return [vm.ast.thread, arg, block]
-    }
     if first == token.keyword.foreach {
         token_stream_skip1(tokens)
         attrs = [vm.ast.attrs, paka_read_foreach_attrs(tokens, state)]
@@ -109,28 +98,6 @@ def paka_read_single(tokens, state) {
         expr = paka_read_expr_base(tokens, state)
         block = paka_read_block(tokens, state)
         return [vm.ast.foreach, idents, expr, block, attrs]
-    }
-    if first == token.keyword.static {
-        token_stream_skip1(tokens)
-        first = token_stream_peek(tokens)
-        if first == token.open.square {
-            token_stream_skip1(tokens)
-            args = [vm.ast.static_array]
-            while true {
-                cur = token_stream_peek(tokens)
-                if cur == token.close.square {
-                    token_stream_skip1(tokens)
-                    return args
-                }
-                expr = paka_read_expr_base(tokens, state)
-                args ~= [expr]
-                if token_stream_peek(tokens) == token.comma {
-                    token_stream_skip1(tokens)
-                }
-            } 
-        }
-        block = paka_read_block(tokens, state)
-        return [vm.ast.static, block]
     }
     if first == token.open.square {
         token_stream_skip1(tokens)
@@ -335,7 +302,7 @@ def paka_read_block(tokens, state) {
 
 def paka_parse(src) {
     xstream = token_stream_new(src)
-    ops = [["=", "~="], ["<", ">", "<=", ">=", "==", "!="], ["++", "~", "+", "-"], ["%", "*", "/"], ["@"]]
+    ops = [["=", "~="], [":"], ["<", ">", "<=", ">=", "==", "!="], ["++", "~", "+", "-"], ["%", "*", "/"], ["@"]]
     state = [ops]
     ret = paka_read_block_body(xstream, state)
     return ret

@@ -24,6 +24,7 @@ def check_argc_state(form, state) {
         if length(form) - 2 != length(found[1]) - 2 {
             put("cannot match argc for: ")
             puts(name)
+            exit
         }
     }
     check_argc_foreach(form, state)
