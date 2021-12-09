@@ -32,5 +32,4 @@ def check_argc_state(form, state) {
 def check_argc(form) {
     funcs = pass_funcs_collect(form)
     check_argc_state(form, funcs)
-    println(length(funcs))
 }
