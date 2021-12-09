@@ -90,7 +90,7 @@ def pass_ctfe_set(form, state) {
     if form[1][0] == vm.ast.ident {
         vars = state[1]
         name = form[1][1]
-        setto = pass_ctfe_real(form[2])
+        setto = pass_ctfe_real(form[2], state)
         i = 0
         while i < length(vars) {
             if vars[i] == name {
@@ -102,9 +102,9 @@ def pass_ctfe_set(form, state) {
         return setto
     }
     if form[1][0] == vm.ast.index {
-        arr = pass_ctfe_real(form[1][1])
-        ind = pass_ctfe_real(form[1][2])
-        val = pass_ctfe_real(form[2])
+        arr = pass_ctfe_real(form[1][1], state)
+        ind = pass_ctfe_real(form[1][2], state)
+        val = pass_ctfe_real(form[2], state)
         if type(arr) != type([]) {
             puts("ctfe: attempt to index non-array")
             exit
@@ -125,7 +125,7 @@ def pass_ctfe_set(form, state) {
 }
 
 def pass_ctfe_type(form, state) {
-    return type(pass_ctfe_real(form[1]))
+    return type(pass_ctfe_real(form[1], state))
 }
 
 def pass_ctfe_call(form, state) {
@@ -489,7 +489,7 @@ def pass_ctfe_const_ident(form, state) {
         return form
     }
     if val[0] != vm.ast.def {
-        return pass_ctfe(val)
+        return pass_ctfe(val, state)
     } else {
         return form
     }

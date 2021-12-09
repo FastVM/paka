@@ -13,6 +13,8 @@ import("backend/emit.paka")
 
 import("util/ast.paka")
 
+import("check/check.paka")
+
 def vm_exec(n, bc, rest) {
     i = 0
     while i < n {

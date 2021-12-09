@@ -1,0 +1,36 @@
+
+def check_argc_foreach(form, state) {
+    i = 1
+    while i < length(form) {
+        check_argc_state(form[i], state)
+        i = i + 1
+    }
+}
+
+def check_argc_state(form, state) {
+    ty = form[0]
+    if util_ast_is_literal(ty) {
+        return none
+    }
+    if ty == vm.ast.ident {
+        return none
+    }
+    if ty == vm.ast.call {
+        name = form[1][1]
+        found = findvar(state, name)
+        if found == none {
+            return none
+        }
+        if length(form) - 2 != length(found[1]) - 2 {
+            put("cannot match argc for: ")
+            puts(name)
+        }
+    }
+    check_argc_foreach(form, state)
+}
+
+def check_argc(form) {
+    funcs = pass_funcs_collect(form)
+    check_argc_state(form, funcs)
+    println(length(funcs))
+}

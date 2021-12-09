@@ -1,0 +1,6 @@
+
+import("argc.paka")
+
+def check_all(ast) {
+    check_argc(ast)
+}

@@ -36,7 +36,6 @@ def emit_binop(op, form, out) {
     return ret
 }
 
-
 def emit_binop2(op_reg, op_num, form, out) {
     r1 = emit_to(form[1], out)
     if form[2][0] == vm.ast.num {
@@ -680,6 +679,7 @@ def emit_link(out) {
 def emit(form, path) {
     out = [[], 0, ["args", 0], [], [], path]
     form = ctfe_run(form, path)
+    check_all(form)
     emit_to(form, out)
     out[0] ~= [0]
     linked = emit_link(out)

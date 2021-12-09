@@ -19,31 +19,31 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
         }
     }
     if first == '(' {
-        stream_skip1()
+        stream_skip1(bsrc)
         return token.open.paren
     }
     if first == ')' {
-        stream_skip1()
+        stream_skip1(bsrc)
         return token.close.paren
     }
     if first == '{' {
-        stream_skip1()
+        stream_skip1(bsrc)
         return token.open.curly
     }
     if first == '}' {
-        stream_skip1()
+        stream_skip1(bsrc)
         return token.close.curly
     }
     if first == '[' {
-        stream_skip1()
+        stream_skip1(bsrc)
         return token.open.square
     }
     if first == ']' {
-        stream_skip1()
+        stream_skip1(bsrc)
         return token.close.square
     }
     if first == ',' {
-        stream_skip1()
+        stream_skip1(bsrc)
         return token.comma
     }
     if first == ''' {
@@ -51,7 +51,7 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
         cur = stream_read(bsrc)
         if cur == "\\"[0] {
             cur = stream_read(bsrc)
-            if stream_read() != ''' {
+            if stream_read(bsrc) != ''' {
                 puts("unterminated char literal")
                 exit
             }
@@ -65,7 +65,7 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                 return [token.num, cur]
             }
         } else {
-            if stream_read() != ''' {
+            if stream_read(bsrc) != ''' {
                 puts("unterminated char literal")
                 exit
             }
