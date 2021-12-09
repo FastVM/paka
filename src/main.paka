@@ -9,7 +9,6 @@ import("macros.paka")
 import("findvar.paka")
 import("paka/all.paka")
 import("pass/all.paka")
-import("ir/ir.paka")
 import("backend/emit.paka")
 
 import("util/ast.paka")

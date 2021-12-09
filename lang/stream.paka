@@ -3,16 +3,24 @@ def stream_new(src) {
     return [src, 0]
 }
 
-def stream_peek(src) {
-    if src[1] >= length(src[0]) {
-        return 0
+def stream_has_data(src) {
+    if src[1] < length(src[0]) {
+        return true
     } else {
+        return false
+    }
+}
+
+def stream_peek(src) {
+    if stream_has_data(src) {
         return src[0][src[1]]
+    } else {
+        return 0
     }
 }
 
 def stream_skip1(src) {
-    if src[1] < length(src[0]) {
+    if stream_has_data(src) {
         src[1] = src[1] + 1
     }
 }

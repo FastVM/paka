@@ -1,4 +1,0 @@
-
-import("func.paka")
-import("block.paka")
-import("instr.paka")
