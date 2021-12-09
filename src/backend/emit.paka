@@ -119,11 +119,18 @@ def emit_set(form, out) {
     if form[1][0] == vm.ast.ident {
         found = findvar(out[2], form[1][1])
         if found == none {
+            n1 = out[1]
             from = emit_to(form[2], out)
-            to = reg(out)
-            out[2] ~= [form[1][1], to]
-            out[0] ~= [opcode.do_store_reg, to, from]
-            return to
+            n2 = out[1]
+            if n1 == n2 {
+                to = reg(out)
+                out[2] ~= [form[1][1], to]
+                out[0] ~= [opcode.do_store_reg, to, from]
+                return to
+            } else {
+                out[2] ~= [form[1][1], from]
+                return from
+            }
         } else {
             from = emit_to(form[2], out)
             out[0] ~= [opcode.do_store_reg, found, from]

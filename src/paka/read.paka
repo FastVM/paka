@@ -135,6 +135,7 @@ def paka_read_single(tokens, state) {
     }
     if type(first) == type(0) {
         put("bad token: ")
+        println(first)
         exit
     }
     if first[0] == (token.num) {
