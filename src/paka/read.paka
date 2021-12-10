@@ -99,6 +99,26 @@ def paka_read_single(tokens, state) {
         block = paka_read_block(tokens, state)
         return [vm.ast.foreach, idents, expr, block, attrs]
     }
+    if first == token.keyword.static {
+        token_stream_skip1(tokens)
+        if token_stream_read(tokens) != token.open.square {
+            puts("expected `[` after `static`")
+            exit
+        }
+        args = [vm.ast.static_array]
+        while true {
+            cur = token_stream_peek(tokens)
+            if cur == token.close.square {
+                token_stream_skip1(tokens)
+                return args
+            }
+            expr = paka_read_expr_base(tokens, state)
+            args ~= [expr]
+            if token_stream_peek(tokens) == token.comma {
+                token_stream_skip1(tokens)
+            }
+        } 
+    }
     if first == token.open.square {
         token_stream_skip1(tokens)
         args = [vm.ast.array]
