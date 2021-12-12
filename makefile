@@ -1,8 +1,19 @@
 
 BOOT ?= bins/boot.bc
-VM ?= ./bin/minivm
+
+COSMO ?= 0
+
+VM_0 = ./bin/minivm
+VM_1 = ./bin/minivm.com
+
+VM ?= $(VM_$(COSMO))
 
 default: bin/stage3
+
+./bin/minivm.com: minivm/vm minivm/main
+	mkdir -p bin
+	$(MAKE) -C minivm minivm.com
+	cp minivm/minivm.com $@
 
 ./bin/minivm: minivm/vm minivm/main
 	mkdir -p bin
