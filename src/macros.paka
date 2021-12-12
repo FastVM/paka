@@ -72,6 +72,7 @@ macro opcode {
     do_static_concat = 37
     do_static_call0 = 38
     do_static_call1 = 39
+    
     do_static_call2 = 41
     do_static_call3 = 42
     do_branch_equal = 43

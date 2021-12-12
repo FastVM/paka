@@ -314,9 +314,6 @@ def paka_read_block(tokens, state) {
         token_stream_skip1(tokens)
         return ret
     }
-    put("@")
-    putnln(first)
-    puts("")
     puts("parser: block error")
     exit
 }
