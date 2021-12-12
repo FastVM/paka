@@ -338,7 +338,7 @@ def emit_array(form, out) {
         regs = regs ~ [emit_to(ent, out)]
     }
     ret = reg(out)
-    out[0] = out[0] ~ [opcode.do_array_new, ret, length(regs)]
+    out[0] = out[0] ~ [opcode.do_static_array_new, ret, length(regs)]
     out[0] = out[0] ~ regs
     return ret
 }
@@ -535,9 +535,6 @@ def emit_to(form, out) {
     if ty == vm.ast.type {
         return emit_type(form, out)
     }
-    if ty == vm.ast.array {
-        return emit_array(form, out)
-    }
     if ty == vm.ast.static_array {
         return emit_static_array(form, out)
     }
@@ -560,9 +557,6 @@ def emit_to(form, out) {
         return emit_set(form, out)
     }
     if ty == "~" {
-        return emit_binop(opcode.do_concat, form, out)
-    }
-    if ty == "++" {
         return emit_binop(opcode.do_static_concat, form, out)
     }
     if ty == "+" {

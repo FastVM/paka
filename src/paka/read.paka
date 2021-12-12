@@ -121,7 +121,7 @@ def paka_read_single(tokens, state) {
     }
     if first == token.open.square {
         token_stream_skip1(tokens)
-        args = [vm.ast.array]
+        args = [vm.ast.static_array]
         while true {
             cur = token_stream_peek(tokens)
             if cur == token.close.square {
@@ -323,7 +323,7 @@ def paka_read_block(tokens, state) {
 
 def paka_parse(src) {
     xstream = token_stream_new(src)
-    ops = [["="], [":"], ["<", ">", "<=", ">=", "==", "!="], ["++", "~", "+", "-"], ["%", "*", "/"], ["@"]]
+    ops = [["="], [":"], ["<", ">", "<=", ">=", "==", "!="], ["~", "+", "-"], ["%", "*", "/"], ["@"]]
     state = [ops]
     ret = paka_read_block_body(xstream, state)
     return ret

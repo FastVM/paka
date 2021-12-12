@@ -20,7 +20,6 @@ macro vm {
     ast.read
     ast.write
     ast.type
-    ast.array
     ast.str
     ast.while
     ast.if
@@ -51,19 +50,19 @@ macro opcode {
     do_mul = 15
     do_div = 16
     do_mod = 17
-    do_concat = 18
+
     do_static_call = 19
     do_return = 20
     do_putchar = 21
     do_string_new = 22
-    do_array_new = 23
+
     do_length = 24
     do_index_get = 25
     do_index_set = 26
     do_type = 27
     do_exec = 28
-    do_extend = 29
-    do_push = 30
+
+
     do_dump = 31
     do_read = 32
     do_write = 33
