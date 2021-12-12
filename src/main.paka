@@ -34,7 +34,7 @@ def main(argv) {
     while i < length(argv) {
         arg = argv[i]
         if run {
-            rest ~= [arg]
+            rest = rest ~ [arg]
             i = i + 1
         } else {
             if arg[0] == '-' {
@@ -59,7 +59,7 @@ def main(argv) {
                     bc = emit(ast1, ['/'])
                     i = i + 1
                     while i < length(argv) {
-                        rest ~= [argv[i]]
+                        rest = rest ~ [argv[i]]
                         i = i + 1
                     }
                     vm_exec(ntimes, bc, rest)

@@ -5,6 +5,6 @@ import("funcs.paka")
 
 def ctfe_run(ast, path) {
     ast = pass_import(ast, path)
-    ast = pass_macro_resolve(ast, [])
+    ast = pass_macro_resolve(ast, [[]])
     return ast
 }

@@ -2,7 +2,7 @@
 def pass_import_copy(form, state) {
     ret = [form[0]]
     foreach skip(1) ent: form {
-        ret ~= [pass_import_state(ent, state)]
+        ret = ret ~ [pass_import_state(ent, state)]
     }
     return ret
 }
@@ -14,7 +14,7 @@ def pass_import_resolve_import(form, state) {
             return [vm.ast.do]
         }
     }
-    state[1] ~= [name]
+    state[1] = state[1] ~ [name]
     src = read(name)
     if src == none {
         puts("cannot open file: " ~ name)

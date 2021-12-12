@@ -4,7 +4,7 @@ def file_dir(filename) {
     n = file_dir_len(filename)
     ret = []
     while i < n {
-        ret ~= [filename[i]]
+        ret = ret ~ [filename[i]]
         i = i + 1
     }
     return ret

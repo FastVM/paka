@@ -2,7 +2,7 @@
 def pass_macro_resolve_copy(form, state) {
     ret = [form[0]]
     foreach skip(1) ent: form {
-        ret ~= [pass_macro_resolve(ent, state)]
+        ret = ret ~ [pass_macro_resolve(ent, state)]
     }
     return ret
 }
@@ -16,7 +16,7 @@ def pass_macro_resolve_macro(form, state) {
         if form[2][where][0] == vm.ast.ident {
             fullname = form[1][1] ~ ['.'] ~ form[2][where][1]
             ast = [vm.ast.num, where]
-            state ~= [fullname, ast]
+            state[0] = state[0] ~ [fullname, ast]
             ok = true
         }
         if form[2][where][0] == "=" {
@@ -27,7 +27,7 @@ def pass_macro_resolve_macro(form, state) {
                 exit
             }
             fullname = form[1][1] ~ ['.'] ~ setto[1]
-            state ~= [fullname, val]
+            state[0] = state[0] ~ [fullname, val]
             ok = true
         }
         if ok == false {
@@ -45,7 +45,7 @@ def pass_macro_resolve(form, state) {
         return form
     }
     if ty == vm.ast.ident {
-        val = findvar(state, form[1])
+        val = findvar(state[0], form[1])
         if val != none {
             return val
         }
