@@ -56,3 +56,4 @@ oom-*
 *.dep
 exec.bc
 aoc/*.txt
+default.prof

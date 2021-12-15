@@ -1,9 +1,7 @@
 
 def check_argc_foreach(form, state) {
-    i = 1
-    while i < length(form) {
-        check_argc_state(form[i], state)
-        i = i + 1
+    foreach skip(1) arg: form {
+        check_argc_state(arg, state)
     }
 }
 
