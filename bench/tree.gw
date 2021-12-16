@@ -1,0 +1,54 @@
+#! Ported from the Wren version.
+
+class final Tree {
+  var int item;
+  late Tree left, right;
+
+  operator new(int it, int depth) {
+    it => item;
+    if (depth > 0) {
+      it + it => var int item2;
+      --depth;
+      new Tree(item2 - 1, depth) => left;
+      new Tree(item2, depth) => right;
+    }
+  }
+
+  fun int check() {
+    if (!left)
+      return item;
+    return item + left.check() - right.check();
+  }
+}
+
+fun int get_arg() {
+  if(!me.args()) return 12;
+  return me.arg(0).atoi();
+}
+
+4 => var int minDepth;
+get_arg() => var int maxDepth;
+maxDepth + 1 => var int stretchDepth;
+
+<<< "stretch tree of depth ", stretchDepth, " check: ",
+  (new Tree(0, stretchDepth)).check() >>>;
+
+new Tree(0, maxDepth) => var Tree longLivedTree;
+
+#! iterations = 2 ** maxDepth
+1 => var int iterations;
+for (var int d; d < maxDepth; ++d)
+  2 *=> iterations;
+
+minDepth => var int depth;
+while (depth < stretchDepth) {
+  var int check;
+  for (var int i; i < iterations; ++i)
+    (new Tree(i, depth)).check() + (new Tree(-i, depth)).check() +=> check;
+
+  <<< iterations * 2, " trees of depth ", depth, " check: ", check >>>;
+  4 /=> iterations;
+  2 +=> depth;
+}
+
+<<< "long lived tree of depth ", maxDepth, " check: ", longLivedTree.check() >>>;

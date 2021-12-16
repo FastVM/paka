@@ -574,24 +574,24 @@ def emit_to(form, out) {
     if ty == "%" {
         return emit_binop(opcode.do_mod, form, out)
     }
-    if ty == "<" {
-        return emit_binop(opcode.do_less, form, out)
-    }
-    if ty == ">" {
-        return emit_binop(opcode.do_greater, form, out)
-    }
-    if ty == "<=" {
-        return emit_binop(opcode.do_less_than_equal, form, out)
-    }
-    if ty == ">=" {
-        return emit_binop(opcode.do_greater_than_equal, form, out)
-    }
-    if ty == "==" {
-        return emit_binop(opcode.do_equal, form, out)
-    }
-    if ty == "!=" {
-        return emit_binop(opcode.do_not_equal, form, out)
-    }
+    ## if ty == "<" {
+    ##     return emit_binop(opcode.do_less, form, out)
+    ## }
+    ## if ty == ">" {
+    ##     return emit_binop(opcode.do_greater, form, out)
+    ## }
+    ## if ty == "<=" {
+    ##     return emit_binop(opcode.do_less_than_equal, form, out)
+    ## }
+    ## if ty == ">=" {
+    ##     return emit_binop(opcode.do_greater_than_equal, form, out)
+    ## }
+    ## if ty == "==" {
+    ##     return emit_binop(opcode.do_equal, form, out)
+    ## }
+    ## if ty == "!=" {
+    ##     return emit_binop(opcode.do_not_equal, form, out)
+    ## }
     put("emit: form:unknown form: ")
     println(form)
     exit
