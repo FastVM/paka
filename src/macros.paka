@@ -13,6 +13,7 @@ macro vm {
     ast.call
     ast.ident
     ast.exec
+    ast.save
     ast.length
     ast.import
     ast.dump
@@ -61,7 +62,7 @@ macro opcode {
     do_index_set = 26
     do_type = 27
     do_exec = 28
-
+    do_save = 29
 
     do_dump = 31
     do_read = 32

@@ -63,6 +63,12 @@ def emit_exec(form, out) {
     return none
 }
 
+def emit_save(form, out) {
+    r1 = emit_to(form[1], out)
+    out[0] = out[0] ~ [opcode.do_save, r1]
+    return none
+}
+
 def emit_length(form, out) {
     r1 = emit_to(form[1], out)
     ret = reg(out)
@@ -516,6 +522,9 @@ def emit_to(form, out) {
     }
     if ty == vm.ast.exec {
         return emit_exec(form, out)
+    }
+    if ty == vm.ast.save {
+        return emit_save(form, out)
     }
     if ty == vm.ast.length {
         return emit_length(form, out)

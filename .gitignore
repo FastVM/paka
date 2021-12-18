@@ -57,3 +57,4 @@ oom-*
 exec.bc
 aoc/*.txt
 default.prof
+*.vm

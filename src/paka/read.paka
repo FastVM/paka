@@ -171,6 +171,9 @@ def paka_read_single(tokens, state) {
         if first[1] == "exec" {
             return paka_read_call(tokens, [vm.ast.exec], state)
         } 
+        if first[1] == "save" {
+            return paka_read_call(tokens, [vm.ast.save], state)
+        } 
         if first[1] == "putchar" {
             return paka_read_call(tokens, [vm.ast.putchar], state)
         } 
