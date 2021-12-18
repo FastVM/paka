@@ -54,7 +54,6 @@ crash-*
 oom-*
 *.core
 *.dep
-exec.bc
 aoc/*.txt
 default.prof
-*.vm
+save.vm
