@@ -1,4 +1,4 @@
 
-import("../io.paka")
+import("../lang/io.paka")
 
 puts("Hello, World!") 
