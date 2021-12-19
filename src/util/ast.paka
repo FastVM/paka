@@ -1,4 +1,4 @@
-
+ 
 def util_ast_is_literal(ty) {
     if ty == vm.ast.num {
         return true

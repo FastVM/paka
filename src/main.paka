@@ -49,6 +49,11 @@ def main(argv) {
                     i = i + 1
                     outlang = argv[i]
                 }
+                if arg[1] == 'r' {
+                    i = i + 1
+                    puts(read(argv[i]))
+                    exit
+                }
                 if arg[1] == 'n' {
                     i = i + 1
                     ntimes = to_int(argv[i])
@@ -94,12 +99,9 @@ def main(argv) {
         }
     }
     if run {
-        if outlang != "bc" {
-            puts("cannot directly run any lang other than with `-l bc`")
-            exit
-        }
         bc = emit(ast, srcfile)
         vm_exec(ntimes, bc, rest)
+        exit
     } else {
         if outlang == "bc" {
             bc = emit(ast, srcfile)
@@ -110,7 +112,7 @@ def main(argv) {
             ast0 = [vm.ast.do, [vm.ast.save, [vm.ast.str, outfile]], ast]
             bc = emit(ast0, srcfile)
             if ntimes != 1 {
-                puts("cannot run `-l vm` with `-n` option")
+                dump(outfile, bc)
             }
             exec(bc, [])
             exit
