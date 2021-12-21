@@ -44,6 +44,7 @@ if maxdepth < N {
 stretchdepth = maxdepth + 1
 tree = bottom_up_tree(0, stretchdepth)
 putnln(item_check(tree))
+save("save.vm")
 
 longlivedtree = bottom_up_tree(0, maxdepth)
 
@@ -60,6 +61,8 @@ while depth < maxdepth + 1 {
         check = check + 1
     }
     putnln(checks)
+    save("save.vm")
     depth = depth + 2
 }
 putnln(item_check(longlivedtree))
+save("save.vm")

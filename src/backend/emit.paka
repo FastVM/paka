@@ -167,7 +167,7 @@ def emit_def(form, out) {
     }
     out[1] = i - 1
     nregs = length(out[0]) + 2
-    out[0] = out[0] ~ [opcode.do_jump, goto(jover), 256]
+    out[0] = out[0] ~ [opcode.do_func, goto(jover), 256]
     out[0] = out[0] ~ [[link.func, call[1][1]]]
     resreg = emit_to(body, out)
     if resreg == none {

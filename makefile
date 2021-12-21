@@ -1,5 +1,5 @@
 
-BOOT ?= bins/boot.vm
+BOOT ?= bins/boot.bc
 
 COSMO ?= 0
 

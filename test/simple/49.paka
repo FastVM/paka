@@ -1,0 +1,3 @@
+putchar('4')
+putchar('9')
+putchar('\n')
