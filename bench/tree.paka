@@ -54,7 +54,7 @@ while depth < maxdepth + 1 {
     checks = 0
     while check < iters {
         tree = bottom_up_tree(1, depth)
-        checks = checks + item_check(tree) 
+        checks = checks + item_check(tree)
         tree = bottom_up_tree(0-1, depth)
         checks = checks + item_check(tree)
         check = check + 1
