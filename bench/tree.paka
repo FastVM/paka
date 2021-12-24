@@ -29,37 +29,41 @@ def pow2(n) {
     }
 }
 
-if length(args) == 0 {
-    puts("error: need an integer argument")
-    exit
-}
-
-N = to_int(args[0])
-mindepth = 4
-maxdepth = mindepth + 2
-if maxdepth < N {
-    maxdepth = N
-}
-
-stretchdepth = maxdepth + 1
-tree = bottom_up_tree(0, stretchdepth)
-putnln(item_check(tree))
-
-longlivedtree = bottom_up_tree(0, maxdepth)
-
-depth = mindepth
-while depth < maxdepth + 1 {
-    iters = pow2(maxdepth - depth + mindepth)
-    check = 0
-    checks = 0
-    while check < iters {
-        tree = bottom_up_tree(1, depth)
-        checks = checks + item_check(tree)
-        tree = bottom_up_tree(0-1, depth)
-        checks = checks + item_check(tree)
-        check = check + 1
+def main(args) {
+    if length(args) == 0 {
+        puts("error: need an integer argument")
+        exit
     }
-    putnln(checks)
-    depth = depth + 2
+    
+    N = to_int(args[0])
+    mindepth = 4
+    maxdepth = mindepth + 2
+    if maxdepth < N {
+        maxdepth = N
+    }
+    
+    stretchdepth = maxdepth + 1
+    tree = bottom_up_tree(0, stretchdepth)
+    putnln(item_check(tree))
+    
+    longlivedtree = bottom_up_tree(0, maxdepth)
+    
+    depth = mindepth
+    while depth < maxdepth + 1 {
+        iters = pow2(maxdepth - depth + mindepth)
+        check = 0
+        checks = 0
+        while check < iters {
+            tree = bottom_up_tree(1, depth)
+            checks = checks + item_check(tree)
+            tree = bottom_up_tree(0-1, depth)
+            checks = checks + item_check(tree)
+            check = check + 1
+        }
+        putnln(checks)
+        depth = depth + 2
+    }
+    putnln(item_check(longlivedtree))
 }
-putnln(item_check(longlivedtree))
+
+main(args)
