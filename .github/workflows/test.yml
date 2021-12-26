@@ -15,7 +15,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: stage3
-          path: bin/stage3.vm
+          path: bin/stage3.bc
   build-opt:
     runs-on: ubuntu-latest
     steps:

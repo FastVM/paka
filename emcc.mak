@@ -17,7 +17,7 @@ LFLAGS += $(EFLAGS)
 
 default: .dummy
 	mkdir -p bin
-	emmake $(MAKE) -C minivm OUT=minivm.js OPT='-O3 $(OPT)' CFLAGS='$(CFLAGS)' LFLAGS='$(LFLAGS)'
+	emmake $(MAKE) -C minivm VM_API=1 OUT=minivm.js OPT='-O3 $(OPT)' CFLAGS='$(CFLAGS)' LFLAGS='$(LFLAGS)'
 	cp minivm/minivm.js bin/minivm.js
 
 .dummy:
