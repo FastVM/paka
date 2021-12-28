@@ -1,7 +1,0 @@
-i = 0
-while true {
-    putchar("SHAW"[i % 4])
-    putchar(10)
-    i = i + 1
-    save("shaw.vm")
-}

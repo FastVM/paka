@@ -50,6 +50,10 @@ def main(argv) {
                     i = i + 1
                     outlang = argv[i]
                 }
+                if arg[1] == 'q' {
+                    puts("got -q flag, exiting")
+                    exit
+                }
                 if arg[1] == 'r' {
                     i = i + 1
                     puts(read(argv[i]))
@@ -81,6 +85,7 @@ def main(argv) {
             i = i + 1
         }
     }
+    argv[0] = "-q"
     if srcfile == none {
         puts("no sources provided")
         exit
@@ -91,6 +96,7 @@ def main(argv) {
         exit
     }
     ast = paka_parse(src)
+    ast = [vm.ast.do, ast, [vm.ast.call, [vm.ast.ident, "main"], [vm.ast.ident, "args"]]]
     if outfile == none {
         if outlang == "bc" {
             outfile = "exec.bc"
@@ -122,5 +128,3 @@ def main(argv) {
         exit
     }
 }
-
-main(args)

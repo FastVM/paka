@@ -65,5 +65,3 @@ def main(args) {
     }
     putnln(item_check(longlivedtree))
 }
-
-main(args)

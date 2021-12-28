@@ -131,6 +131,3 @@ def main(args) {
     println(bc)
     dump("out.bc", bc)
 }
-
-main(args)
-

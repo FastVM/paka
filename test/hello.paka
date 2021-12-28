@@ -1,4 +1,0 @@
-
-import("../lang/io.paka")
-
-puts("Hello, World!") 

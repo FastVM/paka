@@ -10,9 +10,11 @@ def fib(n) {
     }
 }
 
-if length(args) == 0 {
-    puts("error: need an integer argument")
-} else {
-    n = to_int(args[0])
-    putnln(fib(n))
+def main(args) {
+    if length(args) == 0 {
+        puts("error: need an integer argument")
+    } else {
+        n = to_int(args[0])
+        putnln(fib(n))
+    }
 }
