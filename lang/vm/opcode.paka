@@ -1,0 +1,55 @@
+
+
+macro opcode {
+    do_store_reg = 1
+    do_store_none = 2
+    do_store_bool = 3
+    do_store_int = 4
+
+    do_jump = 11
+    do_func = 12
+    do_add = 13
+    do_sub = 14
+    do_mul = 15
+    do_div = 16
+    do_mod = 17
+
+    do_static_call = 19
+    do_return = 20
+    do_putchar = 21
+    do_string_new = 22
+
+    do_length = 24
+    do_index_get = 25
+    do_index_set = 26
+    do_type = 27
+    do_exec = 28
+    do_save = 29
+
+    do_dump = 31
+    do_read = 32
+    do_write = 33
+    do_dynamic_call = 35
+    do_static_array_new = 36
+    do_static_concat = 37
+    do_static_call0 = 38
+    do_static_call1 = 39
+    
+    do_static_call2 = 41
+    do_static_call3 = 42
+    do_branch_equal = 43
+    do_branch_not_equal = 44
+    do_branch_less = 45
+    do_branch_greater = 46
+    do_branch_less_than_equal = 47
+    do_branch_greater_than_equal = 48
+    do_branch_bool = 49
+    do_inc = 50
+    do_dec = 51
+    do_branch_equal_int = 52
+    do_branch_not_equal_int = 53
+    do_branch_less_int = 54
+    do_branch_greater_int = 55
+    do_branch_less_than_equal_int = 56
+    do_branch_greater_than_equal_int = 57
+}

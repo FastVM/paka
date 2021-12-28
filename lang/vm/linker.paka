@@ -1,0 +1,60 @@
+
+import("../findvar.paka")
+
+macro link {
+    jump = 1
+    label = 2
+    call = 3
+    func = 4
+}
+
+def vm_link(bc) {
+    array_type = type([])
+    func_locs = []
+    sized_ops = []
+    labels = []
+    foreach cur: bc {
+        if type(cur) == array_type {
+            if cur[0] == link.func {
+                func_locs = func_locs ~ [cur[1], length(sized_ops)]
+            }
+            if cur[0] == link.label {
+                labels = labels ~ [cur[1], length(sized_ops)]
+            }
+            if cur[0] == link.call {
+                sized_ops = sized_ops ~ [cur]
+            }
+            if cur[0] == link.jump {
+                sized_ops = sized_ops ~ [cur]
+            }
+        } else {
+            sized_ops = sized_ops ~ [cur]
+        }
+    }
+    ret = []
+    foreach op: sized_ops {
+        if type(op) == array_type {
+            if op[0] == link.jump {
+                ret = ret ~ [findvar(labels, op[1])]
+            }
+            if op[0] == link.call {
+                func = findvar(func_locs, op[1])
+                if func == none {
+                    if type(op[1]) == type(0) {
+                        put("link error: undefined label: ")
+                        putn(op[1])
+                        puts("")
+                    } else {
+                        put("link error: undefined: ")
+                        puts(op[1])
+                    }
+                    exit
+                }
+                ret = ret ~ [func]
+            }
+        } else {
+            ret = ret ~ [op]
+        }
+    }
+    return ret
+}

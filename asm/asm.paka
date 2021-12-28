@@ -1,0 +1,28 @@
+
+import("../lang/io.paka")
+import("../lang/stream.paka")
+import("../lang/vm/opcode.paka")
+import("../lang/vm/linker.paka")
+import("../lang/vm/format.paka")
+
+def assemble(src) {
+    stream = stream_new(src)
+}
+
+def main(args) {
+    if length(args) == 0 {
+        puts("need a file as an argument")
+    }
+    file = args[0]
+    src = read(file)
+    if src == none {
+        puts("cannot read file: " ~ file)
+    }
+
+    inter = assemble(src)
+    bc = vm_link(inter)
+    dump("out.bc", bc)
+}
+
+main(args)
+

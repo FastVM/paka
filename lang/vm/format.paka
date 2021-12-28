@@ -1,0 +1,151 @@
+
+import("./opcode.paka")
+
+macro opcode.arg {
+    reg
+    regs
+    label
+    num
+    nums
+}
+
+def vm_opcode_args(op) {
+    if op == opcode.do_store_reg {
+        return [opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_store_none {
+        return [opcode.arg.reg]
+    }
+    if op == opcode.do_store_bool {
+        return [opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_store_int {
+        return [opcode.arg.reg, opcode.arg.num]
+    }
+    if op == opcode.do_jump {
+        return [opcode.arg.label]
+    }
+    if op == opcode.do_func {
+        return [opcode.arg.label]
+    }
+    if op == opcode.do_add {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_sub {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_mul {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_div {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_mod {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_static_call {
+        return [opcode.arg.reg, opcode.arg.label, opcode.arg.regs]
+    }
+    if op == opcode.do_return {
+        return [opcode.arg.reg]
+    }
+    if op == opcode.do_putchar {
+        return [opcode.arg.reg]
+    }
+    if op == opcode.do_string_new {
+        return [opcode.arg.reg, opcode.arg.nums]
+    }
+    if op == opcode.do_length {
+        return [opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_index_get {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_index_set {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_type {
+        return [opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_exec {
+        return [opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_save {
+        return [opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_dump {
+        return [opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_read {
+        return [opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_write {
+        return [opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_dynamic_call {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.regs]
+    }
+    if op == opcode.do_static_array_new {
+        return [opcode.arg.reg, opcode.arg.regs]
+    }
+    if op == opcode.do_static_concat {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_static_call0 {
+        return [opcode.arg.reg, opcode.arg.label]
+    }
+    if op == opcode.do_static_call1 {
+        return [opcode.arg.reg, opcode.arg.label, opcode.arg.reg]
+    }
+    if op == opcode.do_static_call2 {
+        return [opcode.arg.reg, opcode.arg.label, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_static_call3 {
+        return [opcode.arg.reg, opcode.arg.label, opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_branch_equal {
+        return [opcode.arg.reg, opcode.arg.label, opcode.arg.reg, opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_branch_not_equal {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_branch_less {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_branch_greater {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_branch_less_than_equal {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_branch_greater_than_equal {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_branch_bool {
+        return [opcode.arg.reg, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_inc {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.num]
+    }
+    if op == opcode.do_dec {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.num]
+    }
+    if op == opcode.do_branch_equal_int {
+        return [opcode.arg.reg, opcode.arg.num, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_branch_not_equal_int {
+        return [opcode.arg.reg, opcode.arg.num, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_branch_less_int {
+        return [opcode.arg.reg, opcode.arg.num, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_branch_greater_int {
+        return [opcode.arg.reg, opcode.arg.num, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_branch_less_than_equal_int {
+        return [opcode.arg.reg, opcode.arg.num, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_branch_greater_than_equal_int {
+        return [opcode.arg.reg, opcode.arg.num, opcode.arg.label, opcode.arg.label]
+    }
+}

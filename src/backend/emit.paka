@@ -1,4 +1,6 @@
 
+import("../../lang/vm/linker.paka")
+
 def reg(out) {
     out[1] = out[1] + 1
     return out[1]
@@ -142,8 +144,8 @@ def emit_set(form, out) {
 }
 
 def jump(out) {
-    count = length(out[3])
-    out[3] = out[3] ~ [count]
+    count = out[3]
+    out[3] = out[3] + 1
     return count
 }
 
@@ -583,85 +585,17 @@ def emit_to(form, out) {
     if ty == "%" {
         return emit_binop(opcode.do_mod, form, out)
     }
-    ## if ty == "<" {
-    ##     return emit_binop(opcode.do_less, form, out)
-    ## }
-    ## if ty == ">" {
-    ##     return emit_binop(opcode.do_greater, form, out)
-    ## }
-    ## if ty == "<=" {
-    ##     return emit_binop(opcode.do_less_than_equal, form, out)
-    ## }
-    ## if ty == ">=" {
-    ##     return emit_binop(opcode.do_greater_than_equal, form, out)
-    ## }
-    ## if ty == "==" {
-    ##     return emit_binop(opcode.do_equal, form, out)
-    ## }
-    ## if ty == "!=" {
-    ##     return emit_binop(opcode.do_not_equal, form, out)
-    ## }
     put("emit: form:unknown form: ")
     println(form)
     exit
 }
 
-def emit_link(out) {
-    array_type = type([])
-    func_locs = []
-    sized_ops = []
-    foreach cur: out[0] {
-        if type(cur) == array_type {
-            if cur[0] == link.func {
-                func_locs = func_locs ~ [cur[1], length(sized_ops)]
-            }
-            if cur[0] == link.label {
-                out[3][cur[1]] = length(sized_ops)
-            }
-            if cur[0] == link.call {
-                sized_ops = sized_ops ~ [cur]
-            }
-            if cur[0] == link.jump {
-                sized_ops = sized_ops ~ [cur]
-            }
-        } else {
-            sized_ops = sized_ops ~ [cur]
-        }
-    }
-    ret = []
-    foreach op: sized_ops {
-        if type(op) == array_type {
-            if op[0] == link.jump {
-                ret = ret ~ [out[3][op[1]]]
-            }
-            if op[0] == link.call {
-                func = findvar(func_locs, op[1])
-                if func == none {
-                    if type(op[1]) == type(0) {
-                        put("link error: undefined label: ")
-                        putn(op[1])
-                        puts("")
-                    } else {
-                        put("link error: undefined: ")
-                        puts(op[1])
-                    }
-                    exit
-                }
-                ret = ret ~ [func]
-            }
-        } else {
-            ret = ret ~ [op]
-        }
-    }
-    return ret
-}
-
 def emit(form, path) {
-    out = [[], 0, ["args", 0], [], [], path]
+    out = [[], 0, ["args", 0], 0, [], path]
     form = ctfe_run(form, path)
     form = check_all(form)
     emit_to(form, out)
     out[0] = out[0] ~ [0]
-    linked = emit_link(out)
+    linked = vm_link(out[0])
     return linked
 }

@@ -5,8 +5,9 @@ import("../lang/file.paka")
 import("../lang/stream.paka")
 import("../lang/strs.paka")
 
+import("../lang/findvar.paka")
+
 import("macros.paka")
-import("findvar.paka")
 import("paka/all.paka")
 import("pass/all.paka")
 import("backend/emit.paka")
