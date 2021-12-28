@@ -9,6 +9,147 @@ macro opcode.arg {
     nums
 }
 
+def vm_opcode_value(op) {
+    if op == "reg"{
+        return opcode.do_store_reg
+    }
+    if op == "none"{
+        return opcode.do_store_none
+    }
+    if op == "bool"{
+        return opcode.do_store_bool
+    }
+    if op == "int"{
+        return opcode.do_store_int
+    }
+    if op == "jump"{
+        return opcode.do_jump
+    }
+    if op == "func"{
+        return opcode.do_func
+    }
+    if op == "add"{
+        return opcode.do_add
+    }
+    if op == "sub"{
+        return opcode.do_sub
+    }
+    if op == "mul"{
+        return opcode.do_mul
+    }
+    if op == "div"{
+        return opcode.do_div
+    }
+    if op == "mod"{
+        return opcode.do_mod
+    }
+    if op == "call"{
+        return opcode.do_static_call
+    }
+    if op == "return"{
+        return opcode.do_return
+    }
+    if op == "putchar"{
+        return opcode.do_putchar
+    }
+    if op == "string"{
+        return opcode.do_string_new
+    }
+    if op == "length"{
+        return opcode.do_length
+    }
+    if op == "get"{
+        return opcode.do_index_get
+    }
+    if op == "set"{
+        return opcode.do_index_set
+    }
+    if op == "type"{
+        return opcode.do_type
+    }
+    if op == "exec"{
+        return opcode.do_exec
+    }
+    if op == "save"{
+        return opcode.do_save
+    }
+    if op == "dump"{
+        return opcode.do_dump
+    }
+    if op == "read"{
+        return opcode.do_read
+    }
+    if op == "write"{
+        return opcode.do_write
+    }
+    if op == "dcall"{
+        return opcode.do_dynamic_call
+    }
+    if op == "array"{
+        return opcode.do_static_array_new
+    }
+    if op == "cat"{
+        return opcode.do_static_concat
+    }
+    if op == "call0"{
+        return opcode.do_static_call0
+    }
+    if op == "call1"{
+        return opcode.do_static_call1
+    }
+    if op == "call2"{
+        return opcode.do_static_call2
+    }
+    if op == "call3"{
+        return opcode.do_static_call3
+    }
+    if op == "beq"{
+        return opcode.do_branch_equal
+    }
+    if op == "bneq"{
+        return opcode.do_branch_not_equal
+    }
+    if op == "blt"{
+        return opcode.do_branch_less
+    }
+    if op == "bgt"{
+        return opcode.do_branch_greater
+    }
+    if op == "blte"{
+        return opcode.do_branch_less_than_equal
+    }
+    if op == "bgte"{
+        return opcode.do_branch_greater_than_equal
+    }
+    if op == "bb"{
+        return opcode.do_branch_bool
+    }
+    if op == "inc"{
+        return opcode.do_inc
+    }
+    if op == "dec"{
+        return opcode.do_dec
+    }
+    if op == "beqi"{
+        return opcode.do_branch_equal_int
+    }
+    if op == "bneqi"{
+        return opcode.do_branch_not_equal_int
+    }
+    if op == "blti"{
+        return opcode.do_branch_less_int
+    }
+    if op == "bgti"{
+        return opcode.do_branch_greater_int
+    }
+    if op == "bltei"{
+        return opcode.do_branch_less_than_equal_int
+    }
+    if op == "bgtei" {
+        return opcode.do_branch_greater_than_equal_int 
+    }
+}
+
 def vm_opcode_args(op) {
     if op == opcode.do_store_reg {
         return [opcode.arg.reg, opcode.arg.reg]

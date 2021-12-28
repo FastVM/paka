@@ -1,26 +1,134 @@
 
+## this code is slow :(
+
 import("../lang/io.paka")
 import("../lang/stream.paka")
 import("../lang/vm/opcode.paka")
 import("../lang/vm/linker.paka")
 import("../lang/vm/format.paka")
 
-def assemble(src) {
+def asm_spaces(stream) {
+    while stream_peek(stream) == ' ' {
+        stream_skip1(stream)
+    }
+}
+
+def asm_newlines(stream) {
+    while true {
+        if stream_peek(stream) != '\n' {
+            if stream_peek(stream) != ' ' {
+                return none
+            }
+        }
+        stream_skip1(stream)
+    }
+}
+
+def asm_word(stream) {
+    ret = []
+    while true {
+        chr = stream_peek(stream)
+        if chr == ' ' {
+            return ret
+        }
+        if chr == ':' {
+            return ret
+        }
+        if chr == ',' {
+            return ret
+        }
+        if chr == '\n' {
+            return ret
+        }
+        ret = ret ~ [stream_read(stream)]
+    }
+}
+
+def asm_num(stream) {
+    ret = 0
+    while true {
+        chr = stream_peek(stream)
+        if chr < '0' {
+            return ret
+        }
+        if chr > '9' {
+            return ret
+        }
+        stream_skip1(stream)
+        ret = ret * 10 + chr - '0'
+    }
+}
+
+def asm_single(stream, fmt) {
+    if fmt == opcode.arg.reg {
+        if stream_read(stream) != 'r' {
+            puts("expected a register")
+            exit
+        }
+        return asm_num(stream)
+    }
+    if fmt == opcode.arg.regs {
+        puts("regs not yet")
+        exit
+    }
+    if fmt == opcode.arg.label {
+        return [link.jump, asm_word(stream)]
+    }
+    if fmt == opcode.arg.num {
+        return asm_num(stream)
+    }
+    if fmt == opcode.arg.nums {
+        puts("regs not yet")
+        exit
+    }
+}
+
+def asm_line(stream) {
+    asm_newlines(stream)
+    name = asm_word(stream)
+    if stream_peek(stream) == ':' {
+        stream_skip1(stream)
+        return [[link.label, name]]
+    }
+    val = vm_opcode_value(name)
+    if val == none {
+        puts("unknown opcode: " ~ name)
+        exit
+    }
+    ret = [val]
+    fmts = vm_opcode_args(val)
+    foreach fmt: fmts {
+        asm_spaces(stream)
+        ret = ret ~ [asm_single(stream, fmt)]
+    }
+    return ret
+}
+
+def asm_program(src) {
     stream = stream_new(src)
+    instrs = []
+    while stream_has_data(stream) {
+        instrs = instrs ~ asm_line(stream)
+        asm_spaces(stream)
+        asm_newlines(stream)
+    }
+    return instrs
 }
 
 def main(args) {
     if length(args) == 0 {
         puts("need a file as an argument")
+        exit
     }
     file = args[0]
     src = read(file)
     if src == none {
         puts("cannot read file: " ~ file)
+        exit
     }
-
-    inter = assemble(src)
-    bc = vm_link(inter)
+    inter = asm_program(src)
+    bc = vm_link(inter) ~ [0]
+    println(bc)
     dump("out.bc", bc)
 }
 
