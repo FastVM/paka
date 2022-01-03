@@ -80,5 +80,3 @@ def pow(x, n) {
         return x * pow(x, n - 1)
     }
 }
-
-print(gcd(4, 8))
