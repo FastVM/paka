@@ -21,7 +21,7 @@ def abs(x) {
 def range(start, end, step) {
     array = []
     item = start
-    while start < end {
+    while item < end {
         array = array ~ [item]
         item = item + step
     }
