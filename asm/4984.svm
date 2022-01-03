@@ -1,0 +1,29 @@
+
+main:
+    int r0 4984
+    call1 r0 putn r0
+    call0 r0 newline
+    exit
+
+    .byte 1
+newline:
+    int r0 10
+    putchar r0
+    none r0
+    ret r0
+
+    .byte 2
+putn:
+    blti r1 10 putn.digits putn.digit
+putn.digits:
+    int r0 10
+    div r0 r1 r0
+    call1 r0 putn r0
+putn.digit:
+    int r0 10
+    mod r0 r1 r0
+    inc r0 r0 48
+    putchar r0
+    none r0
+    ret r0
+    

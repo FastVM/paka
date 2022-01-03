@@ -10,6 +10,9 @@ macro opcode.arg {
 }
 
 def vm_opcode_value(op) {
+    if op == "exit"{
+        return opcode.do_exit
+    }
     if op == "reg"{
         return opcode.do_store_reg
     }
@@ -46,13 +49,13 @@ def vm_opcode_value(op) {
     if op == "call"{
         return opcode.do_static_call
     }
-    if op == "return"{
+    if op == "ret"{
         return opcode.do_return
     }
     if op == "putchar"{
         return opcode.do_putchar
     }
-    if op == "string"{
+    if op == "str"{
         return opcode.do_string_new
     }
     if op == "length"{
@@ -85,7 +88,7 @@ def vm_opcode_value(op) {
     if op == "dcall"{
         return opcode.do_dynamic_call
     }
-    if op == "array"{
+    if op == "arr"{
         return opcode.do_static_array_new
     }
     if op == "cat"{
@@ -151,6 +154,9 @@ def vm_opcode_value(op) {
 }
 
 def vm_opcode_args(op) {
+    if op == opcode.do_exit {
+        return []
+    }
     if op == opcode.do_store_reg {
         return [opcode.arg.reg, opcode.arg.reg]
     }

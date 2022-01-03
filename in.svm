@@ -1,6 +1,0 @@
-main:
-    length r0 r0
-    inc r0 r0 48
-    putchar r0
-    int r0 10 
-    putchar r0

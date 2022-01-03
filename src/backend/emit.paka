@@ -191,7 +191,7 @@ def emit_return(form, out) {
 }
 
 def emit_exit(form, out) {
-    out[0] = out[0] ~ [0]
+    out[0] = out[0] ~ [opcode.do_exit]
     return none
 }
 

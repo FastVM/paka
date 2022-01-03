@@ -1,6 +1,7 @@
 
 
 macro opcode {
+    do_exit = 0
     do_store_reg = 1
     do_store_none = 2
     do_store_bool = 3
