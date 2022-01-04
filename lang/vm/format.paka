@@ -164,10 +164,13 @@ def vm_opcode_args(op) {
         return [opcode.arg.reg]
     }
     if op == opcode.do_store_bool {
-        return [opcode.arg.reg, opcode.arg.reg]
+        return [opcode.arg.reg, opcode.arg.num]
     }
     if op == opcode.do_store_int {
         return [opcode.arg.reg, opcode.arg.num]
+    }
+    if op == opcode.do_store_reg {
+        return [opcode.arg.reg, opcode.arg.reg]
     }
     if op == opcode.do_jump {
         return [opcode.arg.label]

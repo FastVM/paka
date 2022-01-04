@@ -6,6 +6,8 @@ macro opcode {
     do_store_none = 2
     do_store_bool = 3
     do_store_int = 4
+    do_load_global = 5
+    do_swap_reg = 6
 
     do_jump = 11
     do_func = 12

@@ -98,14 +98,8 @@ def emit_ident(form, out) {
     if res != none {
         return res
     }
-    res = findvar(out[4], form[1])
-    if res != none {
-        oreg = reg(out)
-        out[0] = out[0] ~ [opcode.do_store_int, oreg, res]
-        return oreg
-    }
     oreg = reg(out)
-    out[0] = out[0] ~ [opcode.do_store_int, oreg, [link.call, form[1]]]
+    out[0] = out[0] ~ [opcode.do_load_global, oreg, [link.get, form[1]]]
     return oreg
 }
 
@@ -120,9 +114,16 @@ def emit_set(form, out) {
                 to = reg(out)
                 out[2] = out[2] ~ [form[1][1], to]
                 out[0] = out[0] ~ [opcode.do_store_reg, to, from]
+                puts(form[1][1])
+                if out[5] == true {
+                    out[0] = out[0] ~ [[link.set, form[1][1], to]]
+                }
                 return to
             } else {
                 out[2] = out[2] ~ [form[1][1], from]
+                if out[5] == true {
+                    out[0] = out[0] ~ [[link.set, form[1][1], from]]
+                }
                 return from
             }
         } else {
@@ -163,7 +164,9 @@ def emit_def(form, out) {
     body = form[2]
     tmp1 = out[1]
     tmp2 = out[2]
+    tmp5 = out[5]
     out[2] = []
+    out[5] = false
     foreach skip(2) ent @i: call {
         out[2] = out[2] ~ [ent[1], i - 1]
     }
@@ -180,6 +183,7 @@ def emit_def(form, out) {
     out[0][nregs] = out[1]
     out[1] = tmp1
     out[2] = tmp2
+    out[5] = tmp5
     out[0] = out[0] ~ [label(jover)]
     return none
 }
@@ -383,21 +387,6 @@ def emit_write(form, out) {
     return none
 }
 
-def emit_readc(form, out) {
-    name = out[4][0] ~ ['/'] ~ form[1][1]
-    src = read(name)
-    if src == none {
-        put("file not found for readc: ")
-        puts(form[1][1])
-        exit
-    } else {
-        ret = reg(out)
-        out[0] = out[0] ~ [opcode.do_string_new, ret, length(src)]
-        out[0] = out[0] ~ src
-        return none
-    }
-}
-
 def emit_read(form, out) {
     r1 = emit_to(form[1], out)
     ret = reg(out)
@@ -534,9 +523,6 @@ def emit_to(form, out) {
     if ty == vm.ast.dump {
         return emit_dump(form, out)
     }
-    if ty == vm.ast.readc {
-        return emit_readc(form, out)
-    }
     if ty == vm.ast.read {
         return emit_read(form, out)
     }
@@ -585,13 +571,13 @@ def emit_to(form, out) {
     if ty == "%" {
         return emit_binop(opcode.do_mod, form, out)
     }
-    put("emit: form:unknown form: ")
+    put("emit: form: unknown form: ")
     println(form)
     exit
 }
 
 def emit(form, path) {
-    out = [[], 0, ["args", 0], 0, [], path]
+    out = [[], 0, ["args", 0], 0, [], true]
     form = ctfe_run(form, path)
     form = check_all(form)
     emit_to(form, out)

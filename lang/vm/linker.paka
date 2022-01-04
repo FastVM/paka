@@ -6,6 +6,8 @@ macro link {
     label = 2
     call = 3
     func = 4
+    set = 5
+    get = 6
 }
 
 def vm_link(bc) {
@@ -13,6 +15,7 @@ def vm_link(bc) {
     func_locs = []
     sized_ops = []
     labels = []
+    vars = []
     foreach cur: bc {
         if type(cur) == array_type {
             if cur[0] == link.func {
@@ -21,10 +24,16 @@ def vm_link(bc) {
             if cur[0] == link.label {
                 labels = labels ~ [cur[1], length(sized_ops)]
             }
+            if cur[0] == link.set {
+                vars = vars ~ [cur[1], cur[2]]
+            }
             if cur[0] == link.call {
                 sized_ops = sized_ops ~ [cur]
             }
             if cur[0] == link.jump {
+                sized_ops = sized_ops ~ [cur]
+            }
+            if cur[0] == link.get {
                 sized_ops = sized_ops ~ [cur]
             }
         } else {
@@ -36,6 +45,15 @@ def vm_link(bc) {
         if type(op) == array_type {
             if op[0] == link.jump {
                 ret = ret ~ [findvar(labels, op[1])]
+            }
+            if op[0] == link.get {
+                val = findvar(vars, op[1])
+                if val == none {
+                    puts("link error: unknown var: ")
+                    puts(op[1])
+                    exit
+                }
+                ret = ret ~ [val]
             }
             if op[0] == link.call {
                 func = findvar(func_locs, op[1])
