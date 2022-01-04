@@ -8,6 +8,8 @@ macro opcode {
     do_store_int = 4
     do_load_global = 5
     do_swap_reg = 6
+    do_index_get_int = 7
+    do_index_set_int = 8
 
     do_jump = 11
     do_func = 12

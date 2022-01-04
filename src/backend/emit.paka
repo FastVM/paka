@@ -114,7 +114,6 @@ def emit_set(form, out) {
                 to = reg(out)
                 out[2] = out[2] ~ [form[1][1], to]
                 out[0] = out[0] ~ [opcode.do_store_reg, to, from]
-                puts(form[1][1])
                 if out[5] == true {
                     out[0] = out[0] ~ [[link.set, form[1][1], to]]
                 }
@@ -133,11 +132,18 @@ def emit_set(form, out) {
         }
     }
     if form[1][0] == vm.ast.index {
-        array = emit_to(form[1][1], out)
-        index = emit_to(form[1][2], out)
-        from = emit_to(form[2], out)
-        out[0] = out[0] ~ [opcode.do_index_set, array, index, from]
-        return array
+        if form[1][2][0] == vm.ast.num {
+            array = emit_to(form[1][1], out)
+            from = emit_to(form[2], out)
+            out[0] = out[0] ~ [opcode.do_index_set_int, array, form[1][2][1], from]
+            return array
+        } else {
+            array = emit_to(form[1][1], out)
+            index = emit_to(form[1][2], out)
+            from = emit_to(form[2], out)
+            out[0] = out[0] ~ [opcode.do_index_set, array, index, from]
+            return array
+        }
     }
     put("cannot set to: ")
     puts(form[1][0])
@@ -491,7 +497,7 @@ def emit_to(form, out) {
         return emit_none(form, out)
     }
     if ty == vm.ast.index {
-        return emit_binop(opcode.do_index_get, form, out)
+        return emit_binop2(opcode.do_index_get, opcode.do_index_get_int, form, out)
     }
     if ty == vm.ast.def {
         return emit_def(form, out)

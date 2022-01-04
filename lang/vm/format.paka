@@ -25,6 +25,18 @@ def vm_opcode_value(op) {
     if op == "int"{
         return opcode.do_store_int
     }
+    if op == "global"{
+        return opcode.do_load_global
+    }
+    if op == "swap"{
+        return opcode.do_swap_reg
+    }
+    if op == "geti"{
+        return opcode.do_index_set_int
+    }
+    if op == "seti"{
+        return opcode.do_index_set_int
+    }
     if op == "jump"{
         return opcode.do_jump
     }
@@ -169,8 +181,17 @@ def vm_opcode_args(op) {
     if op == opcode.do_store_int {
         return [opcode.arg.reg, opcode.arg.num]
     }
-    if op == opcode.do_store_reg {
+    if op == opcode.do_swap_reg {
         return [opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_load_global {
+        return [opcode.arg.reg, opcode.arg.num]
+    }
+    if op == opcode.do_index_get {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.num]
+    }
+    if op == opcode.do_index_set {
+        return [opcode.arg.reg, opcode.arg.num, opcode.arg.reg]
     }
     if op == opcode.do_jump {
         return [opcode.arg.label]
