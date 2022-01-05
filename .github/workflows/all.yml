@@ -1,4 +1,4 @@
-name: Build On Linux
+name: Builds
 on: [push]
 jobs:
   linux-ubsan:
