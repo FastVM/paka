@@ -36,7 +36,7 @@ jobs:
       - uses: egor-tensin/setup-mingw@v2
         with:
           platform: x64
-      - run: make -B CC=gcc OPT=-Os
+      - run: make -B CC=gcc OPT=-Os STDLIB=
       - uses: actions/upload-artifact@v2
         with:
           name: minivm-windows-opt
