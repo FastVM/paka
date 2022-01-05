@@ -1,7 +1,7 @@
 name: Build On Linux
 on: [push]
 jobs:
-  build-ubsan:
+  linux-ubsan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -16,14 +16,25 @@ jobs:
         with:
           name: stage3
           path: bin/stage3.bc
-  build-opt:
+  linux-opt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
-      - run: make -B CC=cc CFLAGS+=-flto LFLAGS+=-flto OPT=-Ofast
+      - run: make -B CC=cc CFLAGS+=-flto LFLAGS+=-flto OPT='-Os -ffast-math'
       - uses: actions/upload-artifact@v2
         with:
           name: minivm-linux-opt
+          path: bin/minivm
+  windows-opt:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - run: make -B CC=cc OPT=-Os
+      - uses: actions/upload-artifact@v2
+        with:
+          name: minivm-windows-opt
           path: bin/minivm
