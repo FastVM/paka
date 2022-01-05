@@ -9,11 +9,18 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
         stream_skip1(bsrc)
         return paka_tokenize_stream1(bsrc, ops_flat)
     }
+    if first == 13 {
+        stream_skip1(bsrc)
+        return paka_tokenize_stream1(bsrc, ops_flat)
+    }
     if first == '#' {
         stream_skip1(bsrc)
         while true {
             cur = stream_read(bsrc)
             if cur == 10 {
+                return paka_tokenize_stream1(bsrc, ops_flat)
+            }
+            if cur == 13 {
                 return paka_tokenize_stream1(bsrc, ops_flat)
             }
         }
@@ -57,6 +64,9 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
             }
             if cur == 'n' {
                 return [token.num, 10]
+            } 
+            if cur == 'r' {
+                return [token.num, 13]
             } 
             if cur == "\""[0] {
                 return [token.num, cur]
