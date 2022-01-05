@@ -1,4 +1,4 @@
-name: Actions Test
+name: Build On Linux
 on: [push]
 jobs:
   build-ubsan:

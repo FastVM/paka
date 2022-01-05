@@ -1,0 +1,14 @@
+name: Build On Windows
+on: [push]
+jobs:
+  build-opt:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - run: make -B CC=cc CFLAGS+=-flto LFLAGS+=-flto OPT=-Ofast
+      - uses: actions/upload-artifact@v2
+        with:
+          name: minivm-windows-opt
+          path: bin/minivm

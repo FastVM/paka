@@ -1,4 +1,4 @@
-# returns 1 if positive, -1 if negative, 0 otherwise
+## returns 1 if positive, -1 if negative, 0 otherwise
 def sign(x) {
     if x > 0 {
         return 1
@@ -9,7 +9,7 @@ def sign(x) {
     return 0
 }
 
-# absolute value of a number
+## absolute value of a number
 def abs(x) {
     if x < 0 {
         return 0-x
@@ -18,7 +18,7 @@ def abs(x) {
     }
 }
 
-# range from A to B with step N, including A, not including B.
+## range from A to B with step N, including A, not including B.
 def range(start, end, step) {
     size = (end - start) / step
     
@@ -38,7 +38,7 @@ def range(start, end, step) {
     return lo ~ hi
 }
 
-# computes the factorial
+## computes the factorial
 def factorial(x) {
     result = 1
     term = 1
@@ -49,7 +49,7 @@ def factorial(x) {
     return result
 }
 
-# calculates greatest common divisor between a and b
+## calculates greatest common divisor between a and b
 def gcd(a, b) {
     if b == 0 {
         return a
@@ -58,7 +58,7 @@ def gcd(a, b) {
     }
 }
 
-# non-recursive fibonacci: 0, 1, 1, 2, 3, 5, ...
+## non-recursive fibonacci: 0, 1, 1, 2, 3, 5, ...
 def fib_iter(n) {
     a = 0
     b = 1
@@ -72,7 +72,7 @@ def fib_iter(n) {
     return a
 }
 
-# recursive power of an integer
+## recursive power of an integer
 def pow(x, n) {
     if n <= 0 {
         return 1

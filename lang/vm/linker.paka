@@ -12,6 +12,7 @@ macro link {
 
 def vm_link(bc) {
     array_type = type([])
+    nops = 0
     func_locs = []
     sized_ops = []
     labels = []
@@ -19,25 +20,30 @@ def vm_link(bc) {
     foreach cur: bc {
         if type(cur) == array_type {
             if cur[0] == link.func {
-                func_locs = func_locs ~ [cur[1], length(sized_ops)]
+                func_locs = func_locs ~ [cur[1], nops]
             }
             if cur[0] == link.label {
-                labels = labels ~ [cur[1], length(sized_ops)]
+                labels = labels ~ [cur[1], nops]
             }
             if cur[0] == link.set {
                 vars = vars ~ [cur[1], cur[2]]
+                nops = nops + 1
             }
             if cur[0] == link.call {
                 sized_ops = sized_ops ~ [cur]
+                nops = nops + 1
             }
             if cur[0] == link.jump {
                 sized_ops = sized_ops ~ [cur]
+                nops = nops + 1
             }
             if cur[0] == link.get {
                 sized_ops = sized_ops ~ [cur]
+                nops = nops + 1
             }
         } else {
             sized_ops = sized_ops ~ [cur]
+            nops = nops + 1
         }
     }
     ret = []
