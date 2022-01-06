@@ -1,43 +1,14 @@
 name: Builds
 on: [push]
 jobs:
-  linux-ubsan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: true
-      - run: make -B CC=cc CFLAGS+=-fsanitize=undefined LFLAGS+=-fsanitize=undefined OPT=-g3
-      - uses: actions/upload-artifact@v2
-        with:
-          name: minivm-linux-debug
-          path: bin/minivm
-      - uses: actions/upload-artifact@v2
-        with:
-          name: stage3
-          path: bin/stage3.bc
   linux-opt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
-      - run: make -B CC=cc CFLAGS+=-flto LFLAGS+=-flto OPT='-Os -ffast-math'
+      - run: make -B CC=cc OPT='-Os -ffast-math -flto -fomit-frame-pointer'
       - uses: actions/upload-artifact@v2
         with:
-          name: minivm-linux-opt
-          path: bin/minivm
-  windows-opt:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: true
-      - uses: egor-tensin/setup-mingw@v2
-        with:
-          platform: x64
-      - run: make -B CC=gcc OPT=-Os STDLIB= bin/minivm
-      - uses: actions/upload-artifact@v2
-        with:
-          name: minivm-windows-opt
-          path: bin/minivm.exe
+          name: boot.bc
+          path: bin/stage3.bc
