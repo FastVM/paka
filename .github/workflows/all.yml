@@ -40,4 +40,4 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: minivm-windows-opt
-          path: bin/minivm
+          path: bin/minivm.exe
