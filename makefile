@@ -32,7 +32,7 @@ bin/stage3.bc: bin/stage2.bc
 
 clean: .dummy
 	$(MAKE) -C minivm clean
-	rm -r bin
+	: rm -r bin
 
 .dummy:
 
