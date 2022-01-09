@@ -1,0 +1,153 @@
+
+macro opcode {
+    do_exit = 0
+    do_store_int = 4
+    do_putchar = 21
+    do_string_new = 22
+    do_index_get = 25
+    do_index_set = 26
+    do_static_concat = 37
+    do_inc = 50
+    do_dec = 51
+    do_branch_not_equal_int = 53
+}
+
+def bf_strip_range(src, from, to) {
+    diff = to - from
+    if diff < 1 {
+        return []
+    }
+    if diff < 2 {
+        chr = src[from]
+        foreach test: "+-><[],." {
+            if chr == test {
+                return [test]
+            }
+        }
+        return []
+    }
+    mid = (from + to) / 2
+    return bf_strip_range(src, from, mid) ~ bf_strip_range(src, mid, to)
+}
+
+def bf_stream_new(src) {
+    return [bf_strip_range(src, 0, length(src)), 0]
+}
+
+def bf_stream_peek(src) {
+    if src[1] < length(src[0]) {
+        return src[0][src[1]]
+    } else {
+        return 0
+    }
+}
+
+def bf_stream_skip1(src) {
+    if src[1] < length(src[0]) {
+        src[1] = src[1] + 1
+    }
+}
+
+def bf_stream_read(src) {
+    ret = bf_stream_peek(src)
+    bf_stream_skip1(src)
+    return ret
+}
+
+def bf_puts(src) {
+    foreach chr: src {
+        putchar(chr)
+    }
+    putchar('\n')
+}
+
+def main(args) {
+    if length(args) == 0 {
+        bf_puts("bf.paka needs a file")
+        exit
+    }
+    src = read(args[0])
+    if src == none {
+        bf_puts("cannot read file: " ~ args[0])
+        exit
+    }
+    src = [src, 0]
+    start = [0]
+    rtlen = length(start)
+    bytecode1 = [opcode.do_store_int, 1, 15000, opcode.do_store_int, 3, 0, opcode.do_string_new, 2, length(start)] ~ start
+    bytecode2 = []
+    while rtlen < 30000 {
+        bytecode2 = bytecode2 ~ [opcode.do_static_concat, 2, 2, 2]
+        rtlen = rtlen * 2
+    }
+    depth = 0
+    labels = [none, none, none, none]
+    labels = labels ~ labels ~ labels ~ labels
+    labels = labels ~ labels ~ labels ~ labels
+    last = none
+    while true {
+        chr = bf_stream_read(src)
+        if chr == 0 {
+            bytecode2 = bytecode2 ~ [opcode.do_exit]
+            exec(bytecode1 ~ bytecode2, [])
+            exit
+        }
+        if chr == '+' {
+            n = 1
+            while bf_stream_peek(src) == '+' {
+                bf_stream_skip1(src)
+                n = n + 1
+            }
+            bytecode2 = bytecode2 ~ [opcode.do_inc, 3, 3, n]
+        }
+        if chr == '-' {
+            n = 1
+            while bf_stream_peek(src) == '-' {
+                bf_stream_skip1(src)
+                n = n + 1
+            }
+            bytecode2 = bytecode2 ~ [opcode.do_dec, 3, 3, n]
+        }
+        if chr == '>' {
+            n = 1
+            while bf_stream_peek(src) == '>' {
+                bf_stream_skip1(src)
+                n = n + 1
+            }
+            bytecode2 = bytecode2 ~ [opcode.do_index_set, 2, 1, 3, opcode.do_inc, 1, 1, n, opcode.do_index_get, 3, 2, 1]
+        }
+        if chr == '<' {
+            n = 1
+            while bf_stream_peek(src) == '<' {
+                bf_stream_skip1(src)
+                n = n + 1
+            }
+            bytecode2 = bytecode2 ~ [opcode.do_index_set, 2, 1, 3, opcode.do_dec, 1, 1, n, opcode.do_index_get, 3, 2, 1]
+        }
+        if chr == '[' {
+            ents = length(bytecode1) + length(bytecode2)
+            bytecode2 = bytecode2 ~ [opcode.do_branch_not_equal_int, 3, 0, none, ents + 5]
+            labels[depth] = ents
+            depth = depth + 1
+        }
+        if chr == ']' {
+            depth = depth - 1
+            len1 = length(bytecode1)
+            where = length(bytecode2) + len1 + 5
+            ents = labels[depth]
+            bytecode2 = bytecode2 ~ [opcode.do_branch_not_equal_int, 3, 0, where, ents + 5]
+            if where < len1 {
+                bytecode1[ents + 3] = where
+            } else {
+                bytecode2[ents + 3 - len1] = where
+            }
+        }
+        if chr == '.' {
+            bytecode2 = bytecode2 ~ [opcode.do_putchar, 3]
+        }
+        if chr == ',' {
+            bf_puts("cannot handle command: `,`")
+            exit
+        }
+    }
+}
