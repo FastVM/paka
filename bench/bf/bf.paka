@@ -8,6 +8,7 @@ macro opcode {
     do_string_new = 22
     do_index_get = 25
     do_index_set = 26
+    do_save = 29
     do_static_concat = 37
     do_inc = 50
     do_dec = 51
@@ -75,7 +76,13 @@ def main(args) {
     }
     fix_cell = []
     cellsize = 256 * 256
-    foreach skip(1) arg: args {
+    snap = []
+    stdin = []
+    index = 1
+    out = none
+    while index < length(args) {
+        arg = args[index]
+        index = index + 1
         if arg == "--wrap" {
             fix_cell = [opcode.do_mod, 3, 3, 5]
         }
@@ -87,11 +94,35 @@ def main(args) {
             fix_cell = [opcode.do_mod, 3, 3, 5]
             cellsize = 256 * 256
         }
+        if arg == "--out" {
+            if index >= length(args) {
+                bf_puts("--out: needs an output file")
+                exit
+            }
+            out = args[index]
+            index = index + 1
+        }
+        if arg == "--snap" {
+            if index >= length(args) {
+                bf_puts("--snap: needs an output file")
+                exit
+            }
+            snap = [opcode.do_string_new, 1, length(args[index])] ~ args[index] ~ [opcode.do_save, 1]
+            index = index + 1
+        }
+        if arg == "--stdin" {
+            if index >= length(args) {
+                bf_puts("--stdin: needs a string")
+                exit
+            }
+            stdin = args[index]
+            index = index + 1
+        }
     }
     src = [src, 0]
     start = [0, 0, 0, 0]
     rtlen = length(start)
-    bytecode1 = [opcode.do_index_get_int, 0, 0, 0, opcode.do_store_int, 5, cellsize, opcode.do_store_int, 1, 15000, opcode.do_store_int, 3, 0, opcode.do_store_int, 4, 0, opcode.do_string_new, 2, length(start)] ~ start
+    bytecode1 = snap ~ [opcode.do_index_get_int, 0, 0, 0, opcode.do_store_int, 5, cellsize, opcode.do_store_int, 1, 15000, opcode.do_store_int, 3, 0, opcode.do_store_int, 4, 0, opcode.do_string_new, 2, length(start)] ~ start
     bytecode2 = []
     while rtlen < 30000 {
         bytecode2 = bytecode2 ~ [opcode.do_static_concat, 2, 2, 2]
@@ -106,8 +137,11 @@ def main(args) {
         chr = bf_stream_read(src)
         if chr == 0 {
             bytecode2 = bytecode2 ~ [opcode.do_exit]
-            ## exec(bytecode1 ~ bytecode2, [arg ~ [0]])
-            dump("out.bc", bytecode1 ~ bytecode2)
+            if out == none {
+                exec(bytecode1 ~ bytecode2, [stdin ~ [0]])
+            } else {
+                dump(out, bytecode1 ~ bytecode2)
+            }
             exit
         }
         if chr == '+' {
@@ -167,7 +201,7 @@ def main(args) {
             bytecode2 = bytecode2 ~ [opcode.do_putchar, 3]
         }
         if chr == ',' {
-            bytecode2 = bytecode2 ~ [opcode.do_index_get, 3, 0, 4, opcode.do_inc, 4, 4, 1]
+            bytecode2 = bytecode2 ~ [opcode.do_index_get, 3, 6, 4, opcode.do_inc, 4, 4, 1]
         }
     }
 }

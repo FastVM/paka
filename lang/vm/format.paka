@@ -242,7 +242,7 @@ def vm_opcode_args(op) {
         return [opcode.arg.reg, opcode.arg.reg]
     }
     if op == opcode.do_save {
-        return [opcode.arg.reg, opcode.arg.reg]
+        return [opcode.arg.reg]
     }
     if op == opcode.do_dump {
         return [opcode.arg.reg, opcode.arg.reg]
