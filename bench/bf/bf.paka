@@ -2,6 +2,8 @@
 macro opcode {
     do_exit = 0
     do_store_int = 4
+    do_index_get_int = 7
+    do_mod = 17
     do_putchar = 21
     do_string_new = 22
     do_index_get = 25
@@ -71,10 +73,25 @@ def main(args) {
         bf_puts("cannot read file: " ~ args[0])
         exit
     }
+    fix_cell = []
+    cellsize = 256 * 256
+    foreach skip(1) arg: args {
+        if arg == "--wrap" {
+            fix_cell = [opcode.do_mod, 3, 3, 5]
+        }
+        if arg == "--8bit" {
+            fix_cell = [opcode.do_mod, 3, 3, 5]
+            cellsize = 256
+        }
+        if arg == "--16bit" {
+            fix_cell = [opcode.do_mod, 3, 3, 5]
+            cellsize = 256 * 256
+        }
+    }
     src = [src, 0]
-    start = [0]
+    start = [0, 0, 0, 0]
     rtlen = length(start)
-    bytecode1 = [opcode.do_store_int, 1, 15000, opcode.do_store_int, 3, 0, opcode.do_string_new, 2, length(start)] ~ start
+    bytecode1 = [opcode.do_index_get_int, 0, 0, 0, opcode.do_store_int, 5, cellsize, opcode.do_store_int, 1, 15000, opcode.do_store_int, 3, 0, opcode.do_store_int, 4, 0, opcode.do_string_new, 2, length(start)] ~ start
     bytecode2 = []
     while rtlen < 30000 {
         bytecode2 = bytecode2 ~ [opcode.do_static_concat, 2, 2, 2]
@@ -89,7 +106,8 @@ def main(args) {
         chr = bf_stream_read(src)
         if chr == 0 {
             bytecode2 = bytecode2 ~ [opcode.do_exit]
-            exec(bytecode1 ~ bytecode2, [])
+            ## exec(bytecode1 ~ bytecode2, [arg ~ [0]])
+            dump("out.bc", bytecode1 ~ bytecode2)
             exit
         }
         if chr == '+' {
@@ -125,12 +143,14 @@ def main(args) {
             bytecode2 = bytecode2 ~ [opcode.do_index_set, 2, 1, 3, opcode.do_dec, 1, 1, n, opcode.do_index_get, 3, 2, 1]
         }
         if chr == '[' {
+            bytecode2 = bytecode2 ~ fix_cell
             ents = length(bytecode1) + length(bytecode2)
             bytecode2 = bytecode2 ~ [opcode.do_branch_not_equal_int, 3, 0, none, ents + 5]
             labels[depth] = ents
             depth = depth + 1
         }
         if chr == ']' {
+            bytecode2 = bytecode2 ~ fix_cell
             depth = depth - 1
             len1 = length(bytecode1)
             where = length(bytecode2) + len1 + 5
@@ -143,11 +163,11 @@ def main(args) {
             }
         }
         if chr == '.' {
+            bytecode2 = bytecode2 ~ fix_cell
             bytecode2 = bytecode2 ~ [opcode.do_putchar, 3]
         }
         if chr == ',' {
-            bf_puts("cannot handle command: `,`")
-            exit
+            bytecode2 = bytecode2 ~ [opcode.do_index_get, 3, 0, 4, opcode.do_inc, 4, 4, 1]
         }
     }
 }
