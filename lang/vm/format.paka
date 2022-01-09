@@ -58,6 +58,9 @@ def vm_opcode_value(op) {
     if op == "mod"{
         return opcode.do_mod
     }
+    if op == "pow"{
+        return opcode.do_pow
+    }
     if op == "call"{
         return opcode.do_static_call
     }
@@ -140,10 +143,10 @@ def vm_opcode_value(op) {
         return opcode.do_branch_bool
     }
     if op == "inc"{
-        return opcode.do_inc
+        return opcode.do_add_int
     }
     if op == "dec"{
-        return opcode.do_dec
+        return opcode.do_sub_int
     }
     if op == "beqi"{
         return opcode.do_branch_equal_int
@@ -162,6 +165,24 @@ def vm_opcode_value(op) {
     }
     if op == "bgtei" {
         return opcode.do_branch_greater_than_equal_int 
+    }
+    if op == "addi"{
+        return opcode.do_add_int
+    }
+    if op == "subi"{
+        return opcode.do_sub_int
+    }
+    if op == "muli"{
+        return opcode.do_add_int
+    }
+    if op == "divi"{
+        return opcode.do_sub_int
+    }
+    if op == "modi"{
+        return opcode.do_add_int
+    }
+    if op == "powi"{
+        return opcode.do_sub_int
     }
 }
 
@@ -212,6 +233,9 @@ def vm_opcode_args(op) {
         return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
     }
     if op == opcode.do_mod {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
+    }
+    if op == opcode.do_pow {
         return [opcode.arg.reg, opcode.arg.reg, opcode.arg.reg]
     }
     if op == opcode.do_static_call {
@@ -295,10 +319,10 @@ def vm_opcode_args(op) {
     if op == opcode.do_branch_bool {
         return [opcode.arg.reg, opcode.arg.label, opcode.arg.label]
     }
-    if op == opcode.do_inc {
+    if op == opcode.do_sub_int {
         return [opcode.arg.reg, opcode.arg.reg, opcode.arg.num]
     }
-    if op == opcode.do_dec {
+    if op == opcode.do_add_int {
         return [opcode.arg.reg, opcode.arg.reg, opcode.arg.num]
     }
     if op == opcode.do_branch_equal_int {
@@ -318,5 +342,17 @@ def vm_opcode_args(op) {
     }
     if op == opcode.do_branch_greater_than_equal_int {
         return [opcode.arg.reg, opcode.arg.num, opcode.arg.label, opcode.arg.label]
+    }
+    if op == opcode.do_mul_int {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.num]
+    }
+    if op == opcode.do_div_int {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.num]
+    }
+    if op == opcode.do_mod_int {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.num]
+    }
+    if op == opcode.do_pow_int {
+        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.num]
     }
 }

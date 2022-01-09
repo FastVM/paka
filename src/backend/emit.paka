@@ -417,14 +417,14 @@ def emit_foreach_reverse(form, out) {
         if ent[0] == vm.ast.ident {
             varreg = reg(out)
             out[2] = out[2] ~ [ent[1], varreg]
-            out[0] = out[0] ~ [opcode.do_dec, indreg, indreg, 1]
+            out[0] = out[0] ~ [opcode.do_sub_int, indreg, indreg, 1]
             out[0] = out[0] ~ [opcode.do_index_get, varreg, valreg, indreg]
         } else {
             varreg = reg(out)
             ivarreg = reg(out)
             out[2] = out[2] ~ [ent[1][1], varreg]
             out[2] = out[2] ~ [ent[2][1], ivarreg]
-            out[0] = out[0] ~ [opcode.do_dec, indreg, indreg, 1]
+            out[0] = out[0] ~ [opcode.do_sub_int, indreg, indreg, 1]
             out[0] = out[0] ~ [opcode.do_index_get, varreg, valreg, indreg]
             out[0] = out[0] ~ [opcode.do_store_reg, ivarreg, indreg]
         }
@@ -456,7 +456,7 @@ def emit_foreach_forward(form, out) {
             varreg = reg(out)
             out[2] = out[2] ~ [ent[1], varreg]
             out[0] = out[0] ~ [opcode.do_index_get, varreg, valreg, indreg]
-            out[0] = out[0] ~ [opcode.do_inc, indreg, indreg, 1]
+            out[0] = out[0] ~ [opcode.do_add_int, indreg, indreg, 1]
         } else {
             varreg = reg(out)
             ivarreg = reg(out)
@@ -464,7 +464,7 @@ def emit_foreach_forward(form, out) {
             out[2] = out[2] ~ [ent[2][1], ivarreg]
             out[0] = out[0] ~ [opcode.do_index_get, varreg, valreg, indreg]
             out[0] = out[0] ~ [opcode.do_store_reg, ivarreg, indreg]
-            out[0] = out[0] ~ [opcode.do_inc, indreg, indreg, 1]
+            out[0] = out[0] ~ [opcode.do_add_int, indreg, indreg, 1]
         }
     }
     tmpreg = emit_to(form[3], out)
@@ -563,19 +563,22 @@ def emit_to(form, out) {
         return emit_binop(opcode.do_static_concat, form, out)
     }
     if ty == "+" {
-        return emit_binop2(opcode.do_add, opcode.do_inc, form, out)
+        return emit_binop2(opcode.do_add, opcode.do_add_int, form, out)
     }
     if ty == "-" {
-        return emit_binop2(opcode.do_sub, opcode.do_dec, form, out)
+        return emit_binop2(opcode.do_sub, opcode.do_sub_int, form, out)
     }
     if ty == "*" {
-        return emit_binop(opcode.do_mul, form, out)
+        return emit_binop2(opcode.do_mul, opcode.do_mul_int, form, out)
     }
     if ty == "/" {
-        return emit_binop(opcode.do_div, form, out)
+        return emit_binop2(opcode.do_div, opcode.do_div_int, form, out)
     }
     if ty == "%" {
-        return emit_binop(opcode.do_mod, form, out)
+        return emit_binop2(opcode.do_mod, opcode.do_mod_int, form, out)
+    }
+    if ty == "**" {
+        return emit_binop2(opcode.do_pow, opcode.do_pow_int, form, out)
     }
     put("emit: form: unknown form: ")
     println(form)
