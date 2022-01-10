@@ -1,8 +1,8 @@
 
-# Paka & Purr
+# Paka
 
 Paka is a language designed to be everything that I want in a language.
-The default compiler for this language is called Purr, it targets MiniVM.
+The default compiler for this language is written in paka, it targets MiniVM.
 
 ## Examples
 
@@ -10,7 +10,7 @@ TODO
 
 ## Development
 
-Paka and Purr are developed mainly by [Shaw Summa](#shaw-summa).
+Paka is developed mainly by [Shaw Summa](#shaw-summa).
 
 All contributions are greatly welcome, from performance improvments, to doccumentation.
 
