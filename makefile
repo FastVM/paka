@@ -8,7 +8,7 @@ VM_1 = ./bin/minivm.com
 
 VM ?= $(VM_$(COSMO))
 
-FORMAT = vm
+FORMAT = bc
 
 default: bin/stage3.bc
 
