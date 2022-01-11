@@ -34,7 +34,7 @@ macro opcode {
     do_dump = 31
     do_read = 32
     do_write = 33
-    do_dynamic_call = 35
+
     do_static_array_new = 36
     do_static_concat = 37
     do_static_call0 = 38

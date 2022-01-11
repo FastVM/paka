@@ -242,21 +242,13 @@ def emit_call(form, out) {
         if local == none {
             ret = emit_call_static_opt(form[1][1], regs, out)
         } else {
-            ret = reg(out)
-            out[0] = out[0] ~ [opcode.do_dynamic_call, ret, local, length(regs)]
-            out[0] = out[0] ~ regs
+            puts("no dynamic calls yet")
+            exit
         }
         return ret
     } else {
-        funcreg = emit_to(form[1], out)
-        regs = []
-        foreach skip(2) arg: form {
-            regs = regs ~ [emit_to(arg, out)]
-        } 
-        ret = reg(out)
-        out[0] = out[0] ~ [opcode.do_dynamic_call, ret, funcreg, length(regs)]
-        out[0] = out[0] ~ regs
-        return ret
+        puts("no dynamic calls yet")
+        exit
     }
 }
 

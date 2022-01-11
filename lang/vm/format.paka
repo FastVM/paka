@@ -100,9 +100,6 @@ def vm_opcode_value(op) {
     if op == "write"{
         return opcode.do_write
     }
-    if op == "dcall"{
-        return opcode.do_dynamic_call
-    }
     if op == "arr"{
         return opcode.do_static_array_new
     }
@@ -274,9 +271,6 @@ def vm_opcode_value(op) {
     if op = "write" {
         return opcode.do_write
     } 
-    if op = "dynamic_call" {
-        return opcode.do_dynamic_call
-    } 
     if op = "static_array_new" {
         return opcode.do_static_array_new
     } 
@@ -444,9 +438,6 @@ def vm_opcode_args(op) {
     }
     if op == opcode.do_write {
         return [opcode.arg.reg, opcode.arg.reg]
-    }
-    if op == opcode.do_dynamic_call {
-        return [opcode.arg.reg, opcode.arg.reg, opcode.arg.regs]
     }
     if op == opcode.do_static_array_new {
         return [opcode.arg.reg, opcode.arg.regs]
