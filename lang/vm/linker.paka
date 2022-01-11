@@ -2,6 +2,7 @@
 import("../findvar.paka")
 
 macro link {
+    data = 0
     jump = 1
     label = 2
     call = 3
@@ -14,71 +15,91 @@ def vm_link(bc) {
     array_type = type([])
     nops = 0
     func_locs = []
-    sized_ops = []
+    sized0 = []
+    sized1 = []
     labels = []
     vars = []
     foreach cur: bc {
-        if type(cur) == array_type {
-            if cur[0] == link.func {
-                func_locs = func_locs ~ [cur[1], nops]
-            }
-            if cur[0] == link.label {
-                labels = labels ~ [cur[1], nops]
-            }
-            if cur[0] == link.set {
-                vars = vars ~ [cur[1], cur[2]]
-                nops = nops + 1
-            }
-            if cur[0] == link.call {
-                sized_ops = sized_ops ~ [cur]
-                nops = nops + 1
-            }
-            if cur[0] == link.jump {
-                sized_ops = sized_ops ~ [cur]
-                nops = nops + 1
-            }
-            if cur[0] == link.get {
-                sized_ops = sized_ops ~ [cur]
-                nops = nops + 1
-            }
-        } else {
-            sized_ops = sized_ops ~ [cur]
+        if cur[0] == link.func {
+            func_locs = func_locs ~ [cur[1], nops]
+        }
+        if cur[0] == link.label {
+            labels = labels ~ [cur[1], nops]
+        }
+        if cur[0] == link.set {
+            vars = vars ~ [cur[1], cur[2]]
             nops = nops + 1
         }
-    }
-    ret = []
-    foreach op: sized_ops {
-        if type(op) == array_type {
-            if op[0] == link.jump {
-                ret = ret ~ [findvar(labels, op[1])]
-            }
-            if op[0] == link.get {
-                val = findvar(vars, op[1])
-                if val == none {
-                    puts("link error: unknown var: ")
-                    puts(op[1])
-                    exit
-                }
-                ret = ret ~ [val]
-            }
-            if op[0] == link.call {
-                func = findvar(func_locs, op[1])
-                if func == none {
-                    if type(op[1]) == type(0) {
-                        put("link error: undefined label: ")
-                        putn(op[1])
-                        puts("")
-                    } else {
-                        put("link error: undefined: ")
-                        puts(op[1])
-                    }
-                    exit
-                }
-                ret = ret ~ [func]
-            }
-        } else {
-            ret = ret ~ [op]
+        if cur[0] == link.call {
+            sized0 = sized0 ~ [cur]
+            nops = nops + 1
+        }
+        if cur[0] == link.jump {
+            sized0 = sized0 ~ [cur]
+            nops = nops + 1
+        }
+        if cur[0] == link.get {
+            sized0 = sized0 ~ [cur]
+            nops = nops + 1
+        }
+        if cur[0] == link.data {
+            sized0 = sized0 ~ [cur]
+            nops = nops + length(cur[1])
+        }
+        if length(sized0) >= 50 {
+            sized1 = sized1 ~ sized0
+            sized0 = []
         }
     }
-    return ret
+    sized = sized1 ~ sized0
+    ops0 = []
+    ops1 = []
+    ops2 = []
+    ops3 = []
+    ops4 = []
+    foreach op: sized {
+        if op[0] == link.data {
+            ops0 = ops0 ~ op[1]
+            if length(ops0) >= 30 {
+                ops1 = ops1 ~ ops0
+                ops0 = []
+                if length(ops1) > 90 {
+                    ops2 = ops2 ~ ops1
+                    ops1 = []
+                    if length(ops2) > 300 {
+                        ops3 = ops3 ~ ops2
+                        ops2 = []
+                    }
+                }
+            }
+        }
+        if op[0] == link.jump {
+            ops0 = ops0 ~ [findvar(labels, op[1])]
+        }
+        if op[0] == link.get {
+            val = findvar(vars, op[1])
+            if val == none {
+                puts("link error: unknown var: ")
+                puts(op[1])
+                exit
+            }
+            ops0 = ops0 ~ [val]
+        }
+        if op[0] == link.call {
+            func = findvar(func_locs, op[1])
+            if func == none {
+                if type(op[1]) == type(0) {
+                    put("link error: undefined label: ")
+                    putn(op[1])
+                    puts("")
+                } else {
+                    put("link error: undefined: ")
+                    puts(op[1])
+                }
+                exit
+            }
+            ops0 = ops0 ~ [func]
+        }
+    }
+    return ops3 ~ (ops2 ~ (ops1 ~ ops0))
 }

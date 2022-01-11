@@ -8,6 +8,8 @@ VM_1 = ./bin/minivm.com
 
 VM ?= $(VM_$(COSMO))
 
+FORMAT = vm
+
 default: bin/stage3.bc
 
 ./bin/minivm.com: minivm/vm minivm/main
@@ -22,13 +24,24 @@ default: bin/stage3.bc
 
 bin/stage1.bc: $(VM) src/main.paka
 	mkdir -p bin
-	$(VM) $(BOOT) src/main.paka -o $@ -l bc
+	$(VM) $(BOOT) src/main.paka -o $@ -l $(FORMAT)
 
 bin/stage2.bc: bin/stage1.bc
-	$(VM) bin/stage1.bc src/main.paka -o $@ -l bc
+	$(VM) $^ src/main.paka -o $@ -l $(FORMAT)
 
 bin/stage3.bc: bin/stage2.bc
-	$(VM) bin/stage2.bc src/main.paka -o $@ -l bc
+	$(VM) $^ src/main.paka -o $@ -l $(FORMAT)
+
+bin/stage4.bc: bin/stage3.bc
+	$(VM) $^ src/main.paka -o $@ -l $(FORMAT)
+
+bin/stage5.bc: bin/stage4.bc
+	$(VM) $^ src/main.paka -o $@ -l $(FORMAT)
+
+STAGE_N=$(VM) $$LAST src/main.paka -o $$NEXT -l $(FORMAT)
+
+bin/stage%.bc: $(VM)
+	@LAST=$(BOOT); for i in $$(seq 1 $(@:bin/stage%.bc=%)); do NEXT=bin/stage$$i.bc; echo $(STAGE_N); $(STAGE_N); LAST=$$NEXT; done
 
 clean: .dummy
 	$(MAKE) -C minivm clean

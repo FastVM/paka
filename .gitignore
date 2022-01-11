@@ -58,3 +58,4 @@ aoc/*.txt
 default.prof
 save.vm
 tiny_sk.bf
+exec.bc
