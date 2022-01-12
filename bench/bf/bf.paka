@@ -119,10 +119,10 @@ def main(args) {
             index = index + 1
         }
     }
-    src = [src, 0]
+    src = bf_stream_new(src)
     start = [0, 0, 0, 0]
     rtlen = length(start)
-    bytecode1 = snap ~ [opcode.do_index_get_int, 0, 0, 0, opcode.do_store_int, 5, cellsize, opcode.do_store_int, 1, 15000, opcode.do_store_int, 3, 0, opcode.do_store_int, 4, 0, opcode.do_string_new, 2, length(start)] ~ start
+    bytecode1 = snap ~ [opcode.do_index_get_int, 6, 0, 0, opcode.do_store_int, 5, cellsize, opcode.do_store_int, 1, 15000, opcode.do_store_int, 3, 0, opcode.do_store_int, 4, 0, opcode.do_string_new, 2, length(start)] ~ start
     bytecode2 = []
     while rtlen < 30000 {
         bytecode2 = bytecode2 ~ [opcode.do_static_concat, 2, 2, 2]

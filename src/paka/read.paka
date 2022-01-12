@@ -60,7 +60,7 @@ def paka_read_foreach_attrs(tokens, state) {
 }
 
 def paka_read_foreach_var(tokens, state) {
-    var = paka_read_single(tokens, state)            
+    var = paka_read_single(tokens, state)
     first = token_stream_peek(tokens)
     if first == token.comma {
         return var
