@@ -32,6 +32,9 @@ def pass_import_state(form, state) {
     if util_ast_is_literal(ty) {
         return form
     }
+    if ty == vm.ast.op {
+        return [ty, form[1], pass_import_state(form[2], state), pass_import_state(form[3], state)]
+    }
     if ty == vm.ast.ident {
         return form
     }

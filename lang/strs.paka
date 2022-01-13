@@ -60,3 +60,26 @@ def str_starts_with(src, items) {
     }
     return true
 }
+
+def str.eq(sa, sb) {
+    ## if type(sa) != type(sb) {
+    ##     println([sa, sb])
+    ## }
+    if sa == sb {
+        return true
+    } else {
+        return false
+    }
+}
+
+def str.eq.fixed(sa, sb) {
+    if length(sa) != length(sb) {
+        return false
+    }
+    foreach a@i: sa {
+        if a != sb[i] {
+            return false
+        }
+    }
+    return true
+}

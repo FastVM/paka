@@ -4,5 +4,5 @@ import("../lang/io.paka")
 n = 48 / 3
 
 def main(args) {
-    println(n * 2)
+    putn(n * 2)
 }

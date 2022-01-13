@@ -1,5 +1,5 @@
 import("../lang/io.paka")
 
 def main(argc) {
-    println(2 ** 4)
+    putn(2 ** 4)
 }

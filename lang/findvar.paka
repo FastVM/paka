@@ -1,9 +1,14 @@
 
 def findvar(vars, name) {
     foreach k, v: vars {
+        ## if type(k) == type(name) {
+        ##     if str.eq(k, name) {
+        ##         return [v]
+        ##     }
+        ## }
         if k == name {
-            return v
+            return [v]
         }
     }
-    return none
+    return []
 }

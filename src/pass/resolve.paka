@@ -19,16 +19,18 @@ def pass_macro_resolve_macro(form, state) {
             state[0] = state[0] ~ [fullname, ast]
             ok = true
         }
-        if form[2][where][0] == "=" {
-            setto = form[2][where][1]
-            val = form[2][where][2]
-            if setto[0] != vm.ast.ident {
-                puts("enum macro given bad value on left hand size of `=`")
-                exit
+        if form[2][where][0] == vm.ast.op {
+            if str.eq(form[2][where][1], "=") {
+                setto = form[2][where][2]
+                val = form[2][where][3]
+                if setto[0] != vm.ast.ident {
+                    puts("enum macro given bad value on left hand size of `=`")
+                    exit
+                }
+                fullname = form[1][1] ~ ['.'] ~ setto[1]
+                state[0] = state[0] ~ [fullname, val]
+                ok = true
             }
-            fullname = form[1][1] ~ ['.'] ~ setto[1]
-            state[0] = state[0] ~ [fullname, val]
-            ok = true
         }
         if ok == false {
             puts("that is not valid in a macro")
@@ -46,10 +48,13 @@ def pass_macro_resolve(form, state) {
     }
     if ty == vm.ast.ident {
         val = findvar(state[0], form[1])
-        if val != none {
-            return val
+        if length(val) != 0 {
+            return val[0]
         }
         return form
+    }
+    if ty == vm.ast.op {
+        return [ty, form[1], pass_macro_resolve(form[2], state), pass_macro_resolve(form[3], state)]
     }
     if ty == vm.ast.macro {
         return pass_macro_resolve_macro(form, state)

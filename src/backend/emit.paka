@@ -30,22 +30,22 @@ def emit_none(form, out) {
     return ret
 }
 
-def emit_binop(op, form, out) {
-    r1 = emit_to(form[1], out)
-    r2 = emit_to(form[2], out)
+def emit_binop(op, form1, form2, out) {
+    r1 = emit_to(form1, out)
+    r2 = emit_to(form2, out)
     ret = reg(out)
     out[0] = out[0] ~ [[link.data, [op, ret, r1, r2]]]
     return ret
 }
 
-def emit_binop2(op_reg, op_num, form, out) {
-    r1 = emit_to(form[1], out)
-    if form[2][0] == vm.ast.num {
+def emit_binop2(op_reg, op_num, form1, form2, out) {
+    r1 = emit_to(form1, out)
+    if form2[0] == vm.ast.num {
         ret = reg(out)
-        out[0] = out[0] ~ [[link.data, [op_num, ret, r1, form[2][1]]]]
+        out[0] = out[0] ~ [[link.data, [op_num, ret, r1, form2[1]]]]
         return ret
     } else {
-        r2 = emit_to(form[2], out)
+        r2 = emit_to(form2, out)
         ret = reg(out)
         out[0] = out[0] ~ [[link.data, [op_reg, ret, r1, r2]]]
         return ret
@@ -95,58 +95,56 @@ def emit_do(form, out) {
 
 def emit_ident(form, out) {
     res = findvar(out[2], form[1])
-    if res != none {
-        return res
+    if length(res) == 0 {
+        puts("unknown ident: " ~ form[1])
+        exit
     }
-    oreg = reg(out)
-    out[0] = out[0] ~ [[link.data, [opcode.do_load_global, oreg]], [link.get, form[1]]]
-    return oreg
+    return res[0]
 }
 
-def emit_set(form, out) {
-    if form[1][0] == vm.ast.ident {
-        found = findvar(out[2], form[1][1])
-        if found == none {
+def emit_set(from, to, out) {
+    if from[0] == vm.ast.ident {
+        found = findvar(out[2], from[1])
+        if length(found) == 0 {
             n1 = out[1]
-            from = emit_to(form[2], out)
+            varreg = emit_to(to, out)
             n2 = out[1]
             if n1 == n2 {
                 to = reg(out)
-                out[2] = out[2] ~ [form[1][1], to]
-                out[0] = out[0] ~ [[link.data, [opcode.do_store_reg, to, from]]]
+                out[2] = out[2] ~ [from[1], to]
+                out[0] = out[0] ~ [[link.data, [opcode.do_store_reg, to, varreg]]]
                 if out[5] == true {
-                    out[0] = out[0] ~ [[link.set, form[1][1], to]]
+                    out[0] = out[0] ~ [[link.set, from[1], to]]
                 }
                 return to
             } else {
-                out[2] = out[2] ~ [form[1][1], from]
+                out[2] = out[2] ~ [from[1], varreg]
                 if out[5] == true {
-                    out[0] = out[0] ~ [[link.set, form[1][1], from]]
+                    out[0] = out[0] ~ [[link.set, from[1], varreg]]
                 }
-                return from
+                return varreg
             }
         } else {
-            from = emit_to(form[2], out)
-            out[0] = out[0] ~ [[link.data, [opcode.do_store_reg, found, from]]]
-            return found
+            from = emit_to(to, out)
+            out[0] = out[0] ~ [[link.data, [opcode.do_store_reg, found[0], from]]]
+            return found[0]
         }
     }
-    if form[1][0] == vm.ast.index {
-        if form[1][2][0] == vm.ast.num {
-            array = emit_to(form[1][1], out)
-            from = emit_to(form[2], out)
-            out[0] = out[0] ~ [[link.data, [opcode.do_index_set_int, array, form[1][2][1], from]]]
+    if from[0] == vm.ast.index {
+        if from[2][0] == vm.ast.num {
+            array = emit_to(from[1], out)
+            varreg = emit_to(to, out)
+            out[0] = out[0] ~ [[link.data, [opcode.do_index_set_int, array, from[2][1], varreg]]]
             return array
         } else {
-            array = emit_to(form[1][1], out)
-            index = emit_to(form[1][2], out)
-            from = emit_to(form[2], out)
-            out[0] = out[0] ~ [[link.data, [opcode.do_index_set, array, index, from]]]
+            array = emit_to(from[1], out)
+            index = emit_to(from[2], out)
+            varreg = emit_to(to, out)
+            out[0] = out[0] ~ [[link.data, [opcode.do_index_set, array, index, varreg]]]
             return array
         }
     }
     put("cannot set to: ")
-    puts(form[1][0])
     exit
 }
 
@@ -228,18 +226,12 @@ def emit_call_static_opt(name, args, out) {
 
 def emit_call(form, out) {
     if form[1][0] == vm.ast.ident {
-        local = findvar(out[2], form[1][1])
+        local = findvar(out[2], form[1][1])[0]
         regs = []
         foreach skip(2) arg: form {
             regs = regs ~ [emit_to(arg, out)]
         } 
-        if local == none {
-            ret = emit_call_static_opt(form[1][1], regs, out)
-        } else {
-            puts("no dynamic calls yet")
-            exit
-        }
-        return ret
+        return emit_call_static_opt(form[1][1], regs, out)
     } else {
         puts("no dynamic calls yet")
         exit
@@ -247,65 +239,67 @@ def emit_call(form, out) {
 }
 
 def emit_branch_alike(cond, jfalse, jtrue, out) {
-    if cond[0] == "==" {
-        lhs = emit_to(cond[1], out)
-        if cond[2][0] == vm.ast.num {
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_equal_int, lhs, cond[2][1]]], goto(jfalse), goto(jtrue)]
-        } else {
-            rhs = emit_to(cond[2], out)
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_equal, lhs, rhs]], goto(jfalse), goto(jtrue)]
+    if cond[0] == vm.ast.op {
+        if str.eq(cond[1], "==") {
+            lhs = emit_to(cond[2], out)
+            if cond[3][0] == vm.ast.num {
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_equal_int, lhs, cond[3][1]]], goto(jfalse), goto(jtrue)]
+            } else {
+                rhs = emit_to(cond[3], out)
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_equal, lhs, rhs]], goto(jfalse), goto(jtrue)]
+            }
+            return none
         }
-        return none
-    }
-    if cond[0] == "!=" {
-        lhs = emit_to(cond[1], out)
-        if cond[2][0] == vm.ast.num {
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_not_equal_int, lhs, cond[2][1]]], goto(jfalse), goto(jtrue)]
-        } else {
-            rhs = emit_to(cond[2], out)
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_not_equal, lhs, rhs]], goto(jfalse), goto(jtrue)]
+        if str.eq(cond[1], "!=") {
+            lhs = emit_to(cond[2], out)
+            if cond[3][0] == vm.ast.num {
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_not_equal_int, lhs, cond[3][1]]], goto(jfalse), goto(jtrue)]
+            } else {
+                rhs = emit_to(cond[3], out)
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_not_equal, lhs, rhs]], goto(jfalse), goto(jtrue)]
+            }
+            return none
         }
-        return none
-    }
-    if cond[0] == "<" {
-        lhs = emit_to(cond[1], out)
-        if cond[2][0] == vm.ast.num {
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_less_int, lhs, cond[2][1]]], goto(jfalse), goto(jtrue)]
-        } else {
-            rhs = emit_to(cond[2], out)
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_less, lhs, rhs]], goto(jfalse), goto(jtrue)]
+        if str.eq(cond[1], "<") {
+            lhs = emit_to(cond[2], out)
+            if cond[3][0] == vm.ast.num {
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_less_int, lhs, cond[3][1]]], goto(jfalse), goto(jtrue)]
+            } else {
+                rhs = emit_to(cond[3], out)
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_less, lhs, rhs]], goto(jfalse), goto(jtrue)]
+            }
+            return none
         }
-        return none
-    }
-    if cond[0] == ">" {
-        lhs = emit_to(cond[1], out)
-        if cond[2][0] == vm.ast.num {
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_greater_int, lhs, cond[2][1]]], goto(jfalse), goto(jtrue)]
-        } else {
-            rhs = emit_to(cond[2], out)
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_greater, lhs, rhs]], goto(jfalse), goto(jtrue)]
+        if str.eq(cond[1], ">") {
+            lhs = emit_to(cond[2], out)
+            if cond[3][0] == vm.ast.num {
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_greater_int, lhs, cond[3][1]]], goto(jfalse), goto(jtrue)]
+            } else {
+                rhs = emit_to(cond[3], out)
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_greater, lhs, rhs]], goto(jfalse), goto(jtrue)]
+            }
+            return none
         }
-        return none
-    }
-    if cond[0] == "<=" {
-        lhs = emit_to(cond[1], out)
-        if cond[2][0] == vm.ast.num {
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_less_than_equal_int, lhs, cond[2][1]]], goto(jfalse), goto(jtrue)]
-        } else {
-            rhs = emit_to(cond[2], out)
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_less_than_equal, lhs, rhs]], goto(jfalse), goto(jtrue)]
+        if str.eq(cond[1], "<=") {
+            lhs = emit_to(cond[2], out)
+            if cond[3][0] == vm.ast.num {
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_less_than_equal_int, lhs, cond[3][1]]], goto(jfalse), goto(jtrue)]
+            } else {
+                rhs = emit_to(cond[3], out)
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_less_than_equal, lhs, rhs]], goto(jfalse), goto(jtrue)]
+            }
+            return none
         }
-        return none
-    }
-    if cond[0] == ">=" {
-        lhs = emit_to(cond[1], out)
-        if cond[2][0] == vm.ast.num {
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_greater_than_equal_int, lhs, cond[2][1]]], goto(jfalse), goto(jtrue)]
-        } else {
-            rhs = emit_to(cond[2], out)
-            out[0] = out[0] ~ [[link.data, [opcode.do_branch_greater_than_equal, lhs, rhs]], goto(jfalse), goto(jtrue)]
+        if str.eq(cond[1], ">=") {
+            lhs = emit_to(cond[2], out)
+            if cond[3][0] == vm.ast.num {
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_greater_than_equal_int, lhs, cond[3][1]]], goto(jfalse), goto(jtrue)]
+            } else {
+                rhs = emit_to(cond[3], out)
+                out[0] = out[0] ~ [[link.data, [opcode.do_branch_greater_than_equal, lhs, rhs]], goto(jfalse), goto(jtrue)]
+            }
+            return none
         }
-        return none
     }
     reg = emit_to(cond, out)
     out[0] = out[0] ~ [[link.data, [opcode.do_branch_bool, reg]], goto(jfalse), goto(jtrue)]
@@ -391,8 +385,8 @@ def emit_foreach_reverse(form, out) {
     indreg = reg(out)
     out[0] = out[0] ~ [[link.data, [opcode.do_length, indreg, valreg]]]
     offset = findvar(form[4][1], "skip")
-    if offset != none {
-        sub = emit_to(offset, out)
+    if length(offset) != 0 {
+        sub = emit_to(offset[0], out)
         out[0] = out[0] ~ [[link.data, [opcode.do_sub, indreg, indreg, sub]]]
     }
     jtrue = jump(out)
@@ -424,8 +418,8 @@ def emit_foreach_forward(form, out) {
     out[0] = out[0] ~ [[link.data, [opcode.do_length, lenreg, valreg]]]
     offset = findvar(form[4][1], "skip")
     indreg = reg(out)
-    if offset != none {
-        xreg = emit_to(offset, out)
+    if length(offset) != 0 {
+        xreg = emit_to(offset[0], out)
         out[0] = out[0] ~ [[link.data, [opcode.do_store_reg, indreg, xreg]]]
     } else {
         out[0] = out[0] ~ [[link.data, [opcode.do_store_int, indreg, 0]]]
@@ -457,11 +451,15 @@ def emit_foreach_forward(form, out) {
 }
 
 def emit_foreach(form, out) {
-    if findvar(form[4][1], "reverse") == true {
-        emit_foreach_reverse(form, out)
-    } else {
-        emit_foreach_forward(form, out)
+    rev = findvar(form[4][1], "reverse")
+    if length(rev) != 0 {
+        if rev[0] == true {
+            emit_foreach_reverse(form, out)
+            return none
+        }
     }
+    emit_foreach_forward(form, out)
+    return none
 }
 
 
@@ -480,7 +478,7 @@ def emit_to(form, out) {
         return emit_none(form, out)
     }
     if ty == vm.ast.index {
-        return emit_binop2(opcode.do_index_get, opcode.do_index_get_int, form, out)
+        return emit_binop2(opcode.do_index_get, opcode.do_index_get_int, form[1], form[2], out)
     }
     if ty == vm.ast.def {
         if length(out[0]) > 50 {
@@ -543,31 +541,37 @@ def emit_to(form, out) {
     if ty == vm.ast.foreach {
         return emit_foreach(form, out)
     }
-    if ty == "=" {
-        return emit_set(form, out)
+    if ty == vm.ast.op {
+        op = form[1]
+        if str.eq(op, "=") {
+            return emit_set(form[2], form[3], out)
+        }
+        if str.eq(op, "~") {
+            return emit_binop(opcode.do_static_concat, form[2], form[3], out)
+        }
+        if str.eq(op, "+") {
+            return emit_binop2(opcode.do_add, opcode.do_add_int, form[2], form[3], out)
+        }
+        if str.eq(op, "-") {
+            return emit_binop2(opcode.do_sub, opcode.do_sub_int, form[2], form[3], out)
+        }
+        if str.eq(op, "*") {
+            return emit_binop2(opcode.do_mul, opcode.do_mul_int, form[2], form[3], out)
+        }
+        if str.eq(op, "/") {
+            return emit_binop2(opcode.do_div, opcode.do_div_int, form[2], form[3], out)
+        }
+        if str.eq(op, "%") {
+            return emit_binop2(opcode.do_mod, opcode.do_mod_int, form[2], form[3], out)
+        }
+        if str.eq(op, "**") {
+            return emit_binop2(opcode.do_pow, opcode.do_pow_int, form[2], form[3], out)
+        }
+        puts("emit: form: unknown op")
+        println(form)
+        exit
     }
-    if ty == "~" {
-        return emit_binop(opcode.do_static_concat, form, out)
-    }
-    if ty == "+" {
-        return emit_binop2(opcode.do_add, opcode.do_add_int, form, out)
-    }
-    if ty == "-" {
-        return emit_binop2(opcode.do_sub, opcode.do_sub_int, form, out)
-    }
-    if ty == "*" {
-        return emit_binop2(opcode.do_mul, opcode.do_mul_int, form, out)
-    }
-    if ty == "/" {
-        return emit_binop2(opcode.do_div, opcode.do_div_int, form, out)
-    }
-    if ty == "%" {
-        return emit_binop2(opcode.do_mod, opcode.do_mod_int, form, out)
-    }
-    if ty == "**" {
-        return emit_binop2(opcode.do_pow, opcode.do_pow_int, form, out)
-    }
-    put("emit: form: unknown form: ")
+    puts("emit: form: unknown form")
     println(form)
     exit
 }

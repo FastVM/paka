@@ -6,6 +6,7 @@ import("../lang/stream.paka")
 import("../lang/vm/opcode.paka")
 import("../lang/vm/linker.paka")
 import("../lang/vm/format.paka")
+import("../lang/vm/strs.paka")
 
 def asm_spaces(stream) {
     while stream_peek(stream) == ' ' {
@@ -139,7 +140,7 @@ def asm_line(stream) {
         return [[link.label, name]]
     }
     if name[0] == '.' {
-        if name == ".byte" {
+        if str.eq(name, ".byte") {
             asm_spaces(stream)
             val = asm_num(stream)
             return [val]
@@ -191,12 +192,12 @@ def main(args) {
     file = args[0]
     args = remove(args, 1)
     if length(args) >= 1 {
-        if args[0] == "-o" {
+        if str.eq(args[0], "-o") {
             args = remove(args, 1)
             out = args[0]
             args = remove(args, 1)
         } else {
-            if args[0] == "--" {
+            if str.eq(args[0], "--") {
                 args = remove(args, 1)
                 out = none
             } else {

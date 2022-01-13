@@ -13,6 +13,9 @@ def pass_funcs_state(form, state) {
     if ty == vm.ast.ident {
         return none
     }
+    if ty == vm.ast.op {
+        return [ty, form[1], pass_funcs_state(form[2], state), pass_funcs_state(form[3], state)]
+    }
     if ty == vm.ast.def {
         state[0] = state[0] ~ [form[1][1][1], form]
     }

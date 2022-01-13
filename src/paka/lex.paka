@@ -27,31 +27,31 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
     }
     if first == '(' {
         stream_skip1(bsrc)
-        return token.open.paren
+        return [token.open.paren]
     }
     if first == ')' {
         stream_skip1(bsrc)
-        return token.close.paren
+        return [token.close.paren]
     }
     if first == '{' {
         stream_skip1(bsrc)
-        return token.open.curly
+        return [token.open.curly]
     }
     if first == '}' {
         stream_skip1(bsrc)
-        return token.close.curly
+        return [token.close.curly]
     }
     if first == '[' {
         stream_skip1(bsrc)
-        return token.open.square
+        return [token.open.square]
     }
     if first == ']' {
         stream_skip1(bsrc)
-        return token.close.square
+        return [token.close.square]
     }
     if first == ',' {
         stream_skip1(bsrc)
-        return token.comma
+        return [token.comma]
     }
     if first == ''' {
         stream_skip1(bsrc)
@@ -133,71 +133,71 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
             } else {
                 n0 = xsrc[0]
                 if n0 == 'w' {
-                    if xsrc == "while" {
-                        return token.keyword.while
+                    if str.eq(xsrc, "while") {
+                        return [token.keyword.while]
                     }
-                    if xsrc == "when" {
-                        return token.keyword.when
+                    if str.eq(xsrc, "when") {
+                        return [token.keyword.when]
                     }
                     return [token.ident, xsrc]
                 }
                 if n0 == 'i' {
-                    if xsrc == "if" {
-                        return token.keyword.if
+                    if str.eq(xsrc, "if") {
+                        return [token.keyword.if]
                     }
                     return [token.ident, xsrc]
                 }
                 if n0 == 'e' {
-                    if xsrc == "else" {
-                        return token.keyword.else
+                    if str.eq(xsrc, "else") {
+                        return [token.keyword.else]
                     }
-                    if xsrc == "exit" {
-                        return token.keyword.exit
+                    if str.eq(xsrc, "exit") {
+                        return [token.keyword.exit]
                     }
                     return [token.ident, xsrc]
                 }
                 if n0 == 'd' {
-                    if xsrc == "def" {
-                        return token.keyword.def
+                    if str.eq(xsrc, "def") {
+                        return [token.keyword.def]
                     }
                     return [token.ident, xsrc]
                 }
                 if n0 == 'r' {
-                    if xsrc == "return" {
-                        return token.keyword.return
+                    if str.eq(xsrc, "return") {
+                        return [token.keyword.return]
                     }
                     return [token.ident, xsrc]
                 }
                 if n0 == 't' {
-                    if xsrc == "true" {
-                        return token.keyword.true
+                    if str.eq(xsrc, "true") {
+                        return [token.keyword.true]
                     }
                     return [token.ident, xsrc]
                 }
                 if n0 == 'f' {
-                    if xsrc == "false" {
-                        return token.keyword.false
+                    if str.eq(xsrc, "false") {
+                        return [token.keyword.false]
                     }
-                    if xsrc == "foreach" {
-                        return token.keyword.foreach
+                    if str.eq(xsrc, "foreach") {
+                        return [token.keyword.foreach]
                     }
                     return [token.ident, xsrc]
                 }
                 if n0 == 'n' {
-                    if xsrc == "none" {
-                        return token.keyword.none
+                    if str.eq(xsrc, "none") {
+                        return [token.keyword.none]
                     }
                     return [token.ident, xsrc]
                 }
                 if n0 == 'm' {
-                    if xsrc == "macro" {
-                        return token.keyword.macro
+                    if str.eq(xsrc, "macro") {
+                        return [token.keyword.macro]
                     }
                     return [token.ident, xsrc]
                 }
                 if n0 == 's' {
-                    if xsrc == "static" {
-                        return token.keyword.static
+                    if str.eq(xsrc, "static") {
+                        return [token.keyword.static]
                     }
                     return [token.ident, xsrc]
                 }
@@ -206,7 +206,7 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
         }
     }
     if first == 0 {
-        return 0
+        return []
     }
     puts("bad char: " ~ [first])
     exit

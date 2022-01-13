@@ -11,9 +11,12 @@ def file_dir(filename) {
 }
 
 def file_dir_len(filename) {
-    foreach reverse chr @i: filename {
+    i = length(filename) - 1
+    while i >= 0 {
+        chr = filename[i]
         if chr == '/' {
             return i
         }
+        i = i - 1
     }
 }

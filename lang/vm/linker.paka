@@ -12,7 +12,6 @@ macro link {
 }
 
 def vm_link(bc) {
-    array_type = type([])
     nops = 0
     func_locs = []
     sized0 = []
@@ -74,20 +73,20 @@ def vm_link(bc) {
             }
         }
         if op[0] == link.jump {
-            ops0 = ops0 ~ [findvar(labels, op[1])]
+            ops0 = ops0 ~ [findvar(labels, op[1])[0]]
         }
         if op[0] == link.get {
             val = findvar(vars, op[1])
-            if val == none {
+            if length(val) == 0 {
                 puts("link error: unknown var: ")
                 puts(op[1])
                 exit
             }
-            ops0 = ops0 ~ [val]
+            ops0 = ops0 ~ [val[0]]
         }
         if op[0] == link.call {
             func = findvar(func_locs, op[1])
-            if func == none {
+            if length(func) == 0 {
                 if type(op[1]) == type(0) {
                     put("link error: undefined label: ")
                     putn(op[1])
@@ -98,7 +97,7 @@ def vm_link(bc) {
                 }
                 exit
             }
-            ops0 = ops0 ~ [func]
+            ops0 = ops0 ~ [func[0]]
         }
     }
     return ops3 ~ (ops2 ~ (ops1 ~ ops0))

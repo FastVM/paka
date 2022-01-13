@@ -83,18 +83,18 @@ def main(args) {
     while index < length(args) {
         arg = args[index]
         index = index + 1
-        if arg == "--wrap" {
+        if str.eq(arg, "--wrap") {
             fix_cell = [opcode.do_mod, 3, 3, 5]
         }
-        if arg == "--8bit" {
+        if str.eq(arg, "--8bit") {
             fix_cell = [opcode.do_mod, 3, 3, 5]
             cellsize = 256
         }
-        if arg == "--16bit" {
+        if str.eq(arg, "--16bit") {
             fix_cell = [opcode.do_mod, 3, 3, 5]
             cellsize = 256 * 256
         }
-        if arg == "--out" {
+        if str.eq(arg, "--out") {
             if index >= length(args) {
                 bf_puts("--out: needs an output file")
                 exit
@@ -102,7 +102,7 @@ def main(args) {
             out = args[index]
             index = index + 1
         }
-        if arg == "--snap" {
+        if str.eq(arg, "--snap") {
             if index >= length(args) {
                 bf_puts("--snap: needs an output file")
                 exit
@@ -110,7 +110,7 @@ def main(args) {
             snap = [opcode.do_string_new, 1, length(args[index])] ~ args[index] ~ [opcode.do_save, 1]
             index = index + 1
         }
-        if arg == "--stdin" {
+        if str.eq(arg, "--stdin") {
             if index >= length(args) {
                 bf_puts("--stdin: needs a string")
                 exit

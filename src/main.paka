@@ -27,7 +27,7 @@ def vm_exec(n, bc, rest) {
 def main(argv) {
     run = false
     outfile = none
-    srcfile = none
+    srcfile = ""
     rest = []
     outlang = "bc"
     ntimes = 1
@@ -76,7 +76,7 @@ def main(argv) {
                     return none
                 }
             } else {
-                if srcfile != none {
+                if length(srcfile) != 0 {
                     puts("only one source can be provided")
                     exit
                 }
@@ -86,22 +86,22 @@ def main(argv) {
         }
     }
     argv[0] = "-q"
-    if srcfile == none {
+    if length(srcfile) == 0 {
         puts("no sources provided")
         exit
     }
     src = read(srcfile)
-    if src == none {
+    if length(src) == 0 {
         puts("cannot read file")
         exit
     }
     ast = paka_parse(src)
-    ast = [vm.ast.do, ast, [vm.ast.call, [vm.ast.ident, "main"], [vm.ast.ident, "args"]]]
-    if outfile == none {
-        if outlang == "bc" {
+    ## ast = [vm.ast.do, ast, [vm.ast.call, [vm.ast.ident, "main"], [vm.ast.ident, "args"]]]
+    if length(outfile) == 0 {
+        if str.eq(outlang, "bc") {
             outfile = "exec.bc"
         }
-        if outlang == "vm" {
+        if str.eq(outlang, "vm") {
             outfile = "save.vm"
         }
     }
@@ -110,12 +110,12 @@ def main(argv) {
         vm_exec(ntimes, bc, rest)
         exit
     } else {
-        if outlang == "bc" {
+        if str.eq(outlang, "bc") {
             bc = emit(ast, srcfile)
             dump(outfile, bc)
             exit
         } 
-        if outlang == "vm" {
+        if str.eq(outlang, "vm") {
             ast0 = [vm.ast.do, [vm.ast.save, [vm.ast.str, outfile]], ast]
             bc = emit(ast0, srcfile)
             if ntimes != 1 {
@@ -128,3 +128,6 @@ def main(argv) {
         exit
     }
 }
+
+main(args)
+exit

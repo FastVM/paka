@@ -13,12 +13,16 @@ def check_argc_state(form, state) {
     if ty == vm.ast.ident {
         return none
     }
+    if ty == vm.ast.op {
+        return [ty, form[1], check_argc_state(form[2], state), check_argc_state(form[3], state)]
+    }
     if ty == vm.ast.call {
         name = form[1][1]
         found = findvar(state, name)
-        if found == none {
+        if length(found) == 0 {
             return none
         }
+        found = found[0]
         if length(form) - 2 != length(found[1]) - 2 {
             put("cannot match argc for: ")
             puts(name)

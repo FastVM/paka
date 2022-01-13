@@ -28,11 +28,11 @@ macro vm {
     ast.if
     ast.do
     ast.attrs
-    ast.index
     ast.putchar
     ast.foreach
     ast.value_key
     ast.static_array
+    ast.op
 }
 
 macro token {

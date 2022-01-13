@@ -1,7 +1,7 @@
 
 def token_stream_new(src) {
     ops_flat = ["<=", ">=", "==", "!=", "**", "=", "~", "+", "-", "%", "*", "/", "<", ">", ":", "@"]
-    ssrc = stream_new(src)
+    ssrc = [src, 0]
     return [ops_flat, ssrc, none]
 }
 
