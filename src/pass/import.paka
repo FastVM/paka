@@ -16,7 +16,7 @@ def pass_import_resolve_import(form, state) {
     }
     state[1] = state[1] ~ [name]
     src = read(name)
-    if src == none {
+    if length(src) == 0 {
         puts("cannot open file: " ~ name)
         exit
     }

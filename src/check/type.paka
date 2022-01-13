@@ -13,13 +13,13 @@ def check_types_remove_state(form, state) {
         return form
     }
     if ty == vm.ast.op {
+        if str.eq(form[1], ":") {
+            return check_types_remove_foreach(form[2], state)
+        }
         return [ty, form[1], check_types_remove_state(form[2], state), check_types_remove_state(form[3], state)]
     }
     if ty == vm.ast.ident {
         return form
-    }
-    if str.eq(ty, ":") {
-        return check_types_remove_foreach(form[1], state)
     }
     return check_types_remove_foreach(form, state)
 }

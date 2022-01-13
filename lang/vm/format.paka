@@ -340,6 +340,7 @@ def vm_opcode_value(op) {
     if str.eq(op, "pow_int") {
         return opcode.do_pow_int
     } 
+    return opcode.no_opocode
 }
 
 def vm_opcode_args(op) {
@@ -505,4 +506,5 @@ def vm_opcode_args(op) {
     if op == opcode.do_pow_int {
         return [opcode.arg.reg, opcode.arg.reg, opcode.arg.num]
     }
+    return []
 }

@@ -94,7 +94,11 @@ def paka_read_single(tokens, state) {
             idents = idents ~ [paka_read_foreach_var(tokens, state)]
         }
         next = token_stream_read(tokens)
-        if next != [token.op, ":"] {
+        if next[0] != token.op {
+            puts("error: expected colon after foreach's variable")
+            exit
+        }
+        if str.eq(next[1], ":") {} else {
             puts("error: expected colon after foreach's variable")
             exit
         }

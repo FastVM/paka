@@ -62,9 +62,10 @@ def str_starts_with(src, items) {
 }
 
 def str.eq(sa, sb) {
-    ## if type(sa) != type(sb) {
-    ##     println([sa, sb])
-    ## }
+    if type(sa) != type(sb) {
+        put("bad str.eq: ")
+        println([sa, sb])
+    }
     if sa == sb {
         return true
     } else {

@@ -61,4 +61,6 @@ macro opcode {
     do_div_int = 61
     do_mod_int = 62
     do_pow_int = 63
+
+    no_opocode = 255
 }
