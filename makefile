@@ -12,12 +12,12 @@ FORMAT = bc
 
 default: bin/stage3.bc
 
-./bin/minivm.com: minivm/vm minivm/main
+./bin/minivm.com: minivm
 	mkdir -p bin
 	$(MAKE) -C minivm minivm.com
 	cp minivm/minivm.com $@
 
-./bin/minivm: minivm/vm minivm/main
+./bin/minivm: minivm 
 	mkdir -p bin
 	$(MAKE) -C minivm
 	cp minivm/minivm $@

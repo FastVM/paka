@@ -45,10 +45,6 @@ def paka_read_post(tokens, last, state) {
 def paka_read_foreach_attrs(tokens, state) {
     first = token_stream_peek(tokens)
     if first[0] == token.ident {
-        if str.eq(first[1], "reverse") {
-            token_stream_skip1(tokens)
-            return ["reverse", true] ~ paka_read_foreach_attrs(tokens, state)
-        }
         if str.eq(first[1], "skip") {
             token_stream_skip1(tokens)
             ent = paka_read_single(tokens, state)
