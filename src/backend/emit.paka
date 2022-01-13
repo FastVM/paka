@@ -113,15 +113,9 @@ def emit_set(from, to, out) {
                 to = reg(out)
                 out[2] = out[2] ~ [from[1], to]
                 out[0] = out[0] ~ [[link.data, [opcode.do_store_reg, to, varreg]]]
-                if out[5] == true {
-                    out[0] = out[0] ~ [[link.set, from[1], to]]
-                }
                 return to
             } else {
                 out[2] = out[2] ~ [from[1], varreg]
-                if out[5] == true {
-                    out[0] = out[0] ~ [[link.set, from[1], varreg]]
-                }
                 return varreg
             }
         } else {
@@ -168,9 +162,7 @@ def emit_def(form, out) {
     body = form[2]
     tmp1 = out[1]
     tmp2 = out[2]
-    tmp5 = out[5]
     out[2] = []
-    out[5] = false
     foreach skip(2) ent @i: call {
         out[2] = out[2] ~ [ent[1], i - 1]
     }
@@ -182,7 +174,6 @@ def emit_def(form, out) {
     nregs[1][0] = out[1]
     out[1] = tmp1
     out[2] = tmp2
-    out[5] = tmp5
     out[0] = out[0] ~ [label(jover)]
     return 0
 }
@@ -573,7 +564,7 @@ def emit_to(form, out) {
 }
 
 def emit(form, path) {
-    out = [[], 0, ["args", 0], 0, [], true]
+    out = [[], 0, ["args", 0], 0, []]
     form = ctfe_run(form, path)
     form = check_all(form)
     emit_to(form, out)

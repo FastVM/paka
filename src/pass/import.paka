@@ -10,7 +10,7 @@ def pass_import_copy(form, state) {
 def pass_import_resolve_import(form, state) {
     name = state[0] ~ ['/'] ~ form[1][1]
     foreach existing: state[1] {
-        if existing == name {
+        if str.eq(existing, name) {
             return [vm.ast.do]
         }
     }

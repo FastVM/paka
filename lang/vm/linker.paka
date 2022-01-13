@@ -7,8 +7,6 @@ macro link {
     label = 2
     call = 3
     func = 4
-    set = 5
-    get = 6
 }
 
 def vm_link(bc) {
@@ -17,7 +15,6 @@ def vm_link(bc) {
     sized0 = []
     sized1 = []
     labels = []
-    vars = []
     foreach cur: bc {
         if cur[0] == link.func {
             func_locs = func_locs ~ [cur[1], nops]
@@ -25,19 +22,11 @@ def vm_link(bc) {
         if cur[0] == link.label {
             labels = labels ~ [cur[1], nops]
         }
-        if cur[0] == link.set {
-            vars = vars ~ [cur[1], cur[2]]
-            nops = nops + 1
-        }
         if cur[0] == link.call {
             sized0 = sized0 ~ [cur]
             nops = nops + 1
         }
         if cur[0] == link.jump {
-            sized0 = sized0 ~ [cur]
-            nops = nops + 1
-        }
-        if cur[0] == link.get {
             sized0 = sized0 ~ [cur]
             nops = nops + 1
         }
@@ -73,28 +62,13 @@ def vm_link(bc) {
             }
         }
         if op[0] == link.jump {
-            ops0 = ops0 ~ [findvar(labels, op[1])[0]]
-        }
-        if op[0] == link.get {
-            val = findvar(vars, op[1])
-            if length(val) == 0 {
-                puts("link error: unknown var: ")
-                puts(op[1])
-                exit
-            }
-            ops0 = ops0 ~ [val[0]]
+            ops0 = ops0 ~ [findvar.ikey(labels, op[1])[0]]
         }
         if op[0] == link.call {
             func = findvar(func_locs, op[1])
             if length(func) == 0 {
-                if type(op[1]) == type(0) {
-                    put("link error: undefined label: ")
-                    putn(op[1])
-                    puts("")
-                } else {
-                    put("link error: undefined: ")
-                    puts(op[1])
-                }
+                put("link error: undefined: ")
+                puts(op[1])
                 exit
             }
             ops0 = ops0 ~ [func[0]]

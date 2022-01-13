@@ -1,6 +1,15 @@
 
 def findvar(vars, name) {
     foreach k, v: vars {
+        if str.eq(k, name) {
+            return [v]
+        }
+    }
+    return []
+}
+
+def findvar.ikey(vars, name) {
+    foreach k, v: vars {
         if k == name {
             return [v]
         }

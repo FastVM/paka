@@ -61,11 +61,12 @@ def str_starts_with(src, items) {
     return true
 }
 
-def str.eq(sa, sb) {
+def const.eq(sa, sb) {
     if type(sa) != type(sb) {
-        put("bad str.eq: ")
+        put("bad type.eq: ")
         println([sa, sb])
     }
+    println([sa, sb])
     if sa == sb {
         return true
     } else {
@@ -73,7 +74,13 @@ def str.eq(sa, sb) {
     }
 }
 
-def str.eq.fixed(sa, sb) {
+def str.eq(sa, sb) {
+    if type(sa) != type("") {
+        return const.eq(sa, sb)
+    }
+    if type(sa) != type("") {
+        return const.eq(sa, sb)
+    }
     if length(sa) != length(sb) {
         return false
     }
