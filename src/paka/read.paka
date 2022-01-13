@@ -83,7 +83,7 @@ def paka_read_foreach_var(tokens, state) {
 def paka_read_single(tokens, state) {
     first = token_stream_peek(tokens)
     if length(first) == 0 {
-        return none
+        return 0
     }
     if first[0] == token.keyword.foreach {
         token_stream_skip1(tokens)
@@ -156,10 +156,6 @@ def paka_read_single(tokens, state) {
         token_stream_skip1(tokens)
         return [vm.ast.false]
     }
-    if first[0] == token.keyword.none {
-        token_stream_skip1(tokens)
-        return [vm.ast.none]
-    }
     if first[0] == (token.num) {
         token_stream_skip1(tokens)
         return [vm.ast.num, first[1]]
@@ -170,12 +166,6 @@ def paka_read_single(tokens, state) {
     }
     if first[0] == (token.ident) {
         token_stream_skip1(tokens)
-        if str.eq(first[1], "exec") {
-            return paka_read_call(tokens, [vm.ast.exec], state)
-        } 
-        if str.eq(first[1], "save") {
-            return paka_read_call(tokens, [vm.ast.save], state)
-        } 
         if str.eq(first[1], "putchar") {
             return paka_read_call(tokens, [vm.ast.putchar], state)
         } 
@@ -188,18 +178,12 @@ def paka_read_single(tokens, state) {
         if str.eq(first[1], "write") {
             return paka_read_call(tokens, [vm.ast.write], state)
         }
-        if str.eq(first[1], "readc") {
-            return paka_read_call(tokens, [vm.ast.readc], state)
-        }
         if str.eq(first[1], "read") {
             return paka_read_call(tokens, [vm.ast.read], state)
         }
         if str.eq(first[1], "import") {
             return paka_read_call(tokens, [vm.ast.import], state)
         }
-        if str.eq(first[1], "type") {
-            return paka_read_call(tokens, [vm.ast.type], state)
-        } 
         return [vm.ast.ident, first[1]]
     }
     puts("error: unexpected ")

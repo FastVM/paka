@@ -24,12 +24,6 @@ def emit_false(form, out) {
     return ret
 }
 
-def emit_none(form, out) {
-    ret = reg(out)
-    out[0] = out[0] ~ [[link.data, [opcode.do_store_none, ret]]]
-    return ret
-}
-
 def emit_binop(op, form1, form2, out) {
     r1 = emit_to(form1, out)
     r2 = emit_to(form2, out)
@@ -58,30 +52,10 @@ def emit_putchar(form, out) {
     return 0
 }
 
-def emit_exec(form, out) {
-    r1 = emit_to(form[1], out)
-    r2 = emit_to(form[2], out)
-    out[0] = out[0] ~ [[link.data, [opcode.do_exec, r1, r2]]]
-    return 0
-}
-
-def emit_save(form, out) {
-    r1 = emit_to(form[1], out)
-    out[0] = out[0] ~ [[link.data, [opcode.do_save, r1]]]
-    return 0
-}
-
 def emit_length(form, out) {
     r1 = emit_to(form[1], out)
     ret = reg(out)
     out[0] = out[0] ~ [[link.data, [opcode.do_length, ret, r1]]]
-    return ret
-}
-
-def emit_type(form, out) {
-    r1 = emit_to(form[1], out)
-    ret = reg(out)
-    out[0] = out[0] ~ [[link.data, [opcode.do_type, ret, r1]]]
     return ret
 }
 
@@ -461,9 +435,6 @@ def emit_to(form, out) {
     if ty == vm.ast.false {
         return emit_false(form, out)
     }
-    if ty == vm.ast.none {
-        return emit_none(form, out)
-    }
     if ty == vm.ast.index {
         return emit_binop2(opcode.do_index_get, opcode.do_index_get_int, form[1], form[2], out)
     }
@@ -489,12 +460,6 @@ def emit_to(form, out) {
     if ty == vm.ast.putchar {
         return emit_putchar(form, out)
     }
-    if ty == vm.ast.exec {
-        return emit_exec(form, out)
-    }
-    if ty == vm.ast.save {
-        return emit_save(form, out)
-    }
     if ty == vm.ast.length {
         return emit_length(form, out)
     }
@@ -506,9 +471,6 @@ def emit_to(form, out) {
     }
     if ty == vm.ast.write {
         return emit_write(form, out)
-    }
-    if ty == vm.ast.type {
-        return emit_type(form, out)
     }
     if ty == vm.ast.static_array {
         return emit_static_array(form, out)
@@ -555,11 +517,9 @@ def emit_to(form, out) {
             return emit_binop2(opcode.do_pow, opcode.do_pow_int, form[2], form[3], out)
         }
         puts("emit: form: unknown op")
-        println(form)
         exit
     }
     puts("emit: form: unknown form")
-    println(form)
     exit
 }
 

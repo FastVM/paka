@@ -1,8 +1,0 @@
-
-import("../lang/io.paka")
-
-n = 48 / 3
-
-def main(args) {
-    putn(n * 2)
-}

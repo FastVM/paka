@@ -183,12 +183,6 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                     }
                     return [token.ident, xsrc]
                 }
-                if n0 == 'n' {
-                    if str.eq(xsrc, "none") {
-                        return [token.keyword.none]
-                    }
-                    return [token.ident, xsrc]
-                }
                 if n0 == 'm' {
                     if str.eq(xsrc, "macro") {
                         return [token.keyword.macro]

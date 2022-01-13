@@ -24,21 +24,21 @@ default: bin/stage3.bc
 
 bin/stage1.bc: $(VM) src/main.paka
 	mkdir -p bin
-	$(VM) $(BOOT) src/main.paka -o $@ -l $(FORMAT)
+	$(VM) $(BOOT) src/main.paka -o $@
 
 bin/stage2.bc: bin/stage1.bc
-	$(VM) $^ src/main.paka -o $@ -l $(FORMAT)
+	$(VM) $^ src/main.paka -o $@
 
 bin/stage3.bc: bin/stage2.bc
-	$(VM) $^ src/main.paka -o $@ -l $(FORMAT)
+	$(VM) $^ src/main.paka -o $@
 
 bin/stage4.bc: bin/stage3.bc
-	$(VM) $^ src/main.paka -o $@ -l $(FORMAT)
+	$(VM) $^ src/main.paka -o $@
 
 bin/stage5.bc: bin/stage4.bc
-	$(VM) $^ src/main.paka -o $@ -l $(FORMAT)
+	$(VM) $^ src/main.paka -o $@
 
-STAGE_N=$(VM) $$LAST src/main.paka -o $$NEXT -l $(FORMAT)
+STAGE_N=$(VM) $$LAST src/main.paka -o $$NEXT
 
 bin/stage%.bc: $(VM)
 	@LAST=$(BOOT); for i in $$(seq 1 $(@:bin/stage%.bc=%)); do NEXT=bin/stage$$i.bc; echo $(STAGE_N); $(STAGE_N); LAST=$$NEXT; done

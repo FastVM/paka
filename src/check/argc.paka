@@ -8,10 +8,10 @@ def check_argc_foreach(form, state) {
 def check_argc_state(form, state) {
     ty = form[0]
     if util_ast_is_literal(ty) {
-        return none
+        return 0
     }
     if ty == vm.ast.ident {
-        return none
+        return 0
     }
     if ty == vm.ast.op {
         return [ty, form[1], check_argc_state(form[2], state), check_argc_state(form[3], state)]
@@ -20,7 +20,7 @@ def check_argc_state(form, state) {
         name = form[1][1]
         found = findvar(state, name)
         if length(found) == 0 {
-            return none
+            return 0
         }
         found = found[0]
         if length(form) - 2 != length(found[1]) - 2 {

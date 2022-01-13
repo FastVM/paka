@@ -8,13 +8,15 @@ def pass_func_foreach(form, state) {
 def pass_funcs_state(form, state) {
     ty = form[0]
     if util_ast_is_literal(ty) {
-        return none
+        return 0
     }
     if ty == vm.ast.ident {
-        return none
+        return 0
     }
     if ty == vm.ast.op {
-        return [ty, form[1], pass_funcs_state(form[2], state), pass_funcs_state(form[3], state)]
+        pass_funcs_state(form[2], state)
+        pass_funcs_state(form[3], state)
+        return 0
     }
     if ty == vm.ast.def {
         state[0] = state[0] ~ [form[1][1][1], form]

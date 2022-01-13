@@ -3,7 +3,7 @@
 macro opcode {
     do_exit = 0
     do_store_reg = 1
-    do_store_none = 2
+
     do_store_bool = 3
     do_store_int = 4
     do_load_global = 5
@@ -27,9 +27,6 @@ macro opcode {
     do_length = 24
     do_index_get = 25
     do_index_set = 26
-    do_type = 27
-    do_exec = 28
-    do_save = 29
 
     do_dump = 31
     do_read = 32

@@ -9,9 +9,6 @@ def util_ast_is_literal(ty) {
     if ty == vm.ast.false {
         return true
     }
-    if ty == vm.ast.none {
-        return true
-    }
     if ty == vm.ast.str {
         return true
     }
