@@ -5,9 +5,9 @@ def stream_new(src) {
 
 def stream_has_data(src) {
     if src[1] < length(src[0]) {
-        return true
+        return 1
     } else {
-        return false
+        return 0
     }
 }
 
@@ -41,12 +41,14 @@ def stream_read(src) {
 
 def stream_starts_swith(src, items) {
     if length(items) + src[1] > length(src[0]) {
-        return false
+        return 0
     }
-    foreach item_chr @i: items {
-        if item_chr != src[0][src[1] + i] {
-            return false
+    i = 0
+    while i < length(items) {
+        if items[i] != src[0][src[1] + i] {
+            return 0
         }
+        i = i + 1
     }
-    return true
+    return 1
 }

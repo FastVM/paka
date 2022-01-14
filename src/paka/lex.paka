@@ -15,7 +15,7 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
     }
     if first == '#' {
         stream_skip1(bsrc)
-        while true {
+        while 1 {
             cur = stream_read(bsrc)
             if cur == 10 {
                 return paka_tokenize_stream1(bsrc, ops_flat)
@@ -85,7 +85,7 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
     if first == "\""[0] {
         stream_skip1(bsrc)
         ret = []
-        while true {
+        while 1 {
             cur = stream_read(bsrc)
             if cur == 0 {
                 puts("eof in str")
@@ -112,11 +112,13 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
         puts("bad char")
         exit
     }
-    foreach op: ops_flat {
-        if stream_starts_swith(bsrc, op) {
-            stream_skip(bsrc, length(op))
-            return [token.op, op]
+    i = 0
+    while i < length(ops_flat) {
+        if stream_starts_swith(bsrc, ops_flat[i]) {
+            stream_skip(bsrc, length(ops_flat[i]))
+            return [token.op, ops_flat[i]]
         }
+        i = i + 1
     }
     if char_isdigit(first) {
         n = 0
@@ -127,7 +129,7 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
     }
     if char_id0(first) {
         xsrc = []
-        while true {
+        while 1 {
             if char_id(stream_peek(bsrc)) {
                 xsrc = xsrc ~ [stream_read(bsrc)]
             } else {
@@ -135,9 +137,6 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                 if n0 == 'w' {
                     if str.eq(xsrc, "while") {
                         return [token.keyword.while]
-                    }
-                    if str.eq(xsrc, "when") {
-                        return [token.keyword.when]
                     }
                     return [token.ident, xsrc]
                 }
@@ -168,30 +167,9 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                     }
                     return [token.ident, xsrc]
                 }
-                if n0 == 't' {
-                    if str.eq(xsrc, "true") {
-                        return [token.keyword.true]
-                    }
-                    return [token.ident, xsrc]
-                }
-                if n0 == 'f' {
-                    if str.eq(xsrc, "false") {
-                        return [token.keyword.false]
-                    }
-                    if str.eq(xsrc, "foreach") {
-                        return [token.keyword.foreach]
-                    }
-                    return [token.ident, xsrc]
-                }
                 if n0 == 'm' {
                     if str.eq(xsrc, "macro") {
                         return [token.keyword.macro]
-                    }
-                    return [token.ident, xsrc]
-                }
-                if n0 == 's' {
-                    if str.eq(xsrc, "static") {
-                        return [token.keyword.static]
                     }
                     return [token.ident, xsrc]
                 }

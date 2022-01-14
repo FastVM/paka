@@ -1,8 +1,10 @@
 
 def check_types_remove_foreach(form, state) {
     ret = [form[0]]
-    foreach skip(1) arg: form {
-        ret = ret ~ [check_types_remove_state(arg, state)]
+    i = 1
+    while i < length(form) {
+        ret = ret ~ [check_types_remove_state(form[i], state)]
+        i = i + 1
     }
     return ret
 }

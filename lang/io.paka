@@ -1,7 +1,9 @@
 
 def put(str) {
-    foreach chr: str {
-        putchar(chr)
+    i = 0
+    while i < length(str) {
+        putchar(str[i])
+        i = i + 1
     }
 }
 

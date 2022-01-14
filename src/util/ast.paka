@@ -1,19 +1,13 @@
  
 def util_ast_is_literal(ty) {
     if ty == vm.ast.num {
-        return true
-    }
-    if ty == vm.ast.true {
-        return true
-    }
-    if ty == vm.ast.false {
-        return true
+        return 1
     }
     if ty == vm.ast.str {
-        return true
+        return 1
     }
     if ty == vm.ast.attrs {
-        return true
+        return 1
     }
-    return false
+    return 0
 }

@@ -1,8 +1,10 @@
 
 def pass_macro_resolve_copy(form, state) {
     ret = [form[0]]
-    foreach skip(1) ent: form {
-        ret = ret ~ [pass_macro_resolve(ent, state)]
+    i = 1
+    while i < length(form) {
+        ret = ret ~ [pass_macro_resolve(form[i], state)]
+        i = i + 1
     }
     return ret
 }
@@ -12,12 +14,12 @@ def pass_macro_resolve_macro(form, state) {
     idents = []
     where = 1
     while where < length(form[2]) {
-        ok = false
+        ok = 0
         if form[2][where][0] == vm.ast.ident {
             fullname = form[1][1] ~ ['.'] ~ form[2][where][1]
             ast = [vm.ast.num, where]
             state[0] = state[0] ~ [fullname, ast]
-            ok = true
+            ok = 1
         }
         if form[2][where][0] == vm.ast.op {
             if str.eq(form[2][where][1], "=") {
@@ -29,10 +31,10 @@ def pass_macro_resolve_macro(form, state) {
                 }
                 fullname = form[1][1] ~ ['.'] ~ setto[1]
                 state[0] = state[0] ~ [fullname, val]
-                ok = true
+                ok = 1
             }
         }
-        if ok == false {
+        if ok == 0 {
             puts("that is not valid in a macro")
             exit
         }

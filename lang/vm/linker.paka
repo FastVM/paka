@@ -15,7 +15,9 @@ def vm_link(bc) {
     sized0 = []
     sized1 = []
     labels = []
-    foreach cur: bc {
+    i = 0
+    while i < length(bc) {
+        cur = bc[i]
         if cur[0] == link.func {
             func_locs = func_locs ~ [cur[1], nops]
         }
@@ -38,6 +40,7 @@ def vm_link(bc) {
             sized1 = sized1 ~ sized0
             sized0 = []
         }
+        i = i + 1
     }
     sized = sized1 ~ sized0
     ops0 = []
@@ -45,7 +48,9 @@ def vm_link(bc) {
     ops2 = []
     ops3 = []
     ops4 = []
-    foreach op: sized {
+    i = 0
+    while i < length(sized) {
+        op = sized[i]
         if op[0] == link.data {
             ops0 = ops0 ~ op[1]
             if length(ops0) >= 30 {
@@ -73,6 +78,7 @@ def vm_link(bc) {
             }
             ops0 = ops0 ~ [func[0]]
         }
+        i = i + 1
     }
     return ops3 ~ (ops2 ~ (ops1 ~ ops0))
 }

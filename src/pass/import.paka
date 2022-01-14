@@ -1,18 +1,22 @@
 
 def pass_import_copy(form, state) {
     ret = [form[0]]
-    foreach skip(1) ent: form {
-        ret = ret ~ [pass_import_state(ent, state)]
+    i = 1
+    while i < length(form) {
+        ret = ret ~ [pass_import_state(form[i], state)]
+        i = i + 1
     }
     return ret
 }
 
 def pass_import_resolve_import(form, state) {
     name = state[0] ~ ['/'] ~ form[1][1]
-    foreach existing: state[1] {
-        if str.eq(existing, name) {
+    i = 0
+    while i < length(state[1]) {
+        if str.eq(state[1][i], name) {
             return [vm.ast.do]
         }
+        i = i + 1
     }
     state[1] = state[1] ~ [name]
     src = read(name)

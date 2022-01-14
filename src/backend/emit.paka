@@ -12,18 +12,6 @@ def emit_num(form, out) {
     return ret
 }
 
-def emit_true(form, out) {
-    ret = reg(out)
-    out[0] = out[0] ~ [[link.data, [opcode.do_store_bool, ret, 1]]]
-    return ret
-}
-
-def emit_false(form, out) {
-    ret = reg(out)
-    out[0] = out[0] ~ [[link.data, [opcode.do_store_bool, ret, 0]]]
-    return ret
-}
-
 def emit_binop(op, form1, form2, out) {
     r1 = emit_to(form1, out)
     r2 = emit_to(form2, out)
@@ -31,20 +19,6 @@ def emit_binop(op, form1, form2, out) {
     out[0] = out[0] ~ [[link.data, [op, ret, r1, r2]]]
     return ret
 }
-
-## def emit_binop2(op_reg, op_num, form1, form2, out) {
-##     r1 = emit_to(form1, out)
-##     if form2[0] == vm.ast.num {
-##         ret = reg(out)
-##         out[0] = out[0] ~ [[link.data, [op_num, ret, r1, form2[1]]]]
-##         return ret
-##     } else {
-##         r2 = emit_to(form2, out)
-##         ret = reg(out)
-##         out[0] = out[0] ~ [[link.data, [op_reg, ret, r1, r2]]]
-##         return ret
-##     }
-## }
 
 def emit_putchar(form, out) {
     r1 = emit_to(form[1], out)
@@ -61,8 +35,10 @@ def emit_length(form, out) {
 
 def emit_do(form, out) {
     ret = 0
-    foreach skip(1) stmt: form {
-        ret = emit_to(stmt, out)
+    i = 1
+    while i < length(form) {
+        ret = emit_to(form[i], out)
+        i = i + 1
     } 
     return ret
 }
@@ -130,8 +106,10 @@ def emit_def(form, out) {
     tmp1 = out[1]
     tmp2 = out[2]
     out[2] = []
-    foreach skip(2) ent @i: call {
-        out[2] = out[2] ~ [ent[1], i - 1]
+    i = 2
+    while i < length(call) {
+        out[2] = out[2] ~ [call[i][1], i - 1]
+        i = i + 1
     }
     out[1] = i - 1
     nregs = [link.data, [256]]
@@ -156,15 +134,14 @@ def emit_exit(form, out) {
     return 0
 }
 
-def emit_call_static_opt(name, args, out) {
-}
-
 def emit_call(form, out) {
     if form[1][0] == vm.ast.ident {
         local = findvar(out[2], form[1][1])[0]
         args = []
-        foreach skip(2) arg: form {
-            args = args ~ [emit_to(arg, out)]
+        i = 2
+        while i < length(form) {
+            args = args ~ [emit_to(form[i], out)]
+            i = i + 1
         } 
         ret = reg(out)
         out[0] = out[0] ~ [[link.data, [opcode.do_static_call, ret]], [link.call, form[1][1]], [link.data, [length(args)] ~ args]]
@@ -247,8 +224,10 @@ def emit_if(form, out) {
 
 def emit_array(form, out) {
     regs = []
-    foreach skip(1) ent: form {
-        regs = regs ~ [emit_to(ent, out)]
+    i = 1
+    while i < length(form) {
+        regs = regs ~ [emit_to(form[i], out)]
+        i = i + 1
     }
     ret = reg(out)
     out[0] = out[0] ~ [[link.data, [opcode.do_static_array_new, ret, length(regs)] ~ regs]]
@@ -257,8 +236,10 @@ def emit_array(form, out) {
 
 def emit_static_array(form, out) {
     regs = []
-    foreach skip(1) ent: form {
-        regs = regs ~ [emit_to(ent, out)]
+    i = 1
+    while i < length(form) {
+        regs = regs ~ [emit_to(form[i], out)]
+        i = i + 1
     }
     ret = reg(out)
     out[0] = out[0] ~ [[link.data, [opcode.do_static_array_new, ret, length(regs)] ~ regs]]
@@ -292,55 +273,10 @@ def emit_read(form, out) {
     return ret
 }
 
-def emit_foreach(form, out) {
-    valreg = emit_to(form[2], out)
-    lenreg = reg(out)
-    out[0] = out[0] ~ [[link.data, [opcode.do_length, lenreg, valreg]]]
-    offset = findvar(form[4][1], "skip")
-    indreg = reg(out)
-    if length(offset) != 0 {
-        xreg = emit_to(offset[0], out)
-        out[0] = out[0] ~ [[link.data, [opcode.do_store_reg, indreg, xreg]]]
-    } else {
-        out[0] = out[0] ~ [[link.data, [opcode.do_store_int, indreg, 0]]]
-    }
-    jtrue = jump(out)
-    jfalse = jump(out)
-    out[0] = out[0] ~ [[link.data, [opcode.do_branch_less, indreg, lenreg]], goto(jfalse), goto(jtrue)]
-    out[0] = out[0] ~ [label(jtrue)]
-    foreach ent: form[1] {
-        if ent[0] == vm.ast.ident {
-            varreg = reg(out)
-            out[2] = out[2] ~ [ent[1], varreg]
-            out[0] = out[0] ~ [[link.data, [opcode.do_index_get, varreg, valreg, indreg]]]
-            out[0] = out[0] ~ [[link.data, [opcode.do_add_int, indreg, indreg, 1]]]
-        } else {
-            varreg = reg(out)
-            ivarreg = reg(out)
-            out[2] = out[2] ~ [ent[1][1], varreg]
-            out[2] = out[2] ~ [ent[2][1], ivarreg]
-            out[0] = out[0] ~ [[link.data, [opcode.do_index_get, varreg, valreg, indreg]]]
-            out[0] = out[0] ~ [[link.data, [opcode.do_store_reg, ivarreg, indreg]]]
-            out[0] = out[0] ~ [[link.data, [opcode.do_add_int, indreg, indreg, 1]]]
-        }
-    }
-    tmpreg = emit_to(form[3], out)
-    out[0] = out[0] ~ [[link.data, [opcode.do_branch_less, indreg, lenreg]], goto(jfalse), goto(jtrue)]
-    out[0] = out[0] ~ [label(jfalse)]
-    return 0
-}
-
-
 def emit_to(form, out) {
     ty = form[0]
     if ty == vm.ast.num {
         return emit_num(form, out)
-    }
-    if ty == vm.ast.true {
-        return emit_true(form, out)
-    }
-    if ty == vm.ast.false {
-        return emit_false(form, out)
     }
     if ty == vm.ast.index {
         return emit_binop(opcode.do_index_get, form[1], form[2], out)
@@ -393,9 +329,6 @@ def emit_to(form, out) {
     }
     if ty == vm.ast.do {
         return emit_do(form, out)
-    }
-    if ty == vm.ast.foreach {
-        return emit_foreach(form, out)
     }
     if ty == vm.ast.op {
         op = form[1]

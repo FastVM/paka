@@ -3,8 +3,6 @@ import("../lang/vm/opcode.paka")
 
 macro vm {
     ast.num
-    ast.true
-    ast.false
     ast.index
     ast.def
     ast.return
@@ -24,7 +22,6 @@ macro vm {
     ast.do
     ast.attrs
     ast.putchar
-    ast.foreach
     ast.value_key
     ast.static_array
     ast.op
@@ -45,12 +42,7 @@ macro token {
     keyword.def
     keyword.return
     keyword.macro
-    keyword.when
     keyword.exit
-    keyword.true
-    keyword.false
-    keyword.static
-    keyword.foreach
     op
     str
     num

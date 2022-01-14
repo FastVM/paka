@@ -3,7 +3,6 @@
 macro opcode {
     do_exit = 0
     do_store_reg = 1
-    do_store_bool = 2
     do_store_int = 3
     do_jump = 4
     do_func = 5

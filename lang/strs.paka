@@ -2,73 +2,78 @@
 def char_between(chr, pair) {
     if pair[0] <= chr {
         if chr <= pair[1] {
-            return true
+            return 1
         }
     }
-    return false
+    return 0
 }
  
 def char_isdigit(chr) {
     if char_between(chr, "09") {
-        return true
+        return 1
     } else {
-        return false
+        return 0
     }
 }
 
 def char_isalpha(chr) {
     if char_between(chr, "az") {
-        return true
+        return 1
     }
     if char_between(chr, "AZ") {
-        return true
+        return 1
     }
-    return false
+    return 0
 }
 
 def char_id0(chr) {
     if char_isalpha(chr) {
-        return true
+        return 1
     }
     if chr == '.' {
-        return true
+        return 1
     }
     if chr == '_' {
-        return true
+        return 1
     }
-    return false
+    return 0
 }
 
 def char_id(chr) {
     if char_id0(chr) {
-        return true
+        return 1
     }
     if char_isdigit(chr) {
-        return true
+        return 1
     }
-    return false
+    return 0
 }
 
 def str_starts_with(src, items) {
     if length(items) > length(src) {
-        return false
+        return 0
     }
-    foreach item @i: items {
-        if item != src[i] {
-            return false
+    i = 0
+    while i < length(items) {
+        if items[i] != src[i] {
+            return 0
         }
+        i = i + 1
     }
-    return true
+    return 1
 }
 
 def str.eq(sa, sb) {
+    len = length(sa)
     if length(sa) != length(sb) {
-        return false
+        return 0
     }
-    foreach a@i: sa {
-        if a != sb[i] {
-            return false
+    i = 0
+    while i < len {
+        if sa[i] != sb[i] {
+            return 0
         }
+        i = i + 1
     }
-    return true
+    return 1
 }
