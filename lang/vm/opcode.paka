@@ -12,6 +12,7 @@ macro opcode {
     do_mul = 8
     do_div = 9
     do_mod = 10
+    do_branch_less_than_equal = 11
     do_static_call = 12
     do_return = 13
     do_putchar = 14
@@ -26,5 +27,4 @@ macro opcode {
     do_static_concat = 23
     do_branch_equal = 24
     do_branch_less = 25
-    do_branch_less_than_equal = 26
 }
