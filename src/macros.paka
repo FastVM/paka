@@ -6,6 +6,7 @@ macro vm {
     ast.index
     ast.def
     ast.return
+    ast.defer
     ast.macro
     ast.when
     ast.exit
@@ -41,6 +42,7 @@ macro token {
     keyword.else
     keyword.def
     keyword.return
+    keyword.defer
     keyword.macro
     keyword.exit
     op

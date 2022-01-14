@@ -172,6 +172,11 @@ def paka_read_stmt(tokens, state) {
         expr = paka_read_expr_base(tokens, state)
         return [vm.ast.return, expr]
     }
+    if first[0] == token.keyword.defer {
+        token_stream_skip1(tokens)
+        expr = paka_read_expr_base(tokens, state)
+        return [vm.ast.defer, expr]
+    }
     if first[0] == token.keyword.macro {
         token_stream_skip1(tokens)
         name = token_stream_read(tokens)

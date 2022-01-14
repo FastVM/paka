@@ -159,6 +159,9 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                     if str.eq(xsrc, "def") {
                         return [token.keyword.def]
                     }
+                    if str.eq(xsrc, "defer") {
+                        return [token.keyword.defer]
+                    }
                     return [token.ident, xsrc]
                 }
                 if n0 == 'r' {
