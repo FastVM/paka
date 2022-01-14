@@ -1,0 +1,31 @@
+
+def check_types_collect(form) {
+    if form[0] == vm.ast.op {
+        if str.eq(form[1], ":") {
+            return [1]
+        }
+    }
+    return []
+}
+
+def check_types_func(name, body) {
+    args = body[1]
+    vars = []
+    i = 2
+    while i < length(args) {
+        vars = vars ~ check_types_collect(args[i])
+        i = i + 1
+    }
+}
+
+def check_types(form) {
+    funcs = pass_funcs_collect(form)
+    i = 0
+    while i < length(funcs) {
+        name = funcs[i]
+        i = i + 1
+        body = funcs[i]
+        i = i + 1
+        check_types_func(name, body)
+    }
+}

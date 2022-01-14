@@ -1,9 +1,11 @@
 
 import("argc.paka")
-import("type.paka") 
+import("clear.paka") 
+import("types.paka") 
 
 def check_all(ast) {
     check_argc(ast)
+    check_types(ast)
     ast = check_types_remove(ast)
     return ast
 }

@@ -1,0 +1,27 @@
+
+def check_types_remove_foreach(form) {
+    ret = [form[0]]
+    i = 1
+    while i < length(form) {
+        ret = ret ~ [check_types_remove(form[i])]
+        i = i + 1
+    }
+    return ret
+}
+
+def check_types_remove(form) {
+    ty = form[0]
+    if util_ast_is_literal(ty) {
+        return form
+    }
+    if ty == vm.ast.op {
+        if str.eq(form[1], ":") {
+            return check_types_remove_foreach(form[2])
+        }
+        return [ty, form[1], check_types_remove(form[2]), check_types_remove(form[3])]
+    }
+    if ty == vm.ast.ident {
+        return form
+    }
+    return check_types_remove_foreach(form)
+}
