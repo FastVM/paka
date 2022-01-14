@@ -3,61 +3,31 @@
 macro opcode {
     do_exit = 0
     do_store_reg = 1
-
-    do_store_bool = 3
-    do_store_int = 4
-    ## do_load_global = 5
-    ## do_swap_reg = 6
-    ## do_index_get_int = 7
-    ## do_index_set_int = 8
-
-    do_jump = 11
-    do_func = 12
-    do_add = 13
-    do_sub = 14
-    do_mul = 15
-    do_div = 16
-    do_mod = 17
-    do_pow = 18
-    do_static_call = 19
-    do_return = 20
-    do_putchar = 21
-    do_string_new = 22
-
-    do_length = 24
-    do_index_get = 25
-    do_index_set = 26
-
-    do_dump = 31
-    do_read = 32
-    do_write = 33
-
-    do_static_array_new = 36
-    do_static_concat = 37
-    ## do_static_call0 = 38
-    ## do_static_call1 = 39
-    
-    ## do_static_call2 = 41
-    ## do_static_call3 = 42
-    do_branch_equal = 43
-    ## do_branch_not_equal = 44
-    do_branch_less = 45
-    ## do_branch_greater = 46
-    do_branch_less_than_equal = 47
-    ## do_branch_greater_than_equal = 48
-    do_branch_bool = 49
-    do_add_int = 50
-    ## do_sub_int = 51
-    ## do_branch_equal_int = 52
-    ## do_branch_not_equal_int = 53
-    ## do_branch_less_int = 54
-    ## do_branch_greater_int = 55
-    ## do_branch_less_than_equal_int = 56
-    ## do_branch_greater_than_equal_int = 57
-    ## do_mul_int = 60
-    ## do_div_int = 61
-    ## do_mod_int = 62
-    ## do_pow_int = 63
-
-    no_opocode = 255
+    do_store_bool = 2
+    do_store_int = 3
+    do_jump = 4
+    do_func = 5
+    do_add = 6
+    do_sub = 7
+    do_mul = 8
+    do_div = 9
+    do_mod = 10
+    do_pow = 11
+    do_static_call = 12
+    do_return = 13
+    do_putchar = 14
+    do_string_new = 15
+    do_length = 16
+    do_index_get = 17
+    do_index_set = 18
+    do_dump = 19
+    do_read = 20
+    do_write = 21
+    do_static_array_new = 22
+    do_static_concat = 23
+    do_branch_equal = 24
+    do_branch_less = 25
+    do_branch_less_than_equal = 26
+    do_branch_bool = 27
+    do_add_int = 28
 }

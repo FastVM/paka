@@ -1,6 +1,5 @@
 
 import("../lang/io.paka")
-import("../lang/conv.paka")
 import("../lang/file.paka")
 import("../lang/stream.paka")
 import("../lang/strs.paka")
