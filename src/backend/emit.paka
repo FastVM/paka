@@ -353,9 +353,6 @@ def emit_to(form, out) {
         if str.eq(op, "%") {
             return emit_binop(opcode.do_mod, form[2], form[3], out)
         }
-        if str.eq(op, "**") {
-            return emit_binop(opcode.do_pow, form[2], form[3], out)
-        }
         puts("emit: form: unknown op")
         exit
     }

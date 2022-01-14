@@ -4,6 +4,7 @@ def to_int(arr) {
     i = 0
     while i < length(arr) {
         n = n * 10 + arr[i] - '0'
+        i = i + 1
     }
     return n
 }

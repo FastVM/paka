@@ -227,7 +227,7 @@ def paka_read_block(tokens, state) {
 
 def paka_parse(src) {
     xstream = token_stream_new(src)
-    ops = [["="], [":"], ["<", ">", "<=", ">=", "==", "!="], ["~", "+", "-"], ["%", "*", "/"], ["**"], ["@"]]
+    ops = [["="], [":"], ["<", ">", "<=", ">=", "==", "!="], ["~", "+", "-"], ["%", "*", "/"], ["@"]]
     state = [ops]
     ret = paka_read_block_body(xstream, state)
     return ret
