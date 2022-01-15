@@ -7,7 +7,7 @@ macro vm {
     ast.def
     ast.return
     ast.defer
-    ast.macro
+    ast.enum
     ast.when
     ast.exit
     ast.call

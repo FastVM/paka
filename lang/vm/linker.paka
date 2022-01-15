@@ -67,7 +67,12 @@ def vm_link(bc) {
             }
         }
         if op[0] == link.jump {
-            ops0 = ops0 ~ [findvar.ikey(labels, op[1])[0]]
+            found = findvar.ikey(labels, op[1])
+            if length(found) == 0 {
+                puts("cannot jump to undefined label")
+                exit
+            }
+            ops0 = ops0 ~ found
         }
         if op[0] == link.call {
             func = findvar(func_locs, op[1])

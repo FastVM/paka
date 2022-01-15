@@ -44,7 +44,8 @@ def main(args) {
     
     stretchdepth = maxdepth + 1
     tree = bottom_up_tree(0, stretchdepth)
-    putnln(item_check(tree))
+    putn(item_check(tree))
+    putchar('\n')
     
     longlivedtree = bottom_up_tree(0, maxdepth)
     
@@ -60,10 +61,12 @@ def main(args) {
             checks = checks + item_check(tree)
             check = check + 1
         }
-        putnln(checks)
+        putn(checks)
+        putchar('\n')
         depth = depth + 2
     }
-    putnln(item_check(longlivedtree))
+    putn(item_check(longlivedtree))
+    putchar('\n')
 }
 
 main(args)

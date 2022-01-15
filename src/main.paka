@@ -45,7 +45,6 @@ def main(argv) {
         exit
     }
     ast = paka_parse(src)
-    ast = [vm.ast.do, ast, [vm.ast.call, [vm.ast.ident, "main"], [vm.ast.ident, "args"]]]
     bc = emit(ast, srcfile)
     dump(outfile, bc)
 }

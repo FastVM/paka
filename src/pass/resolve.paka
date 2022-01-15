@@ -58,7 +58,7 @@ def pass_macro_resolve(form, state) {
     if ty == vm.ast.op {
         return [ty, form[1], pass_macro_resolve(form[2], state), pass_macro_resolve(form[3], state)]
     }
-    if ty == vm.ast.macro {
+    if ty == vm.ast.enum {
         return pass_macro_resolve_macro(form, state)
     }
     if ty == vm.ast.def {

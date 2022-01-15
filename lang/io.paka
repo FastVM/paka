@@ -30,8 +30,3 @@ def putn(n) {
         putn_gte0(n)
     }
 }
-
-def putnln(n) {
-    putn(n)
-    puts("")
-}

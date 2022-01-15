@@ -15,7 +15,8 @@ def main(args) {
         puts("error: need an integer argument")
     } else {
         n = to_int(args[0])
-        putnln(fib(n))
+        putn(fib(n))
+        putchar('\n')
     }
 }
 
