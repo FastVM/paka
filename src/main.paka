@@ -5,10 +5,10 @@ def push(x, y) __cat x [y]
 ## io
 
 def put(str) {
-    i = 0
-    while __lt i length(str) {
+    __let i 0
+    while __lt i length str {
         putchar(__get str i)
-        i = __add i 1
+        __let i __add i 1
     }
 }
 
@@ -19,7 +19,7 @@ def puts(str) {
 
 def putn_gte0(n) {
     if __gte n 10 {
-        lowest = __mod n 10
+        __let lowest __mod n 10
         putn_gte0(__div __sub n lowest 10)
         putchar(__add lowest 48)
     } else {
@@ -89,30 +89,30 @@ def char_id(chr) {
 }
 
 def str_starts_with(src, items) {
-    if __gt length(items) length(src) {
+    if __gt length items length src {
         return 0
     }
-    i = 0
-    while __lt i length(items) {
+    __let i 0
+    while __lt i length items {
         if __neq __get items i __get src i {
             return 0
         }
-        i = __add i 1
+        __let i __add i 1
     }
     return 1
 }
 
 def str.eq(sa, sb) {
-    len = length(sa)
-    if __neq length(sa) length(sb) {
+    __let len length sa
+    if __neq length sa length sb {
         return 0
     }
-    i = 0
+    __let i 0
     while __lt i len {
         if __neq __get sa i __get sb i {
             return 0
         }
-        i = __add i 1
+        __let i __add i 1
     }
     return 1
 }
@@ -124,7 +124,7 @@ def stream_new(src) {
 }
 
 def stream_peek(src) {
-    if __lt __get src 1 length((__get src 0)) {
+    if __lt __get src 1 length (__get src 0) {
         return __get __get src 0 __get src 1
     } else {
         return 0
@@ -132,21 +132,21 @@ def stream_peek(src) {
 }
 
 def stream_skip1(src) {
-    if __lt __get src 1 length((__get src 0)) {
+    if __lt __get src 1 length (__get src 0) {
         __set src 1 __add __get src 1 1
     }
 }
 
 def stream_skip(src, n) {
-    i = 0
+    __let i 0
     while __lt i n {
         stream_skip1(src)
-        i = __add i 1
+        __let i __add i 1
     }
 }
 
 def stream_read(src) {
-    ret = stream_peek(src)
+    __let ret stream_peek(src)
     stream_skip1(src)
     return ret
 }
@@ -155,12 +155,12 @@ def stream_starts_swith(src, items) {
     if __gt __add length items __get src 1 length __get src 0 {
         return 0
     }
-    i = 0
-    while __lt i length(items) {
+    __let i 0
+    while __lt i length items {
         if __neq __get items i __get __get src 0 __add __get src 1 i {
             return 0
         }
-        i = __add i 1
+        __let i __add i 1
     }
     return 1
 }
@@ -168,89 +168,89 @@ def stream_starts_swith(src, items) {
 ## linker
 
 macro link {
-    data = 0
-    jump = 1
-    label = 2
-    call = 3
-    func = 4
+    __let data 0
+    __let jump 1
+    __let label 2
+    __let call 3
+    __let func 4
 }
 
 def vm_link(bc) {
-    nops = 0
-    func_locs = empty
-    sized0 = empty
-    sized1 = empty
-    labels = empty
-    i = 0
-    while __lt i length(bc) {
-        cur = __get bc  i
+    __let nops 0
+    __let func_locs empty
+    __let sized0 empty
+    __let sized1 empty
+    __let labels empty
+    __let i 0
+    while __lt i length bc {
+        __let cur __get bc  i
         if __eq __get cur 0 link.func {
-            func_locs = __cat func_locs [__get cur 1, nops]
+            __let func_locs __cat func_locs [__get cur 1, nops]
         }
         if __eq __get cur 0 link.label {
-            labels = __cat labels [__get cur 1, nops]
+            __let labels __cat labels [__get cur 1, nops]
         }
         if __eq __get cur 0 link.call {
-            sized0 = push sized0 cur
-            nops = __add nops 1
+            __let sized0 push sized0 cur
+            __let nops __add nops 1
         }
         if __eq __get cur 0 link.jump {
-            sized0 = push sized0 cur
-            nops = __add nops 1
+            __let sized0 push sized0 cur
+            __let nops __add nops 1
         }
         if __eq __get cur 0 link.data {
-            sized0 = push sized0 cur
-            nops = __add nops length __get cur 1
+            __let sized0 push sized0 cur
+            __let nops __add nops length __get cur 1
         }
-        if __gte length(sized0) 50 {
-            sized1 = __cat sized1 sized0
-            sized0 = empty
+        if __gte length sized0 50 {
+            __let sized1 __cat sized1 sized0
+            __let sized0 empty
         }
-        i = __add i 1
+        __let i __add i 1
     }
-    sized = __cat sized1 sized0
-    ops0 = empty
-    ops1 = empty
-    ops2 = empty
-    ops3 = empty
-    ops4 = empty
-    i = 0
-    while __lt i length(sized) {
-        op = __get sized i
-        linktype = __get op 0
+    __let sized __cat sized1 sized0
+    __let ops0 empty
+    __let ops1 empty
+    __let ops2 empty
+    __let ops3 empty
+    __let ops4 empty
+    __let i 0
+    while __lt i length sized {
+        __let op __get sized i
+        __let linktype __get op 0
         if __eq linktype link.data {
-            ops0 = __cat ops0 __get op 1
-            if __gte length(ops0) 30 {
-                ops1 = __cat ops1 ops0
-                ops0 = empty
-                if __gt length(ops1) 90 {
-                    ops2 = __cat ops2 ops1
-                    ops1 = empty
-                    if __gt length(ops2) 300 {
-                        ops3 = __cat ops3 ops2
-                        ops2 = empty
+            __let ops0 __cat ops0 __get op 1
+            if __gte length ops0 30 {
+                __let ops1 __cat ops1 ops0
+                __let ops0 empty
+                if __gt length ops1 90 {
+                    __let ops2 __cat ops2 ops1
+                    __let ops1 empty
+                    if __gt length ops2 300 {
+                        __let ops3 __cat ops3 ops2
+                        __let ops2 empty
                     }
                 }
             }
         }
         if __eq linktype link.jump {
-            found = findvar.ikey(labels, __get op 1)
-            if __eq length(found) 0 {
+            __let found findvar.ikey(labels, __get op 1)
+            if __eq length found 0 {
                 puts("cannot jump to undefined label")
                 exit
             }
-            ops0 = __cat ops0 found
+            __let ops0 __cat ops0 found
         }
         if __eq linktype link.call {
-            func = findvar(func_locs, __get op 1)
-            if __eq length(func) 0 {
+            __let func findvar(func_locs, __get op 1)
+            if __eq length func 0 {
                 put("link error: undefined: ")
                 puts(__get op 1)
                 exit
             }
-            ops0 = __cat ops0 [__get func 0]
+            __let ops0 __cat ops0 [__get func 0]
         }
-        i = __add i 1
+        __let i __add i 1
     }
     return __cat ops3 __cat ops2 __cat ops1 ops0
 }
@@ -306,43 +306,43 @@ macro token {
 }
 
 macro opcode {
-    do_exit = 0
-    do_store_reg = 1
-    do_branch_bool = 2
-    do_store_int = 3
-    do_jump = 4
-    do_func = 5
-    do_add = 6
-    do_sub = 7
-    do_mul = 8
-    do_div = 9
-    do_mod = 10
-    do_branch_less_than_equal = 11
-    do_static_call = 12
-    do_return = 13
-    do_putchar = 14
-    do_string_new = 15
-    do_length = 16
-    do_index_get = 17
-    do_index_set = 18
-    do_dump = 19
-    do_read = 20
-    do_write = 21
-    do_static_array_new = 22
-    do_static_concat = 23
-    do_branch_equal = 24
-    do_branch_less = 25
+    __let do_exit 0
+    __let do_store_reg 1
+    __let do_branch_bool 2
+    __let do_store_int 3
+    __let do_jump 4
+    __let do_func 5
+    __let do_add 6
+    __let do_sub 7
+    __let do_mul 8
+    __let do_div 9
+    __let do_mod 10
+    __let do_branch_less_than_equal 11
+    __let do_static_call 12
+    __let do_return 13
+    __let do_putchar 14
+    __let do_string_new 15
+    __let do_length 16
+    __let do_index_get 17
+    __let do_index_set 18
+    __let do_dump 19
+    __let do_read 20
+    __let do_write 21
+    __let do_static_array_new 22
+    __let do_static_concat 23
+    __let do_branch_equal 24
+    __let do_branch_less 25
 }
 
 ## find variables
 
 def findvar(vars, name) {
-    i = 0
-    while __lt i length(vars) {
-        k = __get vars i
-        i = __add i 1
-        v = __get vars i
-        i = __add i 1
+    __let i 0
+    while __lt i length vars {
+        __let k __get vars i
+        __let i __add i 1
+        __let v __get vars i
+        __let i __add i 1
         if str.eq(k, name) {
             return [v]
         }
@@ -351,12 +351,12 @@ def findvar(vars, name) {
 }
 
 def findvar.ikey(vars, name) {
-    i = 0
-    while __lt i length(vars) {
-        k = __get vars i
-        i = __add i 1
-        v = __get vars i
-        i = __add i 1
+    __let i 0
+    while __lt i length vars {
+        __let k __get vars i
+        __let i __add i 1
+        __let v __get vars i
+        __let i __add i 1
         if __eq k name {
             return [v]
         }
@@ -367,51 +367,51 @@ def findvar.ikey(vars, name) {
 ## macro resolver
 
 def pass_macro_resolve_copy(form, state) {
-    ret= [__get form 0]
-    i = 1
-    while __lt i length(form) {
-        ret = __cat ret [pass_macro_resolve(__get form i, state)]
-        i = __add i 1
+    __let ret [__get form 0]
+    __let i 1
+    while __lt i length form {
+        __let ret __cat ret [pass_macro_resolve(__get form i, state)]
+        __let i __add i 1
     }
     return ret
 }
 
 def pass_macro_resolve_enum(form, state) {
-    name = __get __get form 1 1
-    idents = empty
-    where = 1
-    while __lt where length(__get form 2) {
-        ok = 0
+    __let name __get __get form 1 1
+    __let idents empty
+    __let where 1
+    while __lt where length __get form 2 {
+        __let ok 0
         if __eq __get __get __get form 2 where 0 vm.ast.ident {
-            fullname = __cat __get __get form 1 1 __cat "." __get __get __get form 2 where 1
-            ast= [vm.ast.num, where]
+            __let fullname __cat __get __get form 1 1 __cat "." __get __get __get form 2 where 1
+            __let ast [vm.ast.num, where]
             __set state 0 __cat __get state 0 [fullname, ast]
-            ok = 1
+            __let ok 1
         }
         if __eq __get __get __get form 2 where 0 vm.ast.op {
             if str.eq(__get __get __get form 2 where 1, "=") {
-                setto = __get __get __get form 2 where 2
-                val = __get __get __get form 2 where 3
+                __let setto __get __get __get form 2 where 2
+                __let val __get __get __get form 2 where 3
                 if __neq __get setto 0 vm.ast.ident {
                     puts("enum macro given bad value on left hand size of `=`")
                     exit
                 }
-                fullname = __cat __get __get form 1 1 __cat "." __get setto 1
+                __let fullname __cat __get __get form 1 1 __cat "." __get setto 1
                 __set state 0 __cat __get state 0 [fullname, val]
-                ok = 1
+                __let ok 1
             }
         }
         if __eq ok 0 {
             puts("that is not valid in a macro")
             exit
         }
-        where = __add where 1
+        __let where __add where 1
     }
     return [vm.ast.do]
 }
  
 def pass_macro_resolve(form, state) {
-    ty = __get form 0
+    __let ty __get form 0
     if __eq ty vm.ast.num {
         return form
     }
@@ -422,8 +422,8 @@ def pass_macro_resolve(form, state) {
         return form
     }
     if __eq ty vm.ast.ident {
-        val = findvar(__get state 0, __get form 1)
-        if __neq length(val) 0 {
+        __let val findvar(__get state 0, __get form 1)
+        if __neq length val 0 {
             return __get val 0
         }
         return form
@@ -448,45 +448,45 @@ def put_reg(out) {
 }
 
 def emit_num(form, out) {
-    ret = put_reg(out)
+    __let ret put_reg(out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_store_int, ret, __get form 1])])]
     return ret
 }
 
 def emit_binop(op, form1, form2, out) {
-    r1 = emit_to(form1, out)
-    r2 = emit_to(form2, out)
-    ret = put_reg(out)
+    __let r1 emit_to(form1, out)
+    __let r2 emit_to(form2, out)
+    __let ret put_reg(out)
     __set out 0 __cat __get out 0 [id([link.data, id([op, ret, r1, r2])])]
     return ret
 }
 
 def emit_putchar(form, out) {
-    r1 = emit_to(__get form 1, out)
+    __let r1 emit_to(__get form 1, out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_putchar, r1])])]
     return 0
 }
 
 def emit_length(form, out) {
-    r1 = emit_to(__get form 1, out)
-    ret = put_reg(out)
+    __let r1 emit_to(__get form 1, out)
+    __let ret put_reg(out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_length, ret, r1])])]
     return ret
 }
 
 def emit_do(form, out) {
-    ret = 0
-    i = 1
-    while __lt i length(form) {
-        ret = emit_to(__get form i, out)
-        i = __add i 1
+    __let ret 0
+    __let i 1
+    while __lt i length form {
+        __let ret emit_to(__get form i, out)
+        __let i __add i 1
     } 
     return ret
 }
 
 def emit_ident(form, out) {
-    res = findvar(__get out 2, __get form 1)
-    if __eq length(res) 0 {
+    __let res findvar(__get out 2, __get form 1)
+    if __eq length res 0 {
         puts(__cat "unknown ident: " __get form 1)
         exit
     }
@@ -495,23 +495,23 @@ def emit_ident(form, out) {
 
 def emit_set(from, to, out) {
     if __eq __get from 0 vm.ast.ident {
-        found = findvar(__get out 2, __get from 1)
-        if __eq length(found) 0 {
-            varreg = emit_to(to, out)
-            to = put_reg(out)
+        __let found findvar(__get out 2, __get from 1)
+        if __eq length found 0 {
+            __let varreg emit_to(to, out)
+            __let to put_reg(out)
             __set out 2 __cat __get out 2 [__get from 1, to]
             __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_store_reg, to, varreg])])]
             return to
         } else {
-            from = emit_to(to, out)
+            __let from emit_to(to, out)
             __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_store_reg, __get found 0, from])])]
             return __get found 0
         }
     }
     if __eq __get from 0 vm.ast.index {
-        array = emit_to(__get from 1, out)
-        index = emit_to(__get from 2, out)
-        varreg = emit_to(to, out)
+        __let array emit_to(__get from 1, out)
+        __let index emit_to(__get from 2, out)
+        __let varreg emit_to(to, out)
         __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_index_set, array, index, varreg])])]
         return array
     }
@@ -522,7 +522,7 @@ def emit_set(from, to, out) {
 }
 
 def put_jump(out) {
-    count = __get out 3
+    __let count __get out 3
     __set out 3 __add __get out 3 1
     return count
 }
@@ -536,21 +536,21 @@ def put_label(jump) {
 }
 
 def emit_def(form, out) {
-    jover = put_jump(out)
-    call = __get form 1
-    body = __get form 2
-    tmp1 = __get out 1
-    tmp2 = __get out 2
+    __let jover put_jump(out)
+    __let call __get form 1
+    __let body __get form 2
+    __let tmp1 __get out 1
+    __let tmp2 __get out 2
     __set out 2 empty
-    i = 2
-    while __lt i length(call) {
+    __let i 2
+    while __lt i length call {
         __set out 2 __cat __get out 2 [__get __get call i 1, __sub i 1]
-        i = __add i 1
+        __let i __add i 1
     }
     __set out 1 __sub i 1
-    nregs = [link.data, [256]]
+    __let nregs [link.data, [256]]
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_func])]), put_goto(jover), nregs, id([link.func, __get __get call 1 1])]
-    resreg = emit_to(body, out)
+    __let resreg emit_to(body, out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_return, resreg])])]
     __set __get nregs 1 0 __get out 1
     __set out 1 tmp1
@@ -560,7 +560,7 @@ def emit_def(form, out) {
 }
 
 def emit_return(form, out) {
-    rreg = emit_to(__get form 1, out)
+    __let rreg emit_to(__get form 1, out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_return, rreg])])]
     return 0
 }
@@ -572,14 +572,14 @@ def emit_exit(form, out) {
 
 def emit_call(form, out) {
     if __eq __get __get form 1 0 vm.ast.ident {
-        args = empty
-        i = 2
-        while __lt i length(form) {
-            args = push args emit_to(__get form i, out)
-            i = __add i 1
+        __let args empty
+        __let i 2
+        while __lt i length form {
+            __let args push args emit_to(__get form i, out)
+            __let i __add i 1
         } 
-        ret = put_reg(out)
-        __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_static_call, ret])]), id([link.call, __get __get form 1 1]), id([link.data, __cat id([length(args)]) args])]
+        __let ret put_reg(out)
+        __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_static_call, ret])]), id([link.call, __get __get form 1 1]), id([link.data, __cat id([length args]) args])]
         return ret
     } else {
         puts("no dynamic calls yet")
@@ -589,53 +589,53 @@ def emit_call(form, out) {
 
 def emit_branch_alike(cond, jfalse, jtrue, out) {
     if __eq __get cond 0 vm.ast.op {
-        first = __get __get cond 1 0
+        __let first __get __get cond 1 0
         if str.eq(__get cond 1, ">") {
-            lhs = emit_to(__get cond 2, out)
-            rhs = emit_to(__get cond 3, out)
+            __let lhs emit_to(__get cond 2, out)
+            __let rhs emit_to(__get cond 3, out)
             __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_branch_less, rhs, lhs])]),put_goto(jfalse), put_goto(jtrue)]
             return 0
         }
         if str.eq(__get cond 1, "<=") {
-            lhs = emit_to(__get cond 2, out)
-            rhs = emit_to(__get cond 3, out)
+            __let lhs emit_to(__get cond 2, out)
+            __let rhs emit_to(__get cond 3, out)
             __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_branch_less_than_equal, lhs, rhs])]),put_goto(jfalse), put_goto(jtrue)]
             return 0
         }
         if str.eq(__get cond 1, "==") {
-            lhs = emit_to(__get cond 2, out)
-            rhs = emit_to(__get cond 3, out)
+            __let lhs emit_to(__get cond 2, out)
+            __let rhs emit_to(__get cond 3, out)
             __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_branch_equal, lhs, rhs])]),put_goto(jfalse), put_goto(jtrue)]
             return 0
         }
         if str.eq(__get cond 1, "!=") {
-            lhs = emit_to(__get cond 2, out)
-            rhs = emit_to(__get cond 3, out)
+            __let lhs emit_to(__get cond 2, out)
+            __let rhs emit_to(__get cond 3, out)
             __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_branch_equal, lhs, rhs])]),put_goto(jtrue), put_goto(jfalse)]
             return 0
         }
         if str.eq(__get cond 1, "<") {
-            lhs = emit_to(__get cond 2, out)
-            rhs = emit_to(__get cond 3, out)
+            __let lhs emit_to(__get cond 2, out)
+            __let rhs emit_to(__get cond 3, out)
             __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_branch_less, lhs, rhs])]),put_goto(jfalse), put_goto(jtrue)]
             return 0
         }
         if str.eq(__get cond 1, ">=") {
-            lhs = emit_to(__get cond 2, out)
-            rhs = emit_to(__get cond 3, out)
+            __let lhs emit_to(__get cond 2, out)
+            __let rhs emit_to(__get cond 3, out)
             __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_branch_less_than_equal, rhs, lhs])]),put_goto(jfalse), put_goto(jtrue)]
             return 0
         }
     }
-    reg = emit_to(cond, out)
+    __let reg emit_to(cond, out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_branch_bool, reg])]),put_goto(jfalse), put_goto(jtrue)]
     return 0
 }
 
 def emit_while(form, out) {
-    jredo = put_jump(out)
-    jtrue = put_jump(out)
-    jfalse = put_jump(out)
+    __let jredo put_jump(out)
+    __let jtrue put_jump(out)
+    __let jfalse put_jump(out)
     __set out 0 __cat __get out 0 [put_label(jredo)]
     emit_branch_alike(__get form 1, jfalse, jtrue, out)
     __set out 0 __cat __get out 0 [put_label(jtrue)]
@@ -646,73 +646,73 @@ def emit_while(form, out) {
 }
 
 def emit_if(form, out) {
-    jout = put_jump(out)
-    jtrue = put_jump(out)
-    jfalse = put_jump(out)
+    __let jout put_jump(out)
+    __let jtrue put_jump(out)
+    __let jfalse put_jump(out)
     emit_branch_alike(__get form 1, jfalse, jtrue, out)
-    rret = put_reg(out)
+    __let rret put_reg(out)
     __set out 0 __cat __get out 0 [put_label(jtrue)]
-    rtrue = emit_to(__get form 2, out)
+    __let rtrue emit_to(__get form 2, out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_store_reg, rret, rtrue, opcode.do_jump])]),put_goto(jout), put_label(jfalse)]
-    rfalse = emit_to(__get form 3, out)
+    __let rfalse emit_to(__get form 3, out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_store_reg, rret, rfalse])])]
     __set out 0 __cat __get out 0 [put_label(jout)]
     return rret
 }
 
 def emit_array(form, out) {
-    regs = empty
-    i = 1
-    while __lt i length(form) {
-        regs = __cat regs [emit_to(__get form i, out)]
-        i = __add i 1
+    __let regs empty
+    __let i 1
+    while __lt i length form {
+        __let regs __cat regs [emit_to(__get form i, out)]
+        __let i __add i 1
     }
-    ret = put_reg(out)
-    __set out 0 __cat __get out 0 [id([link.data, __cat id([opcode.do_static_array_new, ret, length(regs)]) regs])]
+    __let ret put_reg(out)
+    __set out 0 __cat __get out 0 [id([link.data, __cat id([opcode.do_static_array_new, ret, length regs]) regs])]
     return ret
 }
 
 def emit_static_array(form, out) {
-    regs = empty
-    i = 1
-    while __lt i length(form) {
-        regs = __cat regs [emit_to(__get form i, out)]
-        i = __add i 1
+    __let regs empty
+    __let i 1
+    while __lt i length form {
+        __let regs __cat regs [emit_to(__get form i, out)]
+        __let i __add i 1
     }
-    ret = put_reg(out)
-    __set out 0 __cat __get out 0 [id([link.data, __cat id([opcode.do_static_array_new, ret, length(regs)]) regs])]
+    __let ret put_reg(out)
+    __set out 0 __cat __get out 0 [id([link.data, __cat id([opcode.do_static_array_new, ret, length regs]) regs])]
     return ret
 }
 
 def emit_str(form, out) {
-    ret = put_reg(out)
-    __set out 0 __cat __get out 0 [id([link.data, __cat id([opcode.do_string_new, ret, length(__get form 1)]) __get form 1])]
+    __let ret put_reg(out)
+    __set out 0 __cat __get out 0 [id([link.data, __cat id([opcode.do_string_new, ret, length __get form 1]) __get form 1])]
     return ret
 }
 
 def emit_dump(form, out) {
-    r1 = emit_to(__get form 1, out)
-    r2 = emit_to(__get form 2, out)
+    __let r1 emit_to(__get form 1, out)
+    __let r2 emit_to(__get form 2, out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_dump, r1, r2])])]
     return 0
 }
 
 def emit_write(form, out) {
-    r1 = emit_to(__get form 1, out)
-    r2 = emit_to(__get form 2, out)
+    __let r1 emit_to(__get form 1, out)
+    __let r2 emit_to(__get form 2, out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_write, r1, r2])])]
     return 0
 }
 
 def emit_read(form, out) {
-    r1 = emit_to(__get form 1, out)
-    ret = put_reg(out)
+    __let r1 emit_to(__get form 1, out)
+    __let ret put_reg(out)
     __set out 0 __cat __get out 0 [id([link.data, id([opcode.do_read, ret, r1])])]
     return ret
 }
 
 def emit_to(form, out) {
-    ty = __get form 0
+    __let ty __get form 0
     if __eq ty vm.ast.num {
         return emit_num(form, out)
     }
@@ -720,7 +720,7 @@ def emit_to(form, out) {
         return emit_binop(opcode.do_index_get, __get form 1, __get form 2, out)
     }
     if __eq ty vm.ast.def {
-        if __gt length(__get out 0) 50 {
+        if __gt length __get out 0 50 {
             __set out 4 __cat __get out 4 __get out 0
             __set out 0 empty
         }
@@ -769,7 +769,7 @@ def emit_to(form, out) {
         return emit_do(form, out)
     }
     if __eq ty vm.ast.op {
-        op = __get __get form 1 0
+        __let op __get __get form 1 0
         if __eq op '=' {
             return emit_set(__get form 2, __get form 3, out)
         }
@@ -799,39 +799,39 @@ def emit_to(form, out) {
 }
 
 def emit(form, path) {
-    out= [empty, 0, id(["args", 0]), 0, empty, empty]
-    form = pass_macro_resolve(form, [empty])
+    __let out [empty, 0, id(["args", 0]), 0, empty, empty]
+    __let form pass_macro_resolve(form, [empty])
     emit_to(form, out)
-    objc = __cat __get out 4 __cat __get out 0 [id([link.data, id([opcode.do_exit])])]
-    linked = vm_link(objc)
+    __let objc __cat __get out 4 __cat __get out 0 [id([link.data, id([opcode.do_exit])])]
+    __let linked vm_link(objc)
     return linked
 }
 
 ## paka
 
-def paka_tokenize_stream1(bsrc, ops_flat) {
-    first = stream_peek(bsrc)
+def paka_tokenize_stream1(bsrc) {
+    __let first stream_peek(bsrc)
     if __eq first ' ' {
         stream_skip1(bsrc)
-        return paka_tokenize_stream1(bsrc, ops_flat)
+        return paka_tokenize_stream1(bsrc)
     }
     if __eq first 10 {
         stream_skip1(bsrc)
-        return paka_tokenize_stream1(bsrc, ops_flat)
+        return paka_tokenize_stream1(bsrc)
     }
     if __eq first 13 {
         stream_skip1(bsrc)
-        return paka_tokenize_stream1(bsrc, ops_flat)
+        return paka_tokenize_stream1(bsrc)
     }
     if __eq first '#' {
         stream_skip1(bsrc)
         while 1 {
-            cur = stream_read(bsrc)
+            __let cur stream_read(bsrc)
             if __eq cur 10 {
-                return paka_tokenize_stream1(bsrc, ops_flat)
+                return paka_tokenize_stream1(bsrc)
             }
             if __eq cur 13 {
-                return paka_tokenize_stream1(bsrc, ops_flat)
+                return paka_tokenize_stream1(bsrc)
             }
         }
     }
@@ -865,9 +865,9 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
     }
     if __eq first ''' {
         stream_skip1(bsrc)
-        cur = stream_read(bsrc)
+        __let cur stream_read(bsrc)
         if __eq cur '\\' {
-            cur = stream_read(bsrc)
+            __let cur stream_read(bsrc)
             if __neq stream_read(bsrc) ''' {
                 puts("unterminated char literal")
                 exit
@@ -894,9 +894,9 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
     }
     if __eq first 34 {
         stream_skip1(bsrc)
-        ret = empty
+        __let ret empty
         while 1 {
-            cur = stream_read(bsrc)
+            __let cur stream_read(bsrc)
             if __eq cur 0 {
                 puts("eof in str")
                 exit
@@ -905,43 +905,35 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                 return [token.str, ret]
             }
             if __eq cur '\\' {
-                cur = stream_read(bsrc)
+                __let cur stream_read(bsrc)
                 if __eq cur 'n' {
-                    ret = push ret 10
+                    __let ret push ret 10
                 } 
                 if __eq cur 34 {
-                    ret = __cat ret "\""
+                    __let ret __cat ret "\""
                 }
                 if __eq cur '\\' {
-                    ret = __cat ret "\\"
+                    __let ret __cat ret "\\"
                 }
             } else {
-                ret = push ret cur
+                __let ret push ret cur
             }
         }
     }
-    i = 0
-    while __lt i length(ops_flat) {
-        if stream_starts_swith(bsrc, __get ops_flat i) {
-            stream_skip(bsrc, length(__get ops_flat i))
-            return [token.op, __get ops_flat i]
-        }
-        i = __add i 1
-    }
     if char_isdigit(first) {
-        n = 0
+        __let n 0
         while char_isdigit(stream_peek(bsrc)) {
-            n = __add __mul n 10 __sub stream_read(bsrc) '0'
+            __let n __add __mul n 10 __sub stream_read(bsrc) '0'
         }
         return [token.num, n]
     }
     if char_id0(first) {
-        xsrc = empty
+        __let xsrc empty
         while 1 {
             if char_id(stream_peek(bsrc)) {
-                xsrc = push xsrc stream_read(bsrc)
+                __let xsrc push xsrc stream_read(bsrc)
             } else {
-                n0 = __get xsrc 0
+                __let n0 __get xsrc 0
                 if __eq n0 'w' {
                     if str.eq(xsrc, "while") {
                         return [token.keyword.while]
@@ -995,81 +987,79 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
 }
 
 def token_stream_new(src) {
-    ops_flat= ["<=", ">=", "==", "!=", "<", ">", "="]
-    ssrc= [src, 0]
-    return [ops_flat, ssrc, empty]
+    return [[src, 0], empty]
 }
 
 def token_stream_read(tokens) {
-    ret = token_stream_peek(tokens)
+    __let ret token_stream_peek(tokens)
     token_stream_skip1(tokens)
     return ret
 }
 
 def token_stream_peek(tokens) {
-    if __eq length(__get tokens 2) 0 {
-        __set tokens 2 paka_tokenize_stream1(__get tokens 1, __get tokens 0)
+    if __eq length __get tokens 1 0 {
+        __set tokens 1 paka_tokenize_stream1(__get tokens 0)
     }
-    return __get tokens 2
+    return __get tokens 1
 }
 
 def token_stream_skip1(tokens) {
-    if __eq length(__get tokens 2) 0 {
-        paka_tokenize_stream1(__get tokens 1, __get tokens 0)
+    if __eq length __get tokens 1 0 {
+        paka_tokenize_stream1(__get tokens 0)
     }
-    __set tokens 2 empty
+    __set tokens 1 empty
 }
 
 def paka_skip_comma(tokens) {
-    first = token_stream_peek(tokens)
+    __let first token_stream_peek(tokens)
     if __eq __get first 0 token.comma {
         token_stream_skip1(tokens)
     }
 }
 
 def paka_read_scall(tokens, nargs, args, state) {
-    target = __add nargs length(args)
-    got = token_stream_peek(tokens)
+    __let target __add nargs length args
+    __let got token_stream_peek(tokens)
     if __eq __get got 0  token.open.paren {
         token_stream_skip1(tokens)
         while 1 {
-            cur = token_stream_peek(tokens)
-            if __eq length(cur) 0 {
+            __let cur token_stream_peek(tokens)
+            if __eq length cur 0 {
                 puts("error eof arg")
                 exit
             }
             if __eq __get cur 0 token.close.paren {
                 token_stream_skip1(tokens)
-                if __neq length(args) target {
+                if __neq length args target {
                     puts("error: argc")
                     exit
                 }
                 return paka_read_post(tokens, args, state)
             }
-            arg = paka_read_expr_base(tokens, state)
-            args = push args arg
+            __let arg paka_read_expr_base(tokens, state)
+            __let args push args arg
             paka_skip_comma(tokens)
         }
     }
-    while __lt length(args) target {
-        cur = token_stream_peek(tokens)
-        if __eq length(cur) 0 {
+    while __lt length args target {
+        __let cur token_stream_peek(tokens)
+        if __eq length cur 0 {
             puts("error eof arg")
         }
-        arg = paka_read_expr_base(tokens, state)
-        args = push args arg
+        __let arg paka_read_expr_base(tokens, state)
+        __let args push args arg
         paka_skip_comma(tokens)
     }
     return paka_read_post(tokens, args, state)
 }
 
 def paka_read_call(tokens, args, state) {
-    got = token_stream_peek(tokens)
+    __let got token_stream_peek(tokens)
     if __eq __get got 0  token.open.paren {
         token_stream_skip1(tokens)
         while 1 {
-            cur = token_stream_peek(tokens)
-            if __eq length(cur) 0 {
+            __let cur token_stream_peek(tokens)
+            if __eq length cur 0 {
                 puts("error 1")
                 exit
             }
@@ -1077,8 +1067,8 @@ def paka_read_call(tokens, args, state) {
                 token_stream_skip1(tokens)
                 return paka_read_post(tokens, args, state)
             }
-            arg = paka_read_expr_base(tokens, state)
-            args = push args arg
+            __let arg paka_read_expr_base(tokens, state)
+            __let args push args arg
             paka_skip_comma(tokens)
         }
     }
@@ -1087,8 +1077,8 @@ def paka_read_call(tokens, args, state) {
 }
 
 def paka_read_post(tokens, last, state) {
-    first = token_stream_peek(tokens)
-    if __eq length(first) 0 {
+    __let first token_stream_peek(tokens)
+    if __eq length first 0 {
         return last
     }
     if __eq __get first 0 token.open.paren {
@@ -1098,19 +1088,19 @@ def paka_read_post(tokens, last, state) {
             putchar(10)
             exit
         }
-        found = findvar(__get state 1, __get last 1)
-        if __eq length(found) 0 {
-            args= [vm.ast.call, last] 
+        __let found findvar(__get state 1, __get last 1)
+        if __eq length found 0 {
+            __let args [vm.ast.call, last] 
             return paka_read_call(tokens, args, state)
         } else {
-            args= [vm.ast.call, last] 
+            __let args [vm.ast.call, last] 
             return paka_read_scall(tokens, __get found 0, args, state)
         }
     }
     if __eq __get last 0 vm.ast.ident {
-        found = findvar(__get state 1, __get last 1)
-        if __eq length(found) 1 {
-            args= [vm.ast.call, last] 
+        __let found findvar(__get state 1, __get last 1)
+        if __eq length found 1 {
+            __let args [vm.ast.call, last] 
             return paka_read_scall(tokens, __get found 0, args, state)
         }
     }
@@ -1118,27 +1108,27 @@ def paka_read_post(tokens, last, state) {
 }
 
 def paka_read_single(tokens, state) {
-    first = token_stream_peek(tokens)
-    if __eq length(first) 0 {
+    __let first token_stream_peek(tokens)
+    if __eq length first 0 {
         return 0
     }
     if __eq __get first 0 token.open.square {
         token_stream_skip1(tokens)
-        args= [vm.ast.static_array]
+        __let args [vm.ast.static_array]
         while 1 {
-            cur = token_stream_peek(tokens)
+            __let cur token_stream_peek(tokens)
             if __eq __get cur 0 token.close.square {
                 token_stream_skip1(tokens)
                 return args
             }
-            expr = paka_read_expr_base(tokens, state)
-            args = push args expr
+            __let expr paka_read_expr_base(tokens, state)
+            __let args push args expr
             paka_skip_comma(tokens)
         } 
     }
     if __eq __get first 0 token.open.paren {
         token_stream_skip1(tokens)
-        ret = paka_read_expr_base(tokens, state)
+        __let ret paka_read_expr_base(tokens, state)
         token_stream_skip1(tokens)
         return ret
     }
@@ -1167,14 +1157,12 @@ def paka_read_single(tokens, state) {
         if str.eq(__get first 1, "read") {
             return paka_read_scall(tokens, 1, [vm.ast.read], state)
         }
-        if str.eq(__get first 1, "read") {
-        }
         if __eq __get __get first 1 0 '_' {
             if str.eq(__get first 1, "__get") {
                 return paka_read_scall(tokens, 2, [vm.ast.index], state)
             }
             if str.eq(__get first 1, "__set") {
-                args = paka_read_scall(tokens, 3, empty, state)
+                __let args paka_read_scall(tokens, 3, empty, state)
                 return [vm.ast.op, "=", [vm.ast.index, __get args 0, __get args 1], __get args 2]
             }
             if str.eq(__get first 1, "__add") {
@@ -1213,18 +1201,36 @@ def paka_read_single(tokens, state) {
             if str.eq(__get first 1, "__neq") {
                 return paka_read_scall(tokens, 2, [vm.ast.op, "!="], state)
             }
+            if str.eq(__get first 1, "__let") {
+                return paka_read_scall(tokens, 2, [vm.ast.op, "="], state)
+            }
+        if str.eq(__get first 1, "putchar") {
+            return paka_read_scall(tokens, 1, [vm.ast.putchar], state)
+        } 
+        if str.eq(__get first 1, "length") {
+            return paka_read_scall(tokens, 1, [vm.ast.length], state)
+        }
+        if str.eq(__get first 1, "dump") {
+            return paka_read_scall(tokens, 2, [vm.ast.dump], state)
+        }
+        if str.eq(__get first 1, "write") {
+            return paka_read_scall(tokens, 2, [vm.ast.write], state)
+        }
+        if str.eq(__get first 1, "read") {
+            return paka_read_scall(tokens, 1, [vm.ast.read], state)
+        }
         }
         return [vm.ast.ident, __get first 1]
     }
     if __eq __get first 0 token.keyword.if {
         token_stream_skip1(tokens)
-        expr = paka_read_expr_base(tokens, state)
-        block1 = paka_read_block(tokens, state)
-        block2= [vm.ast.do]
-        first = token_stream_peek(tokens)
+        __let expr paka_read_expr_base(tokens, state)
+        __let block1 paka_read_block(tokens, state)
+        __let block2 [vm.ast.do]
+        __let first token_stream_peek(tokens)
         if __eq __get first 0 token.keyword.else {
             token_stream_skip1(tokens)
-            block2 = paka_read_block(tokens, state)
+            __let block2 paka_read_block(tokens, state)
         }
         return [vm.ast.if, expr, block1, block2]
     }
@@ -1235,97 +1241,74 @@ def paka_read_single(tokens, state) {
 }
 
 def parse_is_not_in(op, some) {
-    i = 0
-    while __lt i length(some) {
+    __let i 0
+    while __lt i length some {
         if str.eq(op, __get some i) {
             return 0
         }
-        i = __add i 1
+        __let i __add i 1
     }
     return 1
 }
 
-def paka_read_expr(tokens, depth, state) {
-    ops = __get state 0
-    if __gte depth length(ops) {
-        return paka_read_post(tokens, paka_read_single(tokens, state), state)
-    }
-    ret = paka_read_expr(tokens, __add depth 1, state)
-    while 1 {
-        first = token_stream_peek(tokens)
-        if __eq length(first) 0 {
-        return ret
-        }
-        if __neq __get first 0 token.op {
-            return ret
-        }
-        if parse_is_not_in(__get first 1, __get ops depth) {
-            return ret
-        }
-        token_stream_skip1(tokens)
-        ret= [vm.ast.op, __get first 1, ret, paka_read_expr(tokens, __add depth 1, state)]
-    }
-}
-
 def paka_read_expr_base(tokens, state) {
-    ret = paka_read_expr(tokens, 0, state)
-    return ret
+    return paka_read_post(tokens, paka_read_single(tokens, state), state)
 }
 
 def paka_read_stmt(tokens, state) {
-    first = token_stream_peek(tokens)
+    __let first token_stream_peek(tokens)
     if __eq __get first 0 token.keyword.while {
         token_stream_skip1(tokens)
-        expr = paka_read_expr_base(tokens, state)
-        block = paka_read_block(tokens, state)
+        __let expr paka_read_expr_base(tokens, state)
+        __let block paka_read_block(tokens, state)
         return [vm.ast.while, expr, block]
     }
     if __eq __get first 0 token.keyword.def {
         token_stream_skip1(tokens)
-        expr = paka_read_expr_base(tokens, state)
-        block = paka_read_block(tokens, state)
+        __let expr paka_read_expr_base(tokens, state)
+        __let block paka_read_block(tokens, state)
         return [vm.ast.def, expr, block]
     }
     if __eq __get first 0 token.keyword.return {
         token_stream_skip1(tokens)
-        expr = paka_read_expr_base(tokens, state)
+        __let expr paka_read_expr_base(tokens, state)
         return [vm.ast.return, expr]
     }
     if __eq __get first 0 token.keyword.macro {
         token_stream_skip1(tokens)
-        name = token_stream_read(tokens)
-        first = token_stream_peek(tokens)
-        block = paka_read_block(tokens, state)
+        __let name token_stream_read(tokens)
+        __let first token_stream_peek(tokens)
+        __let block paka_read_block(tokens, state)
         return [vm.ast.enum, id([vm.ast.ident, __get name 1]), block]
     }
     if __eq __get first 0 token.keyword.exit {
         token_stream_skip1(tokens)
         return [vm.ast.exit]
     }
-    ret = paka_read_expr_base(tokens, state)
+    __let ret paka_read_expr_base(tokens, state)
     return ret
 }
 
 def paka_read_block_body(tokens, state) {
-    ret= [vm.ast.do]
+    __let ret [vm.ast.do]
     while 1 {
-        first = token_stream_peek(tokens)
-        if __eq length(first) 0 {
+        __let first token_stream_peek(tokens)
+        if __eq length first 0 {
             return ret
         }
         if __eq __get first 0 token.close.curly {
             return ret
         }
-        stmt = paka_read_stmt(tokens, state)
-        ret = push ret stmt
+        __let stmt paka_read_stmt(tokens, state)
+        __let ret push ret stmt
     }
 }
 
 def paka_read_block(tokens, state) {
-    first = token_stream_peek(tokens)
+    __let first token_stream_peek(tokens)
     if __eq __get first 0 token.open.curly {
         token_stream_skip1(tokens)
-        ret = paka_read_block_body(tokens, state)
+        __let ret paka_read_block_body(tokens, state)
         token_stream_skip1(tokens)
         return ret
     }
@@ -1333,13 +1316,13 @@ def paka_read_block(tokens, state) {
 }
 
 def paka_read_nargs(tokens, name, state) {
-    got = token_stream_peek(tokens)
+    __let got token_stream_peek(tokens)
     if __eq __get got 0  token.open.paren {
         token_stream_skip1(tokens)
-        n = 0
+        __let n 0
         while 1 {
-            cur = token_stream_peek(tokens)
-            if __eq length(cur) 0 {
+            __let cur token_stream_peek(tokens)
+            if __eq length cur 0 {
                 puts("error: need `)` after args to def")
                 exit
             }
@@ -1348,14 +1331,14 @@ def paka_read_nargs(tokens, name, state) {
                 return n
             }
             paka_read_expr_base(tokens, state)
-            n = __add n 1
+            __let n __add n 1
             paka_skip_comma(tokens)
         }
     } else {
-        n = 0
+        __let n 0
         while 1 {
-            cur = token_stream_peek(tokens)
-            if __eq length(cur) 0 {
+            __let cur token_stream_peek(tokens)
+            if __eq length cur 0 {
                 puts("error: need `:` after def")
             }
             if __eq __get cur 0 token.op {
@@ -1365,68 +1348,68 @@ def paka_read_nargs(tokens, name, state) {
                 }
             }
             paka_read_expr_base(tokens, state)
-            n = __add n 1
+            __let n __add n 1
             paka_skip_comma(tokens)
         }
     }
 }
 
 def paka_build_defs(tokens, state) {
-    ret = empty
+    __let ret empty
     while 1 {
-        first = token_stream_read(tokens)
+        __let first token_stream_read(tokens)
         if __eq __get first 0 token.keyword.def {
-            name = token_stream_read(tokens)
-            argc = paka_read_nargs(tokens, __get name 1, state)
-            ret = __cat ret [__get name 1, argc]
+            __let name token_stream_read(tokens)
+            __let argc paka_read_nargs(tokens, __get name 1, state)
+            __let ret __cat ret [__get name 1, argc]
         }
-        if __eq length(first) 0 {
+        if __eq length first 0 {
             return ret
         }
     }
 }
 
 def paka_parse(src) {
-    ops = [["=", "<", ">", "<=", ">=", "==", "!="]]
-    state= [ops, empty]
-    state= [ops, paka_build_defs(token_stream_new(src), state)]
-    ret = paka_read_block_body(token_stream_new(src), state)
+    __let ops [["=", "<", ">", "<=", ">=", "==", "!="]]
+    __let state [ops, empty]
+    __let state [ops, paka_build_defs(token_stream_new(src), state)]
+    __let ret paka_read_block_body(token_stream_new(src), state)
     return ret
 }
 
 ## main
 
 def main(argv) {
-    outfile = "exec.bc"
-    srcfile = ""
-    i = 0
-    while __lt i length(argv) {
-        arg = __get argv i 
+    __let outfile "exec.bc"
+    __let srcfile ""
+    __let i 0
+    while __lt i length argv {
+        __let arg __get argv i 
         if __eq __get arg 0 '-' {
             if __eq __get arg 1 'o' {
-                i = __add i 1
-                outfile = __get argv i
+                __let i __add i 1
+                __let outfile __get argv i
             }
         } else {
-            if __neq length(srcfile) 0 {
+            if __neq length srcfile 0 {
                 puts("only one source can be provided")
                 exit
             }
-            srcfile = arg
+            __let srcfile arg
         }
-        i = __add i 1
+        __let i __add i 1
     }
-    if __eq length(srcfile) 0 {
+    if __eq length srcfile 0 {
         puts("no sources provided")
         exit
     }
-    src = read(srcfile)
-    if __eq length(src) 0 {
+    __let src read(srcfile)
+    if __eq length src 0 {
         puts("cannot read file")
         exit
     }
-    ast = paka_parse(src)
-    bc = emit(ast, srcfile)
+    __let ast paka_parse(src)
+    __let bc emit(ast, srcfile)
     dump(outfile, bc)
 }
 
