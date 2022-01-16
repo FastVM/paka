@@ -1,7 +1,0 @@
-#!/usr/bin/env sh
-
-set -e
-
-NAME=$(dirname $0)
-
-$NAME/bin/minivm $NAME/bin/stage3.bc "$@"

@@ -1,6 +1,13 @@
 
-import("../lang/io.paka")
-import("../lang/conv.paka")
+def printn(n) {
+    if n < 10 {
+        putchar(n % 10 + 48)
+    }
+    else {
+        printn(n / 10)
+        putchar(n % 10 + 48)
+    }
+}
 
 def bottom_up_tree(item, depth) {
     if depth != 0 {
@@ -44,7 +51,7 @@ def main(args) {
     
     stretchdepth = maxdepth + 1
     tree = bottom_up_tree(0, stretchdepth)
-    putn(item_check(tree))
+    printn(item_check(tree))
     putchar('\n')
     
     longlivedtree = bottom_up_tree(0, maxdepth)
@@ -61,11 +68,11 @@ def main(args) {
             checks = checks + item_check(tree)
             check = check + 1
         }
-        putn(checks)
+        printn(checks)
         putchar('\n')
         depth = depth + 2
     }
-    putn(item_check(longlivedtree))
+    printn(item_check(longlivedtree))
     putchar('\n')
 }
 

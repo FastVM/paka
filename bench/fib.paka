@@ -1,6 +1,13 @@
 
-import("../lang/io.paka")
-import("../lang/conv.paka")
+def printn(n) {
+    if n < 10 {
+        putchar(n % 10 + 48)
+    }
+    else {
+        printn(n / 10)
+        putchar(n % 10 + 48)
+    }
+}
 
 def fib(n) {
     if n < 2 {
@@ -10,15 +17,5 @@ def fib(n) {
     }
 }
 
-def main(args) {
-    if length(args) == 0 {
-        puts("error: need an integer argument")
-    } else {
-        n = to_int(args[0])
-        putn(fib(n))
-        putchar('\n')
-    }
-}
-
-main(args)
-exit
+printn(fib(35))
+putchar('\n')
