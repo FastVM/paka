@@ -1157,6 +1157,52 @@ def paka_read_single(tokens, state) {
         if str.eq(__get first 1, "read") {
             return paka_read_scall(tokens, 1, [vm.ast.read], state)
         }
+        if str.eq(__get first 1, "get") {
+            return paka_read_scall(tokens, 2, [vm.ast.index], state)
+        }
+        if str.eq(__get first 1, "set") {
+            __let args paka_read_scall(tokens, 3, empty, state)
+            return [vm.ast.op, "=", [vm.ast.index, __get args 0, __get args 1], __get args 2]
+        }
+        if str.eq(__get first 1, "add") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "+"], state)
+        }
+        if str.eq(__get first 1, "sub") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "-"], state)
+        }
+        if str.eq(__get first 1, "mul") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "*"], state)
+        }
+        if str.eq(__get first 1, "div") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "/"], state)
+        }
+        if str.eq(__get first 1, "mod") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "%"], state)
+        }
+        if str.eq(__get first 1, "cat") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "~"], state)
+        }
+        if str.eq(__get first 1, "lt") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "<"], state)
+        }
+        if str.eq(__get first 1, "gt") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, ">"], state)
+        }
+        if str.eq(__get first 1, "lte") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "<="], state)
+        }
+        if str.eq(__get first 1, "gte") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, ">="], state)
+        }
+        if str.eq(__get first 1, "eq") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "=="], state)
+        }
+        if str.eq(__get first 1, "neq") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "!="], state)
+        }
+        if str.eq(__get first 1, "let") {
+            return paka_read_scall(tokens, 2, [vm.ast.op, "="], state)
+        }
         if __eq __get __get first 1 0 '_' {
             if str.eq(__get first 1, "__get") {
                 return paka_read_scall(tokens, 2, [vm.ast.index], state)
