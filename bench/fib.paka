@@ -1,19 +1,18 @@
 
 def printn(n) {
-    if n < 10 {
-        putchar(n % 10 + 48)
-    }
-    else {
-        printn(n / 10)
-        putchar(n % 10 + 48)
+    if lt n 10 {
+        putchar add mod n 10 48
+    } else {
+        printn div n 10
+        putchar add mod n 10 48
     }
 }
 
 def fib(n) {
-    if n < 2 {
+    if lt n 2 {
         return n
     } else {
-        return fib(n-2) + fib(n-1)
+        return add fib sub n 2 fib sub n 1
     }
 }
 

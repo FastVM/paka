@@ -1,19 +1,36 @@
 
-def printn(n) {
-    if n < 10 {
-        putchar(n % 10 + 48)
+def to_int(str) {
+    let ret 0
+    let index 0
+    while lt index length str {
+        let ret add sub get str index '0' mul 10 ret
+        let index add index 1
     }
-    else {
-        printn(n / 10)
-        putchar(n % 10 + 48)
+    return ret
+}
+
+def printn(n) {
+    if lt n 10 {
+        putchar add mod n 10 48
+    } else {
+        printn div n 10
+        putchar add mod n 10 48
+    }
+}
+
+def puts(s) {
+    let i 0
+    while lt i length s {
+        putchar get s i
+        let i add i 1
     }
 }
 
 def bottom_up_tree(item, depth) {
-    if depth != 0 {
-        i = item + item
-        left = bottom_up_tree(i-1, depth - 1)
-        right = bottom_up_tree(i, depth - 1)
+    if eq depth 0 {
+        let i add item item
+        let left bottom_up_tree sub i 1 sub depth 1
+        let right bottom_up_tree i sub depth 1
         return [item, left, right]
     } else {
         return [item]
@@ -21,60 +38,60 @@ def bottom_up_tree(item, depth) {
 }
 
 def item_check(tree) {
-    if length(tree) != 1 {
-        return tree[0] + item_check(tree[1]) - item_check(tree[2])
-    } else {
-        return tree[0]
+    if neq length tree 1 {
+        return add get tree 0 sub item_check get tree 1 item_check get tree 2
+    } else {gmak
+        return get tree 0
     }
 }
 
 def pow2(n) {
-    if n == 0 {
+    if eq n 0 {
         return 1
     } else {
-        return pow2(n-1) * 2
+        return mul pow2 sub n 1 2
     }
 }
 
 def main(args) {
-    if length(args) == 0 {
+    if eq length args 0 {
         puts("error: need an integer argument")
         exit
     }
     
-    N = to_int(args[0])
-    mindepth = 4
-    maxdepth = mindepth + 2
-    if maxdepth < N {
-        maxdepth = N
+    let N to_int args 0
+    let mindepth 4
+    let maxdepth add mindepth 2
+    if lt maxdepth N {
+        let maxdepth N
     }
     
-    stretchdepth = maxdepth + 1
-    tree = bottom_up_tree(0, stretchdepth)
-    printn(item_check(tree))
-    putchar('\n')
+    let stretchdepth add maxdepth 1
+    let tree bottom_up_tree 0 stretchdepth
+    printn item_check tree
+    putchar '\n'
     
-    longlivedtree = bottom_up_tree(0, maxdepth)
+    let longlivedtree bottom_up_tree 0 maxdepth
     
-    depth = mindepth
-    while depth < maxdepth + 1 {
-        iters = pow2(maxdepth - depth + mindepth)
-        check = 0
-        checks = 0
-        while check < iters {
-            tree = bottom_up_tree(1, depth)
-            checks = checks + item_check(tree)
-            tree = bottom_up_tree(0-1, depth)
-            checks = checks + item_check(tree)
-            check = check + 1
+    let depth mindepth
+    while lt depth add maxdepth 1 {
+        let iters pow2 add sub maxdepth depth mindepth
+        let check 0
+        let checks 0
+        while lt check iters {
+            let tree bottom_up_tree 1 depth
+            let checks add checks item_check tree
+            let tree bottom_up_tree sub 0 1 depth
+            let checks add checks item_check tree
+            let check add check 1
         }
-        printn(checks)
-        putchar('\n')
-        depth = depth + 2
+        printn checks
+        putchar '\n'
+        let depth add depth 2
     }
-    printn(item_check(longlivedtree))
-    putchar('\n')
+    printn item_check longlivedtree
+    putchar '\n'
 }
 
 main(args)
-exit
+return 0
