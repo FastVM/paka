@@ -1,4 +1,11 @@
 
+def add(x, y) x + y
+def sub(x, y) x - y
+def mul(x, y) x * y
+def div(x, y) x / y
+def mod(x, y) x % y
+def cat(x, y) x ~ y
+
 ## io
 
 def put(str) {
@@ -259,7 +266,6 @@ macro vm {
     ast.index
     ast.def
     ast.return
-    ast.defer
     ast.enum
     ast.when
     ast.exit
@@ -295,7 +301,6 @@ macro token {
     keyword.else
     keyword.def
     keyword.return
-    keyword.defer
     keyword.macro
     keyword.exit
     op
@@ -445,6 +450,7 @@ def put_reg(out) {
     out[1] = out[1] + 1
     return out[1]
 }
+
 def emit_num(form, out) {
     ret = put_reg(out)
     out[0] = out[0] ~ [[link.data, [opcode.do_store_int, ret, form[1]]]]
@@ -473,23 +479,12 @@ def emit_length(form, out) {
 }
 
 def emit_do(form, out) {
-    old5 = out[5]
-    out[5] = [[]] ~ old5
     ret = 0
     i = 1
     while i < length(form) {
         ret = emit_to(form[i], out)
         i = i + 1
     } 
-    ent = 0
-    while ent < length(out[5][0]) {
-        cur = emit_to(out[5][0][ent], out)
-        if cur != 0 {
-            ret = cur
-        }
-        ent = ent + 1
-    }
-    out[5] = old5
     return ret
 }
 
@@ -553,9 +548,7 @@ def emit_def(form, out) {
     body = form[2]
     tmp1 = out[1]
     tmp2 = out[2]
-    tmp5 = out[5]
     out[2] = []
-    out[5] = []
     i = 2
     while i < length(call) {
         out[2] = out[2] ~ [call[i][1], i - 1]
@@ -569,32 +562,13 @@ def emit_def(form, out) {
     nregs[1][0] = out[1]
     out[1] = tmp1
     out[2] = tmp2
-    out[5] = tmp5
     out[0] = out[0] ~ [put_label(jover)]
     return 0
 }
 
 def emit_return(form, out) {
     rreg = emit_to(form[1], out)
-    lvl = 0
-    while lvl < length(out[5]) {
-        ent = 0
-        while ent < length(out[5][lvl]) {
-            emit_to(out[5][lvl][ent], out)
-            ent = ent + 1
-        }
-        lvl = lvl + 1
-    }
     out[0] = out[0] ~ [[link.data, [opcode.do_return, rreg]]]
-    return 0
-}
-
-def emit_defer(form, out) {
-    if length(out[5]) == 0 {
-        puts("defer invalid in that location")
-        exit
-    }
-    out[5][0] = [form[1]] ~ out[5][0]
     return 0
 }
 
@@ -719,6 +693,8 @@ def emit_static_array(form, out) {
 
 def emit_str(form, out) {
     ret = put_reg(out)
+    putn(length(form[1]))
+    putchar(10)
     out[0] = out[0] ~ [[link.data, [opcode.do_string_new, ret, length(form[1])] ~ form[1]]]
     return ret
 }
@@ -758,9 +734,6 @@ def emit_to(form, out) {
             out[0] = []
         }
         return emit_def(form, out)
-    }
-    if ty == vm.ast.defer {
-        return emit_defer(form, out)
     }
     if ty == vm.ast.return {
         return emit_return(form, out)
@@ -1002,9 +975,6 @@ def paka_tokenize_stream1(bsrc, ops_flat) {
                 if n0 == 'd' {
                     if str.eq(xsrc, "def") {
                         return [token.keyword.def]
-                    }
-                    if str.eq(xsrc, "defer") {
-                        return [token.keyword.defer]
                     }
                     return [token.ident, xsrc]
                 }
@@ -1293,11 +1263,6 @@ def paka_read_stmt(tokens, state) {
         token_stream_skip1(tokens)
         expr = paka_read_expr_base(tokens, state)
         return [vm.ast.return, expr]
-    }
-    if first[0] == token.keyword.defer {
-        token_stream_skip1(tokens)
-        expr = paka_read_expr_base(tokens, state)
-        return [vm.ast.defer, expr]
     }
     if first[0] == token.keyword.macro {
         token_stream_skip1(tokens)
