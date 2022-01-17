@@ -539,7 +539,7 @@ def emit_def(form out) {
     }
     set out 1 sub i 1
     let nregs [link.data [256]]
-    set out 0 cat get out 0 [[link.data [opcode.do_func]] put_goto jover nregs [link.func get get call 1 1]]
+    set out 0 cat get out 0 [[link.data [opcode.do_func]] put_goto jover [link.data cat [length get get call 1 1] get get call 1 1] nregs [link.func get get call 1 1]]
     let resreg emit_to body out
     set out 0 cat get out 0 [[link.data [opcode.do_return resreg]]]
     set get nregs 1 0 get out 1
