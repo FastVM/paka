@@ -9,12 +9,21 @@ def to_int(str) {
     return ret
 }
 
-def printn(n) {
+def printn0(n) {
     if lt n 10 {
-        putchar add mod n 10 48
+        putchar add n '0'
     } else {
         printn div n 10
-        putchar add mod n 10 48
+        putchar add mod n 10 '0'
+    }
+}
+
+def printn(n) {
+    if lt n 0 {
+        putchar '-'
+        printn0 sub 0 n
+    } else {
+        printn0 n
     }
 }
 
@@ -27,7 +36,7 @@ def puts(s) {
 }
 
 def bottom_up_tree(item, depth) {
-    if eq depth 0 {
+    if neq depth 0 {
         let i add item item
         let left bottom_up_tree sub i 1 sub depth 1
         let right bottom_up_tree i sub depth 1
@@ -40,7 +49,7 @@ def bottom_up_tree(item, depth) {
 def item_check(tree) {
     if neq length tree 1 {
         return add get tree 0 sub item_check get tree 1 item_check get tree 2
-    } else {gmak
+    } else {
         return get tree 0
     }
 }
@@ -49,7 +58,7 @@ def pow2(n) {
     if eq n 0 {
         return 1
     } else {
-        return mul pow2 sub n 1 2
+        return mul 2 pow2 sub n 1
     }
 }
 
@@ -59,7 +68,7 @@ def main(args) {
         exit
     }
     
-    let N to_int args 0
+    let N to_int get args 0
     let mindepth 4
     let maxdepth add mindepth 2
     if lt maxdepth N {

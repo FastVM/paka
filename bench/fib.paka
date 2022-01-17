@@ -1,4 +1,14 @@
 
+def to_int(str) {
+    let ret 0
+    let index 0
+    while lt index length str {
+        let ret add sub get str index '0' mul 10 ret
+        let index add index 1
+    }
+    return ret
+}
+
 def printn(n) {
     if lt n 10 {
         putchar add mod n 10 48
@@ -16,5 +26,10 @@ def fib(n) {
     }
 }
 
-printn(fib(35))
-putchar('\n')
+def main(args) {
+    printn fib to_int get args 0
+    putchar '\n'
+}
+
+main(args)
+return 0

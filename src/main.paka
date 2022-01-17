@@ -448,7 +448,7 @@ def put_reg(out) {
 
 def emit_num(form, out) {
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data,[opcode.do_store_int, ret, get form 1]]]
+    set out 0 cat get out 0 [[link.data, [opcode.do_store_int, ret, get form 1]]]
     return ret
 }
 
@@ -456,20 +456,20 @@ def emit_binop(op, form1, form2, out) {
     let r1 emit_to form1 out
     let r2 emit_to form2 out
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data,[op, ret, r1, r2]]]
+    set out 0 cat get out 0 [[link.data, [op, ret, r1, r2]]]
     return ret
 }
 
 def emit_putchar(form, out) {
     let r1 emit_to get form 1 out
-    set out 0 cat get out 0 [[link.data,[opcode.do_putchar, r1]]]
+    set out 0 cat get out 0 [[link.data, [opcode.do_putchar, r1]]]
     return 0
 }
 
 def emit_length(form, out) {
     let r1 emit_to get form 1 out
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data,[opcode.do_length, ret, r1]]]
+    set out 0 cat get out 0 [[link.data, [opcode.do_length, ret, r1]]]
     return ret
 }
 
@@ -499,11 +499,11 @@ def emit_set(from, to, out) {
             let varreg emit_to to out
             let to put_reg out
             set out 2 cat get out 2 [get from 1, to]
-            set out 0 cat get out 0 [[link.data,[opcode.do_store_reg, to, varreg]]]
+            set out 0 cat get out 0 [[link.data, [opcode.do_store_reg, to, varreg]]]
             return to
         } else {
             let from emit_to to out
-            set out 0 cat get out 0 [[link.data,[opcode.do_store_reg, get found 0, from]]]
+            set out 0 cat get out 0 [[link.data, [opcode.do_store_reg, get found 0, from]]]
             return get found 0
         }
     }
@@ -511,7 +511,7 @@ def emit_set(from, to, out) {
         let array emit_to get from 1 out
         let index emit_to get from 2 out
         let varreg emit_to to out
-        set out 0 cat get out 0 [[link.data,[opcode.do_index_set, array, index, varreg]]]
+        set out 0 cat get out 0 [[link.data, [opcode.do_index_set, array, index, varreg]]]
         return array
     }
     put "cannot set to: form#"
@@ -548,9 +548,9 @@ def emit_def(form, out) {
     }
     set out 1 sub i 1
     let nregs [link.data, [256]]
-    set out 0 cat get out 0 [[link.data,[opcode.do_func]], put_goto jover, nregs,[link.func, get get call 1 1]]
+    set out 0 cat get out 0 [[link.data, [opcode.do_func]], put_goto jover, nregs, [link.func, get get call 1 1]]
     let resreg emit_to body out
-    set out 0 cat get out 0 [[link.data,[opcode.do_return, resreg]]]
+    set out 0 cat get out 0 [[link.data, [opcode.do_return, resreg]]]
     set get nregs 1 0 get out 1
     set out 1 tmp1
     set out 2 tmp2
@@ -560,12 +560,12 @@ def emit_def(form, out) {
 
 def emit_return(form, out) {
     let rreg emit_to get form 1 out
-    set out 0 cat get out 0 [[link.data,[opcode.do_return, rreg]]]
+    set out 0 cat get out 0 [[link.data, [opcode.do_return, rreg]]]
     return 0
 }
 
 def emit_exit(form, out) {
-    set out 0 cat get out 0 [[link.data,[opcode.do_exit]]]
+    set out 0 cat get out 0 [[link.data, [opcode.do_exit]]]
     return 0
 }
 
@@ -578,7 +578,7 @@ def emit_call(form, out) {
             let i add i 1
         } 
         let ret put_reg out
-        set out 0 cat get out 0 [[link.data,[opcode.do_static_call, ret]],[link.call, get get form 1 1],[link.data, cat [length args] args]]
+        set out 0 cat get out 0 [[link.data, [opcode.do_static_call, ret]], [link.call, get get form 1 1], [link.data, cat [length args] args]]
         return ret
     } else {
         puts "no dynamic calls yet"
@@ -592,42 +592,42 @@ def emit_branch_alike(cond, jfalse, jtrue, out) {
         if str.eq get cond 1, ">" {
             let lhs emit_to get cond 2 out
             let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data,[opcode.do_branch_less, rhs, lhs]],put_goto jfalse, put_goto jtrue]
+            set out 0 cat get out 0 [[link.data, [opcode.do_branch_less, rhs, lhs]], put_goto jfalse, put_goto jtrue]
             return 0
         }
         if str.eq get cond 1, "<=" {
             let lhs emit_to get cond 2 out
             let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data,[opcode.do_branch_less_than_equal, lhs, rhs]],put_goto jfalse, put_goto jtrue]
+            set out 0 cat get out 0 [[link.data, [opcode.do_branch_less_than_equal, lhs, rhs]], put_goto jfalse, put_goto jtrue]
             return 0
         }
         if str.eq get cond 1, "==" {
             let lhs emit_to get cond 2 out
             let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data,[opcode.do_branch_equal, lhs, rhs]],put_goto jfalse, put_goto jtrue]
+            set out 0 cat get out 0 [[link.data, [opcode.do_branch_equal, lhs, rhs]], put_goto jfalse, put_goto jtrue]
             return 0
         }
         if str.eq get cond 1, "!=" {
             let lhs emit_to get cond 2 out
             let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data,[opcode.do_branch_equal, lhs, rhs]],put_goto jtrue, put_goto jfalse]
+            set out 0 cat get out 0 [[link.data, [opcode.do_branch_equal, lhs, rhs]], put_goto jtrue, put_goto jfalse]
             return 0
         }
         if str.eq get cond 1, "<" {
             let lhs emit_to get cond 2 out
             let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data,[opcode.do_branch_less, lhs, rhs]],put_goto jfalse, put_goto jtrue]
+            set out 0 cat get out 0 [[link.data, [opcode.do_branch_less, lhs, rhs]], put_goto jfalse, put_goto jtrue]
             return 0
         }
         if str.eq get cond 1, ">=" {
             let lhs emit_to get cond 2 out
             let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data,[opcode.do_branch_less_than_equal, rhs, lhs]],put_goto jfalse, put_goto jtrue]
+            set out 0 cat get out 0 [[link.data, [opcode.do_branch_less_than_equal, rhs, lhs]], put_goto jfalse, put_goto jtrue]
             return 0
         }
     }
     let reg emit_to cond out
-    set out 0 cat get out 0 [[link.data,[opcode.do_branch_bool, reg]],put_goto jfalse, put_goto jtrue]
+    set out 0 cat get out 0 [[link.data, [opcode.do_branch_bool, reg]], put_goto jfalse, put_goto jtrue]
     return 0
 }
 
@@ -652,9 +652,14 @@ def emit_if(form, out) {
     let rret put_reg out
     set out 0 cat get out 0 [put_label jtrue]
     let rtrue emit_to get form 2 out
-    set out 0 cat get out 0 [[link.data,[opcode.do_store_reg, rret, rtrue, opcode.do_jump]],put_goto jout, put_label jfalse]
+    if neq rtrue 0 {
+        set out 0 cat get out 0 [[link.data, [opcode.do_store_reg, rret, rtrue]]]
+    }
+    set out 0 cat get out 0 [[link.data, [opcode.do_jump]], put_goto jout, put_label jfalse]
     let rfalse emit_to get form 3 out
-    set out 0 cat get out 0 [[link.data,[opcode.do_store_reg, rret, rfalse]]]
+    if neq rfalse 0 {
+        set out 0 cat get out 0 [[link.data, [opcode.do_store_reg, rret, rfalse]]]
+    }
     set out 0 cat get out 0 [put_label jout]
     return rret
 }
@@ -692,21 +697,21 @@ def emit_str(form, out) {
 def emit_dump(form, out) {
     let r1 emit_to get form 1 out
     let r2 emit_to get form 2 out
-    set out 0 cat get out 0 [[link.data,[opcode.do_dump, r1, r2]]]
+    set out 0 cat get out 0 [[link.data, [opcode.do_dump, r1, r2]]]
     return 0
 }
 
 def emit_write(form, out) {
     let r1 emit_to get form 1 out
     let r2 emit_to get form 2 out
-    set out 0 cat get out 0 [[link.data,[opcode.do_write, r1, r2]]]
+    set out 0 cat get out 0 [[link.data, [opcode.do_write, r1, r2]]]
     return 0
 }
 
 def emit_read(form, out) {
     let r1 emit_to get form 1 out
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data,[opcode.do_read, ret, r1]]]
+    set out 0 cat get out 0 [[link.data, [opcode.do_read, ret, r1]]]
     return ret
 }
 
@@ -798,10 +803,10 @@ def emit_to(form, out) {
 }
 
 def emit(form, path) {
-    let out [empty, 0,["args", 0], 0, empty, empty]
+    let out [empty, 0, ["args", 0], 0, empty, empty]
     let form pass_macro_resolve form [empty]
     emit_to form out
-    let objcode cat get out 4 cat get out 0 [[link.data,[opcode.do_exit]]]
+    let objcode cat get out 4 cat get out 0 [[link.data, [opcode.do_exit]]]
     let linked vm_link objcode
     return linked
 }
@@ -1052,29 +1057,6 @@ def paka_read_scall(tokens, nargs, args, state) {
     return paka_read_post tokens args state
 }
 
-def paka_read_call(tokens, args, state) {
-    let got token_stream_peek tokens
-    if eq get got 0  token.open.paren {
-        token_stream_skip1 tokens
-        while 1 {
-            let cur token_stream_peek tokens
-            if eq length cur 0 {
-                puts "error 1"
-                exit
-            }
-            if eq get cur 0 token.close.paren {
-                token_stream_skip1 tokens
-                return paka_read_post tokens args state
-            }
-            let arg paka_read_expr_base tokens state
-            let args push args arg
-            paka_skip_comma tokens
-        }
-    }
-    puts "error: wanted `(`"
-    exit
-}
-
 def paka_read_post(tokens, last, state) {
     let first token_stream_peek tokens
     if eq length first 0 {
@@ -1088,19 +1070,14 @@ def paka_read_post(tokens, last, state) {
             exit
         }
         let found findvar state, get last 1
-        if eq length found 0 {
-            let args [vm.ast.call, last] 
-            return paka_read_call tokens, args state
-        } else {
-            let args [vm.ast.call, last] 
-            return paka_read_scall tokens, get found 0, args state
-        }
+        let args [vm.ast.call, last] 
+        return paka_read_scall tokens get found 0 args state
     }
     if eq get last 0 vm.ast.ident {
         let found findvar state, get last 1
         if eq length found 1 {
             let args [vm.ast.call, last] 
-            return paka_read_scall tokens, get found 0, args state
+            return paka_read_scall tokens get found 0 args state
         }
     }
     return last
@@ -1261,7 +1238,7 @@ def paka_read_stmt(tokens, state) {
         let name token_stream_read tokens
         let first token_stream_peek tokens
         let block paka_read_block tokens state
-        return [vm.ast.enum,[vm.ast.ident, get name 1], block]
+        return [vm.ast.enum, [vm.ast.ident, get name 1], block]
     }
     if eq get first 0 token.keyword.exit {
         token_stream_skip1 tokens
