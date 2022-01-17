@@ -31,5 +31,5 @@ def main(args) {
     putchar '\n'
 }
 
-main(args)
+main args
 return 0

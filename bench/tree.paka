@@ -35,12 +35,12 @@ def puts(s) {
     }
 }
 
-def bottom_up_tree(item, depth) {
+def bottom_up_tree(item depth) {
     if neq depth 0 {
         let i add item item
         let left bottom_up_tree sub i 1 sub depth 1
         let right bottom_up_tree i sub depth 1
-        return [item, left, right]
+        return [item left right]
     } else {
         return [item]
     }

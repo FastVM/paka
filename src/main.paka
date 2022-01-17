@@ -1,5 +1,5 @@
 def empty() []
-def push(x, y) cat x [y]
+def push(x y) cat x [y]
 
 ## io
 
@@ -37,7 +37,7 @@ def putn(n) {
 
 ## strings
 
-def char_between(chr, pair) {
+def char_between(chr pair) {
     if lte get pair 0 chr {
         if lte chr get pair 1 {
             return 1
@@ -57,37 +57,30 @@ def char_isdigit(chr) {
 def char_isalpha(chr) {
     if char_between chr "az" {
         return 1
-    }
-    if char_between chr "AZ" {
+    } else if char_between chr "AZ" {
         return 1
+    } else {
+        return 0
     }
-    return 0
 }
 
-def char_id0(chr) {
-    if char_isalpha chr {
-        return 1
-    }
-    if eq chr '.' {
-        return 1
-    }
-    if eq chr '_' {
-        return 1
-    }
-    return 0
+def char_id(char) {
+    if eq char '[' return 0
+    else if eq char ']' return 0 
+    else if eq char '(' return 0
+    else if eq char ')' return 0 
+    else if eq char '{' return 0
+    else if eq char '}' return 0 
+    else if eq char '}' return 0 
+    else if eq char ''' return 0 
+    else if eq char 34 return 0 
+    else if eq char '\n' return 0 
+    else if eq char ' ' return 0 
+    else if eq char 0 return 0 
+    else return 1
 }
 
-def char_id(chr) {
-    if char_id0 chr {
-        return 1
-    }
-    if char_isdigit chr {
-        return 1
-    }
-    return 0
-}
-
-def str_starts_with(src, items) {
+def str_starts_with(src items) {
     if gt length items length src {
         return 0
     }
@@ -101,7 +94,7 @@ def str_starts_with(src, items) {
     return 1
 }
 
-def str.eq(sa, sb) {
+def str.eq(sa sb) {
     let len length sa
     if neq length sa length sb {
         return 0
@@ -119,7 +112,7 @@ def str.eq(sa, sb) {
 ## char streams
 
 def stream_new(src) {
-    return [src, 0]
+    return [src 0]
 }
 
 def stream_peek(src) {
@@ -136,7 +129,7 @@ def stream_skip1(src) {
     }
 }
 
-def stream_skip(src, n) {
+def stream_skip(src n) {
     let i 0
     while lt i n {
         stream_skip1 src
@@ -150,7 +143,7 @@ def stream_read(src) {
     return ret
 }
 
-def stream_starts_swith(src, items) {
+def stream_starts_swith(src items) {
     if gt add length items get src 1 length get src 0 {
         return 0
     }
@@ -184,10 +177,10 @@ def vm_link(bc) {
     while lt i length bc {
         let cur get bc  i
         if eq get cur 0 link.func {
-            let func_locs cat func_locs [get cur 1, nops]
+            let func_locs cat func_locs [get cur 1 nops]
         }
         if eq get cur 0 link.label {
-            let labels cat labels [get cur 1, nops]
+            let labels cat labels [get cur 1 nops]
         }
         if eq get cur 0 link.call {
             let sized0 push sized0 cur
@@ -262,7 +255,6 @@ macro vm {
     ast.def
     ast.return
     ast.enum
-    ast.when
     ast.exit
     ast.call
     ast.ident
@@ -289,8 +281,6 @@ macro token {
     close.paren
     close.square
     close.curly
-    colon
-    comma
     keyword.while
     keyword.if
     keyword.else
@@ -298,6 +288,7 @@ macro token {
     keyword.return
     keyword.macro
     keyword.exit
+    keyword.cond
     op
     str
     num
@@ -335,7 +326,7 @@ macro opcode {
 
 ## find variables
 
-def findvar(vars, name) {
+def findvar(vars name) {
     let i 0
     while lt i length vars {
         let k get vars i
@@ -349,7 +340,7 @@ def findvar(vars, name) {
     return empty
 }
 
-def findvar.ikey(vars, name) {
+def findvar.ikey(vars name) {
     let i 0
     while lt i length vars {
         let k get vars i
@@ -365,7 +356,7 @@ def findvar.ikey(vars, name) {
 
 ## macro resolver
 
-def pass_macro_resolve_copy(form, state) {
+def pass_macro_resolve_copy(form state) {
     let ret [get form 0]
     let i 1
     while lt i length form {
@@ -375,7 +366,7 @@ def pass_macro_resolve_copy(form, state) {
     return ret
 }
 
-def pass_macro_resolve_enum(form, state) {
+def pass_macro_resolve_enum(form state) {
     let name get get form 1 1
     let idents empty
     let where 1
@@ -383,12 +374,12 @@ def pass_macro_resolve_enum(form, state) {
         let ok 0
         if eq get get get form 2 where 0 vm.ast.ident {
             let fullname cat get get form 1 1 cat "." get get get form 2 where 1
-            let ast [vm.ast.num, where]
-            set state 0 cat get state 0 [fullname, ast]
+            let ast [vm.ast.num where]
+            set state 0 cat get state 0 [fullname ast]
             let ok 1
         }
         if eq get get get form 2 where 0 vm.ast.op {
-            if str.eq get get get form 2 where 1, "=" {
+            if str.eq get get get form 2 where 1 "=" {
                 let setto get get get form 2 where 2
                 let val get get get form 2 where 3
                 if neq get setto 0 vm.ast.ident {
@@ -396,7 +387,7 @@ def pass_macro_resolve_enum(form, state) {
                     exit
                 }
                 let fullname cat get get form 1 1 cat "." get setto 1
-                set state 0 cat get state 0 [fullname, val]
+                set state 0 cat get state 0 [fullname val]
                 let ok 1
             }
         }
@@ -409,7 +400,7 @@ def pass_macro_resolve_enum(form, state) {
     return [vm.ast.do]
 }
  
-def pass_macro_resolve(form, state) {
+def pass_macro_resolve(form state) {
     let ty get form 0
     if eq ty vm.ast.num {
         return form
@@ -428,7 +419,7 @@ def pass_macro_resolve(form, state) {
         return form
     }
     if eq ty vm.ast.op {
-        return [ty, get form 1, pass_macro_resolve get form 2 state, pass_macro_resolve get form 3, state]
+        return [ty get form 1 pass_macro_resolve get form 2 state pass_macro_resolve get form 3 state]
     }
     if eq ty vm.ast.enum {
         return pass_macro_resolve_enum form state
@@ -446,34 +437,34 @@ def put_reg(out) {
     return get out 1
 }
 
-def emit_num(form, out) {
+def emit_num(form out) {
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data, [opcode.do_store_int, ret, get form 1]]]
+    set out 0 cat get out 0 [[link.data [opcode.do_store_int ret get form 1]]]
     return ret
 }
 
-def emit_binop(op, form1, form2, out) {
+def emit_binop(op form1 form2 out) {
     let r1 emit_to form1 out
     let r2 emit_to form2 out
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data, [op, ret, r1, r2]]]
+    set out 0 cat get out 0 [[link.data [op ret r1 r2]]]
     return ret
 }
 
-def emit_putchar(form, out) {
+def emit_putchar(form out) {
     let r1 emit_to get form 1 out
-    set out 0 cat get out 0 [[link.data, [opcode.do_putchar, r1]]]
+    set out 0 cat get out 0 [[link.data [opcode.do_putchar r1]]]
     return 0
 }
 
-def emit_length(form, out) {
+def emit_length(form out) {
     let r1 emit_to get form 1 out
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data, [opcode.do_length, ret, r1]]]
+    set out 0 cat get out 0 [[link.data [opcode.do_length ret r1]]]
     return ret
 }
 
-def emit_do(form, out) {
+def emit_do(form out) {
     let ret 0
     let i 1
     while lt i length form {
@@ -483,8 +474,8 @@ def emit_do(form, out) {
     return ret
 }
 
-def emit_ident(form, out) {
-    let res findvar get out 2, get form 1
+def emit_ident(form out) {
+    let res findvar get out 2 get form 1
     if eq length res 0 {
         puts cat "unknown ident: " get form 1
         exit
@@ -492,18 +483,18 @@ def emit_ident(form, out) {
     return get res 0
 }
 
-def emit_set(from, to, out) {
+def emit_set(from to out) {
     if eq get from 0 vm.ast.ident {
-        let found findvar get out 2, get from 1
+        let found findvar get out 2 get from 1
         if eq length found 0 {
             let varreg emit_to to out
             let to put_reg out
-            set out 2 cat get out 2 [get from 1, to]
-            set out 0 cat get out 0 [[link.data, [opcode.do_store_reg, to, varreg]]]
+            set out 2 cat get out 2 [get from 1 to]
+            set out 0 cat get out 0 [[link.data [opcode.do_store_reg to varreg]]]
             return to
         } else {
             let from emit_to to out
-            set out 0 cat get out 0 [[link.data, [opcode.do_store_reg, get found 0, from]]]
+            set out 0 cat get out 0 [[link.data [opcode.do_store_reg get found 0 from]]]
             return get found 0
         }
     }
@@ -511,7 +502,7 @@ def emit_set(from, to, out) {
         let array emit_to get from 1 out
         let index emit_to get from 2 out
         let varreg emit_to to out
-        set out 0 cat get out 0 [[link.data, [opcode.do_index_set, array, index, varreg]]]
+        set out 0 cat get out 0 [[link.data [opcode.do_index_set array index varreg]]]
         return array
     }
     put "cannot set to: form#"
@@ -527,14 +518,14 @@ def put_jump(out) {
 }
 
 def put_goto(jump) {
-    return [link.jump, jump] 
+    return [link.jump jump] 
 }
 
 def put_label(jump) {
-    return [link.label, jump]
+    return [link.label jump]
 }
 
-def emit_def(form, out) {
+def emit_def(form out) {
     let jover put_jump out
     let call get form 1
     let body get form 2
@@ -543,14 +534,14 @@ def emit_def(form, out) {
     set out 2 empty
     let i 2
     while lt i length call {
-        set out 2 cat get out 2 [get get call i 1, sub i 1]
+        set out 2 cat get out 2 [get get call i 1 sub i 1]
         let i add i 1
     }
     set out 1 sub i 1
-    let nregs [link.data, [256]]
-    set out 0 cat get out 0 [[link.data, [opcode.do_func]], put_goto jover, nregs, [link.func, get get call 1 1]]
+    let nregs [link.data [256]]
+    set out 0 cat get out 0 [[link.data [opcode.do_func]] put_goto jover nregs [link.func get get call 1 1]]
     let resreg emit_to body out
-    set out 0 cat get out 0 [[link.data, [opcode.do_return, resreg]]]
+    set out 0 cat get out 0 [[link.data [opcode.do_return resreg]]]
     set get nregs 1 0 get out 1
     set out 1 tmp1
     set out 2 tmp2
@@ -558,18 +549,18 @@ def emit_def(form, out) {
     return 0
 }
 
-def emit_return(form, out) {
+def emit_return(form out) {
     let rreg emit_to get form 1 out
-    set out 0 cat get out 0 [[link.data, [opcode.do_return, rreg]]]
+    set out 0 cat get out 0 [[link.data [opcode.do_return rreg]]]
     return 0
 }
 
-def emit_exit(form, out) {
-    set out 0 cat get out 0 [[link.data, [opcode.do_exit]]]
+def emit_exit(form out) {
+    set out 0 cat get out 0 [[link.data [opcode.do_exit]]]
     return 0
 }
 
-def emit_call(form, out) {
+def emit_call(form out) {
     if eq get get form 1 0 vm.ast.ident {
         let args empty
         let i 2
@@ -578,7 +569,7 @@ def emit_call(form, out) {
             let i add i 1
         } 
         let ret put_reg out
-        set out 0 cat get out 0 [[link.data, [opcode.do_static_call, ret]], [link.call, get get form 1 1], [link.data, cat [length args] args]]
+        set out 0 cat get out 0 [[link.data [opcode.do_static_call ret]] [link.call get get form 1 1] [link.data cat [length args] args]]
         return ret
     } else {
         puts "no dynamic calls yet"
@@ -586,85 +577,85 @@ def emit_call(form, out) {
     }
 }
 
-def emit_branch_alike(cond, jfalse, jtrue, out) {
-    if eq get cond 0 vm.ast.op {
-        let first get get cond 1 0
-        if str.eq get cond 1, ">" {
-            let lhs emit_to get cond 2 out
-            let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data, [opcode.do_branch_less, rhs, lhs]], put_goto jfalse, put_goto jtrue]
+def emit_branch_alike(xcond jfalse jtrue out) {
+    if eq get xcond 0 vm.ast.op {
+        let first get get xcond 1 0
+        if str.eq get xcond 1 ">" {
+            let lhs emit_to get xcond 2 out
+            let rhs emit_to get xcond 3 out
+            set out 0 cat get out 0 [[link.data [opcode.do_branch_less rhs lhs]] put_goto jfalse put_goto jtrue]
             return 0
         }
-        if str.eq get cond 1, "<=" {
-            let lhs emit_to get cond 2 out
-            let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data, [opcode.do_branch_less_than_equal, lhs, rhs]], put_goto jfalse, put_goto jtrue]
+        if str.eq get xcond 1 "<=" {
+            let lhs emit_to get xcond 2 out
+            let rhs emit_to get xcond 3 out
+            set out 0 cat get out 0 [[link.data [opcode.do_branch_less_than_equal lhs rhs]] put_goto jfalse put_goto jtrue]
             return 0
         }
-        if str.eq get cond 1, "==" {
-            let lhs emit_to get cond 2 out
-            let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data, [opcode.do_branch_equal, lhs, rhs]], put_goto jfalse, put_goto jtrue]
+        if str.eq get xcond 1 "==" {
+            let lhs emit_to get xcond 2 out
+            let rhs emit_to get xcond 3 out
+            set out 0 cat get out 0 [[link.data [opcode.do_branch_equal lhs rhs]] put_goto jfalse put_goto jtrue]
             return 0
         }
-        if str.eq get cond 1, "!=" {
-            let lhs emit_to get cond 2 out
-            let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data, [opcode.do_branch_equal, lhs, rhs]], put_goto jtrue, put_goto jfalse]
+        if str.eq get xcond 1 "!=" {
+            let lhs emit_to get xcond 2 out
+            let rhs emit_to get xcond 3 out
+            set out 0 cat get out 0 [[link.data [opcode.do_branch_equal lhs rhs]] put_goto jtrue put_goto jfalse]
             return 0
         }
-        if str.eq get cond 1, "<" {
-            let lhs emit_to get cond 2 out
-            let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data, [opcode.do_branch_less, lhs, rhs]], put_goto jfalse, put_goto jtrue]
+        if str.eq get xcond 1 "<" {
+            let lhs emit_to get xcond 2 out
+            let rhs emit_to get xcond 3 out
+            set out 0 cat get out 0 [[link.data [opcode.do_branch_less lhs rhs]] put_goto jfalse put_goto jtrue]
             return 0
         }
-        if str.eq get cond 1, ">=" {
-            let lhs emit_to get cond 2 out
-            let rhs emit_to get cond 3 out
-            set out 0 cat get out 0 [[link.data, [opcode.do_branch_less_than_equal, rhs, lhs]], put_goto jfalse, put_goto jtrue]
+        if str.eq get xcond 1 ">=" {
+            let lhs emit_to get xcond 2 out
+            let rhs emit_to get xcond 3 out
+            set out 0 cat get out 0 [[link.data [opcode.do_branch_less_than_equal rhs lhs]] put_goto jfalse put_goto jtrue]
             return 0
         }
     }
-    let reg emit_to cond out
-    set out 0 cat get out 0 [[link.data, [opcode.do_branch_bool, reg]], put_goto jfalse, put_goto jtrue]
+    let reg emit_to xcond out
+    set out 0 cat get out 0 [[link.data [opcode.do_branch_bool reg]] put_goto jfalse put_goto jtrue]
     return 0
 }
 
-def emit_while(form, out) {
+def emit_while(form out) {
     let jredo put_jump out
     let jtrue put_jump out
     let jfalse put_jump out
     set out 0 cat get out 0 [put_label jredo]
-    emit_branch_alike get form 1, jfalse, jtrue, out
+    emit_branch_alike get form 1 jfalse jtrue out
     set out 0 cat get out 0 [put_label jtrue]
     emit_to get form 2 out
-    emit_branch_alike get form 1, jfalse, jtrue, out
+    emit_branch_alike get form 1 jfalse jtrue out
     set out 0 cat get out 0 [put_label jfalse]
     return 0
 }
 
-def emit_if(form, out) {
+def emit_if(form out) {
     let jout put_jump out
     let jtrue put_jump out
     let jfalse put_jump out
-    emit_branch_alike get form 1, jfalse, jtrue, out
+    emit_branch_alike get form 1 jfalse jtrue out
     let rret put_reg out
     set out 0 cat get out 0 [put_label jtrue]
     let rtrue emit_to get form 2 out
     if neq rtrue 0 {
-        set out 0 cat get out 0 [[link.data, [opcode.do_store_reg, rret, rtrue]]]
+        set out 0 cat get out 0 [[link.data [opcode.do_store_reg rret rtrue]]]
     }
-    set out 0 cat get out 0 [[link.data, [opcode.do_jump]], put_goto jout, put_label jfalse]
+    set out 0 cat get out 0 [[link.data [opcode.do_jump]] put_goto jout put_label jfalse]
     let rfalse emit_to get form 3 out
     if neq rfalse 0 {
-        set out 0 cat get out 0 [[link.data, [opcode.do_store_reg, rret, rfalse]]]
+        set out 0 cat get out 0 [[link.data [opcode.do_store_reg rret rfalse]]]
     }
     set out 0 cat get out 0 [put_label jout]
     return rret
 }
 
-def emit_array(form, out) {
+def emit_array(form out) {
     let regs empty
     let i 1
     while lt i length form {
@@ -672,11 +663,11 @@ def emit_array(form, out) {
         let i add i 1
     }
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data, cat [opcode.do_static_array_new, ret, length regs] regs]]
+    set out 0 cat get out 0 [[link.data cat [opcode.do_static_array_new ret length regs] regs]]
     return ret
 }
 
-def emit_static_array(form, out) {
+def emit_static_array(form out) {
     let regs empty
     let i 1
     while lt i length form {
@@ -684,44 +675,44 @@ def emit_static_array(form, out) {
         let i add i 1
     }
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data, cat [opcode.do_static_array_new, ret, length regs] regs]]
+    set out 0 cat get out 0 [[link.data cat [opcode.do_static_array_new ret length regs] regs]]
     return ret
 }
 
-def emit_str(form, out) {
+def emit_str(form out) {
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data, cat [opcode.do_string_new, ret, length get form 1] get form 1]]
+    set out 0 cat get out 0 [[link.data cat [opcode.do_string_new ret length get form 1] get form 1]]
     return ret
 }
 
-def emit_dump(form, out) {
+def emit_dump(form out) {
     let r1 emit_to get form 1 out
     let r2 emit_to get form 2 out
-    set out 0 cat get out 0 [[link.data, [opcode.do_dump, r1, r2]]]
+    set out 0 cat get out 0 [[link.data [opcode.do_dump r1 r2]]]
     return 0
 }
 
-def emit_write(form, out) {
+def emit_write(form out) {
     let r1 emit_to get form 1 out
     let r2 emit_to get form 2 out
-    set out 0 cat get out 0 [[link.data, [opcode.do_write, r1, r2]]]
+    set out 0 cat get out 0 [[link.data [opcode.do_write r1 r2]]]
     return 0
 }
 
-def emit_read(form, out) {
+def emit_read(form out) {
     let r1 emit_to get form 1 out
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data, [opcode.do_read, ret, r1]]]
+    set out 0 cat get out 0 [[link.data [opcode.do_read ret r1]]]
     return ret
 }
 
-def emit_to(form, out) {
+def emit_to(form out) {
     let ty get form 0
     if eq ty vm.ast.num {
         return emit_num form out
     }
     if eq ty vm.ast.index {
-        return emit_binop opcode.do_index_get, get form 1, get form 2, out
+        return emit_binop opcode.do_index_get get form 1 get form 2 out
     }
     if eq ty vm.ast.def {
         if gt length get out 0 50 {
@@ -775,25 +766,25 @@ def emit_to(form, out) {
     if eq ty vm.ast.op {
         let op get get form 1 0
         if eq op '=' {
-            return emit_set get form 2, get form 3, out
+            return emit_set get form 2 get form 3 out
         }
         if eq op '~' {
-            return emit_binop opcode.do_static_concat, get form 2, get form 3, out
+            return emit_binop opcode.do_static_concat get form 2 get form 3 out
         }
         if eq op '+' {
-            return emit_binop opcode.do_add, get form 2, get form 3, out
+            return emit_binop opcode.do_add get form 2 get form 3 out
         }
         if eq op '-' {
-            return emit_binop opcode.do_sub, get form 2, get form 3, out
+            return emit_binop opcode.do_sub get form 2 get form 3 out
         }
         if eq op '*' {
-            return emit_binop opcode.do_mul, get form 2, get form 3, out
+            return emit_binop opcode.do_mul get form 2 get form 3 out
         }
         if eq op '/' {
-            return emit_binop opcode.do_div, get form 2, get form 3, out
+            return emit_binop opcode.do_div get form 2 get form 3 out
         }
         if eq op '%' {
-            return emit_binop opcode.do_mod, get form 2, get form 3, out
+            return emit_binop opcode.do_mod get form 2 get form 3 out
         }
         puts "emit: form: unknown op"
         exit
@@ -802,11 +793,11 @@ def emit_to(form, out) {
     exit
 }
 
-def emit(form, path) {
-    let out [empty, 0, ["args", 0], 0, empty, empty]
+def emit(form path) {
+    let out [empty 0 ["args" 0] 0 empty empty]
     let form pass_macro_resolve form [empty]
     emit_to form out
-    let objcode cat get out 4 cat get out 0 [[link.data, [opcode.do_exit]]]
+    let objcode cat get out 4 cat get out 0 [[link.data [opcode.do_exit]]]
     let linked vm_link objcode
     return linked
 }
@@ -863,10 +854,6 @@ def paka_tokenize_stream1(bsrc) {
         stream_skip1 bsrc
         return [token.close.square]
     }
-    if eq first ',' {
-        stream_skip1 bsrc
-        return [token.comma]
-    }
     if eq first ''' {
         stream_skip1 bsrc
         let cur stream_read  bsrc
@@ -877,23 +864,23 @@ def paka_tokenize_stream1(bsrc) {
                 exit
             }
             if eq cur 'n' {
-                return [token.num, 10]
+                return [token.num 10]
             } 
             if eq cur 'r' {
-                return [token.num, 13]
+                return [token.num 13]
             } 
             if eq cur 34 {
-                return [token.num, cur]
+                return [token.num cur]
             }
             if eq cur '\\' {
-                return [token.num, cur]
+                return [token.num cur]
             }
         } else {
             if neq stream_read bsrc ''' {
                 puts "unterminated char literal"
                 exit
             }
-            return [token.num, cur]
+            return [token.num cur]
         }
     }
     if eq first 34 {
@@ -906,7 +893,7 @@ def paka_tokenize_stream1(bsrc) {
                 exit
             }
             if eq cur 34 {
-                return [token.str, ret]
+                return [token.str ret]
             }
             if eq cur '\\' {
                 let cur stream_read  bsrc
@@ -929,9 +916,9 @@ def paka_tokenize_stream1(bsrc) {
         while char_isdigit stream_peek bsrc {
             let n add mul n 10 sub stream_read  bsrc '0'
         }
-        return [token.num, n]
+        return [token.num n]
     }
-    if char_id0 first {
+    if char_id first {
         let xsrc empty
         while 1 {
             if char_id stream_peek bsrc {
@@ -939,45 +926,45 @@ def paka_tokenize_stream1(bsrc) {
             } else {
                 let n0 get xsrc 0
                 if eq n0 'w' {
-                    if str.eq xsrc, "while" {
+                    if str.eq xsrc "while" {
                         return [token.keyword.while]
                     }
-                    return [token.ident, xsrc]
+                    return [token.ident xsrc]
                 }
                 if eq n0 'i' {
-                    if str.eq xsrc, "if" {
+                    if str.eq xsrc "if" {
                         return [token.keyword.if]
                     }
-                    return [token.ident, xsrc]
+                    return [token.ident xsrc]
                 }
                 if eq n0 'e' {
-                    if str.eq xsrc, "else" {
+                    if str.eq xsrc "else" {
                         return [token.keyword.else]
                     }
-                    if str.eq xsrc, "exit" {
+                    if str.eq xsrc "exit" {
                         return [token.keyword.exit]
                     }
-                    return [token.ident, xsrc]
+                    return [token.ident xsrc]
                 }
                 if eq n0 'd' {
-                    if str.eq xsrc, "def" {
+                    if str.eq xsrc "def" {
                         return [token.keyword.def]
                     }
-                    return [token.ident, xsrc]
+                    return [token.ident xsrc]
                 }
                 if eq n0 'r' {
-                    if str.eq xsrc, "return" {
+                    if str.eq xsrc "return" {
                         return [token.keyword.return]
                     }
-                    return [token.ident, xsrc]
+                    return [token.ident xsrc]
                 }
                 if eq n0 'm' {
-                    if str.eq xsrc, "macro" {
+                    if str.eq xsrc "macro" {
                         return [token.keyword.macro]
                     }
-                    return [token.ident, xsrc]
+                    return [token.ident xsrc]
                 }
-                return [token.ident, xsrc]
+                return [token.ident xsrc]
             }
         }
     }
@@ -991,7 +978,7 @@ def paka_tokenize_stream1(bsrc) {
 }
 
 def token_stream_new(src) {
-    return [[src, 0], empty]
+    return [[src 0] empty]
 }
 
 def token_stream_read(tokens) {
@@ -1014,14 +1001,7 @@ def token_stream_skip1(tokens) {
     set tokens 1 empty
 }
 
-def paka_skip_comma(tokens) {
-    let first token_stream_peek tokens
-    if eq get first 0 token.comma {
-        token_stream_skip1 tokens
-    }
-}
-
-def paka_read_scall(tokens, nargs, args, state) {
+def paka_read_scall(tokens nargs args state) {
     let target add nargs length args
     let got token_stream_peek tokens
     if eq get got 0  token.open.paren {
@@ -1042,7 +1022,6 @@ def paka_read_scall(tokens, nargs, args, state) {
             }
             let arg paka_read_expr_base tokens state
             let args push args arg
-            paka_skip_comma tokens
         }
     }
     while lt length args target {
@@ -1050,40 +1029,28 @@ def paka_read_scall(tokens, nargs, args, state) {
         if eq length cur 0 {
             puts "error eof arg"
         }
-        let arg paka_read_expr_base tokens, state
+        let arg paka_read_expr_base tokens state
         let args push args arg
-        paka_skip_comma tokens
     }
     return paka_read_post tokens args state
 }
 
-def paka_read_post(tokens, last, state) {
+def paka_read_post(tokens last state) {
     let first token_stream_peek tokens
     if eq length first 0 {
         return last
     }
-    if eq get first 0 token.open.paren {
-        if neq get last 0 vm.ast.ident {
-            put "cannot call anything but idents: "
-            putn get last 0
-            putchar 10
-            exit
-        }
-        let found findvar state, get last 1
-        let args [vm.ast.call, last] 
-        return paka_read_scall tokens get found 0 args state
-    }
     if eq get last 0 vm.ast.ident {
-        let found findvar state, get last 1
+        let found findvar state get last 1
         if eq length found 1 {
-            let args [vm.ast.call, last] 
+            let args [vm.ast.call last] 
             return paka_read_scall tokens get found 0 args state
         }
     }
     return last
 }
 
-def paka_read_single(tokens, state) {
+def paka_read_single(tokens state) {
     let first token_stream_peek tokens
     if eq length first 0 {
         return 0
@@ -1097,89 +1064,167 @@ def paka_read_single(tokens, state) {
                 token_stream_skip1 tokens
                 return args
             }
-            let expr paka_read_expr_base tokens, state
+            let expr paka_read_expr_base tokens state
             let args push args expr
-            paka_skip_comma tokens
         } 
     }
     if eq get first 0 token.open.paren {
         token_stream_skip1 tokens
-        let ret paka_read_expr_base tokens, state
+        let ret paka_read_expr_base tokens state
         token_stream_skip1 tokens
         return ret
     }
     if eq get first 0 token.num {
         token_stream_skip1 tokens
-        return [vm.ast.num, get first 1]
+        return [vm.ast.num get first 1]
     }
     if eq get first 0 token.str {
         token_stream_skip1 tokens
-        return [vm.ast.str, get first 1]
+        return [vm.ast.str get first 1]
     }
     if eq get first 0 token.ident {
         token_stream_skip1 tokens
-        if str.eq get first 1, "putchar" {
+        if str.eq get first 1 "putchar" {
             return paka_read_scall tokens 1 [vm.ast.putchar] state
         } 
-        if str.eq get first 1, "length" {
+        if str.eq get first 1 "length" {
             return paka_read_scall tokens 1 [vm.ast.length] state
         }
-        if str.eq get first 1, "dump" {
+        if str.eq get first 1 "dump" {
             return paka_read_scall tokens 2 [vm.ast.dump] state
         }
-        if str.eq get first 1, "write" {
+        if str.eq get first 1 "write" {
             return paka_read_scall tokens 2 [vm.ast.write] state
         }
-        if str.eq get first 1, "read" {
+        if str.eq get first 1 "read" {
             return paka_read_scall tokens 1 [vm.ast.read] state
         }
-        if str.eq get first 1, "get" {
+        if str.eq get first 1 "get" {
             return paka_read_scall tokens 2 [vm.ast.index] state
         }
-        if str.eq get first 1, "set" {
+        if str.eq get first 1 "set" {
             let args paka_read_scall tokens 3 empty state
-            return [vm.ast.op, "=", [vm.ast.index, get args 0, get args 1], get args 2]
+            return [vm.ast.op "=" [vm.ast.index get args 0 get args 1] get args 2]
         }
-        if str.eq get first 1, "add" {
-            return paka_read_scall tokens 2 [vm.ast.op, "+"] state
+        if str.eq get first 1 "do" {
+            return paka_read_scall tokens 2 [vm.ast.do] state
         }
-        if str.eq get first 1, "sub" {
-            return paka_read_scall tokens 2 [vm.ast.op, "-"] state
+        if str.eq get first 1 "+" {
+            return paka_read_scall tokens 2 [vm.ast.op "+"] state
         }
-        if str.eq get first 1, "mul" {
-            return paka_read_scall tokens 2 [vm.ast.op, "*"] state
+        if str.eq get first 1 "-" {
+            return paka_read_scall tokens 2 [vm.ast.op "-"] state
         }
-        if str.eq get first 1, "div" {
-            return paka_read_scall tokens 2 [vm.ast.op, "/"] state
+        if str.eq get first 1 "*" {
+            return paka_read_scall tokens 2 [vm.ast.op "*"] state
         }
-        if str.eq get first 1, "mod" {
-            return paka_read_scall tokens 2 [vm.ast.op, "%"] state
+        if str.eq get first 1 "/" {
+            return paka_read_scall tokens 2 [vm.ast.op "/"] state
         }
-        if str.eq get first 1, "cat" {
-            return paka_read_scall tokens 2 [vm.ast.op, "~"] state
+        if str.eq get first 1 "%" {
+            return paka_read_scall tokens 2 [vm.ast.op "%"] state
         }
-        if str.eq get first 1, "lt" {
-            return paka_read_scall tokens 2 [vm.ast.op, "<"] state
+        if str.eq get first 1 "<" {
+            return paka_read_scall tokens 2 [vm.ast.op "<"] state
         }
-        if str.eq get first 1, "gt" {
-            return paka_read_scall tokens 2 [vm.ast.op, ">"] state
+        if str.eq get first 1 ">" {
+            return paka_read_scall tokens 2 [vm.ast.op ">"] state
         }
-        if str.eq get first 1, "lte" {
-            return paka_read_scall tokens 2 [vm.ast.op, "<="] state
+        if str.eq get first 1 "<=" {
+            return paka_read_scall tokens 2 [vm.ast.op "<="] state
         }
-        if str.eq get first 1, "gte" {
-            return paka_read_scall tokens 2 [vm.ast.op, ">="] state
+        if str.eq get first 1 ">=" {
+            return paka_read_scall tokens 2 [vm.ast.op ">="] state
         }
-        if str.eq get first 1, "eq" {
-            return paka_read_scall tokens 2 [vm.ast.op, "=="] state
+        if str.eq get first 1 "==" {
+            return paka_read_scall tokens 2 [vm.ast.op "=="] state
         }
-        if str.eq get first 1, "neq" {
-            return paka_read_scall tokens 2 [vm.ast.op, "!="] state
+        if str.eq get first 1 "!=" {
+            return paka_read_scall tokens 2 [vm.ast.op "!="] state
         }
-        if str.eq get first 1, "let" {
-            return paka_read_scall tokens 2 [vm.ast.op, "="] state
+        if str.eq get first 1 "add" {
+            return paka_read_scall tokens 2 [vm.ast.op "+"] state
         }
-        return [vm.ast.ident, get first 1]
+        if str.eq get first 1 "sub" {
+            return paka_read_scall tokens 2 [vm.ast.op "-"] state
+        }
+        if str.eq get first 1 "mul" {
+            return paka_read_scall tokens 2 [vm.ast.op "*"] state
+        }
+        if str.eq get first 1 "div" {
+            return paka_read_scall tokens 2 [vm.ast.op "/"] state
+        }
+        if str.eq get first 1 "mod" {
+            return paka_read_scall tokens 2 [vm.ast.op "%"] state
+        }
+        if str.eq get first 1 "cat" {
+            return paka_read_scall tokens 2 [vm.ast.op "~"] state
+        }
+        if str.eq get first 1 "lt" {
+            return paka_read_scall tokens 2 [vm.ast.op "<"] state
+        }
+        if str.eq get first 1 "gt" {
+            return paka_read_scall tokens 2 [vm.ast.op ">"] state
+        }
+        if str.eq get first 1 "lte" {
+            return paka_read_scall tokens 2 [vm.ast.op "<="] state
+        }
+        if str.eq get first 1 "gte" {
+            return paka_read_scall tokens 2 [vm.ast.op ">="] state
+        }
+        if str.eq get first 1 "eq" {
+            return paka_read_scall tokens 2 [vm.ast.op "=="] state
+        }
+        if str.eq get first 1 "neq" {
+            return paka_read_scall tokens 2 [vm.ast.op "!="] state
+        }
+        if str.eq get first 1 "let" {
+            return paka_read_scall tokens 2 [vm.ast.op "="] state
+        }
+        if str.eq get first 1 "cond" {
+            return paka_read_scall tokens 3 [vm.ast.if] state
+        }
+        return [vm.ast.ident get first 1]
+    }
+    put "error: unexpected token#"
+    putn get first 0
+    puts "."
+    exit
+}
+
+def parse_is_not_in(op some) {
+    let i 0
+    while lt i length some {
+        if str.eq op get some i {
+            return 0
+        }
+        let i add i 1
+    }
+    return 1
+}
+
+def paka_read_expr_base(tokens state) {
+    return paka_read_post tokens paka_read_single tokens state state
+}
+
+def paka_read_stmt(tokens state) {
+    let first token_stream_peek tokens
+    if eq get first 0 token.keyword.def {
+        token_stream_skip1 tokens
+        let expr paka_read_expr_base tokens state
+        let block paka_read_block tokens state
+        return [vm.ast.def expr block]
+    }
+    if eq get first 0 token.keyword.macro {
+        token_stream_skip1 tokens
+        let name token_stream_read tokens
+        let first token_stream_peek tokens
+        let block paka_read_block tokens state
+        return [vm.ast.enum [vm.ast.ident get name 1] block]
+    }
+    if eq get first 0 token.keyword.exit {
+        token_stream_skip1 tokens
+        return [vm.ast.exit]
     }
     if eq get first 0 token.keyword.if {
         token_stream_skip1 tokens
@@ -1191,64 +1236,24 @@ def paka_read_single(tokens, state) {
             token_stream_skip1 tokens
             let block2 paka_read_block tokens state
         }
-        return [vm.ast.if, expr, block1, block2]
-    }
-    put "error: unexpected token#"
-    putn get first 0
-    puts "."
-    exit
-}
-
-def parse_is_not_in(op, some) {
-    let i 0
-    while lt i length some {
-        if str.eq op, get some i {
-            return 0
-        }
-        let i add i 1
-    }
-    return 1
-}
-
-def paka_read_expr_base(tokens, state) {
-    return paka_read_post tokens paka_read_single tokens state state
-}
-
-def paka_read_stmt(tokens, state) {
-    let first token_stream_peek tokens
-    if eq get first 0 token.keyword.while {
-        token_stream_skip1 tokens
-        let expr paka_read_expr_base tokens state
-        let block paka_read_block tokens state
-        return [vm.ast.while, expr, block]
-    }
-    if eq get first 0 token.keyword.def {
-        token_stream_skip1 tokens
-        let expr paka_read_expr_base tokens state
-        let block paka_read_block tokens state
-        return [vm.ast.def, expr, block]
+        return [vm.ast.if expr block1 block2]
     }
     if eq get first 0 token.keyword.return {
         token_stream_skip1 tokens
         let expr paka_read_expr_base tokens state
-        return [vm.ast.return, expr]
+        return [vm.ast.return expr]
     }
-    if eq get first 0 token.keyword.macro {
+    if eq get first 0 token.keyword.while {
         token_stream_skip1 tokens
-        let name token_stream_read tokens
-        let first token_stream_peek tokens
+        let expr paka_read_expr_base tokens state
         let block paka_read_block tokens state
-        return [vm.ast.enum, [vm.ast.ident, get name 1], block]
-    }
-    if eq get first 0 token.keyword.exit {
-        token_stream_skip1 tokens
-        return [vm.ast.exit]
+        return [vm.ast.while expr block]
     }
     let ret paka_read_expr_base tokens state
     return ret
 }
 
-def paka_read_block_body(tokens, state) {
+def paka_read_block_body(tokens state) {
     let ret [vm.ast.do]
     while 1 {
         let first token_stream_peek tokens
@@ -1263,7 +1268,7 @@ def paka_read_block_body(tokens, state) {
     }
 }
 
-def paka_read_block(tokens, state) {
+def paka_read_block(tokens state) {
     let first token_stream_peek tokens
     if eq get first 0 token.open.curly {
         token_stream_skip1 tokens
@@ -1271,10 +1276,10 @@ def paka_read_block(tokens, state) {
         token_stream_skip1 tokens
         return ret
     }
-    return [vm.ast.do, paka_read_stmt tokens state]
+    return [vm.ast.do paka_read_stmt tokens state]
 }
 
-def paka_read_nargs(tokens, name, state) {
+def paka_read_nargs(tokens name state) {
     let got token_stream_peek tokens
     if eq get got 0  token.open.paren {
         token_stream_skip1 tokens
@@ -1291,7 +1296,6 @@ def paka_read_nargs(tokens, name, state) {
             }
             paka_read_expr_base tokens state
             let n add n 1
-            paka_skip_comma tokens
         }
     } else {
         let n 0
@@ -1301,14 +1305,13 @@ def paka_read_nargs(tokens, name, state) {
                 puts "error: need `:` after def"
             }
             if eq get cur 0 token.op {
-                if str.eq get cur 1, ":" {
+                if str.eq get cur 1 ":" {
                     token_stream_skip1 tokens
                     return n
                 }
             }
             paka_read_expr_base tokens state
             let n add n 1
-            paka_skip_comma tokens
         }
     }
 }
@@ -1320,7 +1323,7 @@ def paka_build_defs(tokens) {
         if eq get first 0 token.keyword.def {
             let name token_stream_read tokens
             let argc paka_read_nargs tokens get name 1 empty
-            let ret cat ret [get name 1, argc]
+            let ret cat ret [get name 1 argc]
         }
         if eq length first 0 {
             return ret
