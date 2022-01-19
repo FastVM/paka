@@ -1,8 +1,0 @@
-
-def to_int(arr) {
-    n = 0
-    foreach ent: arr {
-        n = n * 10 + ent - '0'
-    }
-    return n
-}

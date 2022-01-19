@@ -1,20 +1,35 @@
 
-import("../lang/io.paka")
-import("../lang/conv.paka")
+def to_int(str) {
+    let ret 0
+    let index 0
+    while lt index length str {
+        let ret add sub get str index '0' mul 10 ret
+        let index add index 1
+    }
+    return ret
+}
+
+def printn(n) {
+    if lt n 10 {
+        putchar add mod n 10 48
+    } else {
+        printn div n 10
+        putchar add mod n 10 48
+    }
+}
 
 def fib(n) {
-    if n < 2 {
+    if lt n 2 {
         return n
     } else {
-        return fib(n-2) + fib(n-1)
+        return add fib sub n 2 fib sub n 1
     }
 }
 
 def main(args) {
-    if length(args) == 0 {
-        puts("error: need an integer argument")
-    } else {
-        n = to_int(args[0])
-        putnln(fib(n))
-    }
+    printn fib to_int get args 0
+    putchar '\n'
 }
+
+main args
+return 0

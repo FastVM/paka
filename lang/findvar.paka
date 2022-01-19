@@ -1,9 +1,0 @@
-
-def findvar(vars, name) {
-    foreach k, v: vars {
-        if k == name {
-            return v
-        }
-    }
-    return none
-}
