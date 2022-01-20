@@ -964,6 +964,9 @@ def paka_tokenize_stream1(bsrc) {
                     }
                     return [token.ident xsrc]
                 }
+                if char_between n0 "AZ" {
+                    return paka_tokenize_stream1 bsrc
+                }
                 return [token.ident xsrc]
             }
         }
