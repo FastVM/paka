@@ -1,0 +1,350 @@
+
+macro opcode {
+    let do_exit 0
+    let do_store_reg 1
+    let do_branch_bool 2
+    let do_store_int 3
+    let do_jump 4
+    let do_func 5
+    let do_add 6
+    let do_sub 7
+    let do_mul 8
+    let do_div 9
+    let do_mod 10
+    let do_branch_less_than_equal 11
+    let do_static_call 12
+    let do_return 13
+    let do_putchar 14
+    let do_string_new 15
+    let do_length 16
+    let do_index_get 17
+    let do_index_set 18
+    let do_dump 19
+    let do_read 20
+    let do_write 21
+    let do_static_array_new 22
+    let do_static_concat 23
+    let do_branch_equal 24
+    let do_branch_less 25
+}
+
+def putn_gte0(n) {
+    if gte n 10 {
+        let lowest mod n 10
+        putn_gte0 div sub n lowest 10
+        putchar add lowest 48
+    } else {
+        putchar add 48 mod n 10
+    }
+}
+
+def putn(n) {
+    if lt n 0 {
+        put "-"
+        putn_gte0 sub 0 n
+    } else {
+        putn_gte0 n
+    }
+}
+
+def put(str) {
+    let i 0
+    while lt i length str {
+        putchar get str i
+        let i add i 1
+    }
+}
+
+def puts(str) {
+    put str
+    putchar 10
+}
+
+def vm.join32(a b c d) {
+    return add d mul 256 add c mul 256 add b mul 256 a
+}
+
+def vm.parse(bytes) {
+    let ret []
+    let i 0
+    while lt i length bytes {
+        let v0 get bytes i
+        let i add i 1
+        let v1 get bytes i
+        let i add i 1
+        let v2 get bytes i
+        let i add i 1
+        let v3 get bytes i
+        let i add i 1
+        if gte v3 128 {
+            puts "cannot handle negative bytecode values"
+            exit
+        } else {
+            let ret cat ret [vm.join32 v3 v2 v1 v0]
+        }
+    }
+    return ret
+}
+
+def vm.run(ops index locals head nexthead) {
+    while 1 {
+        let op get ops index
+        let index add index 1
+        if eq op opcode.do_func {
+            let index get ops index
+        } else if eq op opcode.do_jump {
+            let index get ops index
+        } else if eq op opcode.do_static_call {
+            let oreg get ops index
+            let index add index 1
+            let func get ops index
+            let index add index 1
+            let nargs get ops index
+            let index add index 1
+            let i 1
+            while lte i nargs {
+                let regno get ops index
+                let index add index 1
+                set locals add nexthead i get locals add head regno
+                let i add i 1
+            } 
+            let nregs get ops sub func 1
+            let res vm.run ops func locals nexthead add nexthead nregs
+            set locals add head oreg res
+        } else if eq op opcode.do_static_array_new {
+            let oreg get ops index
+            let index add index 1
+            let nargs get ops index
+            let index add index 1
+            let res []
+            let i 1
+            while lte i nargs {
+                let regno get ops index
+                let index add index 1
+                let cur get locals add head regno
+                let res cat res [cur]
+                let i add i 1
+            } 
+            set locals add head oreg res
+        } else if eq op opcode.do_string_new {
+            let oreg get ops index
+            let index add index 1
+            let nargs get ops index
+            let index add index 1
+            let res []
+            let i 1
+            while lte i nargs {
+                let res cat res [ get ops index]
+                let index add index 1
+                let i add i 1
+            } 
+            set locals add head oreg res
+        } else if eq op opcode.do_return {
+            return get locals add head get ops index 
+        } else if eq op opcode.do_putchar {
+            putchar get locals add head get ops index 
+            let index add index 1
+        } else if eq op opcode.do_add {
+            let oreg get ops index
+            let index add index 1
+            let lreg get ops index
+            let index add index 1
+            let rreg get ops index
+            let index add index 1
+            let lhs get locals add head lreg
+            let rhs get locals add head rreg
+            set locals add head oreg add lhs rhs
+        } else if eq op opcode.do_static_concat {
+            let oreg get ops index
+            let index add index 1
+            let lreg get ops index
+            let index add index 1
+            let rreg get ops index
+            let index add index 1
+            let lhs get locals add head lreg
+            let rhs get locals add head rreg
+            set locals add head oreg cat lhs rhs
+        } else if eq op opcode.do_sub {
+            let oreg get ops index
+            let index add index 1
+            let lreg get ops index
+            let index add index 1
+            let rreg get ops index
+            let index add index 1
+            let lhs get locals add head lreg
+            let rhs get locals add head rreg
+            set locals add head oreg sub lhs rhs
+        } else if eq op opcode.do_mul {
+            let oreg get ops index
+            let index add index 1
+            let lreg get ops index
+            let index add index 1
+            let rreg get ops index
+            let index add index 1
+            let lhs get locals add head lreg
+            let rhs get locals add head rreg
+            set locals add head oreg mul lhs rhs
+        } else if eq op opcode.do_div {
+            let oreg get ops index
+            let index add index 1
+            let lreg get ops index
+            let index add index 1
+            let rreg get ops index
+            let index add index 1
+            let lhs get locals add head lreg
+            let rhs get locals add head rreg
+            set locals add head oreg div lhs rhs
+        } else if eq op opcode.do_mod {
+            let oreg get ops index
+            let index add index 1
+            let lreg get ops index
+            let index add index 1
+            let rreg get ops index
+            let index add index 1
+            let lhs get locals add head lreg
+            let rhs get locals add head rreg
+            set locals add head oreg mod lhs rhs
+        } else if eq op opcode.do_length {
+            let oreg get ops index
+            let index add index 1
+            let areg get ops index
+            let index add index 1
+            let arr get locals add head areg
+            set locals add head oreg length arr
+        } else if eq op opcode.do_read {
+            let oreg get ops index
+            let index add index 1
+            let areg get ops index
+            let index add index 1
+            let arr get locals add head areg
+            set locals add head oreg read arr
+        } else if eq op opcode.do_dump {
+            let r1 get ops index
+            let index add index 1
+            let r2 get ops index
+            let index add index 1
+            let v1 get locals add head r1
+            let v2 get locals add head r2
+            dump v1 v2 
+        } else if eq op opcode.do_write {
+            let r1 get ops index
+            let index add index 1
+            let r2 get ops index
+            let index add index 1
+            let v1 get locals add head r1
+            let v2 get locals add head r2
+            write v1 v2 
+        } else if eq op opcode.do_store_reg {
+            let oreg get ops index
+            let index add index 1
+            let ireg get ops index
+            let index add index 1
+            set locals add head oreg get locals add head ireg
+        } else if eq op opcode.do_store_int {
+            let oreg get ops index
+            let index add index 1
+            let num get ops index
+            let index add index 1
+            set locals add head oreg num
+        } else if eq op opcode.do_branch_less_than_equal {
+            let lhs get locals add head get ops index
+            let index add index 1 
+            let rhs get locals add head get ops index
+            let index add index 1
+            if lte lhs rhs {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_branch_equal {
+            let lhs get locals add head get ops index
+            let index add index 1 
+            let rhs get locals add head get ops index
+            let index add index 1
+            if eq lhs rhs {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_branch_less {
+            let lhs get locals add head get ops index
+            let index add index 1 
+            let rhs get locals add head get ops index
+            let index add index 1
+            if lt lhs rhs {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_branch_bool {
+            let val get locals add head get ops index
+            let index add index 1 
+            if neq val 0 {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_index_get {
+            let oreg get ops index
+            let index add index 1
+            let areg get ops index
+            let index add index 1
+            let nreg get ops index
+            let index add index 1
+            let arr get locals add head areg
+            let nth get locals add head nreg
+            set locals add head oreg get arr nth
+        } else if eq op opcode.do_index_set {
+            let areg get ops index
+            let index add index 1
+            let nreg get ops index
+            let index add index 1
+            let vreg get ops index
+            let index add index 1
+            let arr get locals add head areg
+            let nth get locals add head nreg
+            let val get locals add head vreg
+            set arr nth val
+        } else {
+            put "cannot run op: "
+            putn op
+            put "\n"
+            exit
+        }
+    }
+}
+
+def vm.locals() {
+    let ret [0]
+    let i 0
+    while lt i 16 {
+        let ret cat ret ret
+        let i add i 1
+    }
+    return ret
+}
+
+def main(args) {
+    if eq 0 length args {
+        puts "need a file as argument"
+        exit
+    } 
+    let src read get args 0
+    if eq 0 length src {
+        puts "need file to exist and not be empty"
+        exit
+    }
+    let bc vm.parse src
+    let locals vm.locals
+    let arr []
+    let i 1
+    while lt i length args {
+        let arr cat arr [get args i]
+        let i add i 1
+    }
+    set locals 0 arr
+    vm.run bc 0 locals 0 256
+}
+
+main args
+return 0
