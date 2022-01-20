@@ -1,0 +1,90 @@
+#!/usr/bin/env sh
+
+set -e
+
+DC=ldc2
+INDIR=$(pwd)
+OUTFILE=$(basename "$1" .paka)
+
+if test "$1" == ""
+then
+    echo "please give this script a .paka file as an argument"
+    exit
+fi
+
+if test ! "$1"
+then
+    echo "could not find input file: $1"
+fi
+
+if test "$SHACMD" == ""
+then
+    SHACMD=$(which shasum)
+fi
+if test "$SHACMD" == ""
+then
+    SHACMD=$(which sha1sum)
+fi
+if test "$SHACMD" == ""
+then
+    echo "please install shasum or sha1sum command"
+    exit
+fi
+
+PCACHE=~/.paka-cache
+mkdir -p "$PCACHE"
+
+REPO="$PCACHE"/repo
+mkdir -p "$REPO"
+
+LOG="$PCACHE"/log
+mkdir -p "$LOG"
+
+if test ! -d "$REPO"/paka
+then
+    git clone https://github.com/fastvm/paka --depth 1 "$REPO"/paka > $LOG/paka
+    cp "$REPO"/paka/bins/boot.bc "$PCACHE"/boot.bc
+fi
+
+if test ! -d "$REPO"/minivm
+then
+    git clone https://github.com/fastvm/minivm --depth 1 "$REPO"/minivm > $LOG/paka
+    make -C "$REPO"/minivm HOST=D DC="$DC" > $LOG/minivm
+    cp "$REPO"/minivm/minivm "$PCACHE"/minivm
+fi
+
+if test ! -f "$PCACHE"/pakac
+then
+    $DC -O1 -i -I"$REPO"/minivm "$REPO"/minivm/vm/tod.d -of"$PCACHE"/pakac > $LOG/pakac
+fi
+
+RTCACHE="$PCACHE"/runs/"$("$SHACMD" "$1" | cut -d ' ' -f1)"
+mkdir -p "$RTCACHE"
+
+if test ! -f "$RTCACHE"/boot.bc
+then
+    if test -f "$LOG"/paka
+    then
+        rm -f $LOG/paka
+    fi
+    "$PCACHE"/minivm "$PCACHE"/boot.bc "$INDIR"/"$1" -o "$RTCACHE"/boot.bc | tee $LOG/paka
+fi
+
+if test ! -f "$RTCACHE"/out.d
+then
+    "$PCACHE"/pakac "$RTCACHE"/boot.bc > "$RTCACHE"/out.d
+fi
+
+if test ! -f "$RTCACHE"/out
+then
+    $DC -betterC -O3 -flto=full -release $DFLAGS "$RTCACHE"/out.d -of"$RTCACHE"/out > $LOG/exec
+fi
+
+shift
+if test "$1" == "--"
+then
+    shift
+    "$RTCACHE"/out "$*"
+else
+    cp "$RTCACHE"/out $OUTFILE
+fi
