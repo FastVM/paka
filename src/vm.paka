@@ -60,13 +60,36 @@ macro ops.read {
 
 ## Paka <3 C
 
-def puts(str) {
+def put(str) {
     let i 0
     while lt i length str {
         putchar get str i
         let i add i 1
-    } 
-    putchar '\n'
+    }
+}
+
+def puts(str) {
+    put str
+    putchar 10
+}
+
+def putn_gte0(n) {
+    if gte n 10 {
+        let lowest mod n 10
+        putn_gte0 div sub n lowest 10
+        putchar add lowest 48
+    } else {
+        putchar add 48 mod n 10
+    }
+}
+
+def putn(n) {
+    if lt n 0 {
+        put "-"
+        putn_gte0 sub 0 n
+    } else {
+        putn_gte0 n
+    }
 }
 
 ## the vm loop
@@ -120,7 +143,7 @@ def vm.run(ops index locals head nexthead) {
             let func ops.read.num
             set locals add nexthead 1 ops.read.reg
             set locals add nexthead 2 ops.read.reg
-            set locals add nexthead 3 ops.read.reg
+            set locals add nexthead 2 ops.read.reg
             let nregs get ops sub func 1
             let res vm.run ops func locals nexthead add nexthead nregs
             set locals add head oreg res
@@ -225,6 +248,12 @@ def vm.run(ops index locals head nexthead) {
                 let index get ops index
             }
         } else if eq op opcode.do_get {
+            ## putn index put " < " putn length ops put "\n"
+            ## let o ops.read.num
+            ## let a ops.read.reg
+            ## let b ops.read.reg
+            ## putn length a put " > " putn b put "\n"
+            ## set locals add head o get a b
             set locals add head ops.read.num get ops.read.reg ops.read.reg
         } else if eq op opcode.do_set {
             set ops.read.reg ops.read.reg ops.read.reg
@@ -240,6 +269,7 @@ def vm.run(ops index locals head nexthead) {
 }
 
 def main(args) {
+    putn length args put "\n"
     ## we need args
     if eq 0 length args {
         puts "need a file as argument"
