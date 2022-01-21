@@ -99,30 +99,18 @@ def vm.run(ops index locals head nexthead) {
         ## this is the opcode
         let op ops.read.num
         ## dont worry about these if-else chains, minivm compiles them to a branch table
-        if eq op opcode.do_func {
+        if eq op opcode.do_jump {
             let index ops.read.num
-        } else if eq op opcode.do_jump {
-            let index ops.read.num
-        } else if eq op opcode.do_exit {
-            exit
-        } else if eq op opcode.do_call {
-            let oreg ops.read.num
-            let func ops.read.num
-            let nargs ops.read.num
-            let i 1
-            while lte i nargs {
-                set locals add nexthead i ops.read.reg
-                let i add i 1
-            } 
-            let nregs get ops sub func 1
-            let res vm.run ops func locals nexthead add nexthead nregs
-            set locals add head oreg res
-        } else if eq op opcode.do_call0 {
-            let oreg ops.read.num
-            let func ops.read.num
-            let nregs get ops sub func 1
-            let res vm.run ops func locals nexthead add nexthead nregs
-            set locals add head oreg res
+        } else if eq op opcode.do_reg {
+            set locals add head ops.read.num ops.read.reg
+        } else if eq op opcode.do_beqi {
+            if eq ops.read.reg ops.read.num {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_addi {
+           set locals add head ops.read.num add ops.read.reg ops.read.num
         } else if eq op opcode.do_call1 {
             let oreg ops.read.num
             let func ops.read.num
@@ -130,6 +118,40 @@ def vm.run(ops index locals head nexthead) {
             let nregs get ops sub func 1
             let res vm.run ops func locals nexthead add nexthead nregs
             set locals add head oreg res
+        } else if eq op opcode.do_add {
+           set locals add head ops.read.num add ops.read.reg ops.read.reg
+        } else if eq op opcode.do_sub {
+           set locals add head ops.read.num sub ops.read.reg ops.read.reg
+        } else if eq op opcode.do_num {
+            set locals add head ops.read.num ops.read.num
+        } else if eq op opcode.do_ret {
+            return ops.read.reg
+        } else if eq op opcode.do_blte {
+            if lte ops.read.reg ops.read.reg {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_beq {
+            if eq ops.read.reg ops.read.reg {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_blt {
+            if lt ops.read.reg ops.read.reg {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_branch_bool {
+            if neq ops.read.reg 0 {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_geti {
+            set locals add head ops.read.num get ops.read.reg ops.read.num
         } else if eq op opcode.do_call2 {
             let oreg ops.read.num
             let func ops.read.num
@@ -147,6 +169,58 @@ def vm.run(ops index locals head nexthead) {
             let nregs get ops sub func 1
             let res vm.run ops func locals nexthead add nexthead nregs
             set locals add head oreg res
+        } else if eq op opcode.do_mul {
+           set locals add head ops.read.num mul ops.read.reg ops.read.reg
+        } else if eq op opcode.do_div {
+           set locals add head ops.read.num div ops.read.reg ops.read.reg
+        } else if eq op opcode.do_mod {
+           set locals add head ops.read.num mod ops.read.reg ops.read.reg
+        } else if eq op opcode.do_get {
+            set locals add head ops.read.num get ops.read.reg ops.read.reg
+        } else if eq op opcode.do_set {
+            set ops.read.reg ops.read.reg ops.read.reg
+        } else if eq op opcode.do_subi {
+           set locals add head ops.read.num sub ops.read.reg ops.read.num
+        } else if eq op opcode.do_muli {
+           set locals add head ops.read.num mul ops.read.reg ops.read.num
+        } else if eq op opcode.do_divi {
+           set locals add head ops.read.num div ops.read.reg ops.read.num
+        } else if eq op opcode.do_modi {
+           set locals add head ops.read.num mod ops.read.reg ops.read.num
+        } else if eq op opcode.do_seti {
+            set ops.read.reg ops.read.num ops.read.reg
+        } else if eq op opcode.do_bltei {
+            if lte ops.read.reg ops.read.num {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_blti {
+            if lt ops.read.reg ops.read.num {
+                let index get ops add index 1
+            } else {
+                let index get ops index
+            }
+        } else if eq op opcode.do_call {
+            let oreg ops.read.num
+            let func ops.read.num
+            let nargs ops.read.num
+            let i 1
+            while lte i nargs {
+                set locals add nexthead i ops.read.reg
+                let i add i 1
+            } 
+            let nregs get ops sub func 1
+            let res vm.run ops func locals nexthead add nexthead nregs
+            set locals add head oreg res 
+        } else if eq op opcode.do_call0 {
+            let oreg ops.read.num
+            let func ops.read.num
+            let nregs get ops sub func 1
+            let res vm.run ops func locals nexthead add nexthead nregs
+            set locals add head oreg res
+        } else if eq op opcode.do_length {
+            set locals add head ops.read.num length ops.read.reg
         } else if eq op opcode.do_array {
             let oreg ops.read.num
             let nargs ops.read.num
@@ -167,100 +241,20 @@ def vm.run(ops index locals head nexthead) {
                 let i add i 1
             } 
             set locals add head oreg res
-        } else if eq op opcode.do_ret {
-            return ops.read.reg 
-        } else if eq op opcode.do_putchar {
-            putchar ops.read.reg 
-        } else if eq op opcode.do_cat {
-           set locals add head ops.read.num cat ops.read.reg ops.read.reg
-        } else if eq op opcode.do_add {
-           set locals add head ops.read.num add ops.read.reg ops.read.reg
-        } else if eq op opcode.do_sub {
-           set locals add head ops.read.num sub ops.read.reg ops.read.reg
-        } else if eq op opcode.do_mul {
-           set locals add head ops.read.num mul ops.read.reg ops.read.reg
-        } else if eq op opcode.do_div {
-           set locals add head ops.read.num div ops.read.reg ops.read.reg
-        } else if eq op opcode.do_mod {
-           set locals add head ops.read.num mod ops.read.reg ops.read.reg
-        } else if eq op opcode.do_addi {
-           set locals add head ops.read.num add ops.read.reg ops.read.num
-        } else if eq op opcode.do_subi {
-           set locals add head ops.read.num sub ops.read.reg ops.read.num
-        } else if eq op opcode.do_muli {
-           set locals add head ops.read.num mul ops.read.reg ops.read.num
-        } else if eq op opcode.do_divi {
-           set locals add head ops.read.num div ops.read.reg ops.read.num
-        } else if eq op opcode.do_modi {
-           set locals add head ops.read.num mod ops.read.reg ops.read.num
-        } else if eq op opcode.do_length {
-            set locals add head ops.read.num length ops.read.reg
         } else if eq op opcode.do_read {
             set locals add head ops.read.num read ops.read.reg
         } else if eq op opcode.do_dump {
             dump ops.read.reg ops.read.reg 
         } else if eq op opcode.do_write {
             write ops.read.reg ops.read.reg 
-        } else if eq op opcode.do_reg {
-            set locals add head ops.read.num ops.read.reg
-        } else if eq op opcode.do_num {
-            set locals add head ops.read.num ops.read.num
-        } else if eq op opcode.do_blte {
-            if lte ops.read.reg ops.read.reg {
-                let index get ops add index 1
-            } else {
-                let index get ops index
-            }
-        } else if eq op opcode.do_beq {
-            if eq ops.read.reg ops.read.reg {
-                let index get ops add index 1
-            } else {
-                let index get ops index
-            }
-        } else if eq op opcode.do_blt {
-            if lt ops.read.reg ops.read.reg {
-                let index get ops add index 1
-            } else {
-                let index get ops index
-            }
-        } else if eq op opcode.do_bltei {
-            if lte ops.read.reg ops.read.num {
-                let index get ops add index 1
-            } else {
-                let index get ops index
-            }
-        } else if eq op opcode.do_beqi {
-            if eq ops.read.reg ops.read.num {
-                let index get ops add index 1
-            } else {
-                let index get ops index
-            }
-        } else if eq op opcode.do_blti {
-            if lt ops.read.reg ops.read.num {
-                let index get ops add index 1
-            } else {
-                let index get ops index
-            }
-        } else if eq op opcode.do_branch_bool {
-            if neq ops.read.reg 0 {
-                let index get ops add index 1
-            } else {
-                let index get ops index
-            }
-        } else if eq op opcode.do_get {
-            ## putn index put " < " putn length ops put "\n"
-            ## let o ops.read.num
-            ## let a ops.read.reg
-            ## let b ops.read.reg
-            ## putn length a put " > " putn b put "\n"
-            ## set locals add head o get a b
-            set locals add head ops.read.num get ops.read.reg ops.read.reg
-        } else if eq op opcode.do_set {
-            set ops.read.reg ops.read.reg ops.read.reg
-        } else if eq op opcode.do_geti {
-            set locals add head ops.read.num get ops.read.reg ops.read.num
-        } else if eq op opcode.do_seti {
-            set ops.read.reg ops.read.num ops.read.reg
+        } else if eq op opcode.do_cat {
+           set locals add head ops.read.num cat ops.read.reg ops.read.reg
+        } else if eq op opcode.do_putchar {
+            putchar ops.read.reg 
+        } else if eq op opcode.do_exit {
+            exit
+        } else if eq op opcode.do_func {
+            let index ops.read.num
         } else {
             puts "bad opcode"
             exit
@@ -269,7 +263,6 @@ def vm.run(ops index locals head nexthead) {
 }
 
 def main(args) {
-    putn length args put "\n"
     ## we need args
     if eq 0 length args {
         puts "need a file as argument"
