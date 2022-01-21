@@ -92,6 +92,8 @@ def vm.run(ops index locals head nexthead) {
         let index add index 1
         if eq op opcode.do_func {
             let index get ops index
+        } else if eq op opcode.do_exit {
+            exit
         } else if eq op opcode.do_jump {
             let index get ops index
         } else if eq op opcode.do_static_call {

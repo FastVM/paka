@@ -2,7 +2,6 @@
 
 set -e
 
-DC=ldc2
 INDIR=$(pwd)
 OUTFILE=$(basename "$1" .paka)
 
@@ -42,20 +41,20 @@ mkdir -p "$LOG"
 
 if test ! -d "$REPO"/paka
 then
-    git clone https://github.com/fastvm/paka --depth 1 "$REPO"/paka > $LOG/paka
+    git clone https://github.com/fastvm/paka --depth 1 "$REPO"/paka > "$LOG"/paka
     cp "$REPO"/paka/bins/boot.bc "$PCACHE"/boot.bc
 fi
 
 if test ! -d "$REPO"/minivm
 then
-    git clone https://github.com/fastvm/minivm --depth 1 "$REPO"/minivm > $LOG/paka
-    make -C "$REPO"/minivm HOST=D DC="$DC" > $LOG/minivm
+    git clone https://github.com/fastvm/minivm --depth 1 "$REPO"/minivm > "$LOG"/paka
+    make -C "$REPO"/minivm HOST=D DC="ldc2" > "$LOG"/minivm
     cp "$REPO"/minivm/minivm "$PCACHE"/minivm
 fi
 
 if test ! -f "$PCACHE"/pakac
 then
-    $DC -O1 -i -I"$REPO"/minivm "$REPO"/minivm/vm/tod.d -of"$PCACHE"/pakac > $LOG/pakac
+    ldc2 -O1 -i -I"$REPO"/minivm "$REPO"/minivm/vm/tod.d -of"$PCACHE"/pakac > "$LOG"/pakac
 fi
 
 RTCACHE="$PCACHE"/runs/"$("$SHACMD" "$1" | cut -d ' ' -f1)"
@@ -65,9 +64,9 @@ if test ! -f "$RTCACHE"/boot.bc
 then
     if test -f "$LOG"/paka
     then
-        rm -f $LOG/paka
+        rm -f "$LOG"/paka
     fi
-    "$PCACHE"/minivm "$PCACHE"/boot.bc "$INDIR"/"$1" -o "$RTCACHE"/boot.bc | tee $LOG/paka
+    "$PCACHE"/minivm "$PCACHE"/boot.bc "$INDIR"/"$1" -o "$RTCACHE"/boot.bc | tee "$LOG"/paka
 fi
 
 if test ! -f "$RTCACHE"/out.d
@@ -77,14 +76,14 @@ fi
 
 if test ! -f "$RTCACHE"/out
 then
-    $DC -betterC -O3 -flto=full -release $DFLAGS "$RTCACHE"/out.d -of"$RTCACHE"/out > $LOG/exec
+    ldc2 -betterC -O3 -release $DFLAGS "$RTCACHE"/out.d -c -of"$RTCACHE"/out.o > "$LOG"/exec
+    clang -flto=full "$RTCACHE"/out.o -o "$RTCACHE"/out
 fi
 
-shift
 if test "$1" == "--"
 then
-    shift
-    "$RTCACHE"/out "$*"
-else
-    cp "$RTCACHE"/out $OUTFILE
+    echo "cannot run files directly"
+    exit
 fi
+
+cp "$RTCACHE"/out "$OUTFILE"
