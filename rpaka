@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -e
+
+if test "$1" == ""
+then
+    echo "need an argument"
+    exit
+fi
+
+if test "$1" == "--force"
+then
+    CC=clang
+    $CC -Ofast minivm/minivm.c -o minivm/minivm -flto=full
+    shift
+fi
+
+OUT=out.bc
+./minivm/minivm bins/boot.bc $1 -o $OUT
+
+shift
+./minivm/minivm $OUT "$@"

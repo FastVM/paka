@@ -14,12 +14,12 @@ DEP_D = bin/d-host
 
 default: bin/stage3.bc
 
-bin/c-host: minivm 
+bin/c-host: .dummy
 	mkdir -p bin
 	$(MAKE) -C minivm -f c.mak
 	cp minivm/minivm bin/minivm
 
-bin/d-host: minivm
+bin/d-host: .dummy
 	mkdir -p bin
 	$(MAKE) -C minivm -f d.mak 
 	cp minivm/minivm bin/minivm
@@ -34,4 +34,3 @@ clean: .dummy
 	: rm -r bin
 
 .dummy:
-

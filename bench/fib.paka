@@ -20,9 +20,9 @@ def printn(n) {
 
 def fib(n) {
     if lt n 2 {
-        n
+        return n
     } else {
-        add fib sub n 2 fib sub n 1
+        return add fib sub n 2 fib sub n 1
     }
 }
 
