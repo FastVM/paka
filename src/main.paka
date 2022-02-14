@@ -205,7 +205,6 @@ def vm_link(bc) {
     let ops1 empty
     let ops2 empty
     let ops3 empty
-    let ops4 empty
     let i 0
     while lt i length sized {
         let op get sized i
@@ -324,6 +323,22 @@ macro opcode {
     let do_blt 25
 }
 
+macro op {
+    let do_add 0
+    let do_sub 1
+    let do_mul 2
+    let do_div 3
+    let do_mod 4
+    let do_lt 5
+    let do_gt 6
+    let do_lte 7
+    let do_gte 8
+    let do_eq 9
+    let do_neq 10
+    let do_let 11
+    let do_cat 12
+}
+
 ## find variables
 
 def findvar(vars name) {
@@ -379,7 +394,7 @@ def pass_macro_resolve_enum(form state) {
             let ok 1
         }
         if eq get get get form 2 where 0 vm.ast.op {
-            if str.eq get get get form 2 where 1 "=" {
+            if eq get get get form 2 where 1 op.do_let {
                 let setto get get get form 2 where 2
                 let val get get get form 2 where 3
                 if neq get setto 0 vm.ast.ident {
@@ -596,38 +611,38 @@ def emit_call(form out) {
 
 def emit_branch_alike(xcond jfalse jtrue out) {
     if eq get xcond 0 vm.ast.op {
-        let first get get xcond 1 0
-        if str.eq get xcond 1 "==" {
+        let first get xcond 1
+        if eq first op.do_eq {
             let lhs emit_to get xcond 2 out
             let rhs emit_to get xcond 3 out
             set out 0 cat get out 0 [[link.data [opcode.do_beq lhs rhs]] put_goto jfalse put_goto jtrue]
             return 0
         }
-        if str.eq get xcond 1 "!=" {
+        if eq first op.do_neq {
             let lhs emit_to get xcond 2 out
             let rhs emit_to get xcond 3 out
             set out 0 cat get out 0 [[link.data [opcode.do_beq lhs rhs]] put_goto jtrue put_goto jfalse]
             return 0
         }
-        if str.eq get xcond 1 "<" {
+        if eq first op.do_lt {
             let lhs emit_to get xcond 2 out
             let rhs emit_to get xcond 3 out
             set out 0 cat get out 0 [[link.data [opcode.do_blt lhs rhs]] put_goto jfalse put_goto jtrue]
             return 0
         }
-        if str.eq get xcond 1 ">" {
+        if eq first op.do_gt {
             let lhs emit_to get xcond 2 out
             let rhs emit_to get xcond 3 out
             set out 0 cat get out 0 [[link.data [opcode.do_blt lhs rhs]] put_goto jtrue put_goto jfalse ]
             return 0
         }
-        if str.eq get xcond 1 "<=" {
+        if eq first op.do_lte {
             let lhs emit_to get xcond 2 out
             let rhs emit_to get xcond 3 out
             set out 0 cat get out 0 [[link.data [opcode.do_blte lhs rhs]] put_goto jfalse put_goto jtrue]
             return 0
         }
-        if str.eq get xcond 1 ">=" {
+        if eq first op.do_gte {
             let lhs emit_to get xcond 2 out
             let rhs emit_to get xcond 3 out
             set out 0 cat get out 0 [[link.data [opcode.do_blte lhs rhs]] put_goto jtrue put_goto jfalse]
@@ -769,26 +784,26 @@ def emit_to(form out) {
         return emit_do form out
     }
     if eq ty vm.ast.op {
-        let op get get form 1 0
-        if eq op '=' {
+        let op get form 1
+        if eq op op.do_let {
             return emit_set get form 2 get form 3 out
         }
-        if eq op '~' {
+        if eq op op.do_cat {
             return emit_binop opcode.do_cat get form 2 get form 3 out
         }
-        if eq op '+' {
+        if eq op op.do_add {
             return emit_binop opcode.do_add get form 2 get form 3 out
         }
-        if eq op '-' {
+        if eq op op.do_sub {
             return emit_binop opcode.do_sub get form 2 get form 3 out
         }
-        if eq op '*' {
+        if eq op op.do_mul {
             return emit_binop opcode.do_mul get form 2 get form 3 out
         }
-        if eq op '/' {
+        if eq op op.do_div {
             return emit_binop opcode.do_div get form 2 get form 3 out
         }
-        if eq op '%' {
+        if eq op op.do_mod {
             return emit_binop opcode.do_mod get form 2 get form 3 out
         }
         puts "emit: form: unknown op"
@@ -1109,82 +1124,82 @@ def paka_read_single(tokens state) {
         }
         if str.eq get first 1 "set" {
             let args paka_read_scall tokens 3 empty state
-            return [vm.ast.op "=" [vm.ast.index get args 0 get args 1] get args 2]
+            return [vm.ast.op op.do_let [vm.ast.index get args 0 get args 1] get args 2]
         }
         if str.eq get first 1 "do" {
             return paka_read_scall tokens 2 [vm.ast.do] state
         }
         if str.eq get first 1 "+" {
-            return paka_read_scall tokens 2 [vm.ast.op "+"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_add] state
         }
         if str.eq get first 1 "-" {
-            return paka_read_scall tokens 2 [vm.ast.op "-"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_sub] state
         }
         if str.eq get first 1 "*" {
-            return paka_read_scall tokens 2 [vm.ast.op "*"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_mul] state
         }
         if str.eq get first 1 "/" {
-            return paka_read_scall tokens 2 [vm.ast.op "/"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_div] state
         }
         if str.eq get first 1 "%" {
-            return paka_read_scall tokens 2 [vm.ast.op "%"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_mod] state
         }
         if str.eq get first 1 "<" {
-            return paka_read_scall tokens 2 [vm.ast.op "<"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_lt] state
         }
         if str.eq get first 1 ">" {
-            return paka_read_scall tokens 2 [vm.ast.op ">"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_gt] state
         }
         if str.eq get first 1 "<=" {
-            return paka_read_scall tokens 2 [vm.ast.op "<="] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_lte] state
         }
         if str.eq get first 1 ">=" {
-            return paka_read_scall tokens 2 [vm.ast.op ">="] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_gte] state
         }
         if str.eq get first 1 "==" {
-            return paka_read_scall tokens 2 [vm.ast.op "=="] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_eq] state
         }
         if str.eq get first 1 "!=" {
-            return paka_read_scall tokens 2 [vm.ast.op "!="] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_neq] state
         }
         if str.eq get first 1 "add" {
-            return paka_read_scall tokens 2 [vm.ast.op "+"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_add] state
         }
         if str.eq get first 1 "sub" {
-            return paka_read_scall tokens 2 [vm.ast.op "-"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_sub] state
         }
         if str.eq get first 1 "mul" {
-            return paka_read_scall tokens 2 [vm.ast.op "*"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_mul] state
         }
         if str.eq get first 1 "div" {
-            return paka_read_scall tokens 2 [vm.ast.op "/"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_div] state
         }
         if str.eq get first 1 "mod" {
-            return paka_read_scall tokens 2 [vm.ast.op "%"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_mod] state
         }
         if str.eq get first 1 "cat" {
-            return paka_read_scall tokens 2 [vm.ast.op "~"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_cat] state
         }
         if str.eq get first 1 "lt" {
-            return paka_read_scall tokens 2 [vm.ast.op "<"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_lt] state
         }
         if str.eq get first 1 "gt" {
-            return paka_read_scall tokens 2 [vm.ast.op ">"] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_gt] state
         }
         if str.eq get first 1 "lte" {
-            return paka_read_scall tokens 2 [vm.ast.op "<="] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_lte] state
         }
         if str.eq get first 1 "gte" {
-            return paka_read_scall tokens 2 [vm.ast.op ">="] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_gte] state
         }
         if str.eq get first 1 "eq" {
-            return paka_read_scall tokens 2 [vm.ast.op "=="] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_eq] state
         }
         if str.eq get first 1 "neq" {
-            return paka_read_scall tokens 2 [vm.ast.op "!="] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_neq] state
         }
         if str.eq get first 1 "let" {
-            return paka_read_scall tokens 2 [vm.ast.op "="] state
+            return paka_read_scall tokens 2 [vm.ast.op op.do_let] state
         }
         if str.eq get first 1 "cond" {
             return paka_read_scall tokens 3 [vm.ast.if] state
@@ -1195,17 +1210,6 @@ def paka_read_single(tokens state) {
     putn get first 0
     puts "."
     exit
-}
-
-def parse_is_not_in(op some) {
-    let i 0
-    while lt i length some {
-        if str.eq op get some i {
-            return 0
-        }
-        let i add i 1
-    }
-    return 1
 }
 
 def paka_read_expr_base(tokens state) {

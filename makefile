@@ -12,6 +12,8 @@ VM ?= bin/minivm
 DEP_C = bin/c-host
 DEP_D = bin/d-host
 
+DEP_J = $(DEP_JIT)
+
 default: bin/stage3.bc
 
 bin/c-host: .dummy
