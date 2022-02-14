@@ -306,7 +306,7 @@ macro opcode {
     let do_mul 8
     let do_div 9
     let do_mod 10
-    let do_blte 11
+
     let do_call 12
     let do_return 13
     let do_putchar 14
@@ -639,13 +639,13 @@ def emit_branch_alike(xcond jfalse jtrue out) {
         if eq first op.do_lte {
             let lhs emit_to get xcond 2 out
             let rhs emit_to get xcond 3 out
-            set out 0 cat get out 0 [[link.data [opcode.do_blte lhs rhs]] put_goto jfalse put_goto jtrue]
+            set out 0 cat get out 0 [[link.data [opcode.do_blt rhs lhs]] put_goto jtrue put_goto jfalse]
             return 0
         }
         if eq first op.do_gte {
             let lhs emit_to get xcond 2 out
             let rhs emit_to get xcond 3 out
-            set out 0 cat get out 0 [[link.data [opcode.do_blte lhs rhs]] put_goto jtrue put_goto jfalse]
+            set out 0 cat get out 0 [[link.data [opcode.do_blt rhs lhs]] put_goto jfalse put_goto jtrue]
             return 0
         }
     }
