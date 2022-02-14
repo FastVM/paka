@@ -19,7 +19,7 @@ macro opcode {
     let do_mul 8
     let do_div 9
     let do_mod 10
-    let do_blte 11
+    let do_pow 11
     let do_call 12
     let do_ret 13
     let do_putchar 14
@@ -97,12 +97,8 @@ def vm.run(ops index locals head nexthead) {
             set locals add head ops.read.num ops.read.num
         } else if eq op opcode.do_ret {
             return ops.read.reg
-        } else if eq op opcode.do_blte {
-            if lte ops.read.reg ops.read.reg {
-                let index get ops add index 1
-            } else {
-                let index get ops index
-            }
+        } else if eq op opcode.do_pow {
+           set locals add head ops.read.num pow ops.read.reg ops.read.reg
         } else if eq op opcode.do_beq {
             if eq ops.read.reg ops.read.reg {
                 let index get ops add index 1

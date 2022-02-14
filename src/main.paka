@@ -306,7 +306,7 @@ macro opcode {
     let do_mul 8
     let do_div 9
     let do_mod 10
-
+    let do_pow 11
     let do_call 12
     let do_return 13
     let do_putchar 14
@@ -337,6 +337,7 @@ macro op {
     let do_neq 10
     let do_let 11
     let do_cat 12
+    let do_pow 13
 }
 
 ## find variables
@@ -806,6 +807,9 @@ def emit_to(form out) {
         if eq op op.do_mod {
             return emit_binop opcode.do_mod get form 2 get form 3 out
         }
+        if eq op op.do_pow {
+            return emit_binop opcode.do_pow get form 2 get form 3 out
+        }
         puts "emit: form: unknown op"
         exit
     }
@@ -1144,6 +1148,9 @@ def paka_read_single(tokens state) {
         if str.eq get first 1 "%" {
             return paka_read_scall tokens 2 [vm.ast.op op.do_mod] state
         }
+        if str.eq get first 1 "**" {
+            return paka_read_scall tokens 2 [vm.ast.op op.do_pow] state
+        }
         if str.eq get first 1 "<" {
             return paka_read_scall tokens 2 [vm.ast.op op.do_lt] state
         }
@@ -1176,6 +1183,9 @@ def paka_read_single(tokens state) {
         }
         if str.eq get first 1 "mod" {
             return paka_read_scall tokens 2 [vm.ast.op op.do_mod] state
+        }
+        if str.eq get first 1 "pow" {
+            return paka_read_scall tokens 2 [vm.ast.op op.do_pow] state
         }
         if str.eq get first 1 "cat" {
             return paka_read_scall tokens 2 [vm.ast.op op.do_cat] state
@@ -1372,7 +1382,8 @@ def main(argv) {
     }
     let src read srcfile
     if eq length src 0 {
-        puts "cannot read file"
+        put "cannot read file: "
+        puts srcfile
         exit
     }
     let ast paka_parse src
