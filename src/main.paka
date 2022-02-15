@@ -321,6 +321,20 @@ macro opcode {
     let do_cat 23
     let do_beq 24
     let do_blt 25
+    let do_addi 26
+    let do_subi 27
+    let do_muli 28
+    let do_divi 29
+    let do_modi 30
+    let do_call0 31
+    let do_call1 32
+    let do_call2 33
+    let do_call3 34
+    let do_geti 35
+    let do_seti 36
+    let do_beqi 37
+    let do_blti 38
+    let do_bltei 39
 }
 
 macro op {
@@ -590,8 +604,19 @@ def emit_exit(form out) {
 }
 
 def emit_calln(name args out) {
+    let nargs length args
     let ret put_reg out
-    set out 0 cat get out 0 [[link.data [opcode.do_call ret]] [link.call name] [link.data cat [length args] args]]
+    if eq nargs 0 {
+        set out 0 cat get out 0 [[link.data [opcode.do_call0 ret]] [link.call name]]
+    } else if eq nargs 1 {
+        set out 0 cat get out 0 [[link.data [opcode.do_call1 ret]] [link.call name] [link.data args]]
+    } else if eq nargs 2 {
+        set out 0 cat get out 0 [[link.data [opcode.do_call2 ret]] [link.call name] [link.data args]]
+    } else if eq nargs 3 {
+        set out 0 cat get out 0 [[link.data [opcode.do_call3 ret]] [link.call name] [link.data args]]
+    } else {
+        set out 0 cat get out 0 [[link.data [opcode.do_call ret]] [link.call name] [link.data cat [length args] args]]
+    }
     return ret
 }
 
@@ -613,41 +638,115 @@ def emit_call(form out) {
 def emit_branch_alike(xcond jfalse jtrue out) {
     if eq get xcond 0 vm.ast.op {
         let first get xcond 1
+        let lhs_form get xcond 2
+        let rhs_form get xcond 3
         if eq first op.do_eq {
-            let lhs emit_to get xcond 2 out
-            let rhs emit_to get xcond 3 out
-            set out 0 cat get out 0 [[link.data [opcode.do_beq lhs rhs]] put_goto jfalse put_goto jtrue]
-            return 0
+            if eq vm.ast.num get rhs_form 0 {
+                let lhs emit_to lhs_form out
+                let rhs get rhs_form 1
+                set out 0 cat get out 0 [[link.data [opcode.do_beqi lhs rhs]] put_goto jfalse put_goto jtrue]
+                return 0
+            } else if eq vm.ast.num get lhs_form 0 {
+                let lhs get lhs_form 1
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_beqi rhs lhs]] put_goto jfalse put_goto jtrue]
+                return 0
+            } else {
+                let lhs emit_to lhs_form out
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_beq lhs rhs]] put_goto jfalse put_goto jtrue]
+                return 0
+            }
         }
         if eq first op.do_neq {
-            let lhs emit_to get xcond 2 out
-            let rhs emit_to get xcond 3 out
-            set out 0 cat get out 0 [[link.data [opcode.do_beq lhs rhs]] put_goto jtrue put_goto jfalse]
-            return 0
+            if eq vm.ast.num get rhs_form 0 {
+                let lhs emit_to lhs_form out
+                let rhs get rhs_form 1
+                set out 0 cat get out 0 [[link.data [opcode.do_beqi lhs rhs]] put_goto jtrue put_goto jfalse]
+                return 0
+            } else if eq vm.ast.num get lhs_form 0 {
+                let lhs get lhs_form 1
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_beqi rhs lhs]] put_goto jtrue put_goto jfalse]
+                return 0
+            } else {
+                let lhs emit_to lhs_form out
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_beq lhs rhs]] put_goto jtrue put_goto jfalse]
+                return 0
+            }
         }
         if eq first op.do_lt {
-            let lhs emit_to get xcond 2 out
-            let rhs emit_to get xcond 3 out
-            set out 0 cat get out 0 [[link.data [opcode.do_blt lhs rhs]] put_goto jfalse put_goto jtrue]
-            return 0
+            if eq vm.ast.num get rhs_form 0 {
+                let lhs emit_to lhs_form out
+                let rhs get rhs_form 1
+                set out 0 cat get out 0 [[link.data [opcode.do_blti lhs rhs]] put_goto jfalse put_goto jtrue]
+                return 0
+            } else if eq vm.ast.num get lhs_form 0 {
+                let lhs get lhs_form 1
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_bltei rhs lhs]] put_goto jtrue put_goto jfalse]
+                return 0
+            } else {
+                let lhs emit_to lhs_form out
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_blt lhs rhs]] put_goto jfalse put_goto jtrue]
+                return 0
+            }
         }
         if eq first op.do_gt {
-            let lhs emit_to get xcond 2 out
-            let rhs emit_to get xcond 3 out
-            set out 0 cat get out 0 [[link.data [opcode.do_blt lhs rhs]] put_goto jtrue put_goto jfalse ]
-            return 0
+            if eq vm.ast.num get rhs_form 0 {
+                let lhs emit_to lhs_form out
+                let rhs get rhs_form 1
+                set out 0 cat get out 0 [[link.data [opcode.do_bltei lhs rhs]] put_goto jtrue put_goto jfalse]
+                return 0
+            } else if eq vm.ast.num get lhs_form 0 {
+                let lhs get lhs_form 1
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_blti rhs lhs]] put_goto jfalse put_goto jtrue]
+                return 0
+            } else {
+                let lhs emit_to lhs_form out
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_blt lhs rhs]] put_goto jtrue put_goto jfalse]
+                return 0
+            }
         }
         if eq first op.do_lte {
-            let lhs emit_to get xcond 2 out
-            let rhs emit_to get xcond 3 out
-            set out 0 cat get out 0 [[link.data [opcode.do_blt rhs lhs]] put_goto jtrue put_goto jfalse]
-            return 0
+            if eq vm.ast.num get rhs_form 0 {
+                let lhs emit_to lhs_form out
+                let rhs get rhs_form 1
+                set out 0 cat get out 0 [[link.data [opcode.do_bltei lhs rhs]] put_goto jfalse put_goto jtrue]
+                return 0
+            } else if eq vm.ast.num get lhs_form 0 {
+                let lhs get lhs_form 1
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_blti rhs lhs]] put_goto jtrue put_goto jfalse]
+                return 0
+            } else {
+                let lhs emit_to lhs_form out
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_blt rhs lhs]] put_goto jtrue put_goto jfalse]
+                return 0
+            }
         }
         if eq first op.do_gte {
-            let lhs emit_to get xcond 2 out
-            let rhs emit_to get xcond 3 out
-            set out 0 cat get out 0 [[link.data [opcode.do_blt rhs lhs]] put_goto jfalse put_goto jtrue]
-            return 0
+            if eq vm.ast.num get rhs_form 0 {
+                let lhs emit_to lhs_form out
+                let rhs get rhs_form 1
+                set out 0 cat get out 0 [[link.data [opcode.do_blti lhs rhs]] put_goto jtrue put_goto jfalse]
+                return 0
+            } else if eq vm.ast.num get lhs_form 0 {
+                let lhs get lhs_form 1
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_bltei rhs lhs]] put_goto jfalse put_goto jtrue]
+                return 0
+            } else {
+                let lhs emit_to lhs_form out
+                let rhs emit_to rhs_form out
+                set out 0 cat get out 0 [[link.data [opcode.do_blt lhs rhs]] put_goto jtrue put_goto jfalse]
+                return 0
+            }
         }
     }
     let reg emit_to xcond out
@@ -793,19 +892,19 @@ def emit_to(form out) {
             return emit_binop opcode.do_cat get form 2 get form 3 out
         }
         if eq op op.do_add {
-            return emit_binop opcode.do_add get form 2 get form 3 out
+            return emit_binopi opcode.do_add opcode.do_addi get form 2 get form 3 out
         }
         if eq op op.do_sub {
-            return emit_binop opcode.do_sub get form 2 get form 3 out
+            return emit_binopi opcode.do_sub opcode.do_subi get form 2 get form 3 out
         }
         if eq op op.do_mul {
-            return emit_binop opcode.do_mul get form 2 get form 3 out
+            return emit_binopi opcode.do_mul opcode.do_muli get form 2 get form 3 out
         }
         if eq op op.do_div {
-            return emit_binop opcode.do_div get form 2 get form 3 out
+            return emit_binopi opcode.do_div opcode.do_divi get form 2 get form 3 out
         }
         if eq op op.do_mod {
-            return emit_binop opcode.do_mod get form 2 get form 3 out
+            return emit_binopi opcode.do_mod opcode.do_modi get form 2 get form 3 out
         }
         if eq op op.do_pow {
             return emit_binop opcode.do_pow get form 2 get form 3 out
