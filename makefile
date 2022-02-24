@@ -10,20 +10,12 @@ HOST ?= C
 VM ?= bin/minivm
 
 DEP_C = bin/c-host
-DEP_D = bin/d-host
-
-DEP_J = $(DEP_JIT)
 
 default: bin/stage3.bc
 
 bin/c-host: .dummy
 	mkdir -p bin
-	$(MAKE) -C minivm -f c.mak
-	cp minivm/minivm bin/minivm
-
-bin/d-host: .dummy
-	mkdir -p bin
-	$(MAKE) -C minivm -f d.mak 
+	$(MAKE) -C minivm -f makefile
 	cp minivm/minivm bin/minivm
 
 STAGE_N=$(VM) $$LAST src/main.paka -o $$NEXT
