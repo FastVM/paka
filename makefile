@@ -15,7 +15,7 @@ default: bin/stage3.bc
 
 bin/c-host: .dummy
 	mkdir -p bin
-	$(MAKE) -C minivm -f makefile
+	$(MAKE) -C minivm -f makefile minivm
 	cp minivm/minivm bin/minivm
 
 STAGE_N=$(VM) $$LAST src/main.paka -o $$NEXT
