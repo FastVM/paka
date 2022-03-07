@@ -1,21 +1,25 @@
 
+STAGE ?= 3
+
 BOOT ?= bins/boot.bc
-
-COSMO ?= 0
-
-FORMAT = bc
 
 HOST ?= C
 
 VM ?= bin/minivm
 
 DEP_C = bin/c-host
+DEP_ = .dummy
 
-default: bin/stage3.bc
+default: bin/stage$(STAGE).bc
+
+pgo-llvm%: .dummy
+	$(MAKE) minivm/minivm
+	./minivm/minivm bins/boot.bc bench/fib.paka -o out.bc
+	$(MAKE) -C minivm $@ PGO='./minivm ../out.bc 35' OPT='$(OPT)'
 
 bin/c-host: .dummy
 	mkdir -p bin
-	$(MAKE) -C minivm -f makefile minivm
+	$(MAKE) -C minivm minivm
 	cp minivm/minivm bin/minivm
 
 STAGE_N=$(VM) $$LAST src/main.paka -o $$NEXT
