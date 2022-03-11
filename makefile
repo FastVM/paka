@@ -18,7 +18,7 @@ pgo-llvm%: .dummy
 	$(MAKE) -C minivm $@ PGO='./minivm ../out.bc 35' OPT='$(OPT)'
 
 bin/c-host: .dummy
-	: mkdir bin
+	mkdir -p bin
 	$(MAKE) -C minivm minivm
 	cp minivm/minivm bin/minivm
 
