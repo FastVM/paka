@@ -2,7 +2,7 @@
 # Paka
 
 Paka is a language designed to be everything that I want in a language.
-The default compiler for this language is written in paka, it targets MiniVM.
+The default compiler for this language is written in Paka, and it targets MiniVM.
 
 ## Examples
 
@@ -12,13 +12,13 @@ TODO
 
 Paka is developed mainly by [Shaw Summa](#shaw-summa).
 
-All contributions are greatly welcome, from performance improvments, to doccumentation.
+All contributions are greatly welcome, from performance improvements, to documentation.
 
 ### What needs work
 
-Paka is evolving rapidly, it needs work in:
+Paka is evolving rapidly. It needs work in:
 - Tooling
-  - Highlighers
+  - Highlighters
   - Debuggers
   - Compiler messages
 - Ideas
